@@ -1,0 +1,18 @@
+# Base image with Go and Air preinstalled
+FROM golang:1.23.2-alpine
+
+# Set the working directory
+WORKDIR /app
+
+RUN apk add --no-cache ffmpeg && \
+    go install github.com/air-verse/air@latest
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+EXPOSE 8080
+
+# Command to run Air
+CMD ["air", "-c", ".air.toml"]

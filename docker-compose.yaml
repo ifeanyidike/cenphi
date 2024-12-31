@@ -1,0 +1,65 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - 3300:3000
+    volumes:
+      - ./frontend:/usr/src/app
+      # - ./frontend/node_modules:/usr/src/app/node_modules
+    # volumes:
+    #   - type: bind
+    #     source: ./frontend
+    #     target: /app
+    tty: true
+    depends_on:
+      - api-server
+    # command: ["yarn", "dev"] # Run yarn dev to start the frontend server
+    command: ["yarn", "vite", "--host"]
+
+  api-server:
+    build:
+      context: ./api-server
+      dockerfile: Dockerfile.dev # Use Dockerfile.dev for development environment
+      # target: dev-env
+    ports:
+      - "8081:8080"
+    env_file:
+      - ./api-server/.env # Load environment variables specific to API service
+    volumes:
+      - ./api-server:/src
+      - ~/.aws:/root/.aws:ro
+    # volumes:
+    #   - ./api-server:/app # Mount the API service code for live reload (development only)
+    depends_on:
+      - cenphidb
+    command: ["air", "-c", ".air.toml"]
+
+  ai-service:
+    build:
+      context: ./ai-service
+    ports:
+      - "50052:50051"
+    env_file:
+      - ./ai-service/.env # Load environment variables specific to AI service
+    depends_on:
+      - api-server
+    command: ["python3", "main.py"]
+
+    # Uvicorn command to start FastAPI app (change if different)
+
+  cenphidb:
+    image: postgres:latest # PostgreSQL as the database
+    container_name: cenphi_postgres
+    ports:
+      - "5434:5432"
+    environment:
+      POSTGRES_USER: "${DB_USERNAME}"
+      POSTGRES_PASSWORD: "${BS_PASSWORD}"
+      POSTGRES_DB: "${DB_NAME}"
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+
+volumes:
+  dbdata:
+    name: cenphi_dbdata
