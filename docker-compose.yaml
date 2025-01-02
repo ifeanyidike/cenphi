@@ -39,7 +39,7 @@ services:
     build:
       context: ./ai-service
     ports:
-      - "50052:50051"
+      - "50052:50052"
     env_file:
       - ./ai-service/.env # Load environment variables specific to AI service
     depends_on:
