@@ -30,7 +30,7 @@ const SidebarContent = () => {
   return (
     <div className="p-4 lg:p-8 overflow-hidden">
       {/* Stats Overview */}
-      <div className="grid grid-flow-col auto-cols-max gap-4 lg:gap-6 mb-8 overflow-x-auto">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
         {[
           {
             title: "Total Reviews",
@@ -62,7 +62,7 @@ const SidebarContent = () => {
           },
         ].map((stat, i) => (
           <Card key={i} className="hover:shadow-md transition-shadow">
-            <CardContent className="p-10">
+            <CardContent className="p-6 lg:p-8">
               <div className="flex justify-between items-start mb-4">
                 <div className="p-3 bg-purple-50 rounded-xl">
                   <stat.icon className="h-6 w-6 text-purple-600" />
@@ -204,12 +204,6 @@ const SidebarContent = () => {
                     color: "text-purple-600",
                     description: "Key points extraction",
                   },
-                  // {
-                  //   label: "Translate Reviews",
-                  //   icon: Language,
-                  //   color: "text-indigo-600",
-                  //   description: "Multi-language support",
-                  // },
                 ].map((action) => (
                   <button
                     key={action.label}
