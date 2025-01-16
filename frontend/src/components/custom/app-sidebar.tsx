@@ -9,7 +9,7 @@ import { NavMain } from "./nav-main";
 import { NavProjects } from "./nav-projects";
 import { NavUser } from "./nav-user";
 import { TeamSwitcher } from "./team-switcher";
-
+import CenphiLogo from "./cenphi-logo";
 import * as React from "react";
 import {
   BarChart2,
@@ -68,9 +68,9 @@ const data = {
   },
   teams: [
     {
-      name: "Marketing Team",
-      logo: GalleryVerticalEnd,
-      plan: "Enterprise",
+      name: "CENPHI",
+      logo: CenphiLogo,
+      plan: "",
     },
     {
       name: "Support Team",

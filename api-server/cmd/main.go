@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/ifeanyidike/cenphi/internal/config"
+	"github.com/ifeanyidike/cenphi/internal/routes"
 	"github.com/joho/godotenv"
 )
 
@@ -23,5 +24,11 @@ func main() {
 
 	defer db.Close()
 	defer redisClient.Close()
+
+	app := &routes.Application{
+		Config: cfg,
+	}
+	mux := app.Mount()
+	log.Fatal(app.Run(mux))
 
 }
