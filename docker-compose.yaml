@@ -35,16 +35,16 @@ services:
       - cenphidb
     command: ["air", "-c", ".air.toml"]
 
-  # ai-service:
-  #   build:
-  #     context: ./ai-service
-  #   ports:
-  #     - "50052:50052"
-  #   env_file:
-  #     - ./ai-service/.env # Load environment variables specific to AI service
-  #   depends_on:
-  #     - api-server
-  #   command: ["python3", "main.py"]
+  ai-service:
+    build:
+      context: ./ai-service
+    ports:
+      - "50052:50052"
+    env_file:
+      - ./ai-service/.env # Load environment variables specific to AI service
+    depends_on:
+      - api-server
+    command: ["python3", "main.py"]
 
     # Uvicorn command to start FastAPI app (change if different)
 
