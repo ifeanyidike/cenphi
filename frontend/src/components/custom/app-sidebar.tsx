@@ -70,7 +70,7 @@ const data = {
     {
       name: "CENPHI",
       logo: CenphiLogo,
-      plan: "Limited",
+      plan: "",
     },
     {
       name: "Support Team",

@@ -180,7 +180,7 @@ const SidebarContent = () => {
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader className="p-6">
               <CardTitle className="text-lg font-semibold">
-                AI-Powered Actions
+                AI Powered Actions
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6">
