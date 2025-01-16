@@ -335,7 +335,7 @@ const TestimonialsDashboard = () => {
                 <input
                   type="text"
                   placeholder="Search testimonials, customers, or collections..."
-                  className="w-full pl-12 pr-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                  className="w-full pl-12 pr-4 py-2.5 rounded-full border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
                 />
               </div>
             </div>
