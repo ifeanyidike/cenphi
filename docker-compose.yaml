@@ -49,14 +49,15 @@ services:
     # Uvicorn command to start FastAPI app (change if different)
 
   cenphidb:
-    image: postgres:latest # PostgreSQL as the database
+    # image: postgres:latest # PostgreSQL as the database
+    image: ankane/pgvector:latest
     container_name: cenphi_postgres
     ports:
       - "5434:5432"
     environment:
       POSTGRES_USER: "${DB_USERNAME}"
-      POSTGRES_PASSWORD: "${BS_PASSWORD}"
-      POSTGRES_DB: "${DB_NAME}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD}"
+      POSTGRES_DB: "cenphidb"
     volumes:
       - dbdata:/var/lib/postgresql/data
 
