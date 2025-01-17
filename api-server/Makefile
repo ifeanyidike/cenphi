@@ -6,7 +6,7 @@ export $(shell sed 's/=.*//' .env)
 DB_URL ?= postgres://${DB_USERNAME}:${DB_PASSWORD}@${DB_HOST}/${DB_NAME}?sslmode=${DB_SSL_MODE}
 
 MIGRATIONS_DIR=./scripts/migrations
-NETWORK=77802057761a
+NETWORK=5e0fdbea0291
 MIGRATE_CMD=docker run --rm --network=${NETWORK} -v $(shell pwd)/scripts/migrations:/migrations migrate/migrate 
 
 # Targets
@@ -16,6 +16,8 @@ all: up
 
 # Run migrations up
 up:
+	@echo "Running migrate up: $(DB_URL)"
+	@echo "Command: $(MIGRATE_CMD) -path=/migrations -database=$(DB_URL) -verbose up"
 	$(MIGRATE_CMD) -path=/migrations -database=$(DB_URL) -verbose up
 
 # Run migrations down
@@ -35,4 +37,4 @@ create:
 # Initialize the database (optional custom logic)
 init-db:
 	@echo "Initializing the database..."
-	PGPASSWORD=frosty psql -h localhost -U ifeanyidike -d repursodb -f ./scripts/init_db.sql
+	PGPASSWORD=${DB_PASSWORD} psql -h localhost -U ${DB_USERNAME} -d ${DB_NAME} -f ./scripts/init_db.sql

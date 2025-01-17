@@ -1,7 +1,6 @@
 package routes
 
 import (
-	"log"
 	"net/http"
 	"time"
 
@@ -9,10 +8,13 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
 	"github.com/ifeanyidike/cenphi/internal/config"
+	mmiddleware "github.com/ifeanyidike/cenphi/internal/middleware"
+	"go.uber.org/zap"
 )
 
 type Application struct {
 	*config.Config
+	Logger *zap.Logger
 }
 
 func (app *Application) Run(mux http.Handler) error {
@@ -23,13 +25,20 @@ func (app *Application) Run(mux http.Handler) error {
 		ReadTimeout:  time.Second * 10,
 		IdleTimeout:  time.Minute,
 	}
-	log.Printf("server started at %s", app.Server.Address)
-	return srv.ListenAndServe()
+	app.Logger.Info("server started", zap.String("address", app.Server.Address))
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		app.Logger.Error("server encountered an error", zap.Error(err))
+		return err
+	}
+	return nil
 }
 
 func (app *Application) Mount() http.Handler {
 	r := chi.NewRouter()
 
+	m := mmiddleware.NewMiddleware(app.Logger)
+
+	r.Use(m.Logging)
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
@@ -46,9 +55,6 @@ func (app *Application) Mount() http.Handler {
 		MaxAge:           300, // Maximum value not ignored by any of major browsers
 	}))
 
-	// Set a timeout value on the request context (ctx), that will signal
-	// through ctx.Done() that the request has timed out and further
-	// processing should be stopped.
 	r.Use(middleware.Timeout(60 * time.Second))
 
 	r.Get("/health", app.HealthCheck)
