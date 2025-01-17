@@ -6,9 +6,15 @@ import (
 	"github.com/ifeanyidike/cenphi/internal/config"
 	"github.com/ifeanyidike/cenphi/internal/routes"
 	"github.com/joho/godotenv"
+	"go.uber.org/zap"
 )
 
 func main() {
+	logger, err := zap.NewProduction()
+	if err != nil {
+		log.Fatalf("Error initializing zap logger: %v", err)
+	}
+	defer logger.Sync()
 
 	if err := godotenv.Load(); err != nil {
 		log.Fatalf("Error loading.env file %v", err)
@@ -27,8 +33,11 @@ func main() {
 
 	app := &routes.Application{
 		Config: cfg,
+		Logger: logger,
 	}
-	mux := app.Mount()
-	log.Fatal(app.Run(mux))
+
+	if err := app.Run(app.Mount()); err != nil {
+		app.Logger.Fatal("server failed to start", zap.Error(err))
+	}
 
 }
