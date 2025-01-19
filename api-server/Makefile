@@ -6,7 +6,7 @@ export $(shell sed 's/=.*//' .env)
 DB_URL ?= postgres://${DB_USERNAME}:${DB_PASSWORD}@${DB_HOST}/${DB_NAME}?sslmode=${DB_SSL_MODE}
 
 MIGRATIONS_DIR=./scripts/migrations
-NETWORK=5e0fdbea0291
+NETWORK=$(shell docker network ls --filter name=cenphi_default --filter driver=bridge --format "{{.ID}}")
 MIGRATE_CMD=docker run --rm --network=${NETWORK} -v $(shell pwd)/scripts/migrations:/migrations migrate/migrate 
 
 # Targets
@@ -16,16 +16,19 @@ all: up
 
 # Run migrations up
 up:
+	@echo "Detected network: ${NETWORK}"
 	@echo "Running migrate up: $(DB_URL)"
 	@echo "Command: $(MIGRATE_CMD) -path=/migrations -database=$(DB_URL) -verbose up"
 	$(MIGRATE_CMD) -path=/migrations -database=$(DB_URL) -verbose up
 
 # Run migrations down
 down:
+	@echo "Detected network: ${NETWORK}"
 	$(MIGRATE_CMD) -path=/migrations -database=$(DB_URL) -verbose down -all
 
 clean:
-	$(MIGRATE_CMD) -path=/migrations -database=$(DB_URL)  force 1
+	@echo "Detected network: ${NETWORK}"
+	$(MIGRATE_CMD) -path=/migrations -database=$(DB_URL) force 1
 
 # Create a new migration file
 # Usage: make create name=your_migration_name

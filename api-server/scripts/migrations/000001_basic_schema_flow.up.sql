@@ -2,25 +2,31 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";     -- For UUID generation
 CREATE EXTENSION IF NOT EXISTS "pg_trgm";       -- For text search
 CREATE EXTENSION IF NOT EXISTS "hstore";         -- For key-value pairs
-CREATE EXTENSION IF NOT EXISTS "vector";         -- For semantic search
 
--- ENUMS
+-- Create ENUM types
 CREATE TYPE workspace_plan AS ENUM ('free', 'pro', 'enterprise');
+
 CREATE TYPE member_role AS ENUM ('owner', 'admin', 'editor', 'viewer');
+
 CREATE TYPE testimonial_type AS ENUM ('text', 'video', 'audio', 'image', 'social_post');
+
 CREATE TYPE content_status AS ENUM ('pending_review', 'approved', 'rejected', 'archived', 'featured');
+
 CREATE TYPE collection_method AS ENUM (
     'direct_link', 'embed_form', 'qr_code', 'email_request', 
     'sms_request', 'api', 'social_import'
 );
+
 CREATE TYPE verification_type AS ENUM (
     'email', 'phone', 'social_login', 'order_verification',
     'employee_verification', 'domain_verification'
 );
+
 CREATE TYPE ai_service_category AS ENUM (
     'analysis', 'enhancement', 'generation', 
     'optimization', 'verification'
 );
+
 CREATE TYPE analysis_aspect AS ENUM (
     -- Content Analysis
     'sentiment', 'emotion', 'tone', 'language_pattern',
@@ -36,7 +42,19 @@ CREATE TYPE analysis_aspect AS ENUM (
     'social_verification'
 );
 
--- WORKSPACE MANAGEMENT
+-- Create tables in order of dependencies
+
+-- Audit Log table (needed for workspace deletion trigger)
+CREATE TABLE audit_log (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    event_type VARCHAR(50) NOT NULL,
+    entity_type VARCHAR(50) NOT NULL,
+    entity_id UUID NOT NULL,
+    details JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Core tables
 CREATE TABLE workspaces (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(255) NOT NULL,
@@ -52,23 +70,23 @@ CREATE TABLE workspaces (
 
 CREATE TABLE team_members (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    workspace_id UUID REFERENCES workspaces(id),
+    workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
     email VARCHAR(255) NOT NULL,
     first_name VARCHAR(100),
     last_name VARCHAR(100),
     role member_role NOT NULL,
-    password_hash VARCHAR(255),
+    firebase_uid VARCHAR(128) NOT NULL,
     settings JSONB DEFAULT '{}',
     permissions JSONB DEFAULT '{}',
     last_active_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(workspace_id, email)
+    UNIQUE(firebase_uid)
 );
 
--- TESTIMONIAL MANAGEMENT
 CREATE TABLE testimonials (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    workspace_id UUID REFERENCES workspaces(id),
+    workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
     type testimonial_type NOT NULL,
     status content_status DEFAULT 'pending_review',
     
@@ -110,10 +128,9 @@ CREATE TABLE testimonials (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
--- COLLECTION SYSTEM
 CREATE TABLE collection_portals (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    workspace_id UUID REFERENCES workspaces(id),
+    workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     slug VARCHAR(255) UNIQUE,
     collection_methods collection_method[] DEFAULT '{}',
@@ -127,10 +144,10 @@ CREATE TABLE collection_portals (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
--- AI SYSTEM
+-- AI System tables
 CREATE TABLE ai_processing_jobs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    testimonial_id UUID REFERENCES testimonials(id),
+    testimonial_id UUID REFERENCES testimonials(id) ON DELETE CASCADE,
     service_category ai_service_category NOT NULL,
     status VARCHAR(50) DEFAULT 'pending',
     priority INTEGER DEFAULT 1,
@@ -143,7 +160,7 @@ CREATE TABLE ai_processing_jobs (
 
 CREATE TABLE testimonial_dna_profiles (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    testimonial_id UUID REFERENCES testimonials(id),
+    testimonial_id UUID REFERENCES testimonials(id) ON DELETE CASCADE,
     
     -- Core Scores
     authenticity_score FLOAT,
@@ -172,7 +189,7 @@ CREATE TABLE testimonial_dna_profiles (
 
 CREATE TABLE story_analyses (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    testimonial_id UUID REFERENCES testimonials(id),
+    testimonial_id UUID REFERENCES testimonials(id) ON DELETE CASCADE,
     
     -- Narrative Analysis
     story_arc_type VARCHAR(50),
@@ -196,8 +213,8 @@ CREATE TABLE story_analyses (
 
 CREATE TABLE ai_generated_content (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    testimonial_id UUID REFERENCES testimonials(id),
-    job_id UUID REFERENCES ai_processing_jobs(id),
+    testimonial_id UUID REFERENCES testimonials(id) ON DELETE CASCADE,
+    job_id UUID REFERENCES ai_processing_jobs(id) ON DELETE CASCADE,
     
     -- Content Details
     content_type VARCHAR(50),
@@ -213,10 +230,10 @@ CREATE TABLE ai_generated_content (
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
--- CONTENT ORGANIZATION
+-- Content Organization tables
 CREATE TABLE collections (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    workspace_id UUID REFERENCES workspaces(id),
+    workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     description TEXT,
     type VARCHAR(50),
@@ -228,8 +245,8 @@ CREATE TABLE collections (
 );
 
 CREATE TABLE collection_items (
-    collection_id UUID REFERENCES collections(id),
-    testimonial_id UUID REFERENCES testimonials(id),
+    collection_id UUID REFERENCES collections(id) ON DELETE CASCADE,
+    testimonial_id UUID REFERENCES testimonials(id) ON DELETE CASCADE,
     display_order INTEGER,
     custom_settings JSONB DEFAULT '{}',
     added_by UUID REFERENCES team_members(id),
@@ -237,10 +254,10 @@ CREATE TABLE collection_items (
     PRIMARY KEY (collection_id, testimonial_id)
 );
 
--- DISTRIBUTION SYSTEM
+-- Distribution System tables
 CREATE TABLE content_displays (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    workspace_id UUID REFERENCES workspaces(id),
+    workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     type VARCHAR(50) NOT NULL,
     configuration JSONB DEFAULT '{}',
@@ -255,7 +272,7 @@ CREATE TABLE content_displays (
 
 CREATE TABLE display_placements (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    display_id UUID REFERENCES content_displays(id),
+    display_id UUID REFERENCES content_displays(id) ON DELETE CASCADE,
     placement_type VARCHAR(50),
     placement_settings JSONB DEFAULT '{}',
     targeting_rules JSONB DEFAULT '{}',
@@ -263,12 +280,12 @@ CREATE TABLE display_placements (
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
--- COLLABORATION
+-- Collaboration tables
 CREATE TABLE assignments (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    testimonial_id UUID REFERENCES testimonials(id),
-    assigned_to UUID REFERENCES team_members(id),
-    assigned_by UUID REFERENCES team_members(id),
+    testimonial_id UUID REFERENCES testimonials(id) ON DELETE CASCADE,
+    assigned_to UUID REFERENCES team_members(id) ON DELETE SET NULL,
+    assigned_by UUID REFERENCES team_members(id) ON DELETE SET NULL,
     task_type VARCHAR(50),
     status VARCHAR(50),
     priority INTEGER,
@@ -279,21 +296,21 @@ CREATE TABLE assignments (
 
 CREATE TABLE comments (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    testimonial_id UUID REFERENCES testimonials(id),
-    team_member_id UUID REFERENCES team_members(id),
-    parent_comment_id UUID REFERENCES comments(id),
+    testimonial_id UUID REFERENCES testimonials(id) ON DELETE CASCADE,
+    team_member_id UUID REFERENCES team_members(id) ON DELETE SET NULL,
+    parent_comment_id UUID REFERENCES comments(id) ON DELETE CASCADE,
     content TEXT NOT NULL,
     attachments JSONB DEFAULT '{}',
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
--- ANALYTICS
+-- Analytics tables
 CREATE TABLE analytics_events (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    workspace_id UUID REFERENCES workspaces(id),
-    testimonial_id UUID REFERENCES testimonials(id),
-    display_id UUID REFERENCES content_displays(id),
+    workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
+    testimonial_id UUID REFERENCES testimonials(id) ON DELETE CASCADE,
+    display_id UUID REFERENCES content_displays(id) ON DELETE CASCADE,
     event_type VARCHAR(50) NOT NULL,
     event_data JSONB,
     user_agent TEXT,
@@ -303,27 +320,27 @@ CREATE TABLE analytics_events (
 
 CREATE TABLE conversion_tracking (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    testimonial_id UUID REFERENCES testimonials(id),
-    display_id UUID REFERENCES content_displays(id),
+    testimonial_id UUID REFERENCES testimonials(id) ON DELETE CASCADE,
+    display_id UUID REFERENCES content_displays(id) ON DELETE CASCADE,
     conversion_type VARCHAR(50),
     conversion_value DECIMAL(10,2),
     conversion_details JSONB,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
--- SEARCH OPTIMIZATION
+-- Search Optimization table
 CREATE TABLE semantic_indices (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    testimonial_id UUID REFERENCES testimonials(id),
+    testimonial_id UUID REFERENCES testimonials(id) ON DELETE CASCADE,
     embedding_type VARCHAR(50),
-    embedding_vector vector(384),
+    vector_reference_id VARCHAR(255) NOT NULL,
     semantic_metadata JSONB,
     keywords TEXT[],
     topics TEXT[],
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
--- INDEXES
+-- Create all indexes
 CREATE INDEX idx_testimonials_workspace ON testimonials(workspace_id);
 CREATE INDEX idx_testimonials_status ON testimonials(status);
 CREATE INDEX idx_testimonials_type ON testimonials(type);
@@ -342,17 +359,82 @@ CREATE INDEX idx_collections_workspace ON collections(workspace_id);
 CREATE INDEX idx_analytics_events_workspace ON analytics_events(workspace_id);
 CREATE INDEX idx_analytics_events_testimonial ON analytics_events(testimonial_id);
 CREATE INDEX idx_semantic_indices_testimonial ON semantic_indices(testimonial_id);
+CREATE INDEX idx_semantic_indices_vector_ref ON semantic_indices(vector_reference_id);
+CREATE INDEX idx_audit_log_event_type ON audit_log(event_type);
+CREATE INDEX idx_audit_log_entity ON audit_log(entity_type, entity_id);
 
--- Add workspace deletion cascade trigger
+-- Create trigger functions
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
 CREATE OR REPLACE FUNCTION cascade_workspace_deletion()
 RETURNS TRIGGER AS $$
 BEGIN
-    -- Implement cascading deletion logic here
+    -- Log the deletion event
+    INSERT INTO audit_log (
+        event_type,
+        entity_type,
+        entity_id,
+        details
+    ) VALUES (
+        'workspace_deletion',
+        'workspace',
+        OLD.id,
+        jsonb_build_object(
+            'workspace_name', OLD.name,
+            'workspace_plan', OLD.plan,
+            'deleted_at', CURRENT_TIMESTAMP
+        )
+    );
+
+    -- Clean up any orphaned data or external references
+    PERFORM pg_notify('file_cleanup_channel', json_build_object(
+        'workspace_id', OLD.id,
+        'action', 'delete_workspace_files'
+    )::text);
+
+    -- Clean up any cached data
+    PERFORM pg_notify('cache_cleanup_channel', json_build_object(
+        'workspace_id', OLD.id,
+        'action', 'invalidate_workspace_cache'
+    )::text);
+
     RETURN OLD;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER workspace_deletion_trigger
-BEFORE DELETE ON workspaces
-FOR EACH ROW
-EXECUTE FUNCTION cascade_workspace_deletion(); 
+-- Create triggers
+CREATE TRIGGER update_workspaces_updated_at
+    BEFORE UPDATE ON workspaces
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_testimonials_updated_at
+    BEFORE UPDATE ON testimonials
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_collection_portals_updated_at
+    BEFORE UPDATE ON collection_portals
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_collections_updated_at
+    BEFORE UPDATE ON collections
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_content_displays_updated_at
+    BEFORE UPDATE ON content_displays
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_comments_updated_at
+    BEFORE UPDATE ON comments
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
