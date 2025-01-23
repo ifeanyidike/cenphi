@@ -1,4 +1,6 @@
 import React from 'react'
+import TestimonialImage from '@/assets/bun-bro.png'
+import Femalecheftestimonial from '@/assets/femalechef-rafiki.png'
 
 const TestimonialsSection = () => {
     return (
@@ -17,16 +19,16 @@ const TestimonialsSection = () => {
         {/* Content Grid */}
         <div className="mt-12 grid gap-12 md:grid-cols-2 px-4 md:px-16 lg:px-24">
           {/* Testimonial Card 1 */}
-          <div className="rounded-full border-2 border-white bg-teal-400 text-white p-8 rounded-lg shadow-lg">
+          <div className="rounded-full border-2 border-white bg-teal-600 text-white p-8 rounded-lg shadow-lg">
             <p className="text-lg italic">
               "The setup was incredibly simple. It took less than 5 minutes to get started with collecting reviews. We
               were able to import existing reviews, which is such an important feature to have."
             </p>
             <div className="mt-6 flex items-center">
               <img
-                src="/placeholder-profile.jpg"
+                src={TestimonialImage}
                 alt="Matt Davies"
-                className="w-12 h-12 rounded-full shadow-md"
+                className="w-12 h-12 rounded-full border-2 border-white shadow-md"
               />
               <div className="ml-4">
                 <p className="font-semibold">Matt Davies</p>
@@ -65,16 +67,16 @@ const TestimonialsSection = () => {
           </div>
   
           {/* Testimonial Card 2 */}
-          <div className="rounded-full border-2 border-white bg-teal-400 text-white p-8 rounded-lg shadow-lg">
+          <div className="rounded-full border-2 border-white bg-teal-600 text-white p-8 rounded-lg shadow-lg">
             <p className="text-lg italic">
               "In the beginning, I thought collecting testimonials was easy. I underestimated the value of managing and
               displaying them effectively. This tool saved a lot of development time."
             </p>
             <div className="mt-6 flex items-center">
               <img
-                src="/placeholder-profile-2.jpg"
+                src={Femalecheftestimonial}
                 alt="Adrian Spataru"
-                className="w-12 h-12 rounded-full shadow-md"
+                className="w-12 h-12 border-2 border-white rounded-full shadow-md"
               />
               <div className="ml-4">
                 <p className="font-semibold">Adrian Spataru</p>

@@ -4,6 +4,8 @@ import LandingPage from "@/pages/landingpage";
 import { Login } from "@/pages/Login";
 import { Signup } from "@/pages/SignUp";
 import ResetPasswordPage from "@/pages/ResetPassword";
+import WhyCenphi from "@/pages/WhyCenphi";
+import Pricing from "@/pages/Pricing";
 
 export const router = createBrowserRouter([
   {
@@ -13,6 +15,14 @@ export const router = createBrowserRouter([
   {
     path: "/home",
     element: <LandingPage />,
+  },
+  {
+    path: "/why-Cenphi",
+    element: <WhyCenphi />,
+  },
+  {
+    path: "/pricing",
+    element: <Pricing />,
   },
   {
     path: "/login",

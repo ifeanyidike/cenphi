@@ -45,10 +45,11 @@ const Navbar = () => {
                 <Link to="/pricing" className="text-gray-600 hover:text-gray-900">
                   Pricing
                 </Link>
+                <Link to="/why-Cenphi" className="text-gray-600 hover:text-gray-900">
+                Why Cenphi
+                </Link>
                 
-                <a href="#why-senja" className="text-gray-600 hover:text-gray-900">
-                  Why Cenphi
-                </a>
+              
                 
                 <div className="relative group">
                   <button className="flex items-center gap-1 text-gray-600 hover:text-gray-900">

@@ -1,31 +1,46 @@
 import React from 'react';
 import { CheckCircle, ArrowRight, Star } from 'lucide-react';
 import { Button } from "@/components/ui/button";
+import HerosectionIllustration from "@/assets/illustrationherosection.png"
 
 const HeroSection = () => {
     return (
       <div className="relative min-h-screen bg-gray-300 rounded-bl-[100px] rounded-br-[100px] overflow-hidden pt-16 md:pt-20">
       {/* Background decoration */}
-      <div className="absolute inset-0">
+      {/* <div className="absolute inset-0">
         <div className="absolute top-20 left-20 w-72 h-72 bg-teal-200 rounded-full opacity-40 blur-3xl" />
         <div className="absolute bottom-20 right-20 w-96 h-96 bg-rose-200 rounded-full opacity-40 blur-3xl" />
-      </div>
+      </div> */}
+      <div className="absolute inset-0">
+    <div className="absolute top-20 left-20 w-72 h-72 bg-teal-100 rounded-full opacity-20 blur-2xl" />
+    <div className="absolute bottom-20 right-20 w-96 h-96 bg-rose-100 rounded-full opacity-20 blur-2xl" />
+  </div>
 
       {/* Content container */}
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16 w-[90%]">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
+      {/* <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16 w-[90%]">
+        <div className="grid lg:grid-cols-2 gap-12 items-center"> */}
+         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16 w-[90%]">
+         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Left column - Text content */}
-          <div className="space-y-8 bg-gradient-to-br from-teal-100 via-teal-200 to-rose-100 backdrop-blur-sm rounded-3xl p-8 shadow-lg">
+          {/* <div className="space-y-8 bg-gradient-to-br from-teal-100 via-teal-200 to-rose-100 backdrop-blur-sm rounded-3xl p-8 shadow-lg"> */}
+          <div className="space-y-8 bg-white/70 backdrop-blur-sm rounded-3xl p-8 shadow-md">
             {/* Social proof badge */}
-            <div className="inline-flex items-center gap-2 bg-white/40 backdrop-blur-sm rounded-full px-4 py-2 text-gray-700">
+            {/* <div className="inline-flex items-center gap-2 bg-white/40 backdrop-blur-sm rounded-full px-4 py-2 text-gray-700">
               <Star className="h-4 w-4 fill-current text-yellow-500" />
               <span className="text-sm">Trusted by 20,000+ happy customers</span>
-            </div>
+            </div> */}
+            <div className="inline-flex items-center gap-2 bg-gray-100 rounded-full px-4 py-2 text-gray-700">
+          <Star className="h-4 w-4 fill-current text-yellow-500" />
+          <span className="text-sm">Trusted by 20,000+ happy customers</span>
+        </div>
 
             {/* Main heading */}
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-800 leading-tight">
+            {/* <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-800 leading-tight">
               Unlock Trust with the Right <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-500 to-rose-500">Review Collection Tools</span>
-            </h1>
+            </h1> */}
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-800 leading-tight">
+          Unlock Trust with the Right <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-rose-600">Review Collection Tools</span>
+        </h1>
 
             {/* Subheading */}
             <p className="text-lg text-gray-600 max-w-xl">
@@ -48,7 +63,7 @@ const HeroSection = () => {
 
             {/* CTA buttons */}
             <div className="flex flex-wrap gap-4">
-              <Button size="lg" className="bg-teal-200 hover:bg-teal-600 text-white px-8">
+              <Button size="lg" className=" bg-teal-600  hover:bg-teal-200 text-white hover:text-black px-8">
                 Start for free
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
@@ -78,7 +93,7 @@ const HeroSection = () => {
             <div className="relative bg-gradient-to-br from-teal-100 via-teal-200 to-rose-100 backdrop-blur-sm   rounded-3xl p-4 shadow-xl">
               <div className="aspect-[4/3] rounded-2xl bg-white/50 overflow-hidden">
                 <img 
-                  src="/api/placeholder/800/600" 
+                  src={HerosectionIllustration}
                   alt="Application preview" 
                   className="w-full h-full object-cover"
                 />
