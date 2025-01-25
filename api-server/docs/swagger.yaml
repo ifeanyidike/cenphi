@@ -1,0 +1,110 @@
+basePath: /api/v1
+definitions:
+  github_com_ifeanyidike_cenphi_internal_models.User:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      first_name:
+        type: string
+      id:
+        type: integer
+      last_name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  github_com_ifeanyidike_cenphi_internal_utils.ErrorResponse:
+    properties:
+      code:
+        type: integer
+      message:
+        type: string
+    type: object
+host: localhost:8081
+info:
+  contact: {}
+  description: API documentation for Cenphi.
+  termsOfService: http://example.com/terms/
+  title: Cenphi API
+  version: "1.0"
+paths:
+  /health:
+    get:
+      consumes:
+      - application/json
+      description: Returns the health status of the application
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: Healthy
+          schema:
+            type: string
+        "500":
+          description: Unhealthy
+          schema:
+            type: string
+      summary: Health Check
+      tags:
+      - Health
+  /users:
+    get:
+      consumes:
+      - application/json
+      description: Fetch a user by their ID.
+      parameters:
+      - description: User ID
+        in: query
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ifeanyidike_cenphi_internal_models.User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_ifeanyidike_cenphi_internal_utils.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_ifeanyidike_cenphi_internal_utils.ErrorResponse'
+      summary: Get User
+      tags:
+      - Users
+    post:
+      consumes:
+      - application/json
+      description: Register a new user.
+      parameters:
+      - description: User data
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ifeanyidike_cenphi_internal_models.User'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: User registered successfully
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_ifeanyidike_cenphi_internal_utils.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_ifeanyidike_cenphi_internal_utils.ErrorResponse'
+      summary: Register User
+      tags:
+      - Users
+swagger: "2.0"
