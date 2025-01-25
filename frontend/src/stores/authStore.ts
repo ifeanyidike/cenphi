@@ -175,7 +175,7 @@ class AuthStore {
           field: "email",
           message: "Invalid email format. Please enter a valid email address.",
         });
-        return;
+        return false;
       }
 
       const passwordError = FirebaseErrorHandler.validatePassword(password);
@@ -184,10 +184,11 @@ class AuthStore {
           field: "password",
           message: passwordError,
         });
-        return;
+        return false;
       }
 
       const cred = await createUserWithEmailAndPassword(auth, email, password);
+      return true;
       console.log("signup cred", cred);
     } catch (error: any) {
       // Handle Firebase auth errors
@@ -213,9 +214,12 @@ class AuthStore {
       }
 
       const cred = await signInWithEmailAndPassword(auth, email, password);
+      return true;
       console.log("login cred", cred);
     } catch (error: any) {
+      console.error("login error", error);
       this.setError(FirebaseErrorHandler.checkFirebaseErrorsAndThrow(error));
+      return false;
     } finally {
       this.setLoading(false);
     }
