@@ -1,19 +1,94 @@
 basePath: /api/v1
 definitions:
+  github_com_ifeanyidike_cenphi_internal_models.BrandingSettings:
+    properties:
+      logo_url:
+        type: string
+      primary_color:
+        type: string
+    required:
+    - logo_url
+    - primary_color
+    type: object
+  github_com_ifeanyidike_cenphi_internal_models.IntegrationSettings:
+    properties:
+      google_analytics_id:
+        type: string
+      slack_webhook_url:
+        type: string
+    type: object
+  github_com_ifeanyidike_cenphi_internal_models.Plan:
+    enum:
+    - free
+    - basic
+    - pro
+    - enterprise
+    type: string
+    x-enum-varnames:
+    - PlanFree
+    - PlanBasic
+    - PlanPro
+    - PlanEnterprise
   github_com_ifeanyidike_cenphi_internal_models.User:
     properties:
       created_at:
         type: string
       email:
         type: string
+      email_verified:
+        type: boolean
+      firebase_uid:
+        type: string
       first_name:
         type: string
       id:
-        type: integer
+        type: string
+      last_active:
+        type: string
       last_name:
         type: string
+      permissions: {}
+      settings: {}
       updated_at:
         type: string
+    type: object
+  github_com_ifeanyidike_cenphi_internal_models.Workspace:
+    properties:
+      analytics_settings:
+        additionalProperties: true
+        type: object
+      branding_settings:
+        $ref: '#/definitions/github_com_ifeanyidike_cenphi_internal_models.BrandingSettings'
+      created_at:
+        type: string
+      custom_domain:
+        type: string
+      id:
+        type: string
+      integration_settings:
+        $ref: '#/definitions/github_com_ifeanyidike_cenphi_internal_models.IntegrationSettings'
+      name:
+        maxLength: 100
+        minLength: 3
+        type: string
+      plan:
+        allOf:
+        - $ref: '#/definitions/github_com_ifeanyidike_cenphi_internal_models.Plan'
+        enum:
+        - free
+        - basic
+        - pro
+        - enterprise
+      settings:
+        additionalProperties: true
+        type: object
+      updated_at:
+        type: string
+      website_url:
+        type: string
+    required:
+    - name
+    - plan
     type: object
   github_com_ifeanyidike_cenphi_internal_utils.ErrorResponse:
     properties:
@@ -56,7 +131,7 @@ paths:
       description: Fetch a user by their ID.
       parameters:
       - description: User ID
-        in: query
+        in: path
         name: id
         required: true
         type: string
@@ -107,4 +182,87 @@ paths:
       summary: Register User
       tags:
       - Users
+  /workspaces:
+    get:
+      consumes:
+      - application/json
+      description: Fetch a workspace by their ID.
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ifeanyidike_cenphi_internal_models.Workspace'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_ifeanyidike_cenphi_internal_utils.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_ifeanyidike_cenphi_internal_utils.ErrorResponse'
+      summary: Get Workspace
+      tags:
+      - Workspaces
+    post:
+      consumes:
+      - application/json
+      description: Create a new workspace.
+      parameters:
+      - description: Workspace data
+        in: body
+        name: workspace
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ifeanyidike_cenphi_internal_models.Workspace'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Workspace created successfully
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_ifeanyidike_cenphi_internal_utils.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_ifeanyidike_cenphi_internal_utils.ErrorResponse'
+      summary: Create Workspace
+      tags:
+      - Workspaces
+  /workspaces/{id}:
+    delete:
+      description: Delete workspace using the provided path parameter `id`.
+      parameters:
+      - description: The ID of the workspace to delete
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Delete workspace by ID
+      tags:
+      - Workspaces
 swagger: "2.0"

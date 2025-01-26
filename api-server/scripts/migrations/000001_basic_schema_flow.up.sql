@@ -58,6 +58,7 @@ CREATE TABLE audit_log (
 CREATE TABLE workspaces (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(255) NOT NULL,
+    website_url VARCHAR(255) NOT NULL,
     plan workspace_plan DEFAULT 'free',
     settings JSONB DEFAULT '{}',
     branding_settings JSONB DEFAULT '{}',

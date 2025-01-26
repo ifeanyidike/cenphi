@@ -10,7 +10,7 @@ NETWORK=$(shell docker network ls --filter name=cenphi_default --filter driver=b
 MIGRATE_CMD=docker run --rm --network=${NETWORK} -v $(shell pwd)/scripts/migrations:/migrations migrate/migrate 
 
 # Targets
-.PHONY: all up down create init-db
+.PHONY: all up down create init-db swagger
 
 all: up
 
@@ -41,3 +41,5 @@ create:
 init-db:
 	@echo "Initializing the database..."
 	PGPASSWORD=${DB_PASSWORD} psql -h localhost -U ${DB_USERNAME} -d ${DB_NAME} -f ./scripts/init_db.sql
+swagger:
+	swag init -g cmd/main.go --parseDependency
