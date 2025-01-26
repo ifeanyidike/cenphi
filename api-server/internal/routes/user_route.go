@@ -7,7 +7,7 @@ import (
 
 func RegisterUserRoutes(r chi.Router, controller controllers.UserController) {
 	r.Route("/users", func(r chi.Router) {
-		r.Get("/", controller.GetUser)
+		r.Get("/{id}", controller.GetUser)
 		r.Post("/", controller.RegisterUser)
 	})
 }

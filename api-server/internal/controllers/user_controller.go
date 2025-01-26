@@ -6,6 +6,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
+	"github.com/ifeanyidike/cenphi/internal/apperrors"
 	"github.com/ifeanyidike/cenphi/internal/models"
 	"github.com/ifeanyidike/cenphi/internal/services"
 	"github.com/ifeanyidike/cenphi/internal/utils"
@@ -32,21 +35,25 @@ func NewUserController(service services.UserService, logger *zap.Logger) UserCon
 // @Tags Users
 // @Accept json
 // @Produce json
-// @Param id query string true "User ID"
+// @Param id path string true "User ID"
 // @Success 200 {object} models.User
 // @Failure 400 {object} utils.ErrorResponse
 // @Failure 404 {object} utils.ErrorResponse
 // @Router /users [get]
 func (c *userController) GetUser(w http.ResponseWriter, r *http.Request) {
-	id := r.URL.Query().Get("id")
-	if id == "" {
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		utils.RespondWithError(w, http.StatusBadRequest, apperrors.ErrInvalidWorkspaceID.Error())
+		return
+	}
+	if id == uuid.Nil {
 		utils.RespondWithError(w, http.StatusBadRequest, "User ID is required")
 		return
 	}
 
 	user, err := c.service.GetUser(r.Context(), id)
 	if err != nil {
-		c.logger.Error("failed to get user", zap.String("userID", id), zap.Error(err))
+		c.logger.Error("failed to get user", zap.String("userID", id.String()), zap.Error(err))
 		utils.RespondWithError(w, http.StatusNotFound, err.Error())
 		return
 	}
