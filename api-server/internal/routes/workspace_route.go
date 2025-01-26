@@ -9,5 +9,7 @@ func RegisterWorkspaceRoutes(r chi.Router, controller controllers.WorkspaceContr
 	r.Route("/workspaces", func(r chi.Router) {
 		r.Get("/", controller.GetWorkspace)
 		r.Post("/", controller.CreateWorkspace)
+		r.Put("/{id}", controller.UpdateWorkspace)
+		r.Delete("/{id}", controller.DeleteWorkspace)
 	})
 }
