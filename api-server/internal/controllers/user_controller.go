@@ -1,8 +1,10 @@
 package controllers
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/ifeanyidike/cenphi/internal/models"
 	"github.com/ifeanyidike/cenphi/internal/services"
@@ -42,7 +44,7 @@ func (c *userController) GetUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := c.service.GetUser(id)
+	user, err := c.service.GetUser(r.Context(), id)
 	if err != nil {
 		c.logger.Error("failed to get user", zap.String("userID", id), zap.Error(err))
 		utils.RespondWithError(w, http.StatusNotFound, err.Error())
@@ -72,13 +74,14 @@ func (c *userController) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		utils.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
-	if user.Email == "" || user.Password == "" {
-		utils.RespondWithError(w, http.StatusBadRequest, "Email and Password are required")
+	if user.Email == "" || user.FirebaseUID == "" {
+		utils.RespondWithError(w, http.StatusBadRequest, "The user data is malformed: Invalid user")
 		return
 	}
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
 
-	// Register the user via the service layer
-	if err := c.service.RegisterUser(&user); err != nil {
+	if err := c.service.RegisterUser(ctx, &user); err != nil {
 		c.logger.Error("failed to register user", zap.Error(err))
 		utils.RespondWithError(w, http.StatusInternalServerError, "Failed to register user")
 		return

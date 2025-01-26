@@ -1,16 +1,24 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 // User represents a user in the system.
 type User struct {
-	ID        int64     `json:"id"`
-	Email     string    `json:"email"`
-	Password  string    `json:"-"` // Exclude password from JSON responses
-	FirstName string    `json:"first_name"`
-	LastName  string    `json:"last_name"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID            uuid.UUID   `json:"id"`
+	Email         string      `json:"email"`
+	EmailVerified bool        `json:"email_verified"`
+	FirebaseUID   string      `json:"firebase_uid"`
+	FirstName     string      `json:"first_name"`
+	LastName      string      `json:"last_name"`
+	Settings      interface{} `json:"settings"`
+	Permissions   interface{} `json:"permissions"`
+	LastActive    time.Time   `json:"last_active"`
+	CreatedAt     time.Time   `json:"created_at"`
+	UpdatedAt     time.Time   `json:"updated_at"`
 }
 
 // FullName returns the user's full name.

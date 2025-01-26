@@ -21,13 +21,14 @@ import (
 )
 
 type Application struct {
-	Config            *config.Config
-	Logger            *zap.Logger
-	DB                *sql.DB
-	RedisClient       *redis.Client
-	HealthController  *controllers.HealthController
-	UserController    *controllers.UserController
-	SwaggerController *controllers.SwaggerController
+	Config              *config.Config
+	Logger              *zap.Logger
+	DB                  *sql.DB
+	RedisClient         *redis.Client
+	HealthController    *controllers.HealthController
+	UserController      *controllers.UserController
+	SwaggerController   *controllers.SwaggerController
+	WorkspaceController *controllers.WorkspaceController
 }
 
 func NewApplication(cfg *config.Config, db *sql.DB, redisClient *redis.Client) *Application {
@@ -41,15 +42,20 @@ func NewApplication(cfg *config.Config, db *sql.DB, redisClient *redis.Client) *
 	userService := services.NewUserService(userRepo)
 	userController := controllers.NewUserController(userService, logger)
 
+	workspaceRepo := repositories.NewWorkspaceRepository(db)
+	workspaceService := services.NewWorkspaceService(workspaceRepo)
+	workspaceController := controllers.NewWorkspaceController(workspaceService, logger)
+
 	healthController := controllers.NewHealthController(logger)
 	swaggerController := controllers.NewSwaggerController()
 
 	return &Application{
-		Config:            cfg,
-		Logger:            logger,
-		HealthController:  healthController,
-		UserController:    &userController,
-		SwaggerController: swaggerController,
+		Config:              cfg,
+		Logger:              logger,
+		HealthController:    healthController,
+		UserController:      &userController,
+		SwaggerController:   swaggerController,
+		WorkspaceController: &workspaceController,
 	}
 }
 
@@ -99,6 +105,7 @@ func (app *Application) Mount() http.Handler {
 		app.HealthController,
 		app.UserController,
 		app.SwaggerController,
+		app.WorkspaceController,
 	)
 	return r
 }

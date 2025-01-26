@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"errors"
 
 	"github.com/ifeanyidike/cenphi/internal/models"
@@ -8,8 +9,8 @@ import (
 )
 
 type UserService interface {
-	GetUser(id string) (*models.User, error)
-	RegisterUser(user *models.User) error
+	GetUser(ctx context.Context, id string) (*models.User, error)
+	RegisterUser(ctx context.Context, user *models.User) error
 }
 
 type userService struct {
@@ -20,14 +21,14 @@ func NewUserService(repo repositories.UserRepository) UserService {
 	return &userService{repo: repo}
 }
 
-func (s *userService) GetUser(id string) (*models.User, error) {
-	user, err := s.repo.GetByID(id)
+func (s *userService) GetUser(ctx context.Context, id string) (*models.User, error) {
+	user, err := s.repo.GetByID(ctx, id)
 	if err != nil || user == nil {
 		return nil, errors.New("user not found")
 	}
 	return user, nil
 }
 
-func (s *userService) RegisterUser(user *models.User) error {
-	return s.repo.Create(user)
+func (s *userService) RegisterUser(ctx context.Context, user *models.User) error {
+	return s.repo.Create(ctx, user)
 }
