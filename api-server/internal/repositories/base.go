@@ -13,7 +13,7 @@ import (
 type Repository[T any] interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*T, error)
 	Create(ctx context.Context, entity *T) error
-	Update(ctx context.Context, entity *T) error
+	Update(ctx context.Context, entity *T, id uuid.UUID) error
 	Delete(ctx context.Context, id uuid.UUID) error
 }
 
@@ -27,7 +27,7 @@ func NewBaseRepository[T any](db *sql.DB, tableName string) *BaseRepository[T] {
 }
 
 func (r *BaseRepository[T]) GetByID(ctx context.Context, id uuid.UUID) (*T, error) {
-	query := fmt.Sprintf("SELECT * FROM %s WHERE id = ?", r.tableName)
+	query := fmt.Sprintf("SELECT * FROM %s WHERE id = $1", r.tableName)
 	row := r.db.QueryRowContext(ctx, query, id)
 
 	var entity T
@@ -42,12 +42,12 @@ func (r *BaseRepository[T]) Create(ctx context.Context, entity *T) error {
 	return errors.New("Create must be implemented in the specific repository")
 }
 
-func (r *BaseRepository[T]) Update(ctx context.Context, entity *T) error {
+func (r *BaseRepository[T]) Update(ctx context.Context, entity *T, id uuid.UUID) error {
 	return errors.New("Update must be implemented in the specific repository")
 }
 
 func (r *BaseRepository[T]) Delete(ctx context.Context, id uuid.UUID) error {
-	query := fmt.Sprintf("DELETE FROM %s WHERE id = ?", r.tableName)
+	query := fmt.Sprintf("DELETE FROM %s WHERE id = $1", r.tableName)
 	_, err := r.db.ExecContext(ctx, query, id)
 	return err
 }

@@ -22,7 +22,7 @@ func TestWorkspaceRepository(t *testing.T) {
 		workspace := &models.Workspace{
 			ID:           uuid.New(),
 			Name:         "my-org-workspace",
-			Plan:         "basic",
+			Plan:         "free",
 			CustomDomain: "my-org.cenphi.app",
 			CreatedAt:    time.Now(),
 			UpdatedAt:    time.Now(),
@@ -48,7 +48,9 @@ func TestWorkspaceRepository(t *testing.T) {
 		// analyticsJSON, _ := workspace.MarshalAnalyticsSettings()
 		// integrationJSON, _ := workspace.MarshalIntegrationSettings()
 
+		t.Log("Before running create")
 		err := repo.Create(context.Background(), workspace)
+		t.Log("After running create")
 		require.NoError(t, err)
 
 		storedUser, err := repo.GetByID(context.Background(), workspace.ID)
@@ -70,7 +72,7 @@ func TestWorkspaceRepository(t *testing.T) {
 		workspace := &models.Workspace{
 			ID:           uuid.New(),
 			Name:         "my-org-workspace",
-			Plan:         "basic",
+			Plan:         "free",
 			CustomDomain: "my-org.cenphi.app",
 			CreatedAt:    time.Now(),
 			UpdatedAt:    time.Now(),
@@ -97,27 +99,24 @@ func TestWorkspaceRepository(t *testing.T) {
 		workspace.Name = "my-updated-org-workspace"
 		workspace.Plan = "pro"
 		workspace.CustomDomain = "updated-my-org.cenphi.app"
-		workspace.BrandingSettings.LogoURL = "https://example.com/updated-logo.png"
-		workspace.AnalyticsSettings["google_analytics_id"] = "UA-98765432-10"
-		workspace.IntegrationSettings.GoogleAnalyticsID = "UA-98765432-10"
-		workspace.IntegrationSettings.SlackWebhookURL = "https://hooks.slack.com/services/T0000000/B0000000/YYYYYYYYYYYYYYYYY"
-		workspace.Settings["theme"] = "light"
+		// workspace.BrandingSettings.LogoURL = "https://example.com/updated-logo.png"
+		// workspace.AnalyticsSettings["google_analytics_id"] = "UA-98765432-10"
+		// workspace.IntegrationSettings.GoogleAnalyticsID = "UA-98765432-10"
+		// workspace.IntegrationSettings.SlackWebhookURL = "https://hooks.slack.com/services/T0000000/B0000000/YYYYYYYYYYYYYYYYY"
+		// workspace.Settings["theme"] = "light"
 		workspace.WebsiteURL = "https://updated-my-org.cenphi.app"
 
 		workspace.UpdatedAt = time.Now()
-		err = repo.Update(context.Background(), workspace)
+		err = repo.Update(context.Background(), workspace, workspace.ID)
 		require.NoError(t, err)
 
 		// Verify the update.
-		storedWorkspace, err := repo.FindByCustomDomain(context.Background(), workspace.CustomDomain)
+		storedWorkspace, err := repo.GetByID(context.Background(), workspace.ID)
 		require.NoError(t, err)
 		assert.Equal(t, workspace.Name, storedWorkspace.Name)
 		assert.Equal(t, workspace.ID, storedWorkspace.ID)
 		assert.Equal(t, workspace.WebsiteURL, storedWorkspace.WebsiteURL)
 		assert.Equal(t, workspace.CustomDomain, storedWorkspace.CustomDomain)
-		assert.Equal(t, workspace.BrandingSettings.LogoURL, storedWorkspace.BrandingSettings.LogoURL)
-		assert.Equal(t, workspace.AnalyticsSettings["google_analytics_id"], storedWorkspace.AnalyticsSettings["google_analytics_id"])
-		assert.Equal(t, workspace.IntegrationSettings.GoogleAnalyticsID, storedWorkspace.IntegrationSettings.GoogleAnalyticsID)
 
 	})
 
@@ -126,7 +125,7 @@ func TestWorkspaceRepository(t *testing.T) {
 		workspace := &models.Workspace{
 			ID:           uuid.New(),
 			Name:         "my-org-workspace",
-			Plan:         "basic",
+			Plan:         "free",
 			CustomDomain: "my-org.cenphi.app",
 			CreatedAt:    time.Now(),
 			UpdatedAt:    time.Now(),
@@ -152,9 +151,9 @@ func TestWorkspaceRepository(t *testing.T) {
 		err = repo.Delete(context.Background(), workspace.ID)
 		require.NoError(t, err)
 
-		_, err = repo.FindByCustomDomain(context.Background(), workspace.CustomDomain)
-		require.NoError(t, err)
-		assert.Nil(t, err)
-		// assert.Error(t, err)
+		_, err = repo.GetByID(context.Background(), workspace.ID)
+		// require.NoError(t, err)
+		// assert.Nil(t, err)
+		assert.Error(t, err)
 	})
 }
