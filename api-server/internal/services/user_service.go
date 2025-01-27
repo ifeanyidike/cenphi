@@ -11,6 +11,7 @@ import (
 
 type UserService interface {
 	GetUser(ctx context.Context, id uuid.UUID) (*models.User, error)
+	FindByUID(ctx context.Context, uid string) (*models.User, error)
 	RegisterUser(ctx context.Context, user *models.User) error
 }
 
@@ -24,6 +25,14 @@ func NewUserService(repo repositories.UserRepository) UserService {
 
 func (s *userService) GetUser(ctx context.Context, id uuid.UUID) (*models.User, error) {
 	user, err := s.repo.GetByID(ctx, id)
+	if err != nil || user == nil {
+		return nil, errors.New("user not found")
+	}
+	return user, nil
+}
+
+func (s *userService) FindByUID(ctx context.Context, uid string) (*models.User, error) {
+	user, err := s.repo.FindByUID(ctx, uid)
 	if err != nil || user == nil {
 		return nil, errors.New("user not found")
 	}

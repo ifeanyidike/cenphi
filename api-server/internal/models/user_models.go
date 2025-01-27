@@ -18,7 +18,7 @@ type User struct {
 	Permissions   interface{} `json:"permissions"`
 	LastActive    time.Time   `json:"last_active"`
 	CreatedAt     time.Time   `json:"created_at"`
-	UpdatedAt     time.Time   `json:"updated_at"`
+	UpdatedAt     time.Time   `json:"updated_at,omitempty"`
 }
 
 // FullName returns the user's full name.
