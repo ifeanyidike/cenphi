@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronDown, Menu, X } from 'lucide-react';
-import { Button } from "@/components/ui/button";
 import CenphiLogo from './cenphi-logo';
 import { Link } from 'react-router-dom';
 
@@ -63,9 +62,10 @@ const Navbar = () => {
                 <Link to="/signin" className="text-gray-600 hover:text-gray-900 mx-2 px-4 py-2 rounded-lg">
                   Login
                 </Link>
-                <Link to="signup" className="bg-teal-500 hover:bg-teal-600 text-white mx-2 px-4 py-2 rounded-lg">
-                  Sign up for free
+                <Link to="signup" className="px-8 py-3 bg-[#31E981] text-[#0C0C0C] font-semibold rounded-full hover:bg-[#FE5F55] transition-colors">
+                Join for free
                 </Link>
+              
               </div>
             </div>
   
@@ -85,28 +85,31 @@ const Navbar = () => {
         {isMobileMenuOpen && (
           <div className="md:hidden bg-white/90 backdrop-blur-sm">
             <div className="px-4 pt-2 pb-4 space-y-3">
-              <a href="#features" className="block py-2 text-gray-600 hover:text-gray-900">
-                Features
-              </a>
-              <a href="#customers" className="block py-2 text-gray-600 hover:text-gray-900">
-                Customers
-              </a>
-              <a href="#pricing" className="block py-2 text-gray-600 hover:text-gray-900">
-                Pricing
-              </a>
-              <a href="#why-senja" className="block py-2 text-gray-600 hover:text-gray-900">
-                Why Senja
-              </a>
-              <a href="#resources" className="block py-2 text-gray-600 hover:text-gray-900">
-                Resources
-              </a>
+             <Link to={"/features"} className="block py-2 text-gray-600 hover:text-gray-900">
+             Features
+             </Link>
+             <Link to={"/customers"} className="block py-2 text-gray-600 hover:text-gray-900">
+             Customers
+             </Link>
+
+             <Link to={"/pricing"} className="block py-2 text-gray-600 hover:text-gray-900">
+             Pricing
+             </Link>
+             <Link to={"/why-cenphi"} className="block py-2 text-gray-600 hover:text-gray-900">
+             Why Cenphi
+             </Link>
+             <Link to={"/why-cenphi"} className="block py-2 text-gray-600 hover:text-gray-900">
+             Resources
+             </Link>
+             
               <div className="pt-4 space-y-3">
                 <button className="w-full text-left py-2 text-gray-600 hover:text-gray-900">
                   Login
                 </button>
-                <Button className="w-full bg-teal-500 hover:bg-teal-600 text-white">
-                  Sign up for free
-                </Button>
+                <button className="px-8 py-3 bg-[#31E981] text-[#0C0C0C] font-semibold rounded-full hover:bg-[#FE5F55] transition-colors">
+                Join for free
+              </button>
+               
               </div>
             </div>
           </div>
