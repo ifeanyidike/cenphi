@@ -2,11 +2,11 @@ import { UploadCloud, Video, BarChart, Share2 } from "lucide-react";
 
 const HowItWorks = () => {
   return (
-    <section className="py-16 bg-gradient-to-br from-gray-50 to-gray-100">
+    <section className="py-16 bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
       <div className="container mx-auto px-6 md:px-12">
         {/* Section Header */}
         <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold text-gray-800 w-2/4 text-center mx-auto">
+          <h2 className="text-4xl font-bold text-gray-800 w-3/4 text-center mx-auto">
             Start collecting & sharing testimonials
             <span className="text-rose-500"> in a few easy steps</span>
           </h2>
