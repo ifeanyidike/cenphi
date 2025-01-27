@@ -103,7 +103,7 @@ func (app *Application) Mount() http.Handler {
 
 	routes.RegisterRoutes(r,
 		app.HealthController,
-		app.UserController,
+		*app.UserController,
 		app.SwaggerController,
 		app.WorkspaceController,
 	)

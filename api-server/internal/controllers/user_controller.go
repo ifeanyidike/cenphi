@@ -3,12 +3,11 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
-	"github.com/ifeanyidike/cenphi/internal/apperrors"
 	"github.com/ifeanyidike/cenphi/internal/models"
 	"github.com/ifeanyidike/cenphi/internal/services"
 	"github.com/ifeanyidike/cenphi/internal/utils"
@@ -26,6 +25,9 @@ type userController struct {
 }
 
 func NewUserController(service services.UserService, logger *zap.Logger) UserController {
+	if service == nil || logger == nil {
+		panic("userService and logger must not be nil")
+	}
 	return &userController{service: service, logger: logger}
 }
 
@@ -41,19 +43,34 @@ func NewUserController(service services.UserService, logger *zap.Logger) UserCon
 // @Failure 404 {object} utils.ErrorResponse
 // @Router /users [get]
 func (c *userController) GetUser(w http.ResponseWriter, r *http.Request) {
-	id, err := uuid.Parse(chi.URLParam(r, "id"))
-	if err != nil {
-		utils.RespondWithError(w, http.StatusBadRequest, apperrors.ErrInvalidWorkspaceID.Error())
-		return
-	}
-	if id == uuid.Nil {
-		utils.RespondWithError(w, http.StatusBadRequest, "User ID is required")
+	// id, err := uuid.Parse(chi.URLParam(r, "id"))
+	// if err != nil {
+	// 	c.logger.Error("error getting user", zap.String("userID", id.String()), zap.Error(err))
+	// 	utils.RespondWithError(w, http.StatusBadRequest, apperrors.ErrInvalidWorkspaceID.Error())
+	// 	return
+	// }
+	// if id == uuid.Nil {
+	// 	utils.RespondWithError(w, http.StatusBadRequest, "User ID is required")
+	// 	return
+	// }
+
+	log.Printf("Request URL: %s", r.URL.String())
+
+	// Log the path specifically
+	log.Printf("Request Path: %s", r.URL.Path)
+
+	uid := chi.URLParam(r, "id")
+	log.Println("firebase uid", uid)
+
+	if uid == "" {
+		c.logger.Error("firebase uid is empty")
+		utils.RespondWithError(w, http.StatusBadRequest, "User UID is required")
 		return
 	}
 
-	user, err := c.service.GetUser(r.Context(), id)
+	user, err := c.service.FindByUID(r.Context(), uid)
 	if err != nil {
-		c.logger.Error("failed to get user", zap.String("userID", id.String()), zap.Error(err))
+		c.logger.Error("failed to get user", zap.String("userID", uid), zap.Error(err))
 		utils.RespondWithError(w, http.StatusNotFound, err.Error())
 		return
 	}

@@ -30,7 +30,7 @@ func (r *userRepository) Create(ctx context.Context, user *models.User) error {
 	query := `
 		INSERT INTO users 
 			(email, email_verified, first_name, last_name, firebase_uid, last_active, created_at) 
-		VALUES (?, ?, ?, ?, ?, ?)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
 	`
 	_, err := r.db.ExecContext(ctx, query,
 		user.Email,
