@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -33,9 +34,9 @@ type Workspace struct {
 	Name                string                 `json:"name" db:"name" validate:"required,min=3,max=100"`
 	WebsiteURL          string                 `json:"website_url,omitempty" db:"website_url" validate:"omitempty,url"`
 	Plan                Plan                   `json:"plan" db:"plan" validate:"required,oneof=free basic pro enterprise"`
+	CustomDomain        string                 `json:"custom_domain,omitempty" db:"custom_domain" validate:"omitempty,hostname_rfc1123"`
 	Settings            map[string]interface{} `json:"settings,omitempty" db:"settings"`
 	BrandingSettings    *BrandingSettings      `json:"branding_settings,omitempty" db:"branding_settings"`
-	CustomDomain        string                 `json:"custom_domain,omitempty" db:"custom_domain" validate:"omitempty,hostname_rfc1123"`
 	AnalyticsSettings   map[string]interface{} `json:"analytics_settings,omitempty" db:"analytics_settings"`
 	IntegrationSettings *IntegrationSettings   `json:"integration_settings,omitempty" db:"integration_settings"`
 	CreatedAt           time.Time              `json:"created_at" db:"created_at"`
@@ -59,4 +60,53 @@ func ValidateWorkspace(workspace *Workspace) error {
 		return fmt.Errorf("%w: %w", apperrors.ErrValidationFailed, err)
 	}
 	return nil
+}
+
+func (w *Workspace) MarshalSettings() (string, error) {
+	if w.Settings == nil {
+		return "{}", nil
+	}
+	data, err := json.Marshal(w.Settings)
+	return string(data), err
+}
+
+func (w *Workspace) MarshalBrandingSettings() (string, error) {
+	if w.BrandingSettings == nil {
+		return "{}", nil
+	}
+	data, err := json.Marshal(w.BrandingSettings)
+	return string(data), err
+}
+
+func (w *Workspace) MarshalAnalyticsSettings() (string, error) {
+	if w.AnalyticsSettings == nil {
+		return "{}", nil
+	}
+	data, err := json.Marshal(w.AnalyticsSettings)
+	return string(data), err
+}
+
+func (w *Workspace) MarshalIntegrationSettings() (string, error) {
+	if w.IntegrationSettings == nil {
+		return "{}", nil
+	}
+	data, err := json.Marshal(w.IntegrationSettings)
+	return string(data), err
+}
+
+// Helper to unmarshal fields
+func (w *Workspace) UnmarshalSettings(data string) error {
+	return json.Unmarshal([]byte(data), &w.Settings)
+}
+
+func (w *Workspace) UnmarshalBrandingSettings(data string) error {
+	return json.Unmarshal([]byte(data), &w.BrandingSettings)
+}
+
+func (w *Workspace) UnmarshalAnalyticsSettings(data string) error {
+	return json.Unmarshal([]byte(data), &w.AnalyticsSettings)
+}
+
+func (w *Workspace) UnmarshalIntegrationSettings(data string) error {
+	return json.Unmarshal([]byte(data), &w.IntegrationSettings)
 }

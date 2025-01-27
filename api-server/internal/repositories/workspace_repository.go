@@ -3,7 +3,9 @@ package repositories
 import (
 	"context"
 	"database/sql"
+	"log"
 
+	"github.com/google/uuid"
 	"github.com/ifeanyidike/cenphi/internal/models"
 )
 
@@ -38,4 +40,42 @@ func (r *workspaceRepository) FindByCustomDomain(ctx context.Context, customDoma
 		return nil, err
 	}
 	return &workspace, nil
+}
+
+func (r *workspaceRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Workspace, error) {
+	log.Println("id to get", id)
+	query :=
+		`
+        SELECT 
+            id, name, plan, custom_domain, created_at, updated_at
+        FROM workspaces
+        WHERE id = ?
+        `
+	row := r.db.QueryRowContext(ctx, query, id)
+
+	var workspace models.Workspace
+	err := row.Scan(&workspace.ID, &workspace.Name, &workspace.Plan, &workspace.CustomDomain, &workspace.CreatedAt, &workspace.UpdatedAt)
+	log.Println("error occurred in get", err)
+	if err != nil {
+		return nil, err
+	}
+	return &workspace, nil
+}
+
+func (r *workspaceRepository) Create(ctx context.Context, workspace *models.Workspace) error {
+	query := `
+		INSERT INTO workspaces 
+			(id, name, website_url, plan, custom_domain) 
+		VALUES (?, ?, ?, ?, ?)
+	`
+	result, err := r.db.ExecContext(ctx, query,
+		workspace.ID,
+		workspace.Name,
+		workspace.WebsiteURL,
+		workspace.Plan,
+		workspace.CustomDomain,
+	)
+	value, _ := result.RowsAffected()
+	log.Println("result received", value)
+	return err
 }
