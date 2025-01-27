@@ -18,12 +18,13 @@ func TestUserService(t *testing.T) {
 
 	t.Run("RegisterUser", func(t *testing.T) {
 		user := &models.User{
-			ID:        uuid.New(),
-			Email:     "create@example.com",
-			FirstName: "New",
-			LastName:  "User",
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
+			ID:          uuid.New(),
+			Email:       "create@example.com",
+			FirebaseUID: "firebase-uid",
+			FirstName:   "New",
+			LastName:    "User",
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
 		}
 
 		mockRepo.On("Create", mock.Anything, user).Return(nil)
@@ -35,12 +36,13 @@ func TestUserService(t *testing.T) {
 
 	t.Run("GetUser", func(t *testing.T) {
 		user := &models.User{
-			ID:        uuid.New(),
-			Email:     "get@example.com",
-			FirstName: "Get",
-			LastName:  "User",
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
+			ID:          uuid.New(),
+			Email:       "get@example.com",
+			FirebaseUID: "firebase-uuid",
+			FirstName:   "Get",
+			LastName:    "User",
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
 		}
 
 		mockRepo.On("GetByID", mock.Anything, user.ID).Return(user, nil)

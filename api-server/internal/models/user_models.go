@@ -16,7 +16,7 @@ type User struct {
 	LastName      string      `json:"last_name"`
 	Settings      interface{} `json:"settings"`
 	Permissions   interface{} `json:"permissions"`
-	LastActive    time.Time   `json:"last_active"`
+	LastActiveAt  time.Time   `json:"last_active_at"`
 	CreatedAt     time.Time   `json:"created_at"`
 	UpdatedAt     time.Time   `json:"updated_at,omitempty"`
 }

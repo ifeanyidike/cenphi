@@ -32,7 +32,7 @@ func (w *workspaceService) CreateWorkspace(ctx context.Context, workspace *model
 }
 
 func (w *workspaceService) UpdateWorkspace(ctx context.Context, id uuid.UUID, workspace *models.Workspace) error {
-	return w.repo.Update(ctx, workspace)
+	return w.repo.Update(ctx, workspace, id)
 }
 
 func (w *workspaceService) DeleteWorkspace(ctx context.Context, id uuid.UUID) error {

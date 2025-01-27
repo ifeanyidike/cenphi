@@ -30,8 +30,8 @@ func (m *UserService) FindByUID(ctx context.Context, uid string) (*models.User, 
 	return args.Get(0).(*models.User), args.Error(1)
 }
 
-func (m *UserService) UpdateUser(ctx context.Context, user *models.User) error {
-	args := m.Called(ctx, user)
+func (m *UserService) UpdateUser(ctx context.Context, user *models.User, id uuid.UUID) error {
+	args := m.Called(ctx, user, id)
 	return args.Error(0)
 }
 

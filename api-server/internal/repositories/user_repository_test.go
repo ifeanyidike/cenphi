@@ -45,7 +45,7 @@ func TestUserRepository(t *testing.T) {
 		user := &models.User{
 			ID:            uuid.New(),
 			Email:         "update@example.com",
-			FirebaseUID:   "firebase-uid",
+			FirebaseUID:   "firebase-uid-1",
 			EmailVerified: false,
 			FirstName:     "UpdatedFirstName",
 			LastName:      "UpdatedLastName",
@@ -59,7 +59,7 @@ func TestUserRepository(t *testing.T) {
 		user.FirstName = "UpdatedFirstName"
 		user.LastName = "UpdatedLastName"
 		user.UpdatedAt = time.Now()
-		err = repo.Update(context.Background(), user)
+		err = repo.Update(context.Background(), user, user.ID)
 		require.NoError(t, err)
 
 		// Verify the update.
@@ -74,7 +74,7 @@ func TestUserRepository(t *testing.T) {
 		user := &models.User{
 			ID:            uuid.New(),
 			Email:         "delete@example.com",
-			FirebaseUID:   "firebase-uid",
+			FirebaseUID:   "firebase-uid-2",
 			EmailVerified: false,
 			FirstName:     "Delete",
 			LastName:      "Me",

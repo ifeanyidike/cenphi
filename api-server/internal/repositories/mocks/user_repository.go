@@ -22,8 +22,8 @@ func (m *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Use
 	return args.Get(0).(*models.User), args.Error(1)
 }
 
-func (m *UserRepository) Update(ctx context.Context, user *models.User) error {
-	args := m.Called(ctx, user)
+func (m *UserRepository) Update(ctx context.Context, user *models.User, id uuid.UUID) error {
+	args := m.Called(ctx, user, id)
 	return args.Error(0)
 }
 

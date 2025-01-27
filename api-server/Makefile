@@ -40,6 +40,7 @@ create:
 # Initialize the database (optional custom logic)
 init-db:
 	@echo "Initializing the database..."
-	PGPASSWORD=${DB_PASSWORD} psql -h localhost -U ${DB_USERNAME} -d ${DB_NAME} -f ./scripts/init_db.sql
+	# docker exec -it PGPASSWORD=${DB_PASSWORD} psql -h localhost -U ${DB_USERNAME} -d ${DB_NAME} -f ./scripts/init_db.sql
+	docker exec -it cenphi_postgres psql -U ${DB_USERNAME} -d ${DB_NAME} -f ./scripts/init_db.sql
 swagger:
 	swag init -g cmd/main.go --parseDependency
