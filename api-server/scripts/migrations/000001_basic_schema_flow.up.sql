@@ -58,6 +58,7 @@ CREATE TABLE audit_log (
 CREATE TABLE workspaces (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(255) NOT NULL,
+    website_url VARCHAR(255) NOT NULL,
     plan workspace_plan DEFAULT 'free',
     settings JSONB DEFAULT '{}',
     branding_settings JSONB DEFAULT '{}',
@@ -68,20 +69,28 @@ CREATE TABLE workspaces (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE team_members (
+CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
-    email VARCHAR(255) NOT NULL,
+    firebase_uid VARCHAR(128) NOT NULL UNIQUE,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    email_verified BOOLEAN DEFAULT FALSE,
     first_name VARCHAR(100),
     last_name VARCHAR(100),
-    role member_role NOT NULL,
-    firebase_uid VARCHAR(128) NOT NULL,
     settings JSONB DEFAULT '{}',
     permissions JSONB DEFAULT '{}',
     last_active_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE team_members (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    role member_role NOT NULL,
+    settings JSONB DEFAULT '{}',
+    permissions JSONB DEFAULT '{}',
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(workspace_id, email)
-    UNIQUE(firebase_uid)
+    UNIQUE(workspace_id, user_id)
 );
 
 CREATE TABLE testimonials (
