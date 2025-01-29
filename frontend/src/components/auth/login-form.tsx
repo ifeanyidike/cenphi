@@ -23,6 +23,7 @@ export function LoginForm({
     e.preventDefault();
     await onSubmit({ email, password });
   };
+  console.log("error");
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
