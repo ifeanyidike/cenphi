@@ -16,7 +16,7 @@ const Navbar = () => {
     }, []);
   
     return (
-      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+      <nav className={`fixed max-7xl top-0 left-0 right-0 z-50 transition-all duration-300 overflow-hidden ${
         isScrolled ? 'bg-white/80 backdrop-blur-sm shadow-lg' : 'bg-transparent'
       }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -62,7 +62,7 @@ const Navbar = () => {
                 <Link to="/signin" className="text-gray-600 hover:text-gray-900 mx-2 px-4 py-2 rounded-lg">
                   Login
                 </Link>
-                <Link to="signup" className="px-8 py-3 bg-[#31E981] text-[#0C0C0C] font-semibold rounded-full hover:bg-[#FE5F55] transition-colors">
+                <Link to="signup" className="px-8 py-3 bg-[#2D2D2A] text-[#FFFFFF] font-semibold rounded-full hover:bg-[#C14953] transition-colors duration-300">
                 Join for free
                 </Link>
               

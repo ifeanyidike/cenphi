@@ -29,8 +29,8 @@ const ReviewWidget = () => {
   ];
 
   return (
-    <div className="w-full max-w-6xl mx-auto p-8">
-      <div className="grid md:grid-cols-2 gap-5 bg-gradient-to-br from-[#31E981]/30 to-white rounded-lg items-start p-10">
+    <div className="w-full max-w-7xl mx-auto p-8 overflow-hidden">
+      <div className="grid md:grid-cols-2 gap-5 bg-[#2D2D2A] rounded-2xl items-start p-10">
         {/* Review Cards Column */}
         <div className="space-y-4">
           {reviews.map((review) => (
@@ -88,7 +88,7 @@ const ReviewWidget = () => {
 
         {/* Image Column */}
         <div className="relative">
-          <div className="w-[600px] h-[600px] rounded-xl overflow-hidden">
+          <div className="w-[600px] h-[600px] bg-[#E5DCC5]/10 rounded-full overflow-hidden">
             <img 
               src={GirlwithFlower} 
               alt="Plant Review" 

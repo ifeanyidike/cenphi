@@ -10,6 +10,9 @@ import FeaturedCarousel1 from "@/components/custom/featuredcarousel";
 import Widget from "@/components/custom/widgetcomponent";
 import TestimonialSection2 from "@/components/custom/testimonialsection2";
 import IntegrationSection from "@/components/custom/integrationsection";
+import TestimonialSharingSection3 from "@/components/custom/testimonialsection3";
+import ReviewSection from "@/components/custom/reviewsection";
+import Footer from "@/components/custom/footer";
 
 
 
@@ -24,6 +27,10 @@ const LandingPage = () => {
       <Widget />  
       <TestimonialSection2 />
       <IntegrationSection />
+      <TestimonialSharingSection3 />
+      <ReviewSection />
+      <Footer />
+      {/* <HeroSection />
       {/* <TestimonialShowcase />
       <TestimonialsSection />
       <HowItWorks /> */}
