@@ -261,13 +261,13 @@ const IntegrationSection = () => {
     <div className="max-w-7xl mx-auto px-4 py-24 bg-gradient-to-b from-white to-gray-50">
       <div className="text-center mb-16">
         <h2 className="text-4xl font-bold mb-6 text-[#2D2D2A]">
-          "The best part is that it{' '}
+          The best part is that it{' '}
           <span className="text-[#C14953] relative">
             integrates seamlessly
             <svg className="absolute -bottom-2 left-0 w-full" viewBox="0 0 100 8" preserveAspectRatio="none">
               <path d="M0,5 Q50,8 100,5" stroke="#C14953" strokeWidth="2" fill="none"/>
             </svg>
-          </span>"
+          </span>
         </h2>
         
         <div className="flex flex-col items-center gap-4">

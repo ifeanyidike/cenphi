@@ -91,255 +91,80 @@ import { Quote } from 'lucide-react';
 
 const ProductDataCard = () => {
   return (
-<div className="w-full max-w-7xl mx-auto p-8 overflow-hidden">
+    <div className="w-full max-w-7xl mx-auto p-4 sm:p-6 md:p-8 overflow-hidden">
+      <div className="bg-[#2D2D2A] rounded-xl sm:rounded-2xl text-[#E5DCC5] p-4 sm:p-6 md:p-8 min-h-[400px]">
+        <div className="max-w-6xl mx-auto">
+          {/* Header Section */}
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2">Product Data</h1>
+          <h2 className="text-xl sm:text-2xl mb-4 sm:mb-8 text-[#848FA5]">
+            Elevating Product Insights Through Reviews
+          </h2>
 
-
-   <div className=" bg-[#2D2D2A] rounded-2xl text-[#E5DCC5] p-8 min-h-[400px]">
-      <div className="max-w-6xl mx-auto">
-        {/* Header Section */}
-        <h1 className="text-4xl font-bold mb-2">Product Data</h1>
-        <h2 className="text-2xl mb-8 text-[#848FA5]">
-          Elevating Product Insights Through Reviews
-        </h2>
-
-        {/* Main Text */}
-        <p className="text-lg mb-12 max-w-3xl">
-          Gathering product reviews may be a simple task, but collecting accurate
-          information and displaying it strategically to customers can make the
-          difference between an average product page and one that genuinely
-          converts.
-        </p>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-          {/* Rating Card */}
-          <div className="bg-[#4C4C47] p-6 rounded-lg">
-            <div className="flex items-center mb-2">
-              {[...Array(5)].map((_, i) => (
-                <Star
-                  key={i}
-                  className="w-6 h-6 text-yellow-500 fill-yellow-500"
-                />
-              ))}
-            </div>
-            <div className="text-3xl font-bold mb-1">4.9/5.0</div>
-            <div className="text-[#848FA5]">Average Customer Rating</div>
-          </div>
-
-          {/* Satisfaction Card */}
-          <div className="bg-[#4C4C47] p-6 rounded-lg">
-            <div className="text-3xl font-bold mb-1">98%</div>
-            <div className="text-[#848FA5]">Customer Satisfaction</div>
-            <div className="text-sm mt-1">Based on 1000+ reviews</div>
-          </div>
-        </div>
-
-        {/* Testimonial Card */}
-        <div className="bg-[#E5DCC5] text-[#2D2D2A] p-8 rounded-lg">
-          <div className="hidden lg:flex">
-                         <Quote className="w-10 h-10 text-[#C14953] transform -scale-x-100" />
-                       </div>
-          <p className="text-lg mb-6">
-            Cenphi.io offers a wealth of features to quickly gain and build trust
-            for products, strategically displaying customer feedback that
-            transforms a good product page into a converting powerhouse.
+          {/* Main Text */}
+          <p className="text-base sm:text-lg mb-6 sm:mb-12 max-w-3xl">
+            Gathering product reviews may be a simple task, but collecting accurate
+            information and displaying it strategically to customers can make the
+            difference between an average product page and one that genuinely
+            converts.
           </p>
-          
-          <div className="flex items-center">
-            <div className="w-12 h-12 rounded-full bg-[#C14953] flex items-center justify-center text-[#E5DCC5] font-bold mr-4">
-              DS
+
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-12">
+            {/* Rating Card */}
+            <div className="bg-[#4C4C47] p-4 sm:p-6 rounded-lg">
+              <div className="flex items-center mb-2">
+                {[...Array(5)].map((_, i) => (
+                  <Star
+                    key={i}
+                    className="w-4 h-4 sm:w-6 sm:h-6 text-yellow-500 fill-yellow-500"
+                  />
+                ))}
+              </div>
+              <div className="text-2xl sm:text-3xl font-bold mb-1">4.9/5.0</div>
+              <div className="text-sm sm:text-base text-[#848FA5]">Average Customer Rating</div>
             </div>
-            <div>
-              <div className="font-bold">Daniel Singh</div>
-              <div className="text-[#4C4C47]">Co-Founder @ Concrete Jungle</div>
+
+            {/* Satisfaction Card */}
+            <div className="bg-[#4C4C47] p-4 sm:p-6 rounded-lg">
+              <div className="text-2xl sm:text-3xl font-bold mb-1">98%</div>
+              <div className="text-sm sm:text-base text-[#848FA5]">Customer Satisfaction</div>
+              <div className="text-xs sm:text-sm mt-1">Based on 1000+ reviews</div>
             </div>
           </div>
-        </div>
 
-        {/* CTA Button */}
-        <button className="mt-8 bg-[#C14953] text-[#E5DCC5] px-6 py-3 rounded-lg hover:bg-opacity-90 transition-opacity flex items-center">
-          READ CASE STUDY
-          <svg className="w-4 h-4 ml-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M5 12h14M12 5l7 7-7 7"/>
-          </svg>
-        </button>
+          {/* Testimonial Card */}
+          <div className="bg-[#E5DCC5] text-[#2D2D2A] p-4 sm:p-6 md:p-8 rounded-lg">
+            <div className="hidden lg:flex mb-4">
+              <Quote className="w-8 h-8 sm:w-10 sm:h-10 text-[#C14953] transform -scale-x-100" />
+            </div>
+            <p className="text-base sm:text-lg mb-4 sm:mb-6">
+              Cenphi.io offers a wealth of features to quickly gain and build trust
+              for products, strategically displaying customer feedback that
+              transforms a good product page into a converting powerhouse.
+            </p>
+            
+            <div className="flex items-center">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-[#C14953] flex items-center justify-center text-[#E5DCC5] font-bold mr-3 sm:mr-4">
+                DS
+              </div>
+              <div>
+                <div className="font-bold text-sm sm:text-base">Daniel Singh</div>
+                <div className="text-[#4C4C47] text-xs sm:text-sm">Co-Founder @ Concrete Jungle</div>
+              </div>
+            </div>
+          </div>
+
+          {/* CTA Button */}
+          <button className="w-full sm:w-auto mt-6 sm:mt-8 bg-[#C14953] text-[#E5DCC5] px-4 sm:px-6 py-3 rounded-lg hover:bg-opacity-90 transition-opacity flex items-center justify-center sm:justify-start">
+            READ CASE STUDY
+            <svg className="w-4 h-4 ml-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
-    
-   </div>
   );
 };
 
 export default ProductDataCard;
-
-// import React from 'react';
-// import { Star } from 'lucide-react';
-
-// const ProductDataCard = () => {
-//   return (
-//     <div className="bg-white p-12 min-h-[400px]">
-//       <div className="max-w-6xl mx-auto">
-//         {/* Header Section */}
-//         <h1 className="text-4xl font-bold mb-2 text-[#848FA5]">Product Data</h1>
-//         <h2 className="text-2xl mb-12 text-black">
-//           Elevating Product Insights Through Reviews
-//         </h2>
-
-//         {/* Main Text */}
-//         <p className="text-lg mb-16 max-w-3xl text-gray-600">
-//           Gathering product reviews may be a simple task, but collecting accurate
-//           information and displaying it strategically to customers can make the
-//           difference between an average product page and one that genuinely
-//           converts.
-//         </p>
-
-//         {/* Stats Grid */}
-//         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-16">
-//           {/* Rating Card */}
-//           <div className="bg-white border border-gray-100 p-8 rounded-lg shadow-sm">
-//             <div className="flex items-center mb-3">
-//               {[...Array(5)].map((_, i) => (
-//                 <Star
-//                   key={i}
-//                   className="w-6 h-6 fill-[#C14953] text-[#C14953]"
-//                 />
-//               ))}
-//             </div>
-//             <div className="text-4xl font-bold mb-2 text-[#848FA5]">4.9/5.0</div>
-//             <div className="text-gray-500">Average Customer Rating</div>
-//           </div>
-
-//           {/* Satisfaction Card */}
-//           <div className="bg-white border border-gray-100 p-8 rounded-lg shadow-sm">
-//             <div className="text-4xl font-bold mb-2 text-[#848FA5]">98%</div>
-//             <div className="text-gray-500">Customer Satisfaction</div>
-//             <div className="text-sm mt-2 text-gray-400">Based on 1000+ reviews</div>
-//           </div>
-//         </div>
-
-//         {/* Testimonial Card */}
-//         <div className="bg-white border border-gray-100 p-10 rounded-lg shadow-sm mb-12">
-//           <div className="text-[#C14953] text-6xl mb-6">"</div>
-//           <p className="text-xl mb-8 text-gray-600 leading-relaxed">
-//             Cenphi.io offers a wealth of features to quickly gain and build trust
-//             for products, strategically displaying customer feedback that
-//             transforms a good product page into a converting powerhouse.
-//           </p>
-          
-//           <div className="flex items-center">
-//             <div className="w-12 h-12 rounded-full bg-[#848FA5] flex items-center justify-center text-white font-bold mr-4">
-//               DS
-//             </div>
-//             <div>
-//               <div className="font-bold text-gray-800">Daniel Singh</div>
-//               <div className="text-gray-500">Co-Founder @ Concrete Jungle</div>
-//             </div>
-//           </div>
-//         </div>
-
-//         {/* CTA Button */}
-//         <button className="bg-white border-2 border-[#C14953] text-[#C14953] px-8 py-3 rounded-lg hover:bg-[#C14953] hover:text-white transition-all duration-200 flex items-center font-medium">
-//           READ CASE STUDY
-//           <svg className="w-4 h-4 ml-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-//             <path d="M5 12h14M12 5l7 7-7 7"/>
-//           </svg>
-//         </button>
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default ProductDataCard;
-
-
-// import React from 'react';
-// import { Quote, Star, ArrowRight } from 'lucide-react';
-// import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-// import { Button } from "@/components/ui/button";
-
-// const ProductDataCard = () => {
-//   return (
-//     <div className="w-full max-w-7xl mx-auto p-8">
-//       <Card className="bg-[#2D2D2A] text-[#E5DCC5] border-none">
-//         <CardContent className="p-8">
-//           <div className="space-y-8">
-//             {/* Header Section */}
-//             <div className="space-y-4">
-//               <CardTitle className="text-4xl">Product Data</CardTitle>
-//               <h2 className="text-2xl text-[#848FA5]">
-//                 Elevating Product Insights Through Reviews
-//               </h2>
-//             </div>
-
-//             {/* Main Text */}
-//             <p className="text-lg max-w-3xl">
-//               Gathering product reviews may be a simple task, but collecting accurate
-//               information and displaying it strategically to customers can make the
-//               difference between an average product page and one that genuinely converts.
-//             </p>
-
-//             {/* Stats Grid */}
-//             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-//               {/* Rating Card */}
-//               <Card className="bg-[#4C4C47] border-none">
-//                 <CardContent className="p-6">
-//                   <div className="flex items-center mb-2">
-//                     {[...Array(5)].map((_, i) => (
-//                       <Star
-//                         key={i}
-//                         className="w-6 h-6 fill-[#C14953] text-[#C14953]"
-//                       />
-//                     ))}
-//                   </div>
-//                   <div className="text-3xl font-bold mb-1">4.9/5.0</div>
-//                   <div className="text-[#848FA5]">Average Customer Rating</div>
-//                 </CardContent>
-//               </Card>
-
-//               {/* Satisfaction Card */}
-//               <Card className="bg-[#4C4C47] border-none">
-//                 <CardContent className="p-6">
-//                   <div className="text-3xl font-bold mb-1">98%</div>
-//                   <div className="text-[#848FA5]">Customer Satisfaction</div>
-//                   <div className="text-sm mt-1">Based on 1000+ reviews</div>
-//                 </CardContent>
-//               </Card>
-//             </div>
-
-//             {/* Testimonial Card */}
-//             <Card className="bg-[#E5DCC5] border-none">
-//               <CardContent className="p-8">
-//                 <Quote className="w-12 h-12 text-[#C14953] mb-4" />
-//                 <p className="text-lg text-[#2D2D2A] mb-6">
-//                   Cenphi.io offers a wealth of features to quickly gain and build trust
-//                   for products, strategically displaying customer feedback that
-//                   transforms a good product page into a converting powerhouse.
-//                 </p>
-                
-//                 <div className="flex items-center">
-//                   <div className="w-12 h-12 rounded-full bg-[#C14953] flex items-center justify-center text-[#E5DCC5] font-bold mr-4">
-//                     DS
-//                   </div>
-//                   <div>
-//                     <div className="font-bold text-[#2D2D2A]">Daniel Singh</div>
-//                     <div className="text-[#4C4C47]">Co-Founder @ Concrete Jungle</div>
-//                   </div>
-//                 </div>
-//               </CardContent>
-//             </Card>
-
-//             {/* CTA Button */}
-//             <Button 
-//               className="bg-[#C14953] text-[#E5DCC5] hover:bg-[#A13943] transition-colors"
-//             >
-//               READ CASE STUDY
-//               <ArrowRight className="w-4 h-4 ml-2" />
-//             </Button>
-//           </div>
-//         </CardContent>
-//       </Card>
-//     </div>
-//   );
-// };
-
-// export default ProductDataCard;
