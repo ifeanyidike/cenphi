@@ -34,7 +34,7 @@ const LandingPage = () => {
       {/* <TestimonialShowcase />
       <TestimonialsSection />
       <HowItWorks /> */}
-      <h1>My name is Edward. I am a forex trader and developer</h1>
+      
     </>
   );
 };

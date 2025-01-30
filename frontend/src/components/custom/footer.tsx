@@ -56,10 +56,10 @@ const Footer = () => {
 
   return (
     <footer className="bg-[#2D2D2A] text-[#E5DCC5]">
-      <div className="max-w-7xl mx-auto px-4 py-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         {/* Top section with logo and auth buttons */}
-        <div className="flex justify-between items-center pb-12 border-b border-[#E5DCC5]/10">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row justify-between items-center pb-12 border-b border-[#E5DCC5]/10">
+          <div className="flex items-center gap-2 mb-4 sm:mb-0">
             <div className="w-8 h-8 bg-[#C14953] rounded-full" />
             <span className="text-xl font-bold">CENPHI.io</span>
           </div>
@@ -75,7 +75,7 @@ const Footer = () => {
         </div>
 
         {/* Main navigation grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 py-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 py-12">
           {Object.entries(navigation).map(([title, items]) => (
             <div key={title}>
               <h3 className="font-semibold mb-4 text-white">{title}</h3>
@@ -117,7 +117,7 @@ const Footer = () => {
               <a href="#" className="hover:text-[#C14953]">Data Request</a>
             </div>
             
-            <p className="text-sm text-[#E5DCC5]/50">
+            <p className="text-sm text-[#E5DCC5]/50 text-center sm:text-left">
               © 2024 Cenphi.io | Convert more visitors into sales
             </p>
           </div>

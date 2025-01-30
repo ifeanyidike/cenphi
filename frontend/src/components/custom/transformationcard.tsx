@@ -109,7 +109,7 @@ const TransformationCard = () => {
     <div className="max-w-7xl mx-auto p-8 overflow-hidden">
       <div className="flex items-center justify-center text-center mb-12">
         <blockquote className="w-2/4 text-2xl md:text-3xl font-bold text-[#2D2D2A] mb-4">
-          "Transform your business journey with the power of social proof"
+          Transform your business journey with the power of social proof
         </blockquote>
       </div>
 

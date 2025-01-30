@@ -18,30 +18,26 @@ const FeatureCarousel = () => {
     {
       id: 1,
       title: "Powerful Dashboard",
-      description: "Keep all your testimonials organized and safe, and have easy filtering tools that make finding them simple.",
-      icon: <LineChart className="w-6 h-6" />,
-      review: "Our team has never been more efficient. The powerful dashboard helped us organize and categorize thousands of customer testimonials. It saves hours every week, and filtering is seamless."
+      description: "Keep all your testimonials organized with smart filtering tools.",
+      icon: <LineChart className="w-6 h-6" />
     },
     {
       id: 2,
       title: "Auto-Transcription",
-      description: "Automatically transcribe your video reviews into text, making them easy to digest and organize by product or feedback.",
-      icon: <FileText className="w-6 h-6" />,
-      review: "The auto-transcription tool is a game-changer. It simplifies the process of converting video reviews to text, which makes sorting and sharing reviews on social media a breeze."
+      description: "Convert video reviews to text automatically for easy organization.",
+      icon: <FileText className="w-6 h-6" />
     },
     {
       id: 3,
       title: "Advanced Search",
-      description: "Find the perfect testimonial with powerful filters and advanced search capabilities.",
-      icon: <Search className="w-6 h-6" />,
-      review: "Advanced Search has made finding specific testimonials incredibly fast. Whether searching by customer name or keywords, it ensures the perfect feedback is always within reach."
+      description: "Find the perfect testimonial instantly with powerful filters.",
+      icon: <Search className="w-6 h-6" />
     },
     {
       id: 4,
       title: "HD Video Downloads",
-      description: "Download video testimonials in high-quality format for your marketing needs.",
-      icon: <Video className="w-6 h-6" />,
-      review: "The ability to download HD video testimonials has elevated our marketing campaigns. The quality is superb, and it allows us to repurpose videos across multiple platforms."
+      description: "Download high-quality videos ready for your marketing needs.",
+      icon: <Video className="w-6 h-6" />
     }
   ];
 
@@ -49,7 +45,7 @@ const FeatureCarousel = () => {
     {
       id: 1,
       quote: 
-        "The intuitive auto-transcription feature has been an absolute game-changer for my team. Before using this tool, we spent hours manually transcribing customer video reviews, which was both time-consuming and inefficient. Now, the process is entirely automated, and the transcripts are highly accurate, saving us hours of labor. It’s also easy to organize the testimonials by categories or products, making it simple to showcase specific feedback to potential customers. Since we started using this tool, engagement on our landing pages has increased significantly, and our conversion rate is up by 30%. I recommend this tool to anyone looking to enhance their customer feedback system.",
+        "The auto-transcription feature has been an absolute game-changer. We've saved countless hours on manual transcription ,and our landing page conversion rate is up by 30%. My team and I now experience the benefits of social proof with the help of the widget offered to us by cenphi.io. It's the perfect tool for managing customer testimonials.",
       author: "Sophie O'Neal",
       position: "CRO @ Show Me More",
       image: ReviewImage2
@@ -57,7 +53,7 @@ const FeatureCarousel = () => {
     {
       id: 2,
       quote: 
-        "The dashboard has been a revelation for our team. Its user-friendly design allows us to organize and analyze hundreds of testimonials effortlessly. The ability to filter feedback by specific keywords, products, or even customer sentiment has made it so much easier to find the most impactful reviews to share with our stakeholders. We’ve saved countless hours that would have been spent digging through scattered data, and our marketing campaigns have become more targeted as a result. Additionally, the powerful visualization tools help us track trends and uncover areas for improvement. This platform has truly transformed how we collect and utilize customer feedback in our organization.",
+        "This platform transformed how we handle customer feedback. The powerful dashboard and filtering tools make it incredibly easy to find and share the most impactful reviews with our stakeholders.",
       author: "Sarah Chen",
       position: "Product Manager at TechCorp",
       image: ReviewerImage
@@ -73,15 +69,46 @@ const FeatureCarousel = () => {
   };
 
   return (
-    <div className="w-full max-w-7xl bg-white mx-auto py-16 px-4 overflow-hidden">
+    <div className="w-full max-w-7xl bg-white mx-auto py-8 md:py-16 px-4 overflow-hidden">
       <div className="max-w-6xl mx-auto">
-        <div className="grid md:grid-cols-2 gap-12">
+        <div className="flex flex-col md:grid md:grid-cols-2 gap-8 md:gap-12">
+          {/* Features Section */}
+          <div className="order-1 md:order-2">
+            <h3 className="text-base md:text-lg font-bold text-[#2D2D2A] uppercase italic tracking-wider mb-3">
+              Testimonial Management
+            </h3>
+            <h2 className="text-3xl md:text-4xl font-bold text-[#2D2D2A] mb-8 md:mb-10 leading-tight">
+              Find the perfect testimonial every time
+            </h2>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              {features.map((feature) => (
+                <div
+                  key={feature.id}
+                  className="p-6 md:p-8 rounded-xl bg-white border border-[#2D2D2A]/20 hover:border-[#2D2D2A] transition-colors group"
+                >
+                  <div className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-[#E5DCC5] flex items-center justify-center mb-4 md:mb-5 group-hover:bg-[#2D2D2A] transition-colors">
+                    <div className="text-[#C14953] group-hover:text-white transition-colors">
+                      {feature.icon}
+                    </div>
+                  </div>
+                  <h3 className="text-xl md:text-2xl font-semibold text-[#2D2D2A] mb-3">
+                    {feature.title}
+                  </h3>
+                  <p className="text-base md:text-lg text-[#848FA5] leading-relaxed">
+                    {feature.description}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Testimonial Section */}
-          <div className="relative">
-            <div className="bg-[#2D2D2A] rounded-3xl p-8 relative overflow-hidden h-full flex items-center">
+          <div className="relative order-2 md:order-1">
+            <div className="bg-[#2D2D2A] rounded-2xl md:rounded-3xl p-8 md:p-10 relative overflow-hidden h-full flex items-center">
               {/* Decorative quote mark */}
-              <div className="absolute top-4 left-4 p-4 rounded-full">
-                <Quote className="w-12 h-12 text-[#E5DCC5]" />
+              <div className="absolute top-6 left-6 p-2 md:p-4 rounded-full">
+                <Quote className="w-10 h-10 md:w-14 md:h-14 text-[#E5DCC5]" />
               </div>
               
               {testimonials.map((testimonial, index) => (
@@ -91,12 +118,12 @@ const FeatureCarousel = () => {
                     index === activeSlide ? 'opacity-100' : 'opacity-0 absolute'
                   }`}
                 >
-                  <blockquote className="text-[#E5DCC5] text-2xl font-lg text-justified mb-6 relative z-10">
+                  <blockquote className="text-[#E5DCC5] text-xl md:text-3xl font-medium leading-relaxed mb-8 relative z-10 mt-12 md:mt-8">
                     "{testimonial.quote}"
                   </blockquote>
                   
                   <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 rounded-full overflow-hidden">
+                    <div className="w-12 h-12 md:w-14 md:h-14 rounded-full overflow-hidden">
                       <img 
                         src={testimonial.image} 
                         alt={testimonial.author}
@@ -104,63 +131,32 @@ const FeatureCarousel = () => {
                       />
                     </div>
                     <div>
-                      <h4 className="text-white font-semibold">{testimonial.author}</h4>
-                      <p className="text-white/80 text-sm">{testimonial.position}</p>
+                      <h4 className="text-lg md:text-xl font-semibold text-white">
+                        {testimonial.author}
+                      </h4>
+                      <p className="text-base md:text-lg text-white/80">
+                        {testimonial.position}
+                      </p>
                     </div>
                   </div>
                 </div>
               ))}
               
               {/* Navigation buttons */}
-              <div className="absolute bottom-4 right-4 flex space-x-2">
+              <div className="absolute bottom-6 right-6 flex space-x-3">
                 <button
                   onClick={prevSlide}
-                  className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors"
+                  className="p-2 md:p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors"
                 >
-                  <ChevronLeft className="w-5 h-5 text-white" />
+                  <ChevronLeft className="w-6 h-6 md:w-7 md:h-7 text-white" />
                 </button>
                 <button
                   onClick={nextSlide}
-                  className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors"
+                  className="p-2 md:p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors"
                 >
-                  <ChevronRight className="w-5 h-5 text-white" />
+                  <ChevronRight className="w-6 h-6 md:w-7 md:h-7 text-white" />
                 </button>
               </div>
-              
-            </div>
-          </div>
-
-          {/* Features Section */}
-          <div>
-            <h3 className="text-sm font-bold text-[#2D2D2A] uppercase itallic bold tracking-wider mb-2">
-              Testimonial Management
-            </h3>
-            <h2 className="text-3xl font-bold text-[#2D2D2A] mb-8">
-              Organize & find the perfect testimonial every time
-            </h2>
-            
-            <div className="grid grid-cols-2 gap-6">
-              {features.map((feature) => (
-                <div
-                  key={feature.id}
-                  className="p-6 rounded-xl bg-white border border-[#2D2D2A]/20 hover:border-[#2D2D2A] transition-colors group"
-                >
-                  <div className="w-12 h-12 rounded-full bg-[#E5DCC5] flex items-center justify-center mb-4 group-hover:bg-[#2D2D2A] transition-colors">
-                    <div className="text-[#C14953] group-hover:text-white transition-colors">
-                      {feature.icon}
-                    </div>
-                  </div>
-                  <h3 className="font-semibold text-[#2D2D2A] mb-2">
-                    {feature.title}
-                  </h3>
-                  <p className="text-sm text-[#848FA5]">
-                    {feature.description}
-                  </p>
-                  <p className="text-xs text-[#2D2D2A] mt-2">
-                    <strong>Review:</strong> {feature.review}
-                  </p>
-                </div>
-              ))}
             </div>
           </div>
         </div>

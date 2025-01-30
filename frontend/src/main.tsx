@@ -4,6 +4,7 @@ import "./index.css";
 
 import { RouterProvider } from "react-router-dom";
 import { router } from "./util/routes";
+import Navbar from "@/components/custom/nav-bar-simple";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
