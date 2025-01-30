@@ -1,10 +1,21 @@
 import React from 'react'
+import PricingSection from '@/components/custom/pricingfreesection'
+import PricingPreiumSection from '@/components/custom/presingsectionpremium'
+import FAQSection from '@/components/custom/faq'
+import TestimonialSection4 from '@/components/custom/testimonialsection4'
+import ReviewSection from "@/components/custom/reviewsection";
+import Footer from "@/components/custom/footer";
 
 const Pricing = () => {
   return (
-    <div className='min-h-screen flex items-center justify-center text-4xl md:text-5xl lg:text-6xl font-bold text-gray-800 leading-tigh'>
-    <h1 className="text-transparent bg-clip-text bg-gradient-to-r from-teal-500 to-rose-500"> Cenphi offers the most affordable price in the market. Give us benefit of doubt and you will not regret it</h1>
-</div>
+    <>
+<PricingSection />
+<PricingPreiumSection />
+<FAQSection />
+<TestimonialSection4 />
+<ReviewSection />
+<Footer />
+  </>
   )
 }
 
