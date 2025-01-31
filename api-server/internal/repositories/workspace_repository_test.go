@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-redis/redismock/v9"
 	"github.com/google/uuid"
 	"github.com/ifeanyidike/cenphi/internal/models"
 	"github.com/ifeanyidike/cenphi/internal/repositories"
@@ -16,7 +17,8 @@ func TestWorkspaceRepository(t *testing.T) {
 	db, cleanup := repositories.SetupTestDB()
 	defer cleanup()
 
-	repo := repositories.NewWorkspaceRepository(db)
+	redisClient, _ := redismock.NewClientMock()
+	repo := repositories.NewWorkspaceRepository(redisClient)
 
 	t.Run("CreateWorkspace", func(t *testing.T) {
 		workspace := &models.Workspace{
@@ -49,17 +51,17 @@ func TestWorkspaceRepository(t *testing.T) {
 		// integrationJSON, _ := workspace.MarshalIntegrationSettings()
 
 		t.Log("Before running create")
-		err := repo.Create(context.Background(), workspace)
+		err := repo.Create(context.Background(), workspace, db)
 		t.Log("After running create")
 		require.NoError(t, err)
 
-		storedUser, err := repo.GetByID(context.Background(), workspace.ID)
+		storedUser, err := repo.GetByID(context.Background(), workspace.ID, db)
 		require.NoError(t, err)
 		assert.Equal(t, workspace.Name, storedUser.Name)
 		assert.Equal(t, workspace.ID, storedUser.ID)
 		assert.Equal(t, workspace.WebsiteURL, storedUser.WebsiteURL)
 
-		storedUser, err = repo.GetByID(context.Background(), workspace.ID)
+		storedUser, err = repo.GetByID(context.Background(), workspace.ID, db)
 		require.NoError(t, err)
 		assert.Equal(t, workspace.Name, storedUser.Name)
 		assert.Equal(t, workspace.ID, storedUser.ID)
@@ -92,7 +94,7 @@ func TestWorkspaceRepository(t *testing.T) {
 			},
 			WebsiteURL: "https://my-org.cenphi.app",
 		}
-		err := repo.Create(context.Background(), workspace)
+		err := repo.Create(context.Background(), workspace, db)
 		require.NoError(t, err)
 
 		// Update the workspace.
@@ -107,11 +109,11 @@ func TestWorkspaceRepository(t *testing.T) {
 		workspace.WebsiteURL = "https://updated-my-org.cenphi.app"
 
 		workspace.UpdatedAt = time.Now()
-		err = repo.Update(context.Background(), workspace, workspace.ID)
+		err = repo.Update(context.Background(), workspace, workspace.ID, db)
 		require.NoError(t, err)
 
 		// Verify the update.
-		storedWorkspace, err := repo.GetByID(context.Background(), workspace.ID)
+		storedWorkspace, err := repo.GetByID(context.Background(), workspace.ID, db)
 		require.NoError(t, err)
 		assert.Equal(t, workspace.Name, storedWorkspace.Name)
 		assert.Equal(t, workspace.ID, storedWorkspace.ID)
@@ -145,13 +147,13 @@ func TestWorkspaceRepository(t *testing.T) {
 			},
 			WebsiteURL: "https://my-org.cenphi.app",
 		}
-		err := repo.Create(context.Background(), workspace)
+		err := repo.Create(context.Background(), workspace, db)
 		require.NoError(t, err)
 
-		err = repo.Delete(context.Background(), workspace.ID)
+		err = repo.Delete(context.Background(), workspace.ID, db)
 		require.NoError(t, err)
 
-		_, err = repo.GetByID(context.Background(), workspace.ID)
+		_, err = repo.GetByID(context.Background(), workspace.ID, db)
 		// require.NoError(t, err)
 		// assert.Nil(t, err)
 		assert.Error(t, err)

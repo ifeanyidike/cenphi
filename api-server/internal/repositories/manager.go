@@ -1,44 +1,52 @@
 package repositories
 
 import (
-	"database/sql"
 	"sync"
+
+	"github.com/redis/go-redis/v9"
 )
 
 // Repo provides access to all repositories.
 type Repo interface {
-	User() UserRepository // Expose the UserRepository
-	// Add methods for other repositories here, e.g., Product() ProductRepository
-	Close() error // Close the database connection
+	User() UserRepository
+	TeamMember() TeamMemberRepository
+	Workspace() WorkspaceRepository
 }
 
 type repo struct {
-	db        *sql.DB
-	userRepo  UserRepository
-	initOnce  sync.Once
-	closeOnce sync.Once
+	redis          *redis.Client
+	userRepo       UserRepository
+	workspaceRepo  WorkspaceRepository
+	teamMemberRepo TeamMemberRepository
+	initOnce       sync.Once
 }
 
-// NewRepositoryManager creates a new Repo with the given database connection.
-func NewRepositoryManager(db *sql.DB) Repo {
+func NewRepositoryManager(redis *redis.Client) Repo {
 	return &repo{
-		db: db,
+		redis: redis,
 	}
 }
 
 // User returns the UserRepository instance, initializing it lazily.
 func (m *repo) User() UserRepository {
 	m.initOnce.Do(func() {
-		m.userRepo = NewUserRepository(m.db)
+		m.userRepo = NewUserRepository(m.redis)
 	})
 	return m.userRepo
 }
 
-// Close closes the database connection.
-func (m *repo) Close() error {
-	var err error
-	m.closeOnce.Do(func() {
-		err = m.db.Close()
+// TeamMember returns the TeamMemberRepository instance, initializing it lazily.
+func (m *repo) TeamMember() TeamMemberRepository {
+	m.initOnce.Do(func() {
+		m.teamMemberRepo = NewTeamMemberRepository(m.redis)
 	})
-	return err
+	return m.teamMemberRepo
+}
+
+// Workspace returns the WorkspaceRepository instance, initializing it lazily.
+func (m *repo) Workspace() WorkspaceRepository {
+	m.initOnce.Do(func() {
+		m.workspaceRepo = NewWorkspaceRepository(m.redis)
+	})
+	return m.workspaceRepo
 }

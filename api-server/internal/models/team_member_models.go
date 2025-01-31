@@ -22,7 +22,8 @@ type MemberRole string
 const (
 	Owner  MemberRole = "owner"
 	Admin  MemberRole = "admin"
-	Member MemberRole = "member"
+	Viewer MemberRole = "viewer"
+	Editor MemberRole = "editor"
 )
 
 func ValidateTeamMember(team_member *TeamMember) error {
@@ -32,4 +33,16 @@ func ValidateTeamMember(team_member *TeamMember) error {
 		return err
 	}
 	return nil
+}
+
+type TeamMemberGetParams struct {
+	TeamMember
+	FirstName     string `json:"first_name" db:"first_name"`
+	LastName      string `json:"last_name" db:"last_name"`
+	Email         string `json:"email" db:"email"`
+	FirebaseUID   string `json:"firebase_uid" db:"firebase_uid"`
+	EmailVerified bool   `json:"email_verified" db:"email_verified"`
+	WorkspaceName string `json:"workspace_name" db:"workspace_name"`
+	WorkspacePlan Plan   `json:"workspace_plan" db:"workspace_plan"`
+	WebsiteURL    string `json:"website_url" db:"website_url"`
 }

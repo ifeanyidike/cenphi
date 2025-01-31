@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 
 	"github.com/google/uuid"
@@ -17,14 +18,15 @@ type UserService interface {
 
 type userService struct {
 	repo repositories.UserRepository
+	db   *sql.DB
 }
 
-func NewUserService(repo repositories.UserRepository) UserService {
-	return &userService{repo: repo}
+func NewUserService(repo repositories.UserRepository, db *sql.DB) UserService {
+	return &userService{repo: repo, db: db}
 }
 
 func (s *userService) GetUser(ctx context.Context, id uuid.UUID) (*models.User, error) {
-	user, err := s.repo.GetByID(ctx, id)
+	user, err := s.repo.GetByID(ctx, id, s.db)
 	if err != nil || user == nil {
 		return nil, errors.New("user not found")
 	}
@@ -32,7 +34,7 @@ func (s *userService) GetUser(ctx context.Context, id uuid.UUID) (*models.User, 
 }
 
 func (s *userService) FindByUID(ctx context.Context, uid string) (*models.User, error) {
-	user, err := s.repo.FindByUID(ctx, uid)
+	user, err := s.repo.FindByUID(ctx, uid, s.db)
 	if err != nil || user == nil {
 		return nil, errors.New("user not found")
 	}
@@ -40,5 +42,5 @@ func (s *userService) FindByUID(ctx context.Context, uid string) (*models.User, 
 }
 
 func (s *userService) RegisterUser(ctx context.Context, user *models.User) error {
-	return s.repo.Create(ctx, user)
+	return s.repo.Create(ctx, user, s.db)
 }

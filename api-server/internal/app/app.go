@@ -21,14 +21,16 @@ import (
 )
 
 type Application struct {
-	Config              *config.Config
-	Logger              *zap.Logger
-	DB                  *sql.DB
-	RedisClient         *redis.Client
-	HealthController    *controllers.HealthController
-	UserController      *controllers.UserController
-	SwaggerController   *controllers.SwaggerController
-	WorkspaceController *controllers.WorkspaceController
+	Config               *config.Config
+	Logger               *zap.Logger
+	DB                   *sql.DB
+	RedisClient          *redis.Client
+	HealthController     *controllers.HealthController
+	UserController       *controllers.UserController
+	SwaggerController    *controllers.SwaggerController
+	WorkspaceController  *controllers.WorkspaceController
+	TeamMemberController *controllers.TeamMemberController
+	OnboardingController *controllers.OnboardingController
 }
 
 func NewApplication(cfg *config.Config, db *sql.DB, redisClient *redis.Client) *Application {
@@ -38,24 +40,35 @@ func NewApplication(cfg *config.Config, db *sql.DB, redisClient *redis.Client) *
 	}
 
 	// Initialize controllers
-	userRepo := repositories.NewUserRepository(db)
-	userService := services.NewUserService(userRepo)
+	repo := repositories.NewRepositoryManager(redisClient)
+
+	userRepo := repositories.NewUserRepository(redisClient)
+	userService := services.NewUserService(userRepo, db)
 	userController := controllers.NewUserController(userService, logger)
 
-	workspaceRepo := repositories.NewWorkspaceRepository(db)
-	workspaceService := services.NewWorkspaceService(workspaceRepo)
+	workspaceRepo := repositories.NewWorkspaceRepository(redisClient)
+	workspaceService := services.NewWorkspaceService(workspaceRepo, db)
 	workspaceController := controllers.NewWorkspaceController(workspaceService, logger)
+
+	teamMemberRepo := repositories.NewTeamMemberRepository(redisClient)
+	teamMemberService := services.NewTeamMemberService(teamMemberRepo, db)
+	teamMemberController := controllers.NewTeamMemberController(teamMemberService, logger)
+
+	onboardingService := services.NewOnboardingService(repo, db)
+	onboardingController := controllers.NewOnboardingController(onboardingService, logger)
 
 	healthController := controllers.NewHealthController(logger)
 	swaggerController := controllers.NewSwaggerController()
 
 	return &Application{
-		Config:              cfg,
-		Logger:              logger,
-		HealthController:    healthController,
-		UserController:      &userController,
-		SwaggerController:   swaggerController,
-		WorkspaceController: &workspaceController,
+		Config:               cfg,
+		Logger:               logger,
+		HealthController:     healthController,
+		UserController:       &userController,
+		SwaggerController:    swaggerController,
+		WorkspaceController:  &workspaceController,
+		TeamMemberController: &teamMemberController,
+		OnboardingController: &onboardingController,
 	}
 }
 
@@ -106,6 +119,8 @@ func (app *Application) Mount() http.Handler {
 		*app.UserController,
 		app.SwaggerController,
 		app.WorkspaceController,
+		app.TeamMemberController,
+		app.OnboardingController,
 	)
 	return r
 }

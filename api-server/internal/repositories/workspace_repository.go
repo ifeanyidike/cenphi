@@ -2,29 +2,29 @@ package repositories
 
 import (
 	"context"
-	"database/sql"
 	"log"
 
 	"github.com/google/uuid"
 	"github.com/ifeanyidike/cenphi/internal/models"
+	"github.com/redis/go-redis/v9"
 )
 
 type WorkspaceRepository interface {
 	Repository[models.Workspace]
-	FindByCustomDomain(ctx context.Context, customDomain string) (*models.Workspace, error)
+	FindByCustomDomain(ctx context.Context, customDomain string, db DB) (*models.Workspace, error)
 }
 
 type workspaceRepository struct {
 	*BaseRepository[models.Workspace]
 }
 
-func NewWorkspaceRepository(db *sql.DB) WorkspaceRepository {
+func NewWorkspaceRepository(redis *redis.Client) WorkspaceRepository {
 	return &workspaceRepository{
-		BaseRepository: NewBaseRepository[models.Workspace](db, "workspaces"),
+		BaseRepository: NewBaseRepository[models.Workspace](redis, "workspaces"),
 	}
 }
 
-func (r *workspaceRepository) FindByCustomDomain(ctx context.Context, customDomain string) (*models.Workspace, error) {
+func (r *workspaceRepository) FindByCustomDomain(ctx context.Context, customDomain string, db DB) (*models.Workspace, error) {
 	query :=
 		`
         SELECT 
@@ -32,7 +32,7 @@ func (r *workspaceRepository) FindByCustomDomain(ctx context.Context, customDoma
         FROM workspaces
         WHERE custom_domain = $1
         `
-	row := r.db.QueryRow(query, customDomain)
+	row := db.QueryRowContext(ctx, query, customDomain)
 
 	var workspace models.Workspace
 	err := row.Scan(&workspace.ID, &workspace.Name, &workspace.Plan, &workspace.Settings, &workspace.BrandingSettings, &workspace.CustomDomain, &workspace.AnalyticsSettings, &workspace.IntegrationSettings, &workspace.CreatedAt, &workspace.UpdatedAt)
@@ -42,7 +42,7 @@ func (r *workspaceRepository) FindByCustomDomain(ctx context.Context, customDoma
 	return &workspace, nil
 }
 
-func (r *workspaceRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Workspace, error) {
+func (r *workspaceRepository) GetByID(ctx context.Context, id uuid.UUID, db DB) (*models.Workspace, error) {
 	log.Println("id to get", id)
 	query :=
 		`
@@ -51,7 +51,7 @@ func (r *workspaceRepository) GetByID(ctx context.Context, id uuid.UUID) (*model
         FROM workspaces
         WHERE id = $1
         `
-	row := r.db.QueryRowContext(ctx, query, id)
+	row := db.QueryRowContext(ctx, query, id)
 
 	var workspace models.Workspace
 	err := row.Scan(&workspace.ID, &workspace.Name, &workspace.Plan, &workspace.CustomDomain, &workspace.WebsiteURL, &workspace.CreatedAt, &workspace.UpdatedAt)
@@ -62,14 +62,14 @@ func (r *workspaceRepository) GetByID(ctx context.Context, id uuid.UUID) (*model
 	return &workspace, nil
 }
 
-func (r *workspaceRepository) Create(ctx context.Context, workspace *models.Workspace) error {
+func (r *workspaceRepository) Create(ctx context.Context, workspace *models.Workspace, db DB) error {
 
 	query := `
 		INSERT INTO workspaces 
 			(id, name, website_url, plan, custom_domain) 
 		VALUES ($1, $2, $3, $4, $5)
 	`
-	_, err := r.db.ExecContext(ctx, query,
+	_, err := db.ExecContext(ctx, query,
 		workspace.ID,
 		workspace.Name,
 		workspace.WebsiteURL,
@@ -80,7 +80,7 @@ func (r *workspaceRepository) Create(ctx context.Context, workspace *models.Work
 	return err
 }
 
-func (r *workspaceRepository) Update(ctx context.Context, workspace *models.Workspace, id uuid.UUID) error {
+func (r *workspaceRepository) Update(ctx context.Context, workspace *models.Workspace, id uuid.UUID, db DB) error {
 	// settingsJSON, err := json.Marshal(workspace.Settings)
 	// if err != nil {
 	// 	return err
@@ -109,7 +109,7 @@ func (r *workspaceRepository) Update(ctx context.Context, workspace *models.Work
     `
 
 	// Execute the query with the marshaled JSON values
-	_, err := r.db.ExecContext(ctx, query,
+	_, err := db.ExecContext(ctx, query,
 		id,
 		workspace.Name,
 		workspace.WebsiteURL,
