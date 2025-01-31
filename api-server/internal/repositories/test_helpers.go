@@ -232,6 +232,8 @@ func SetupTestDB() (*sql.DB, func()) {
 	if _, err := db.Exec(`
 		CREATE EXTENSION IF NOT EXISTS "uuid-ossp"; 
 		CREATE TYPE workspace_plan AS ENUM ('free', 'pro', 'enterprise');
+		CREATE TYPE member_role AS ENUM ('owner', 'admin', 'editor', 'viewer');
+		
 		CREATE TABLE users (
 		    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
 		    firebase_uid VARCHAR(128) NOT NULL UNIQUE,
@@ -257,6 +259,17 @@ func SetupTestDB() (*sql.DB, func()) {
 		    integration_settings JSONB DEFAULT '{}',
 		    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
 		    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+		);
+
+		CREATE TABLE team_members (
+		    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    		workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
+    		user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    		role member_role NOT NULL,
+    		settings JSONB DEFAULT '{}',
+    		permissions JSONB DEFAULT '{}',
+    		created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    		UNIQUE(workspace_id, user_id)
 		);
 	`); err != nil {
 		log.Fatalf("Failed to create test schema: %v", err)

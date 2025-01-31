@@ -7,10 +7,11 @@ import (
 )
 
 type Config struct {
-	Server   ServerConfig
-	Database DatabaseConfig
-	Redis    RedisConfig
-	AWS      AWSConfig
+	Server    ServerConfig
+	Database  DatabaseConfig
+	Redis     RedisConfig
+	AWS       AWSConfig
+	Providers ProviderConfig
 }
 
 type ServerConfig struct {

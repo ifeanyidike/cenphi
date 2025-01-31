@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-chi/chi"
 	"github.com/google/uuid"
 	"github.com/ifeanyidike/cenphi/internal/models"
 	"github.com/ifeanyidike/cenphi/internal/services/mocks"
@@ -66,8 +68,17 @@ func TestUserController(t *testing.T) {
 		}
 
 		route := fmt.Sprintf("/api/v1/users/%v", user.ID)
-		mockService.On("GetUser", mock.Anything, user.ID).Return(user, nil)
 		req := httptest.NewRequest(http.MethodGet, route, nil)
+
+		// Create a new RouteContext and add the userId parameter
+		rctx := chi.NewRouteContext()
+		rctx.URLParams.Add("id", user.ID.String())
+
+		// Set the RouteContext in the request context
+		req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+
+		mockService.On("GetUser", mock.Anything, user.ID).Return(user, nil)
+
 		rec := httptest.NewRecorder()
 		controller.GetUser(rec, req)
 
@@ -78,3 +89,29 @@ func TestUserController(t *testing.T) {
 		mockService.AssertCalled(t, "GetUser", mock.Anything, user.ID)
 	})
 }
+
+// Invalid UUID format in URL parameter returns 400 bad request
+// func TestGetUserReturnsBadRequestForInvalidUUID(t *testing.T) {
+// 	ctrl := gomock.NewController(t)
+// 	defer ctrl.Finish()
+
+// 	mockService := services.NewUserService(ctrl)
+// 	mockLogger := zap.NewNop()
+
+// 	controller := NewUserController(mockService, mockLogger)
+
+// 	w := httptest.NewRecorder()
+// 	r := httptest.NewRequest(http.MethodGet, "/users/invalid-uuid", nil)
+// 	rctx := chi.NewRouteContext()
+// 	rctx.URLParams.Add("id", "invalid-uuid")
+// 	r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
+
+// 	controller.GetUser(w, r)
+
+// 	require.Equal(t, http.StatusBadRequest, w.Code)
+
+// 	var response map[string]string
+// 	err := json.NewDecoder(w.Body).Decode(&response)
+// 	require.NoError(t, err)
+// 	require.Equal(t, apperrors.ErrInvalidID.Error(), response["error"])
+// }
