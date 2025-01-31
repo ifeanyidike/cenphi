@@ -63,3 +63,10 @@ var (
 	ErrFileUploadFailed = errors.New("file upload failed")
 	ErrFileDeleteFailed = errors.New("file delete failed")
 )
+
+var (
+	ErrProviderNotFound      = errors.New("provider not found")
+	ErrRateLimited           = errors.New("rate limit exceeded")
+	ErrProviderNotConfigured = errors.New("provider not configured")
+	ErrAuthExpired           = errors.New("authentication expired")
+)

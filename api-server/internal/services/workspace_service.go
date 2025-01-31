@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/google/uuid"
 	"github.com/ifeanyidike/cenphi/internal/models"
@@ -17,24 +18,25 @@ type WorkspaceService interface {
 
 type workspaceService struct {
 	repo repositories.WorkspaceRepository
+	db   *sql.DB
 }
 
-func NewWorkspaceService(repo repositories.WorkspaceRepository) WorkspaceService {
-	return &workspaceService{repo: repo}
+func NewWorkspaceService(repo repositories.WorkspaceRepository, db *sql.DB) WorkspaceService {
+	return &workspaceService{repo: repo, db: db}
 }
 
 func (w *workspaceService) GetWorkspace(ctx context.Context, id uuid.UUID) (*models.Workspace, error) {
-	return w.repo.GetByID(ctx, id)
+	return w.repo.GetByID(ctx, id, w.db)
 }
 
 func (w *workspaceService) CreateWorkspace(ctx context.Context, workspace *models.Workspace) error {
-	return w.repo.Create(ctx, workspace)
+	return w.repo.Create(ctx, workspace, w.db)
 }
 
 func (w *workspaceService) UpdateWorkspace(ctx context.Context, id uuid.UUID, workspace *models.Workspace) error {
-	return w.repo.Update(ctx, workspace, id)
+	return w.repo.Update(ctx, workspace, id, w.db)
 }
 
 func (w *workspaceService) DeleteWorkspace(ctx context.Context, id uuid.UUID) error {
-	return w.repo.Delete(ctx, id)
+	return w.repo.Delete(ctx, id, w.db)
 }

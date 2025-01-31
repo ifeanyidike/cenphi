@@ -14,7 +14,6 @@ type Plan string
 
 const (
 	PlanFree       Plan = "free"
-	PlanBasic      Plan = "basic"
 	PlanPro        Plan = "pro"
 	PlanEnterprise Plan = "enterprise"
 )
