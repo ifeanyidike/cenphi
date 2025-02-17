@@ -1,0 +1,16 @@
+# Use the official Node.js image
+FROM node:22.7.0-alpine
+
+WORKDIR /usr/src/app
+
+# Copy package.json and yarn.lock and install dependencies
+COPY package.json yarn.lock ./
+# --ignore-platform is added to fix issue that occurs with vite
+RUN yarn install --ignore-platform 
+
+# Copy the rest of the application files
+COPY . .
+
+EXPOSE 3300
+
+CMD ["yarn", "vite", "--host"]
