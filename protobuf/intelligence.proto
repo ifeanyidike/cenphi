@@ -1,0 +1,612 @@
+syntax = "proto3";
+
+package intelligence;
+option go_package = "./pb";
+
+import "google/protobuf/timestamp.proto";
+
+// Service defining comprehensive AI-powered testimonial processing
+service Intelligence {
+   // Core Enhancement & Analysis Services
+  
+  // Enhances testimonials by improving clarity, grammar, and emotional impact while 
+  // preserving authenticity
+  rpc EnhanceTestimonial (EnhanceTestimonialRequest) returns (EnhanceTestimonialResponse);
+  
+  // Performs comprehensive sentiment analysis including customer satisfaction scoring,
+  // key pain points, and improvement suggestions
+  rpc AnalyzeSentiment (AnalyzeSentimentRequest) returns (AnalyzeSentimentResponse);
+  
+  // Trust & Authenticity
+  
+  // Advanced fake review detection using multi-modal analysis (text patterns, metadata, 
+  // user behavior)
+  rpc DetectFakeTestimonial (DetectFakeTestimonialRequest) returns (DetectFakeTestimonialResponse);
+
+  
+  // Transforms testimonials into compelling success stories with business impact metrics
+  rpc GenerateStoryFromTestimonials (GenerateStoryRequest) returns (GenerateStoryResponse);
+  
+  // Global Reach & Accessibility
+  
+  // Context-aware translation that preserves emotional nuance and cultural relevance
+  rpc TranslateTestimonial (TranslateTestimonialRequest) returns (TranslateTestimonialResponse);
+  
+  // Advanced Content Generation
+  
+  // Creates dynamic video testimonials with AI-generated avatars, expressions, and 
+  // voice synchronization
+  rpc GenerateVideoTestimonial (GenerateVideoTestimonialRequest) returns (GenerateVideoTestimonialResponse);
+  
+  // Generates natural-sounding voice testimonials with emotion-aware voice modulation
+  rpc GenerateVoiceTestimonial (GenerateVoiceTestimonialRequest) returns (GenerateVoiceTestimonialResponse);
+  // Analytics & Insights
+  
+  // Real-time competitor testimonial analysis and benchmarking
+  rpc BenchmarkAgainstCompetitors (BenchmarkRequest) returns (BenchmarkResponse);
+  
+  // AI-powered journey mapping and visualization
+  rpc GenerateAIJourneyMap (JourneyMapRequest) returns (JourneyMapResponse);
+  
+  // Personalized demo generation using testimonial insights
+  rpc GenerateAIProductDemo (ProductDemoRequest) returns (ProductDemoResponse);
+  
+  // AI-driven ROI prediction and visualization
+  rpc GenerateAIROIPredictor (ROIPredictorRequest) returns (ROIPredictorResponse);
+  
+  // Creates personalized microsites using AI content generation
+  rpc GenerateAIMicrosite (MicrositeRequest) returns (MicrositeResponse);
+  
+  // AI-powered sales conversation generator
+  rpc GenerateSalesConversation (SalesConversationRequest) returns (SalesConversationResponse);
+  
+  // Emotional resonance analyzer and optimizer
+  rpc AnalyzeEmotionalResonance (EmotionalResonanceRequest) returns (EmotionalResonanceResponse);
+  
+  // AI competitive differentiator analysis
+  rpc AnalyzeCompetitiveDifferentiators (CompetitiveDiffRequest) returns (CompetitiveDiffResponse);
+  
+  // Multimodal testimonial synthesis (text, audio, video)
+  rpc SynthesizeMultimodalTestimonial (MultimodalRequest) returns (MultimodalResponse);
+
+  // A bidirectional streaming RPC: both client and server send streams of messages.
+  rpc ChatStream(stream ChatMessage) returns (stream ChatResponse);
+
+   // A client-side streaming RPC: the client sends a stream of VideoChunk
+  // messages and then waits for a single VideoSummary response.
+  rpc ProcessVideoByChunks(stream VideoChunk) returns (VideoSummary);
+
+}
+
+
+message EnhanceTestimonialRequest {
+    string text = 1;
+    string target_tone = 2;  // professional, casual, etc.
+    bool preserve_key_metrics = 3;
+    repeated string key_points_to_emphasize = 4;
+  }
+  
+  message EnhanceTestimonialResponse {
+    string enhanced_text = 1;
+    float enhancement_confidence = 2;
+    repeated string changes_made = 3;
+  }
+  
+  message AnalyzeSentimentRequest {
+    string text = 1;
+    string industry_context = 2;
+    repeated string aspect_categories = 3;  // product, service, support, etc.
+  }
+  
+  message AnalyzeSentimentResponse {
+    float sentiment_score = 1;
+    repeated EmotionAnalysis emotions = 2;
+    repeated AspectAnalysis aspects = 3;
+    repeated string key_phrases = 4;
+  }
+  
+  message DetectFakeTestimonialRequest {
+    string text = 1;
+    UserMetadata user_data = 2;
+    repeated string previous_testimonials = 3;
+  }
+  
+  message DetectFakeTestimonialResponse {
+    float authenticity_score = 1;
+    repeated string risk_factors = 2;
+    map<string, float> feature_scores = 3;
+  }
+  
+  message TranslateTestimonialRequest {
+    string text = 1;
+    string source_language = 2;
+    string target_language = 3;
+    bool preserve_tone = 4;
+    string industry_context = 5;
+  }
+  
+  message TranslateTestimonialResponse {
+    string translated_text = 1;
+    float translation_confidence = 2;
+    repeated string cultural_adaptations = 3;
+  }
+  
+  message GenerateVideoTestimonialRequest {
+    string text = 1;
+    AvatarPreferences avatar_prefs = 2;
+    string voice_style = 3;
+    repeated EmotionTimestamp emotion_markers = 4;
+  }
+  
+  message GenerateVideoTestimonialResponse {
+    string video_url = 1;
+    string thumbnail_url = 2;
+    float generation_quality = 3;
+  }
+  
+  message GenerateVoiceTestimonialRequest {
+    string text = 1;
+    string voice_id = 2;
+    repeated EmotionMarker emotion_points = 3;
+    AudioPreferences preferences = 4;
+  }
+  
+  message GenerateVoiceTestimonialResponse {
+    string audio_url = 1;
+    map<string, float> emotion_confidence = 2;
+    float voice_naturality_score = 3;
+  }
+  
+  message GenerateStoryRequest {
+    repeated string testimonial_ids = 1;
+    string narrative_style = 2;
+    repeated string key_themes = 3;
+    StoryPreferences preferences = 4;
+  }
+  
+  message GenerateStoryResponse {
+    string story_text = 1;
+    repeated string source_testimonials = 2;
+    repeated ThemeAnalysis themes = 3;
+  }
+  
+  message GenerateAutoReplyRequest {
+    string testimonial_text = 1;
+    string brand_voice = 2;
+    float sentiment_score = 3;
+    repeated string key_points_to_address = 4;
+  }
+  
+  message GenerateAutoReplyResponse {
+    string reply_text = 1;
+    float empathy_score = 2;
+    repeated string addressed_points = 3;
+  }
+  
+  message CompetitorAnalysisRequest {
+    repeated string competitor_testimonials = 1;
+    string industry = 2;
+    repeated string feature_categories = 3;
+  }
+  
+  message CompetitorAnalysisResponse {
+    repeated CompetitorInsight insights = 1;
+    map<string, float> sentiment_comparison = 2;
+    repeated FeatureComparison feature_analysis = 3;
+  }
+  
+  message SentimentPredictionRequest {
+    repeated HistoricalSentiment historical_data = 1;
+    int32 prediction_timeframe = 2;
+    repeated string external_factors = 3;
+  }
+  
+  message SentimentPredictionResponse {
+    repeated TimestampedPrediction predictions = 1;
+    repeated TrendFactor contributing_factors = 2;
+    float prediction_confidence = 3;
+  }
+  
+  message PlacementRequest {
+    string testimonial_id = 1;
+    string page_context = 2;
+    UserSegment target_audience = 3;
+    repeated string conversion_goals = 4;
+  }
+  
+  message PlacementResponse {
+    repeated PlacementRecommendation recommendations = 1;
+    map<string, float> predicted_engagement = 2;
+    repeated string optimization_suggestions = 3;
+  }
+  
+  // Supporting Types
+  
+  message EmotionAnalysis {
+    string emotion = 1;
+    float intensity = 2;
+    repeated string triggers = 3;
+  }
+  
+  message AspectAnalysis {
+    string aspect = 1;
+    float sentiment_score = 2;
+    repeated string key_phrases = 3;
+  }
+  
+  message UserMetadata {
+    string user_id = 1;
+    string account_age = 2;
+    repeated string previous_activity = 3;
+  }
+  
+  message AvatarPreferences {
+    string gender = 1;
+    string age_range = 2;
+    string ethnicity = 3;
+    repeated string style_preferences = 4;
+  }
+  
+  message EmotionTimestamp {
+    float timestamp = 1;
+    string emotion = 2;
+    float intensity = 3;
+  }
+  
+  message EmotionMarker {
+    float timestamp = 1;
+    string emotion = 2;
+    float intensity = 3;
+  }
+  
+  message AudioPreferences {
+    string voice_style = 1;
+    float speaking_rate = 2;
+    float pitch = 3;
+  }
+  
+  message StoryPreferences {
+    string tone = 1;
+    int32 target_length = 2;
+    repeated string focus_areas = 3;
+  }
+  
+  message ThemeAnalysis {
+    string theme = 1;
+    float prominence = 2;
+    repeated string supporting_quotes = 3;
+  }
+  
+  message CompetitorInsight {
+    string competitor = 1;
+    repeated string strengths = 2;
+    repeated string weaknesses = 3;
+  }
+  
+  message FeatureComparison {
+    string feature = 1;
+    map<string, float> competitor_scores = 2;
+    repeated string key_differences = 3;
+  }
+  
+  message HistoricalSentiment {
+    google.protobuf.Timestamp timestamp = 1;
+    float sentiment_score = 2;
+    repeated string contextual_factors = 3;
+  }
+  
+  message TimestampedPrediction {
+    google.protobuf.Timestamp timestamp = 1;
+    float predicted_sentiment = 2;
+    float confidence_interval = 3;
+  }
+  
+  message TrendFactor {
+    string factor = 1;
+    float impact_weight = 2;
+    string explanation = 3;
+  }
+  
+  message UserSegment {
+    string demographic = 1;
+    string behavior_pattern = 2;
+    repeated string interests = 3;
+  }
+  
+  message PlacementRecommendation {
+    string location = 1;
+    float confidence_score = 2;
+    repeated string reasoning = 3;
+  }
+
+// New Message Definitions
+
+message JourneyStage {
+    string stage_name = 1;
+    repeated string testimonial_excerpts = 2;
+    repeated string key_outcomes = 3;
+  }
+  
+  message EmotionalMilestone {
+    string emotion = 1;
+    string trigger = 2;
+    string resolution = 3;
+  }
+  
+  message MetricMilestone {
+    string metric_name = 1;
+    double value = 2;
+    string timeframe = 3;
+  }
+  
+  message DemoHighlight {
+    string feature = 1;
+    repeated string testimonial_proof = 2;
+    string interaction_type = 3;
+  }
+  
+  message CustomerQuote {
+    string quote = 1;
+    string context = 2;
+    repeated string related_features = 3;
+  }
+  
+  message MetricVisualization {
+    string metric_name = 1;
+    string visualization_type = 2;
+    repeated double data_points = 3;
+  }
+  
+  message CompanyProfile {
+    string size = 1;
+    string industry = 2;
+    repeated string current_challenges = 3;
+  }
+  
+  message ROIMetric {
+    string metric_name = 1;
+    double projected_value = 2;
+    string calculation_method = 3;
+  }
+  
+  message BenchmarkComparison {
+    string metric = 1;
+    double industry_average = 2;
+    double projected_performance = 3;
+  }
+
+
+
+
+message JourneyMapRequest {
+  repeated string testimonial_ids = 1;
+  string industry_vertical = 2;
+  bool include_emotional_journey = 3;
+  repeated string key_metrics = 4;
+}
+
+message JourneyMapResponse {
+  repeated JourneyStage stages = 1;
+  repeated EmotionalMilestone emotional_milestones = 2;
+  string visualization_url = 3;
+}
+
+message ProductDemoRequest {
+  string testimonial_id = 1;
+  string product_category = 2;
+  UserProfile target_user = 3;
+  repeated string highlight_features = 4;
+}
+
+message ProductDemoResponse {
+  string interactive_demo_url = 1;
+  repeated DemoScene scenes = 2;
+  map<string, float> engagement_metrics = 3;
+}
+
+message ROIPredictorRequest {
+  string industry = 1;
+  CompanyProfile company_profile = 2;
+  repeated string target_metrics = 3;
+  repeated HistoricalData historical_data = 4;
+}
+
+message ROIPredictorResponse {
+  repeated ROIPrediction predictions = 1;
+  string visualization_widget = 2;
+  repeated string insight_explanations = 3;
+}
+
+message MicrositeRequest {
+  string prospect_company = 1;
+  repeated string pain_points = 2;
+  repeated string success_metrics = 3;
+  string industry_vertical = 4;
+}
+
+message MicrositeResponse {
+  string microsite_url = 1;
+  repeated AIGeneratedContent content_blocks = 2;
+  repeated string personalization_factors = 3;
+}
+
+message SalesConversationRequest {
+  string testimonial_id = 1;
+  string prospect_industry = 2;
+  repeated string objections = 3;
+  SalesContext context = 4;
+}
+
+message SalesConversationResponse {
+  repeated ConversationPoint talking_points = 1;
+  repeated string testimonial_quotes = 2;
+  map<string, string> objection_handlers = 3;
+}
+
+message EmotionalResonanceRequest {
+  string testimonial_content = 1;
+  string target_audience = 2;
+  repeated string emotional_goals = 3;
+}
+
+message EmotionalResonanceResponse {
+  float resonance_score = 1;
+  repeated EmotionalImpact emotional_impacts = 2;
+  repeated string optimization_suggestions = 3;
+}
+
+message CompetitiveDiffRequest {
+  repeated string testimonial_ids = 1;
+  repeated string competitor_names = 2;
+  string market_segment = 3;
+}
+
+message CompetitiveDiffResponse {
+  repeated DifferentiatorInsight differentiators = 1;
+  map<string, float> competitive_advantages = 2;
+  repeated string actionable_insights = 3;
+}
+
+message MultimodalRequest {
+  string testimonial_id = 1;
+  repeated string output_formats = 2;
+  StylePreferences style_prefs = 3;
+}
+
+message MultimodalResponse {
+  map<string, string> content_urls = 1;
+  repeated SynthesisMetric quality_metrics = 2;
+  string integration_code = 3;
+}
+
+  
+  message UserProfile {
+    string user_id = 1;
+    string name = 2;
+    string email = 3;
+    string account_creation_date = 4;
+    repeated string previous_interactions = 5;
+  }
+  
+  message DemoScene {
+    string scene_name = 1;
+    string description = 2;
+    repeated string key_features_showcased = 3;
+  }
+  
+  message HistoricalData {
+    repeated string past_testimonials = 1;
+    repeated ROIPrediction past_roi_predictions = 2;
+  }
+  
+  message ROIPrediction {
+    string metric_name = 1;
+    double projected_value = 2;
+    string calculation_method = 3;
+  }
+  
+  message AIGeneratedContent {
+    string content_type = 1;
+    string generated_text = 2;
+    string metadata = 3;
+  }
+  
+  message SalesContext {
+    string industry = 1;
+    string target_audience = 2;
+    string sales_strategy = 3;
+  }
+  
+  message ConversationPoint {
+    string topic = 1;
+    string recommended_response = 2;
+    float engagement_score = 3;
+  }
+  
+  message EmotionalImpact {
+    string factor = 1;
+    float intensity = 2;
+    repeated string contributing_elements = 3;
+  }
+  
+  message DifferentiatorInsight {
+    string differentiator = 1;
+    string competitive_advantage = 2;
+    float uniqueness_score = 3;
+  }
+  
+  message StylePreferences {
+    string tone = 1;
+    string format = 2;
+    string personalization_level = 3;
+  }
+  
+  message SynthesisMetric {
+    string metric_name = 1;
+    float effectiveness_score = 2;
+    repeated string improvement_suggestions = 3;
+  }
+  
+  message BenchmarkRequest {
+    string industry = 1;
+    string metric_to_compare = 2;
+    repeated string competitor_testimonials = 3;
+  }
+  
+  message BenchmarkResponse {
+    string metric = 1;
+    double industry_average = 2;
+    double projected_performance = 3;
+    repeated DifferentiatorInsight insights = 4;
+  }
+  
+  // A message sent from the client.
+message ChatMessage {
+  // An identifier to correlate conversation state.
+  string session_id = 1;
+  
+  // The text input from the user.
+  string text = 2;
+  
+  // Optional context from the video (for instance, key information extracted during video processing).
+  string video_context = 3;
+}
+
+// A message sent from the server in response to a chat message.
+message ChatResponse {
+  // The reply text.
+  string text = 1;
+  
+  // The detected emotional tone of the response.
+  string emotional_tone = 2;
+  
+  // A list of suggested follow-up questions.
+  repeated string suggested_questions = 3;
+}
+
+// Message representing a chunk of the video.
+message VideoChunk {
+  // The raw video data for this chunk.
+  bytes content = 1;
+
+  // Metadata about the video chunk, such as user and session IDs.
+  VideoMetadata metadata = 2;
+}
+
+// Metadata accompanying each video chunk.
+message VideoMetadata {
+  string user_id = 1;
+  string session_id = 2;
+}
+
+// The summary returned after processing the complete video.
+message VideoSummary {
+  // Highlights or key moments extracted from the video.
+  string highlights = 1;
+
+  // A transcript of the video.
+  string transcript = 2;
+
+  // Overall sentiment (or other analysis results).
+  string sentiment = 3;
+}
