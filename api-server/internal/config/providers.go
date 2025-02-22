@@ -1,8 +1,6 @@
 // config/providers.go
 package config
 
-import "time"
-
 type ProviderConfig struct {
 	Twitter    TwitterConfig
 	Instagram  InstagramConfig
@@ -19,9 +17,11 @@ type ProviderConfig struct {
 
 // Example env mapping:
 type TwitterConfig struct {
-	BearerToken       string `env:"TWITTER_BEARER_TOKEN,required"`
-	Username          string `env:"TWITTER_USERNAME,required"`
-	RequestsPerMinute int    `env:"TWITTER_RPM" envDefault:"300"`
+	BearerToken       string `env:"X_BEARER_TOKEN,required"`
+	Username          string `env:"X_USERNAME,required"`
+	RequestsPerMinute int    `env:"X_RPM" envDefault:"300"`
+	APIKey            string `env:"X_API_KEY,required"`
+	APISecret         string `env:"X_API_SECRET,required"`
 }
 
 type InstagramConfig struct {
@@ -68,25 +68,22 @@ type FacebookConfig struct {
 }
 
 type TrustpilotConfig struct {
-	APIKey     string        `env:"TRUSTPILOT_API_KEY,required"`
-	BusinessID string        `env:"TRUSTPILOT_BUSINESS_ID,required"`
-	Timeout    time.Duration `env:"TRUSTPILOT_TIMEOUT" envDefault:"10s"`
-	BaseURL    string        `env:"TRUSTPILOT_BASE_URL" envDefault:"https://api.trustpilot.com"`
+	APIKey     string `env:"TRUSTPILOT_API_KEY,required"`
+	BusinessID string `env:"TRUSTPILOT_BUSINESS_ID,required"`
+	BaseURL    string `env:"TRUSTPILOT_BASE_URL" envDefault:"https://api.trustpilot.com"`
 }
 
 type YelpConfig struct {
-	APIKey     string        `env:"YELP_API_KEY,required"`
-	BusinessID string        `env:"YELP_BUSINESS_ID,required"`
-	Timeout    time.Duration `env:"YELP_TIMEOUT" envDefault:"10s"`
-	BaseURL    string        `env:"YELP_BASE_URL" envDefault:"https://api.yelp.com"`
-	CategoryID string        `env:"YELP_CATEGORY_ID" envDefault:"food"`
+	APIKey     string `env:"YELP_API_KEY,required"`
+	BusinessID string `env:"YELP_BUSINESS_ID,required"`
+	BaseURL    string `env:"YELP_BASE_URL" envDefault:"https://api.yelp.com"`
+	CategoryID string `env:"YELP_CATEGORY_ID" envDefault:"food"`
 }
 
 type GoogleMyBusinessConfig struct {
-	APIKey       string        `env:"GOOGLE_MY_BUSINESS_API_KEY,required"`
-	BusinessID   string        `env:"GOOGLE_MY_BUSINESS_BUSINESS_ID,required"`
-	Timeout      time.Duration `env:"GOOGLE_MY_BUSINESS_TIMEOUT" envDefault:"10s"`
-	BaseURL      string        `env:"GOOGLE_MY_BUSINESS_BASE_URL" envDefault:"https://mybusiness.googleapis.com/v4"`
-	LocationID   string        `env:"GOOGLE_MY_BUSINESS_LOCATION_ID" envDefault:"1234567890"` // Replace with your location ID
-	LanguageCode string        `env:"GOOGLE_MY_BUSINESS_LANGUAGE_CODE" envDefault:"en-US"`
+	ClientID     string `env:"GOOGLE_MY_BUSINESS_CLIENT_ID,required"`
+	ClientSecret string `env:"GOOGLE_MY_BUSINESS_CLIENT_SECRET,required"`
+	AccountName  string `env:"GOOGLE_MY_BUSINESS_ACCOUNT_NAME,required"`
+	AccessToken  string `env:"GOOGLE_MY_BUSINESS_ACCESS_TOKEN,required"`
+	RefreshToken string `env:"GOOGLE_MY_BUSINESS_REFRESH_TOKEN,required"`
 }

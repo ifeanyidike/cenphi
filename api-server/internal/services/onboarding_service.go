@@ -37,13 +37,10 @@ func (s *onboardingService) OnboardOwner(ctx context.Context, userId uuid.UUID, 
 		} else {
 			tx.Commit()
 		}
-		log.Println("Finished onboarding owner")
-		log.Printf("user_id: %s, workspace_id: %s, team_member_id: %s", userId, workspace.ID, team_member.ID)
-		log.Println("----------------------------------------")
 	}()
 
 	// User already created during registration. Get the user
-	fmt.Println("Calling GetByID")
+
 	user, err := s.repo.User().GetByID(ctx, userId, tx)
 	if err != nil {
 		log.Printf("error getting user: %v", err)
@@ -57,7 +54,6 @@ func (s *onboardingService) OnboardOwner(ctx context.Context, userId uuid.UUID, 
 	}
 
 	// Create the workspace
-	fmt.Println("Calling Create on WorkspaceRepository")
 	err = s.repo.Workspace().Create(ctx, workspace, tx)
 	if err != nil {
 		log.Printf("error creating workspace: %v", err)

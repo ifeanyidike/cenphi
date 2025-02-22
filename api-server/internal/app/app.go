@@ -11,29 +11,35 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/ifeanyidike/cenphi/internal/config"
 	"github.com/ifeanyidike/cenphi/internal/controllers"
+	"github.com/ifeanyidike/cenphi/internal/providers"
 	"github.com/ifeanyidike/cenphi/internal/repositories"
 	"github.com/ifeanyidike/cenphi/internal/routes"
 	"github.com/ifeanyidike/cenphi/internal/services"
+	"github.com/ifeanyidike/cenphi/pb"
+	"github.com/ifeanyidike/cenphi/pkg/ratelimit"
 	"github.com/redis/go-redis/v9"
+	"golang.org/x/oauth2"
 
 	mmiddleware "github.com/ifeanyidike/cenphi/internal/middleware"
 	"go.uber.org/zap"
 )
 
 type Application struct {
-	Config               *config.Config
-	Logger               *zap.Logger
-	DB                   *sql.DB
-	RedisClient          *redis.Client
-	HealthController     *controllers.HealthController
-	UserController       *controllers.UserController
-	SwaggerController    *controllers.SwaggerController
-	WorkspaceController  *controllers.WorkspaceController
-	TeamMemberController *controllers.TeamMemberController
-	OnboardingController *controllers.OnboardingController
+	Config                *config.Config
+	Logger                *zap.Logger
+	DB                    *sql.DB
+	RedisClient           *redis.Client
+	GrpcClient            *pb.IntelligenceClient
+	HealthController      *controllers.HealthController
+	UserController        *controllers.UserController
+	SwaggerController     *controllers.SwaggerController
+	WorkspaceController   *controllers.WorkspaceController
+	TeamMemberController  *controllers.TeamMemberController
+	OnboardingController  *controllers.OnboardingController
+	TestimonialController *controllers.TestimonialController
 }
 
-func NewApplication(cfg *config.Config, db *sql.DB, redisClient *redis.Client) *Application {
+func NewApplication(cfg *config.Config, db *sql.DB, redisClient *redis.Client, grpcClient *pb.IntelligenceClient) *Application {
 	logger, err := zap.NewProduction()
 	if err != nil {
 		log.Fatalf("Error initializing zap logger: %v", err)
@@ -60,15 +66,45 @@ func NewApplication(cfg *config.Config, db *sql.DB, redisClient *redis.Client) *
 	healthController := controllers.NewHealthController(logger)
 	swaggerController := controllers.NewSwaggerController()
 
+	twitter := providers.NewTwitterProvider(cfg.Providers.Twitter.BearerToken, cfg.Providers.Twitter.Username, cfg.Providers.Twitter.APIKey, cfg.Providers.Twitter.APISecret)
+	instagram := providers.NewInstagramProvider(cfg.Providers.Instagram.AccessToken, cfg.Providers.Instagram.UserID)
+	facebook := providers.NewFacebookProvider(cfg.Providers.Facebook.AccessToken, cfg.Providers.Facebook.PageID)
+	trustpilot := providers.NewTrustpilotProvider(cfg.Providers.Trustpilot.APIKey, cfg.Providers.Trustpilot.BusinessID)
+	yelp := providers.NewYelpProvider(cfg.Providers.Yelp.APIKey, cfg.Providers.Yelp.BusinessID)
+
+	token := &oauth2.Token{
+		AccessToken:  cfg.Providers.Google.AccessToken,
+		RefreshToken: cfg.Providers.Google.RefreshToken,
+		Expiry:       time.Now().Add(1 * time.Hour),
+	}
+	google := providers.NewGoogleProvider(cfg.Providers.Google.ClientID, cfg.Providers.Google.ClientSecret, cfg.Providers.Google.AccountName, token)
+
+	providers := []providers.Provider{
+		twitter, instagram, facebook, trustpilot, yelp, google,
+	}
+	testimonialRepo := repositories.NewTestimonialRepository(redisClient, db)
+	testimonialService := services.NewTestimonialService(testimonialRepo, db)
+
+	// Create service
+	providerService := services.NewProviderService(
+		providers,
+		ratelimit.NewRedisLimiter(redisClient),
+		repositories.NewTestimonialRepository(redisClient, db),
+		db,
+	)
+
+	testimonialController := controllers.NewTestimonialController(testimonialService, *providerService, logger)
+
 	return &Application{
-		Config:               cfg,
-		Logger:               logger,
-		HealthController:     healthController,
-		UserController:       &userController,
-		SwaggerController:    swaggerController,
-		WorkspaceController:  &workspaceController,
-		TeamMemberController: &teamMemberController,
-		OnboardingController: &onboardingController,
+		Config:                cfg,
+		Logger:                logger,
+		HealthController:      healthController,
+		UserController:        &userController,
+		SwaggerController:     swaggerController,
+		WorkspaceController:   &workspaceController,
+		TeamMemberController:  &teamMemberController,
+		OnboardingController:  &onboardingController,
+		TestimonialController: &testimonialController,
 	}
 }
 
@@ -122,5 +158,6 @@ func (app *Application) Mount() http.Handler {
 		app.TeamMemberController,
 		app.OnboardingController,
 	)
+
 	return r
 }

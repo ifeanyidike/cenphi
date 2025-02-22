@@ -1,4 +1,4 @@
-// internal/repositories/providers/yelp.go
+// internal/providers/yelp/yelp.go
 package providers
 
 import (
@@ -11,46 +11,35 @@ import (
 	"github.com/ifeanyidike/cenphi/internal/models"
 )
 
-type YelpConfig struct {
-	APIKey     string
-	BusinessID string
-	Timeout    time.Duration
-	BaseURL    string
-}
-
 type YelpProvider struct {
-	config     YelpConfig
+	apiKey     string
+	businessID string
 	httpClient *http.Client
 }
 
-func NewYelpProvider(cfg YelpConfig) *YelpProvider {
+func NewYelpProvider(apiKey, businessID string) *YelpProvider {
 	return &YelpProvider{
-		config: cfg,
+		apiKey:     apiKey,
+		businessID: businessID,
 		httpClient: &http.Client{
-			Timeout: cfg.Timeout,
+			Timeout: 10 * time.Second,
 		},
 	}
 }
 
-func (p *YelpProvider) Fetch(ctx context.Context) ([]models.Testimonial, error) {
-	url := fmt.Sprintf("%s/businesses/%s/reviews", p.config.BaseURL, p.config.BusinessID)
+func (y *YelpProvider) Name() string { return "yelp" }
 
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("yelp request creation failed: %w", err)
-	}
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", p.config.APIKey))
-	req.Header.Set("Accept", "application/json")
+func (y *YelpProvider) Fetch(ctx context.Context) ([]models.Testimonial, error) {
+	url := fmt.Sprintf("https://api.yelp.com/v3/businesses/%s/reviews", y.businessID)
 
-	resp, err := p.httpClient.Do(req)
+	req, _ := http.NewRequestWithContext(ctx, "GET", url, nil)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", y.apiKey))
+
+	resp, err := y.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("yelp API request failed: %w", err)
 	}
 	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("yelp API returned status %d", resp.StatusCode)
-	}
 
 	var result struct {
 		Reviews []struct {
@@ -71,20 +60,24 @@ func (p *YelpProvider) Fetch(ctx context.Context) ([]models.Testimonial, error) 
 	var testimonials []models.Testimonial
 	for _, review := range result.Reviews {
 		testimonials = append(testimonials, models.Testimonial{
-			CustomerName: review.User.Name,
-			Content:      review.Text,
-			Rating:       &review.Rating,
+			Content:          review.Text,
+			Rating:           &review.Rating,
+			CustomerName:     review.User.Name,
+			CreatedAt:        review.TimeCreated,
+			Type:             models.TestimonialTypeText,
+			CollectionMethod: models.CollectionAPI,
 			SourceData: map[string]interface{}{
-				"source":           p.SourceName(),
-				"yelp_business_id": p.config.BusinessID,
+				"yelp_review_id":   review.ID,
+				"source":           y.Name(),
+				"yelp_business_id": y.businessID,
 			},
-			CreatedAt: review.TimeCreated,
 		})
 	}
 
 	return testimonials, nil
 }
 
-func (p *YelpProvider) SourceName() string {
-	return "yelp"
-}
+func (y *YelpProvider) RateLimit() int            { return 5000 } // Daily limit
+func (y *YelpProvider) RateWindow() time.Duration { return 24 * time.Hour }
+func (y *YelpProvider) Schedule() string          { return "@daily" }
+func (y *YelpProvider) IsConfigured() bool        { return y.apiKey != "" && y.businessID != "" }

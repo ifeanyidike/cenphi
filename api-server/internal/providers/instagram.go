@@ -9,44 +9,28 @@ import (
 	"time"
 
 	"github.com/ifeanyidike/cenphi/internal/models"
-	"github.com/ifeanyidike/cenphi/pkg/ratelimit"
 )
 
-type InstagramConfig struct {
-	AccessToken     string
-	UserID          string
-	Timeout         time.Duration
-	BaseURL         string
-	RequestsPerHour int
-}
-
 type InstagramProvider struct {
-	BaseProvider
-	config     InstagramConfig
-	httpClient *http.Client
+	accessToken string
+	userID      string
+	httpClient  *http.Client
 }
 
-func NewInstagramProvider(cfg InstagramConfig) *InstagramProvider {
+func NewInstagramProvider(accessToken, userID string) *InstagramProvider {
 	return &InstagramProvider{
-		BaseProvider: BaseProvider{
-			rateLimiter: ratelimit.NewTokenBucketLimiter(cfg.RequestsPerHour / 3600),
-		},
-		config: cfg,
+		accessToken: accessToken,
+		userID:      userID,
 		httpClient: &http.Client{
-			Timeout: cfg.Timeout,
+			Timeout: 10 * time.Second,
 		},
 	}
 }
 
 func (p *InstagramProvider) Fetch(ctx context.Context) ([]models.Testimonial, error) {
-	if err := p.WaitForRateLimit(ctx); err != nil {
-		return nil, fmt.Errorf("rate limit error: %w", err)
-	}
-
-	url := fmt.Sprintf("%s/%s/media?access_token=%s",
-		p.config.BaseURL,
-		p.config.UserID,
-		p.config.AccessToken,
+	url := fmt.Sprintf("https://graph.instagram.com/v19.0/%s/media?access_token=%s",
+		p.userID,
+		p.accessToken,
 	)
 
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
@@ -85,7 +69,7 @@ func (p *InstagramProvider) Fetch(ctx context.Context) ([]models.Testimonial, er
 				"media_id":   media.ID,
 				"media_type": media.MediaType,
 				"platform":   "instagram",
-				"source":     p.SourceName(),
+				"source":     p.Name(),
 			},
 			CollectionMethod: models.CollectionAPI,
 		}
@@ -101,6 +85,11 @@ func (p *InstagramProvider) Fetch(ctx context.Context) ([]models.Testimonial, er
 	return testimonials, nil
 }
 
-func (p *InstagramProvider) SourceName() string {
+func (p *InstagramProvider) Name() string {
 	return "instagram"
 }
+
+func (i *InstagramProvider) RateLimit() int            { return 200 } // 200/hr
+func (i *InstagramProvider) RateWindow() time.Duration { return time.Hour }
+func (i *InstagramProvider) Schedule() string          { return "@hourly" }
+func (i *InstagramProvider) IsConfigured() bool        { return i.accessToken != "" && i.userID != "" }
