@@ -14,9 +14,8 @@ import (
 
 type GoogleMyBusiness struct {
 	BaseProvider
-	client *http.Client
-	config *oauth2.Config
-	token  *oauth2.Token
+	client      *http.Client
+	accountName string
 }
 
 type LocationsResponse struct {
@@ -25,7 +24,7 @@ type LocationsResponse struct {
 	} `json:"locations"`
 }
 
-func New(clientID, clientSecret string, token *oauth2.Token) *GoogleMyBusiness {
+func NewGoogleProvider(clientID, clientSecret, accountName string, token *oauth2.Token) *GoogleMyBusiness {
 	conf := &oauth2.Config{
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
@@ -41,7 +40,7 @@ func New(clientID, clientSecret string, token *oauth2.Token) *GoogleMyBusiness {
 			name:       "google_my_business",
 			rateLimit:  100,         // 100 requests
 			rateWindow: time.Minute, // per minute
-			schedule:   "@every 1h",
+			schedule:   "@hourly",
 			oauthConfig: &OAuthConfig{
 				ClientID:     clientID,
 				ClientSecret: clientSecret,
@@ -50,21 +49,19 @@ func New(clientID, clientSecret string, token *oauth2.Token) *GoogleMyBusiness {
 				Scopes:       conf.Scopes,
 			},
 		},
-		config: conf,
-		token:  token,
 		client: conf.Client(context.Background(), token),
 	}
 }
 
 func (p *GoogleMyBusiness) Fetch(ctx context.Context) ([]models.Testimonial, error) {
-	locationsResponse, err := p.fetchLocations(ctx)
+	locations, err := p.fetchLocations(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch locations: %w", err)
 	}
 
 	var allTestimonials []models.Testimonial
-	for _, location := range locationsResponse.Locations {
-		reviews, err := p.fetchReviews(ctx, location.Name)
+	for _, location := range locations {
+		reviews, err := p.fetchReviews(ctx, location)
 		if err != nil {
 			continue
 		}
@@ -74,8 +71,8 @@ func (p *GoogleMyBusiness) Fetch(ctx context.Context) ([]models.Testimonial, err
 	return allTestimonials, nil
 }
 
-func (g *GoogleMyBusiness) fetchLocations(ctx context.Context) (*LocationsResponse, error) {
-	locationUrl := fmt.Sprintf("https://mybusiness.googleapis.com/v4/accounts/%s/locations")
+func (g *GoogleMyBusiness) fetchLocations(ctx context.Context) ([]string, error) {
+	locationUrl := fmt.Sprintf("https://mybusiness.googleapis.com/v4/accounts/%s/locations", g.accountName)
 	req, err := http.NewRequestWithContext(ctx, "GET", locationUrl, nil)
 	if err != nil {
 		return nil, fmt.Errorf("google locations request failed: %w", err)
@@ -96,7 +93,12 @@ func (g *GoogleMyBusiness) fetchLocations(ctx context.Context) (*LocationsRespon
 		return nil, fmt.Errorf("failed to decode google locations response: %w", err)
 	}
 
-	return &locationsResponse, nil
+	locationIDs := make([]string, len(locationsResponse.Locations))
+	for _, location := range locationsResponse.Locations {
+		locationIDs = append(locationIDs, location.Name)
+	}
+
+	return locationIDs, nil
 }
 
 func (g *GoogleMyBusiness) fetchReviews(ctx context.Context, locationID string) ([]models.Testimonial, error) {
@@ -131,7 +133,7 @@ func (g *GoogleMyBusiness) fetchReviews(ctx context.Context, locationID string) 
 			Content:      r.Comment,
 			Rating:       &r.StarRating,
 			SourceData: map[string]interface{}{
-				"source":               g.SourceName(),
+				"source":               g.Name(),
 				"location":             locationID,
 				"trustpilot_review_id": r.ReviewID,
 			},
@@ -141,12 +143,12 @@ func (g *GoogleMyBusiness) fetchReviews(ctx context.Context, locationID string) 
 	return testimonials, nil
 }
 
-func (p *GoogleMyBusiness) SourceName() string {
+func (p *GoogleMyBusiness) Name() string {
 	return "google"
 }
 
 func (g *GoogleMyBusiness) IsConfigured() bool {
-	return g.config.ClientID != "" &&
-		g.config.ClientSecret != "" &&
-		g.token != nil
+	return g.oauthConfig.ClientID != "" &&
+		g.oauthConfig.ClientSecret != "" &&
+		g.accountName != ""
 }

@@ -2,7 +2,9 @@ package repositories
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -14,7 +16,8 @@ type TestimonialRepository interface {
 	Repository[models.Testimonial]
 	FetchByWorkspaceID(ctx context.Context, workspaceID uuid.UUID, filter TestimonialFilter, db DB) ([]models.Testimonial, error)
 	UpdateStatus(ctx context.Context, id uuid.UUID, status models.ContentStatus, db DB) error
-	BatchUpsert(ctx context.Context, testimonials []models.Testimonial, db DB) error
+	BatchUpsert(ctx context.Context, testimonials []models.Testimonial, db *sql.DB) error
+	Upsert(ctx context.Context, testimonial models.Testimonial, db DB) error
 }
 
 type testimonialRepository struct {
@@ -37,7 +40,7 @@ type DateRange struct {
 	End   time.Time
 }
 
-func NewTestimonialRepository(redis *redis.Client) TestimonialRepository {
+func NewTestimonialRepository(redis *redis.Client, db DB) TestimonialRepository {
 	return &testimonialRepository{
 		BaseRepository: NewBaseRepository[models.Testimonial](redis, "testimonials"),
 	}
@@ -133,23 +136,106 @@ func (r *testimonialRepository) Create(ctx context.Context, t *models.Testimonia
 	).Scan(&t.ID, &t.CreatedAt, &t.UpdatedAt)
 }
 
-func (r *testimonialRepository) BatchUpsert(ctx context.Context, testimonials []models.Testimonial, db DB) error {
-	// tx, err := db.BeginTxx(ctx, nil)
-	// if err != nil {
-	// 	return err
-	// }
+// func (r *testimonialRepository) BatchUpsert(ctx context.Context, testimonials []models.Testimonial, db DB) error {
+// 	// tx, err := db.BeginTxx(ctx, nil)
+// 	// if err != nil {
+// 	// 	return err
+// 	// }
 
-	// for _, t := range testimonials {
-	// 	_, err := tx.NamedExecContext(ctx, `
-	// 		INSERT INTO testimonials (...)
-	// 		VALUES (...)
-	// 		ON CONFLICT (source, source_id) DO UPDATE
-	// 		SET ...`, t)
-	// 	if err != nil {
-	// 		tx.Rollback()
-	// 		return err
-	// 	}
-	// }
-	// return tx.Commit()
+// 	// for _, t := range testimonials {
+// 	// 	_, err := tx.NamedExecContext(ctx, `
+// 	// 		INSERT INTO testimonials (...)
+// 	// 		VALUES (...)
+// 	// 		ON CONFLICT (source, source_id) DO UPDATE
+// 	// 		SET ...`, t)
+// 	// 	if err != nil {
+// 	// 		tx.Rollback()
+// 	// 		return err
+// 	// 	}
+// 	// }
+// 	// return tx.Commit()
+// 	return nil
+// }
+
+func (r *testimonialRepository) BatchUpsert(ctx context.Context, testimonials []models.Testimonial, db *sql.DB) error {
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if p := recover(); p != nil {
+			tx.Rollback()
+			slog.Error("transaction failed")
+		} else {
+			tx.Commit()
+			slog.Info("transaction committed")
+		}
+	}()
+
+	for _, t := range testimonials {
+		if err := r.Upsert(ctx, t, db); err != nil {
+			tx.Rollback()
+			slog.Error("transaction failed rollback")
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
+
+func (r *testimonialRepository) Upsert(ctx context.Context, testimonial models.Testimonial, db DB) error {
+	query := `
+	INSERT INTO reviews (
+		workspace_id, type, status, content, media_urls, rating, language,
+		customer_name, customer_email, customer_title, customer_company,
+		customer_location, customer_avatar_url, customer_metadata,
+		collection_method, verification_method, verification_data, verified_at,
+		source_data, tags, categories, custom_fields
+	) VALUES (
+		$1, $2, $3, $4, $5, $6, $7, 
+		$8, $9, $10, $11, $12, 
+		$13, $14, $15, 
+		$16, $17, $18, $19, 
+		$20, $21, $22, $23
+	)
+	ON CONFLICT (workspace_id, type)
+	DO UPDATE SET 
+		status = EXCLUDED.status,
+		content = EXCLUDED.content,
+		media_urls = EXCLUDED.media_urls,
+		rating = EXCLUDED.rating,
+		language = EXCLUDED.language,
+		customer_name = EXCLUDED.customer_name,
+		customer_email = EXCLUDED.customer_email,
+		customer_title = EXCLUDED.customer_title,
+		customer_company = EXCLUDED.customer_company,
+		customer_location = EXCLUDED.customer_location,
+		customer_avatar_url = EXCLUDED.customer_avatar_url,
+		customer_metadata = EXCLUDED.customer_metadata,
+		collection_method = EXCLUDED.collection_method,
+		verification_method = EXCLUDED.verification_method,
+		verification_data = EXCLUDED.verification_data,
+		verified_at = EXCLUDED.verified_at,
+		source_data = EXCLUDED.source_data,
+		tags = EXCLUDED.tags,
+		categories = EXCLUDED.categories,
+		custom_fields = EXCLUDED.custom_fields
+	WHERE reviews.source_data->>'review_id' IS NOT NULL
+	RETURNING id;
+	`
+	var id string
+
+	err := db.QueryRowContext(ctx, query,
+		testimonial.WorkspaceID, testimonial.Type, testimonial.Status, testimonial.Content, testimonial.MediaURLs, testimonial.Rating, testimonial.Language,
+		testimonial.CustomerName, testimonial.CustomerEmail, testimonial.CustomerTitle, testimonial.CustomerCompany,
+		testimonial.CustomerLocation, testimonial.CustomerAvatarURL, testimonial.CustomerMetadata,
+		testimonial.CollectionMethod, testimonial.VerificationMethod, testimonial.VerificationData, testimonial.VerifiedAt,
+		testimonial.SourceData, testimonial.Tags, testimonial.Categories, testimonial.CustomFields,
+	).Scan(&id)
+
+	if err != nil {
+		return fmt.Errorf("error inserting testimonial: %w", err)
+	}
 	return nil
 }

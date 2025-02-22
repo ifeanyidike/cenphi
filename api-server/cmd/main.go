@@ -31,11 +31,19 @@ func main() {
 		log.Fatalf("Failed to initialize database and redis: %v", err)
 	}
 
+	grpc := config.NewIntelligence()
+	grpcConn, err := grpc.ConnectToService()
+	if err != nil {
+		log.Fatalf("Error connecting to intelligence service: %v", err)
+	}
+	// grpcClient := grpc.GetClient()
+
+	defer grpcConn.Close()
 	defer db.Close()
 	defer redisClient.Close()
 
 	// Initialize the application
-	app := app.NewApplication(cfg, db, redisClient)
+	app := app.NewApplication(cfg, db, redisClient, grpc.GetClient())
 	defer app.Logger.Sync()
 
 	// Start the server

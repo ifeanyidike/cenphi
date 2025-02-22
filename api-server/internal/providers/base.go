@@ -24,7 +24,7 @@ type Provider interface {
 	Schedule() string // Cron-formatted schedule
 
 	// Authentication configuration
-	OAuthConfig() *OAuthConfig // Returns nil for non-OAuth providers
+	// OAuthConfig() *OAuthConfig // Returns nil for non-OAuth providers
 
 	// Initialization status
 	IsConfigured() bool // Check if provider is properly configured

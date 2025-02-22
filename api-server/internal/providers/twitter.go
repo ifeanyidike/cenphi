@@ -1,74 +1,68 @@
-// internal/repositories/providers/twitter.go
+// internal/providers/twitter/twitter.go
 package providers
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
+	"github.com/g8rswimmer/go-twitter/v2"
 	"github.com/ifeanyidike/cenphi/internal/models"
-	"github.com/ifeanyidike/cenphi/pkg/ratelimit"
-	"golang.org/x/time/rate"
 )
 
-type TwitterConfig struct {
-	BearerToken       string
-	Username          string
-	Timeout           time.Duration
-	BaseURL           string
-	RequestsPerMinute int
-}
-
 type TwitterProvider struct {
-	BaseProvider
-	config     TwitterConfig
-	httpClient *http.Client
+	apiKey      string
+	apiSecret   string
+	bearerToken string
+	username    string
+	httpClient  *http.Client
 }
 
-func NewTwitterProvider(cfg TwitterConfig) *TwitterProvider {
+// Methods belonging to the go-twitter package
+type authorize struct {
+	Token string
+}
+
+func (a authorize) Add(req *http.Request) {
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", a.Token))
+}
+
+func NewTwitterProvider(bearerToken, username, apiKey, apiSecret string) *TwitterProvider {
 	return &TwitterProvider{
-		BaseProvider: BaseProvider{
-			rateLimiter: ratelimit.NewTokenBucketLimiter(cfg.RequestsPerMinute / 60),
-		},
-		config: cfg,
+		bearerToken: bearerToken,
+		username:    username,
 		httpClient: &http.Client{
-			Timeout: cfg.Timeout,
-			Transport: &http.Transport{
-				MaxIdleConns:       10,
-				MaxConnsPerHost:    100,
-				DisableCompression: false,
-				IdleConnTimeout:    30 * time.Second,
-			},
+			Timeout: 10 * time.Second,
 		},
+		apiKey:    apiKey,
+		apiSecret: apiSecret,
 	}
 }
 
-func (p *TwitterProvider) Fetch(ctx context.Context) ([]models.Testimonial, error) {
-	if err := p.WaitForRateLimit(ctx); err != nil {
-		return nil, fmt.Errorf("rate limit error: %w", err)
-	}
-	url := fmt.Sprintf("%s/2/tweets/search/recent?query=from:%s",
-		p.config.BaseURL,
-		p.config.Username,
-	)
+func (t *TwitterProvider) Name() string {
+	return "twitter"
+}
+
+func (t *TwitterProvider) Fetch(ctx context.Context) ([]models.Testimonial, error) {
+	url := fmt.Sprintf("https://api.x.com/2/tweets/search/recent?query=from:%s", t.username)
 
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("twitter request creation failed: %w", err)
 	}
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", p.config.BearerToken))
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", t.bearerToken))
 
-	resp, err := p.httpClient.Do(req)
+	resp, err := t.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("twitter API request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == http.StatusTooManyRequests {
-		p.rateLimiter.SetLimit(rate.Limit(p.config.RequestsPerMinute / 120))
-		return nil, fmt.Errorf("twitter rate limit exceeded")
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("twitter API returned status %d", resp.StatusCode)
 	}
 
 	var result struct {
@@ -78,35 +72,22 @@ func (p *TwitterProvider) Fetch(ctx context.Context) ([]models.Testimonial, erro
 			CreatedAt time.Time `json:"created_at"`
 			AuthorID  string    `json:"author_id"`
 		} `json:"data"`
-		Includes struct {
-			Users []struct {
-				ID       string `json:"id"`
-				Username string `json:"username"`
-			} `json:"users"`
-		} `json:"includes"`
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, fmt.Errorf("failed to decode twitter response: %w", err)
 	}
 
-	userMap := make(map[string]string)
-	for _, user := range result.Includes.Users {
-		userMap[user.ID] = user.Username
-	}
-
 	var testimonials []models.Testimonial
 	for _, tweet := range result.Data {
 		testimonials = append(testimonials, models.Testimonial{
-			Type:         models.TestimonialTypeText,
-			CustomerName: userMap[tweet.AuthorID],
-			Content:      tweet.Text,
-			CreatedAt:    tweet.CreatedAt,
+			Content:   tweet.Text,
+			CreatedAt: tweet.CreatedAt,
+			Type:      models.TestimonialTypeText,
 			SourceData: map[string]interface{}{
 				"tweet_id":  tweet.ID,
 				"author_id": tweet.AuthorID,
-				"source":    p.SourceName(),
-				"username":  p.config.Username,
+				"source":    t.Name(),
 			},
 			CollectionMethod: models.CollectionAPI,
 		})
@@ -115,6 +96,43 @@ func (p *TwitterProvider) Fetch(ctx context.Context) ([]models.Testimonial, erro
 	return testimonials, nil
 }
 
-func (p *TwitterProvider) SourceName() string {
-	return "twitter"
+func (t *TwitterProvider) FetchViaGoTwitter(ctx context.Context) {
+	opts := twitter.TweetLookupOpts{
+		Expansions:  []twitter.Expansion{twitter.ExpansionEntitiesMentionsUserName, twitter.ExpansionAuthorID},
+		TweetFields: []twitter.TweetField{twitter.TweetFieldCreatedAt, twitter.TweetFieldConversationID, twitter.TweetFieldAttachments},
+	}
+	fmt.Println("Callout to tweet lookup callout")
+	client := &twitter.Client{
+		Authorizer: authorize{
+			Token: t.bearerToken,
+		},
+		Client: http.DefaultClient,
+		Host:   "https://api.twitter.com",
+	}
+	tweetDictionary, err := client.TweetLookup(ctx, []string{t.username}, opts)
+	if err != nil {
+		fmt.Printf("Error fetching tweets: %v\n", err)
+		return
+	}
+	enc, err := json.MarshalIndent(tweetDictionary, "", "    ")
+	if err != nil {
+		log.Panic(err)
+	}
+	fmt.Println(string(enc))
+}
+
+func (t *TwitterProvider) RateLimit() int {
+	return 450 // Twitter v2 API allows 450 requests per 15-minute window
+}
+
+func (t *TwitterProvider) RateWindow() time.Duration {
+	return 15 * time.Minute
+}
+
+func (t *TwitterProvider) Schedule() string {
+	return "*/5 * * * *" // Every 5 minutes
+}
+
+func (t *TwitterProvider) IsConfigured() bool {
+	return t.bearerToken != "" && t.username != ""
 }
