@@ -11,35 +11,30 @@ import (
 	"github.com/ifeanyidike/cenphi/internal/models"
 )
 
-type TrustpilotConfig struct {
-	APIKey     string
-	BusinessID string
-	Timeout    time.Duration
-	BaseURL    string
-}
-
 type TrustpilotProvider struct {
-	config     TrustpilotConfig
+	apiKey     string
+	businessID string
 	httpClient *http.Client
 }
 
-func NewTrustpilotProvider(cfg TrustpilotConfig) *TrustpilotProvider {
+func NewTrustpilotProvider(apiKey, businessID string) *TrustpilotProvider {
 	return &TrustpilotProvider{
-		config: cfg,
+		apiKey:     apiKey,
+		businessID: businessID,
 		httpClient: &http.Client{
-			Timeout: cfg.Timeout,
+			Timeout: 10 * time.Second,
 		},
 	}
 }
 
 func (p *TrustpilotProvider) Fetch(ctx context.Context) ([]models.Testimonial, error) {
-	url := fmt.Sprintf("%s/business-units/%s/reviews", p.config.BaseURL, p.config.BusinessID)
+	url := fmt.Sprintf("https://api.trustpilot.com/v1/business-units/%s/reviews", p.businessID)
 
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("trustpilot request creation failed: %w", err)
 	}
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", p.config.APIKey))
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", p.apiKey))
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := p.httpClient.Do(req)
@@ -75,7 +70,7 @@ func (p *TrustpilotProvider) Fetch(ctx context.Context) ([]models.Testimonial, e
 			Content:      review.Text,
 			Rating:       &review.Rating,
 			SourceData: map[string]interface{}{
-				"source":               p.SourceName(),
+				"source":               p.Name(),
 				"trustpilot_review_id": review.ID,
 			},
 			CreatedAt: review.CreatedAt,
@@ -85,6 +80,11 @@ func (p *TrustpilotProvider) Fetch(ctx context.Context) ([]models.Testimonial, e
 	return testimonials, nil
 }
 
-func (p *TrustpilotProvider) SourceName() string {
+func (p *TrustpilotProvider) Name() string {
 	return "trustpilot"
 }
+
+func (t *TrustpilotProvider) RateLimit() int            { return 100 } // 100/min
+func (t *TrustpilotProvider) RateWindow() time.Duration { return time.Minute }
+func (t *TrustpilotProvider) Schedule() string          { return "@hourly" }
+func (t *TrustpilotProvider) IsConfigured() bool        { return t.apiKey != "" && t.businessID != "" }

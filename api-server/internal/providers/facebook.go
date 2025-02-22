@@ -11,32 +11,26 @@ import (
 	"github.com/ifeanyidike/cenphi/internal/models"
 )
 
-type FacebookConfig struct {
-	AccessToken string
-	PageID      string
-	Timeout     time.Duration
-	BaseURL     string
-}
-
 type FacebookProvider struct {
-	config     FacebookConfig
-	httpClient *http.Client
+	accessToken string
+	pageID      string
+	httpClient  *http.Client
 }
 
-func NewFacebookProvider(cfg FacebookConfig) *FacebookProvider {
+func NewFacebookProvider(accessToken, pageID string) *FacebookProvider {
 	return &FacebookProvider{
-		config: cfg,
+		accessToken: accessToken,
+		pageID:      pageID,
 		httpClient: &http.Client{
-			Timeout: cfg.Timeout,
+			Timeout: 10 * time.Second,
 		},
 	}
 }
 
 func (p *FacebookProvider) Fetch(ctx context.Context) ([]models.Testimonial, error) {
-	url := fmt.Sprintf("%s/%s/ratings?access_token=%s",
-		p.config.BaseURL,
-		p.config.PageID,
-		p.config.AccessToken,
+	url := fmt.Sprintf("https://graph.facebook.com/v19.0/%s/ratings?access_token=%s",
+		p.pageID,
+		p.accessToken,
 	)
 
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
@@ -77,8 +71,8 @@ func (p *FacebookProvider) Fetch(ctx context.Context) ([]models.Testimonial, err
 			Content:      review.ReviewText,
 			Rating:       &review.Rating,
 			SourceData: map[string]interface{}{
-				"source":  p.SourceName(),
-				"page_id": p.config.PageID,
+				"source":  p.Name(),
+				"page_id": p.pageID,
 			},
 			CreatedAt: review.CreatedTime,
 		})
@@ -87,6 +81,11 @@ func (p *FacebookProvider) Fetch(ctx context.Context) ([]models.Testimonial, err
 	return testimonials, nil
 }
 
-func (p *FacebookProvider) SourceName() string {
+func (p *FacebookProvider) Name() string {
 	return "facebook"
 }
+
+func (f *FacebookProvider) RateLimit() int            { return 200 } // 200/hr
+func (f *FacebookProvider) RateWindow() time.Duration { return time.Hour }
+func (f *FacebookProvider) Schedule() string          { return "@hourly" }
+func (f *FacebookProvider) IsConfigured() bool        { return f.accessToken != "" && f.pageID != "" }

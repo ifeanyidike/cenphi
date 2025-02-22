@@ -1,0 +1,55 @@
+# .github/workflows/ai-service.yml
+name: AI Service CI/CD
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "ai-service/**"
+      - ".github/workflows/ai-service.yml"
+
+jobs:
+  test-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+
+      - name: Install Dependencies
+        working-directory: ./ai-service
+        run: pip install -r requirements.txt
+
+      - name: Run Tests
+        working-directory: ./ai-service
+        run: python -m pytest
+
+      - name: Configure Oracle Cloud CLI
+        uses: oracle-actions/configure-oci-credentials@v1
+        with:
+          fingerprint: ${{ secrets.OCI_FINGERPRINT }}
+          private-key: ${{ secrets.OCI_PRIVATE_KEY }}
+          tenancy: ${{ secrets.OCI_TENANCY }}
+          user: ${{ secrets.OCI_USER }}
+          region: ${{ secrets.OCI_REGION }}
+
+      - name: Build and Push Docker image
+        working-directory: ./ai-service
+        run: |
+          docker build -t ai-service .
+          docker tag ai-service ${{ secrets.OCI_REGISTRY }}/ai-service:${{ github.sha }}
+          docker push ${{ secrets.OCI_REGISTRY }}/ai-service:${{ github.sha }}
+
+      - name: Deploy to Oracle Cloud
+        run: |
+          ssh -i ${{ secrets.SSH_PRIVATE_KEY }} ubuntu@${{ secrets.AI_SERVICE_HOST }} \
+          "docker pull ${{ secrets.OCI_REGISTRY }}/ai-service:${{ github.sha }} && \
+           docker stop ai-service || true && \
+           docker rm ai-service || true && \
+           docker run -d --name ai-service -p 50051:50051 \
+           -e HF_TOKEN=${{ secrets.HF_TOKEN }} \
+           -e COLAB_URL=${{ secrets.COLAB_URL }} \
+           ${{ secrets.OCI_REGISTRY }}/ai-service:${{ github.sha }}"
