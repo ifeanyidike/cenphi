@@ -1,14 +1,7 @@
 // 404.tsx
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  ArrowLeft,
-  Home,
-  Search,
-  Compass,
-  Clock,
-  RefreshCw,
-} from "lucide-react";
+import { Home, Search, Compass, Clock, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
