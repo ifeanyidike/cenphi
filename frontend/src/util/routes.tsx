@@ -10,7 +10,6 @@ import NotFoundPage from "@/pages/NotFoundPage";
 // Testimonial Collection Process
 import TestimonialCollectionLayout from "@/layouts/TestimonialCollectionLayout";
 import TestimonialTypeSelection from "@/pages/collection/TypeSelection";
-import TestimonialCollection from "@/pages/TestimonialCollection";
 import TestimonialUploads from "@/pages/collection/TestimonialUploads";
 import VideoTestimonialRecorder from "@/pages/collection/VideoTestimonialRecorder";
 import AudioTestimonialRecorder from "@/pages/collection/AudioTestimonialRecorder";
@@ -19,6 +18,7 @@ import MobileTransferPage from "@/pages/collection/MobileTransferPage";
 import ThankYouPage from "@/pages/collection/ThankYouPage";
 
 import { useParams } from "react-router-dom";
+import TestimonialHero from "@/pages/TestimonialHeroPage";
 
 // A dynamic component to choose the correct recorder based on the URL parameter.
 const DynamicRecorder = () => {
@@ -52,8 +52,8 @@ export const router = createBrowserRouter([
     element: <ResetPasswordPage />,
   },
   {
-    path: "/flow",
-    element: <TestimonialCollection />,
+    path: "/home2",
+    element: <TestimonialHero />,
   },
   {
     // Parent route for the testimonial collection process.
