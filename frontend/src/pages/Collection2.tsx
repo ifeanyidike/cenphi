@@ -1,19 +1,6 @@
-import React, { useState, useEffect } from "react";
-import {
-  motion,
-  AnimatePresence,
-  useMotionValue,
-  useTransform,
-} from "framer-motion";
-import {
-  ChevronRight,
-  ArrowRight,
-  CheckCircle2,
-  Circle,
-  Star,
-  MessageSquare,
-  Plus,
-} from "lucide-react";
+import { useState, useEffect } from "react";
+import { motion, useMotionValue } from "framer-motion";
+import { ArrowRight, CheckCircle2, Circle, Star, Plus } from "lucide-react";
 
 // Innovative scroll-based progress indicator
 const ProgressRing = ({ progress }: { progress: number }) => (

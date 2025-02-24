@@ -25,3 +25,9 @@ dist-ssr
 *.sln
 *.sw?
 
+ai-service/Dockerfile.optim
+ai-service/Dockerfile.optim0
+ai-service/slim.report.json
+deployment/
+.qodo/
+slim.report.json

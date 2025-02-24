@@ -56,11 +56,19 @@ stop-docker:
 stop-run-docker:
 	$(DOCKER_COMPOSE) down -v && $(DOCKER_COMPOSE_PROD) up --build
 
+
+slim-docker-full:
+	slim build \
+	--http-probe=false \
+	--env-file slim.env \
+	--include-path '/root/.cache/huggingface' \
+    --include-path '/opt/venv' \
+	cenphi-ai-service:latest
 # Produces a slim image of the ai container
 slim-docker:
 	slim build \
+	--env-file slim.env \
 	--http-probe=false \
-	--continue-after=60 \
 	--include-path "/opt/venv/lib/python3.12/site-packages/torch/bin/torch_shm_manager" \
 	--include-path /opt/venv/lib/python3.12/site-packages/transformers/utils/dummy_vision_objects.py \
 	cenphi-ai-service:latest

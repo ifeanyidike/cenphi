@@ -1,19 +1,9 @@
-import React from "react";
 import { motion } from "framer-motion";
-import {
-  Star,
-  Sparkles,
-  Diamond,
-  Award,
-  BookOpen,
-  Crown,
-  Heart,
-  Check,
-} from "lucide-react";
+import { Star, Sparkles, Diamond, BookOpen, Crown } from "lucide-react";
 
 const DemoSuccessView = () => {
   // Simplified demo version
-  const testimonialType = "transformational";
+  // const testimonialType = "transformational";
 
   // Dynamic content based on testimonial type
   const getThematicContent = () => {
