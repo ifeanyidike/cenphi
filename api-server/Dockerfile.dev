@@ -13,7 +13,7 @@ rm -rf /go/pkg/mod/cache
 
 COPY . .
 
-EXPOSE 8080
+EXPOSE 8081
 
 # Command to run Air
 CMD ["air", "-c", ".air.toml"]
