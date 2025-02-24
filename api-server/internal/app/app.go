@@ -119,9 +119,18 @@ func (app *Application) Run(mux http.Handler) error {
 	}
 
 	app.Logger.Info("server started", zap.String("address", app.Config.Server.Address))
-	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		app.Logger.Error("server encountered an error", zap.Error(err))
-		return err
+	if app.Config.Server.Environment == "production" {
+		// In production, use HTTPS
+		if err := server.ListenAndServeTLS(app.Config.Server.CertFile, app.Config.Server.KeyFile); err != nil && err != http.ErrServerClosed {
+			app.Logger.Error("server encountered an error", zap.Error(err))
+			return err
+		}
+	} else {
+		// In development, use HTTP
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			app.Logger.Error("server encountered an error", zap.Error(err))
+			return err
+		}
 	}
 	return nil
 }

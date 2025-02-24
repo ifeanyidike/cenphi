@@ -1,6 +1,5 @@
-"use client";
-import React, { useState, useEffect, useRef } from "react";
-import { Star, ArrowRight, Quote, Play, Pause } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { ArrowRight, Quote, Play, Pause } from "lucide-react";
 
 const UltraPremiumHero = () => {
   const [isVisible, setIsVisible] = useState(false);

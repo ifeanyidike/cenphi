@@ -1,11 +1,9 @@
-"use client";
 import React, { useState, useEffect, useRef } from "react";
 import {
   Play,
   Pause,
   Sparkles,
   Brain,
-  Share,
   MessageSquare,
   RefreshCw,
   Zap,

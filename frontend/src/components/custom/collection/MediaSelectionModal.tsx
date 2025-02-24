@@ -16,7 +16,7 @@ import { collectionStore } from "@/stores/collectionStore";
 import { runInAction } from "mobx";
 import { useNavigate } from "react-router-dom";
 
-type MediaType = "video" | "audio" | "text" | null;
+// type MediaType = "video" | "audio" | "text" | null;
 type OptionType = "record" | "upload" | "mobile";
 
 interface MediaOption {

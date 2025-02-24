@@ -17,6 +17,9 @@ type Config struct {
 type ServerConfig struct {
 	Address       string
 	MaxUploadSize int64
+	CertFile      string
+	KeyFile       string
+	Environment   string
 }
 
 type DatabaseConfig struct {

@@ -1,7 +1,6 @@
-"use client";
 // Due to length, this will be split into multiple parts. Here's Part 1 - Imports and Core Components:
 
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   motion,
   useMotionValue,
@@ -9,7 +8,6 @@ import {
   useSpring,
   useScroll,
   AnimatePresence,
-  MotionValue,
 } from "framer-motion";
 import { useInView } from "react-intersection-observer";
 import {
@@ -17,14 +15,8 @@ import {
   Quote,
   MessageSquare,
   Award,
-  Sparkles,
-  Shield,
-  Target,
-  TrendingUp,
   ArrowRight,
   Users,
-  Globe,
-  Zap,
 } from "lucide-react";
 
 // Custom hook for smooth mouse tracking
@@ -356,7 +348,7 @@ const StatsCard = ({
   delay?: number;
 }) => {
   const cardRef = useRef<HTMLDivElement>(null);
-  const [isHovered, setIsHovered] = useState(false);
+  const [isHovered] = useState(false);
   const [ref, inView] = useInView({ threshold: 0.2 });
 
   const x = useMotionValue(0);
@@ -550,7 +542,7 @@ const TestimonialCard = ({
 
 // Main Hero Component
 const TestimonialHero2 = () => {
-  const [activeTab, setActiveTab] = useState("featured");
+  const [activeTab] = useState("featured");
   const { scrollYProgress } = useScroll();
   const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
 

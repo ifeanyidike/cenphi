@@ -71,7 +71,7 @@ const NotFoundPage: React.FC = () => {
       requestAnimationFrame(animate);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      particles.forEach((particle, index) => {
+      particles.forEach((particle) => {
         particle.x += particle.velocity.x;
         particle.y += particle.velocity.y;
 

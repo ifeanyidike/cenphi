@@ -1,22 +1,14 @@
-import React from "react";
 import {
   ArrowUpRight,
   Bot,
   Brain,
-  CheckCircle,
-  ChevronRight,
-  Download,
   FileText,
-  Filter,
-  Heart,
   MessageSquare,
   Plus,
   Star,
   Users,
-  Zap,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 const EmptyDashboard = () => {
@@ -90,16 +82,15 @@ const EmptyDashboard = () => {
                   No Customer Reviews Yet
                 </h3>
                 <p className="text-gray-500 max-w-md mb-6">
-                  Start collecting feedback from your customers to build trust and improve your services.
+                  Start collecting feedback from your customers to build trust
+                  and improve your services.
                 </p>
                 <div className="flex flex-wrap gap-4 justify-center">
                   <Button variant="default">
                     <Plus className="h-4 w-4 mr-2" />
                     Add Customer
                   </Button>
-                  <Button variant="outline">
-                    Import Reviews
-                  </Button>
+                  <Button variant="outline">Import Reviews</Button>
                 </div>
               </div>
             </CardContent>
@@ -155,7 +146,8 @@ const EmptyDashboard = () => {
               </div>
               <div className="mt-4 p-4 bg-purple-50 rounded-lg">
                 <p className="text-sm text-purple-700">
-                  These tools will be available once you add your first customer review.
+                  These tools will be available once you add your first customer
+                  review.
                 </p>
               </div>
             </CardContent>
@@ -174,20 +166,20 @@ const EmptyDashboard = () => {
                     label: "Add Customers",
                     description: "Import or create customer profiles",
                     icon: Users,
-                    status: "pending"
+                    status: "pending",
                   },
                   {
                     label: "Collect Reviews",
                     description: "Start gathering feedback",
                     icon: MessageSquare,
-                    status: "pending"
+                    status: "pending",
                   },
                   {
                     label: "Analyze Data",
                     description: "Get insights from your reviews",
                     icon: Brain,
-                    status: "pending"
-                  }
+                    status: "pending",
+                  },
                 ].map((step) => (
                   <div
                     key={step.label}
@@ -198,7 +190,9 @@ const EmptyDashboard = () => {
                     </div>
                     <div>
                       <p className="font-medium text-gray-900">{step.label}</p>
-                      <p className="text-sm text-gray-500">{step.description}</p>
+                      <p className="text-sm text-gray-500">
+                        {step.description}
+                      </p>
                     </div>
                   </div>
                 ))}

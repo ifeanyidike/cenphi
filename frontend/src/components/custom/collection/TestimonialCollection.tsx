@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { motion, AnimatePresence, useMotionValue } from "framer-motion";
 import TestimonialTypeSelection from "./TestimonialTypeSelection";
 import { VideoRecorder } from "./VideoRecorder";
@@ -7,7 +6,7 @@ import { AIFeedback } from "./AIFeedback";
 import MediaSelectionModal from "./MediaSelectionModal";
 import FileUpload from "./FileUpload";
 import MobileTransfer from "./MobileTransfer";
-import { TestimonialType, AIFeedbackData } from "./types";
+import { TestimonialType } from "./types";
 import { GUIDED_PROMPTS, MAX_RECORDING_DURATION } from "./constants";
 import TestimonialProgress from "./TestimonialProgress";
 import TextCollection from "./TextCollection";

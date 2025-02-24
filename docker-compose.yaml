@@ -28,6 +28,7 @@ services:
     # image: cenphi-ai-service.slim # the slim image is for production
     build:
       context: ./ai-service
+    platform: linux/amd64
     ports:
       - "50052:50052"
     env_file:
