@@ -1,9 +1,7 @@
 import React, { useState } from "react";
 import {
-  Calendar,
   Bell,
   Settings,
-  Plus,
   Search,
   Star,
   Filter,
@@ -11,28 +9,20 @@ import {
   Share2,
   ChevronRight,
   MessageSquare,
-  BarChart3,
   Users,
   Archive,
   ArrowUpRight,
   Menu,
   Home,
   LineChart,
-  PieChart,
-  Trophy,
   Flag,
   Clock,
   CheckCircle,
-  XCircle,
-  AlertCircle,
   Heart,
   Target,
   Zap,
   BookOpen,
-  Truck,
   Grid,
-  Tag,
-  Map,
   ChevronDown,
   Brain,
   Sparkles,
@@ -61,23 +51,23 @@ interface MenuItem {
   description?: string;
 }
 
-interface Stat {
-  title: string;
-  value: string | number;
-  icon: React.ElementType;
-  change: string;
-  trend: "up" | "down";
-}
+// interface Stat {
+//   title: string;
+//   value: string | number;
+//   icon: React.ElementType;
+//   change: string;
+//   trend: "up" | "down";
+// }
 
-interface Review {
-  id: number;
-  name: string;
-  initials: string;
-  rating: number;
-  timeAgo: string;
-  content: string;
-  isNew: boolean;
-}
+// interface Review {
+//   id: number;
+//   name: string;
+//   initials: string;
+//   rating: number;
+//   timeAgo: string;
+//   content: string;
+//   isNew: boolean;
+// }
 type Menu =
   | "insights"
   | "engagement"
@@ -88,7 +78,7 @@ type Menu =
   | "aiFeatures"
   | "automation";
 const TestimonialsDashboard2 = () => {
-  const [activeTab, setActiveTab] = useState("overview");
+  // const [activeTab, setActiveTab] = useState("overview");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<Record<Menu, boolean>>({
     dashboard: true,

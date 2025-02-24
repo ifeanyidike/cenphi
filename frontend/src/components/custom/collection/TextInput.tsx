@@ -108,7 +108,7 @@ export const TextInput: React.FC<TextInputProps> = ({
 // Component to display keyboard shortcuts help overlay
 const ShortcutsHelp: React.FC = () => {
   const [showDialog, setShowDialog] = useState(false);
-  const [lastUsed, setLastUsed] = useState<string | null>(null);
+  const [lastUsed] = useState<string | null>(null);
 
   // Predefined shortcuts (matching the ones in the audio recorder example)
   const shortcuts = [

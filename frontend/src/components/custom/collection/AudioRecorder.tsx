@@ -98,7 +98,7 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
   const [duration, setDuration] = useState(0);
   const [preview, setPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [audioLevel, setAudioLevel] = useState(0);
+  // const [audioLevel, setAudioLevel] = useState(0);
   const [frequencyData, setFrequencyData] = useState<Uint8Array>(
     new Uint8Array()
   );
@@ -132,8 +132,8 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
       const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
       analyserRef.current.getByteFrequencyData(dataArray);
       setFrequencyData(dataArray);
-      const average = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-      setAudioLevel(average / 255);
+      // const average = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+      // setAudioLevel(average / 255);
       animationFrameRef.current = requestAnimationFrame(updateVisualization);
     }
   }, [isRecording, isPaused]);

@@ -5,7 +5,6 @@ import { Brain, Quote, RefreshCw, Share, Star, Zap } from "lucide-react";
 
 const HomeTestimonialCard = ({
   testimonial,
-  inView,
 }: {
   testimonial: Testimonial;
   inView: boolean;

@@ -75,7 +75,7 @@ const SuccessView: React.FC<SuccessViewProps> = ({
 }) => {
   // States and refs
   const [particles, setParticles] = useState<Particle[]>([]);
-  const [isFullyLoaded, setIsFullyLoaded] = useState<boolean>(false);
+  // const [isFullyLoaded, setIsFullyLoaded] = useState<boolean>(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const textRevealControls = useAnimationControls();
   const iconControls = useAnimationControls();
@@ -127,7 +127,7 @@ const SuccessView: React.FC<SuccessViewProps> = ({
   const runAnimationSequence = useCallback(async () => {
     await iconControls.start("visible");
     await textRevealControls.start("visible");
-    setIsFullyLoaded(true);
+    // setIsFullyLoaded(true);
     if (onComplete) setTimeout(onComplete, 7000);
   }, [iconControls, textRevealControls, onComplete]);
 

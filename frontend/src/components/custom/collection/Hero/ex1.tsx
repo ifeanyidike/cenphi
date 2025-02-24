@@ -1,4 +1,3 @@
-"use client";
 import React, { useState, useEffect, useRef } from "react";
 import {
   motion,
@@ -8,14 +7,7 @@ import {
   useScroll,
   AnimatePresence,
 } from "framer-motion";
-import {
-  Star,
-  Quote,
-  MessageSquare,
-  Users,
-  Award,
-  TrendingUp,
-} from "lucide-react";
+import { Quote, MessageSquare, Users, Award, TrendingUp } from "lucide-react";
 
 // Artistic canvas background component
 const AnimatedBackground = () => {
@@ -178,7 +170,7 @@ const StatsCard = ({
 
 // Main Component
 const UltraPremiumHero = () => {
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [activeIndex] = useState(0);
   const { scrollYProgress } = useScroll();
   const containerRef = useRef<HTMLDivElement>(null);
   const mouseX = useMotionValue(0);
