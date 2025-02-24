@@ -20,7 +20,7 @@ services:
     volumes:
       - ./api-server:/src
       - ~/.aws:/root/.aws:ro
-      - /etc/ssl/certs:ro
+      - /etc/ssl/certs:/etc/ssl/certs:ro
     depends_on:
       - cenphidb
     command: ["/app/api"]
