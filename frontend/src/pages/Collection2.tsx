@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, useMotionValue } from "framer-motion";
 import { ArrowRight, CheckCircle2, Circle, Star, Plus } from "lucide-react";
-
 // Innovative scroll-based progress indicator
 const ProgressRing = ({ progress }: { progress: number }) => (
   <svg className="w-32 h-32" viewBox="0 0 100 100">
