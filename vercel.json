@@ -1,7 +1,4 @@
 {
-  "projectSettings": {
-    "rootDirectory": "frontend"
-  },
   "rewrites": [
     {
       "source": "/(.*)",
