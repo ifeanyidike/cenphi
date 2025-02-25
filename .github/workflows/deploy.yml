@@ -7,6 +7,20 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:13
+        ports:
+          - 5434:5432
+        env:
+          POSTGRES_USER: ifeanyidike
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: cenphidb_test
+        options: >-
+          --health-cmd "pg_isready -U ifeanyidike" 
+          --health-interval 10s 
+          --health-timeout 5s 
+          --health-retries 5
     strategy:
       matrix:
         service: [api-server, ai-service]
@@ -14,8 +28,15 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Start PostgreSQL container
-        run: docker compose up -d cenphidb
+      - name: Create .env.test file
+        run: |
+          cat <<EOF > .env.test
+          DB_USERNAME=ifeanyidike
+          DB_PASSWORD=test_password
+          DB_HOST=127.0.0.1
+          DB_PORT=5434
+          DB_NAME=cenphidb_test
+          EOF
 
       # Optionally wait for the DB to be ready (using sleep or a health check)
       - name: Wait for PostgreSQL to be ready
