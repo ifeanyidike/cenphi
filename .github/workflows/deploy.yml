@@ -28,7 +28,6 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # Add caching here, right after checkout
       - name: Cache Go modules
         if: ${{ matrix.service == 'api-server' }}
         uses: actions/cache@v3
@@ -49,15 +48,14 @@ jobs:
 
       - name: Create .env.test file
         run: |
-          cat <<EOF > .env.test
+          cat > .env.test << 'ENDOFFILE'
           DB_USERNAME=ifeanyidike
           DB_PASSWORD=test_password
           DB_HOST=127.0.0.1
           DB_PORT=5434
           DB_NAME=cenphidb_test
-          EOF
+          ENDOFFILE
 
-      # Optionally wait for the DB to be ready (using sleep or a health check)
       - name: Wait for PostgreSQL to be ready
         run: |
           for i in {1..30}; do
@@ -71,24 +69,24 @@ jobs:
           echo "Postgres did not start in time."
           exit 1
 
-      # API Server tests (Golang)
       - name: Set up Go for API Server
         if: ${{ matrix.service == 'api-server' }}
         uses: actions/setup-go@v2
         with:
-          go-version: "1.23"
+          go-version: "1.23.1"
+
       - name: Test API Server
         if: ${{ matrix.service == 'api-server' }}
         run: |
           cd api-server
           go test ./...
 
-      # AI Service tests (Python)
       - name: Set up Python for AI Service
         if: ${{ matrix.service == 'ai-service' }}
         uses: actions/setup-python@v4
         with:
           python-version: "3.12"
+
       - name: Install dependencies for AI Service
         if: ${{ matrix.service == 'ai-service' }}
         run: |
@@ -96,6 +94,7 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest
+
       - name: Test AI Service
         if: ${{ matrix.service == 'ai-service' }}
         run: |
@@ -112,7 +111,6 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # Add caching here, immediately after checkout
       - name: Cache Docker layers
         uses: actions/cache@v3
         with:
@@ -121,43 +119,39 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-buildx-${{ matrix.service }}-
 
-      # Create necessary .env files for each service
       - name: Create .env files
         run: |
           if [ "${{ matrix.service }}" == "api-server" ]; then
-            cat <<EOF > ./api-server/.env
-            DB_USERNAME=ifeanyidike
-            DB_PASSWORD=test_password
-            DB_HOST=cenphidb
-            DB_PORT=5432
-            DB_NAME=cenphidb
-            # Add other necessary API server variables
-            EOF
+            cat > ./api-server/.env << 'ENDOFFILE'
+          DB_USERNAME=ifeanyidike
+          DB_PASSWORD=test_password
+          DB_HOST=cenphidb
+          DB_PORT=5432
+          DB_NAME=cenphidb
+          # Add other necessary API server variables
+          ENDOFFILE
           fi
 
           if [ "${{ matrix.service }}" == "ai-service" ]; then
-            cat <<EOF > ./ai-service/.env
-            # Add necessary AI service variables here
-            PYTHONUNBUFFERED=1
-            TRANSFORMERS_CACHE=/root/.cache/huggingface
-            # Add other necessary AI service variables
-            EOF
+            cat > ./ai-service/.env << 'ENDOFFILE'
+          # Add necessary AI service variables here
+          PYTHONUNBUFFERED=1
+          TRANSFORMERS_CACHE=/root/.cache/huggingface
+          # Add other necessary AI service variables
+          ENDOFFILE
           fi
 
-      # Install Docker Slim (Now known as Slim Toolkit)
       - name: Install Docker Slim
         run: |
           curl -sL https://raw.githubusercontent.com/slimtoolkit/slim/master/scripts/install-slim.sh | sudo -E bash -
           slim --version
 
-      # Set up Docker Buildx (for multi-platform builds if needed)
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      # Log in to Docker Hub with explicit settings
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
@@ -165,13 +159,11 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
           logout: false
 
-      # Verify Docker login status
       - name: Verify Docker login
         run: |
           echo "Checking Docker login status..."
           docker info
 
-      # Build and push with more explicit options
       - name: Build and push ${{ matrix.service }} image
         uses: docker/build-push-action@v4
         with:
@@ -181,17 +173,28 @@ jobs:
           tags: lorddickson/${{ matrix.service }}:latest
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
-        #   no-cache: false
-        #   build-args: |
-        #     BUILDKIT_INLINE_CACHE=1
 
-      # For the AI service, run your slim process
-      - name: Slim AI Service Image
-        if: ${{ matrix.service == 'ai-service' }}
-        working-directory: ai-service
+      # Move cache for next job
+      - name: Move cache
         run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+      - name: Slim AI Service Image
+        if: ${{ matrix.service == 'ai-service' && success() }}
+        run: |
+          # Create a basic Makefile if it doesn't exist
+          if [ ! -f ./ai-service/Makefile ]; then
+            cat > ./ai-service/Makefile << 'ENDOFFILE'
+          slim-docker-full:
+          	slim build --tag $(IMAGE_NAME).slim $(IMAGE_NAME)
+          ENDOFFILE
+          fi
+
           # Make sure the image exists before trying to slim it
           docker pull lorddickson/ai-service:latest || { echo "Failed to pull image, cannot slim"; exit 1; }
+
+          cd ai-service
           make slim-docker-full IMAGE_NAME=lorddickson/ai-service:latest
 
           # Push the slimmed image if slimming was successful
