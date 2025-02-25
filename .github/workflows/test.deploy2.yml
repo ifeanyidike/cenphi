@@ -1,0 +1,85 @@
+name: CI/CD Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [api-server, ai-service]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Install Docker Slim
+      - name: Install Docker Slim
+        run: |
+          wget -q https://github.com/docker-slim/docker-slim/releases/download/1.41.0/dist_linux.tar.gz
+          tar xzf dist_linux.tar.gz
+          chmod +x docker-slim
+          sudo mv docker-slim /usr/local/bin/
+          docker-slim --version
+
+      # Set up Docker Buildx (for multi-platform builds if needed)
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push ${{ matrix.service }} image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./${{ matrix.service }}
+          file: ./${{ matrix.service }}/Dockerfile
+          push: true
+          tags: lorddickson/${{ matrix.service }}:latest
+
+      # Optionally, for the AI service run your slim process.
+      - name: Slim AI Service Image
+        if: ${{ matrix.service == 'ai-service' }}
+        working-directory: ai-service
+        run: make slim-docker-full-v2
+
+  deploy_api:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: SSH Deploy to API Server
+        uses: appleboy/ssh-action@v0.1.5
+        with:
+          host: ${{ secrets.API_SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          script: |
+            cd /home/opc && ./deploy.sh
+
+  deploy_ai:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: SSH Deploy to AI Service
+        uses: appleboy/ssh-action@v0.1.5
+        with:
+          host: ${{ secrets.AI_SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          script: |
+            cd /home/opc && ./deploy.sh
