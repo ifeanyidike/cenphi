@@ -14,6 +14,23 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
+      - name: Start PostgreSQL container
+        run: docker-compose up -d cenphidb
+
+      # Optionally wait for the DB to be ready (using sleep or a health check)
+      - name: Wait for PostgreSQL to be ready
+        run: |
+          for i in {1..30}; do
+            if nc -z localhost 5434; then
+              echo "Postgres is up!"
+              exit 0
+            fi
+            echo "Waiting for Postgres..."
+            sleep 2
+          done
+          echo "Postgres did not start in time."
+          exit 1
+
       # API Server tests (Golang)
       - name: Set up Go for API Server
         if: ${{ matrix.service == 'api-server' }}
