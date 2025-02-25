@@ -14,7 +14,7 @@ services:
     build:
       context: ./api-server
     ports:
-      - "8443:443"
+      - "8081:443"
     env_file:
       - ./api-server/.env
     volumes:
