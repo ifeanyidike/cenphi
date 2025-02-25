@@ -15,7 +15,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Start PostgreSQL container
-        run: docker-compose up -d cenphidb
+        run: docker compose up -d cenphidb
 
       # Optionally wait for the DB to be ready (using sleep or a health check)
       - name: Wait for PostgreSQL to be ready
