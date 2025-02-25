@@ -19,7 +19,7 @@ jobs:
         if: ${{ matrix.service == 'api-server' }}
         uses: actions/setup-go@v2
         with:
-          go-version: "1.18"
+          go-version: "1.23"
       - name: Test API Server
         if: ${{ matrix.service == 'api-server' }}
         run: |
