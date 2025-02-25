@@ -183,25 +183,21 @@ jobs:
       - name: Slim AI Service Image
         if: ${{ matrix.service == 'ai-service' && success() }}
         run: |
-          # Create a basic Makefile if it doesn't exist
-          if [ ! -f ./ai-service/Makefile ]; then
-            cat > ./ai-service/Makefile << 'ENDOFFILE'
-          slim-docker-full:
-          	slim build --tag $(IMAGE_NAME).slim $(IMAGE_NAME)
-          ENDOFFILE
-          fi
-
           # Make sure the image exists before trying to slim it
           docker pull lorddickson/ai-service:latest || { echo "Failed to pull image, cannot slim"; exit 1; }
 
+          echo "Creating slim version of the AI service image..."
+
           cd ai-service
-          make slim-docker-full IMAGE_NAME=lorddickson/ai-service:latest
+          slim build --http-probe=false --include-path '/root/.cache/huggingface' --include-path '/opt/venv' --tag lorddickson/ai-service:slim lorddickson/ai-service:latest
 
           # Push the slimmed image if slimming was successful
           if [ $? -eq 0 ]; then
-            docker push lorddickson/ai-service.slim:latest
+            echo "Successfully created slim image, pushing to Docker Hub"
+            docker push lorddickson/ai-service:slim
+            echo "Slim image pushed successfully!"
           else
-            echo "Slimming failed, using original image"
+            echo "Slimming failed, original image will be used in deployment"
           fi
 
   deploy_api:
