@@ -76,11 +76,12 @@ jobs:
           cd ai-service
           pip install --upgrade pip
           pip install -r requirements.txt
+          pip install pytest
       - name: Test AI Service
         if: ${{ matrix.service == 'ai-service' }}
         run: |
           cd ai-service
-          pytest
+          python -m pytest
 
   build-and-push:
     needs: test
