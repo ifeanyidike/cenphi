@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/go-chi/chi/middleware"
@@ -109,36 +108,10 @@ func NewApplication(cfg *config.Config, db *sql.DB, redisClient *redis.Client, g
 	}
 }
 
-// func (app *Application) Run(mux http.Handler) error {
-
-// 	server := &http.Server{
-// 		Addr:         app.Config.Server.Address,
-// 		Handler:      mux,
-// 		WriteTimeout: 10 * time.Second,
-// 		ReadTimeout:  10 * time.Second,
-// 		IdleTimeout:  30 * time.Second,
-// 	}
-
-// 	app.Logger.Info("server started", zap.String("address", app.Config.Server.Address))
-// 	if app.Config.Server.Environment == "production" {
-// 		// In production, use HTTPS
-// 		if err := server.ListenAndServeTLS(app.Config.Server.CertFile, app.Config.Server.KeyFile); err != nil && err != http.ErrServerClosed {
-// 			app.Logger.Error("server encountered an error", zap.Error(err))
-// 			return err
-// 		}
-// 	} else {
-// 		// In development, use HTTP
-// 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-// 			app.Logger.Error("server encountered an error", zap.Error(err))
-// 			return err
-// 		}
-// 	}
-// 	return nil
-// }
-
 func (app *Application) Run(mux http.Handler) error {
+
 	server := &http.Server{
-		Addr:         app.Config.Server.Address, // e.g., ":8081"
+		Addr:         app.Config.Server.Address,
 		Handler:      mux,
 		WriteTimeout: 10 * time.Second,
 		ReadTimeout:  10 * time.Second,
@@ -146,25 +119,43 @@ func (app *Application) Run(mux http.Handler) error {
 	}
 
 	app.Logger.Info("server started", zap.String("address", app.Config.Server.Address))
-
-	if app.Config.Server.Environment == "production" {
-		// Read certificate and key paths from environment variables
-		certFile := os.Getenv("SSL_CERT_FILE") // e.g., "/etc/ssl/certs/fullchain.pem"
-		keyFile := os.Getenv("SSL_KEY_FILE")   // e.g., "/etc/ssl/certs/privkey.pem"
-		app.Logger.Info("Running in production mode with HTTPS")
-		if err := server.ListenAndServeTLS(certFile, keyFile); err != nil && err != http.ErrServerClosed {
-			app.Logger.Error("server encountered an error", zap.Error(err))
-			return err
-		}
-	} else {
-		app.Logger.Info("Running in development mode with HTTP")
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			app.Logger.Error("server encountered an error", zap.Error(err))
-			return err
-		}
+	app.Logger.Info("environment log", zap.String("environment", app.Config.Server.Environment))
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		app.Logger.Error("server encountered an error", zap.Error(err))
+		return err
 	}
 	return nil
 }
+
+// func (app *Application) Run(mux http.Handler) error {
+// 	server := &http.Server{
+// 		Addr:         app.Config.Server.Address, // e.g., ":8081"
+// 		Handler:      mux,
+// 		WriteTimeout: 10 * time.Second,
+// 		ReadTimeout:  10 * time.Second,
+// 		IdleTimeout:  30 * time.Second,
+// 	}
+
+// 	app.Logger.Info("server started", zap.String("address", app.Config.Server.Address))
+
+// 	if app.Config.Server.Environment == "production" {
+// 		// Read certificate and key paths from environment variables
+// 		certFile := os.Getenv("SSL_CERT_FILE") // e.g., "/etc/ssl/certs/fullchain.pem"
+// 		keyFile := os.Getenv("SSL_KEY_FILE")   // e.g., "/etc/ssl/certs/privkey.pem"
+// 		app.Logger.Info("Running in production mode with HTTPS")
+// 		if err := server.ListenAndServeTLS(certFile, keyFile); err != nil && err != http.ErrServerClosed {
+// 			app.Logger.Error("server encountered an error", zap.Error(err))
+// 			return err
+// 		}
+// 	} else {
+// 		app.Logger.Info("Running in development mode with HTTP")
+// 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+// 			app.Logger.Error("server encountered an error", zap.Error(err))
+// 			return err
+// 		}
+// 	}
+// 	return nil
+// }
 
 func (app *Application) Mount() http.Handler {
 	r := chi.NewRouter()
