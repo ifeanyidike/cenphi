@@ -15,6 +15,7 @@ GO_PROTO=protoc --proto_path=. \
 DOCKER_COMPOSE=docker-compose
 DOCKER_COMPOSE_DEV=docker-compose -f docker-compose.yaml -f docker-compose.dev.yaml
 DOCKER_COMPOSE_PROD=docker-compose -f docker-compose.yaml -f docker-compose.prod.yaml
+SLIM_IMAGE_NAME ?= cenphi-ai-service:latest
 
 # Targets
 .PHONY: all python-proto go-proto build-docker run-docker start-docker stop-docker stop-run-docker slim-docker build-docker-dev run-docker-dev start-docker-dev stop-run-docker-dev clean
@@ -63,7 +64,7 @@ slim-docker-full:
 	--env-file slim.env \
 	--include-path '/root/.cache/huggingface' \
     --include-path '/opt/venv' \
-	cenphi-ai-service:latest
+	$(IMAGE_NAME)
 
 slim-docker-full-v2:
 	docker-slim build \
