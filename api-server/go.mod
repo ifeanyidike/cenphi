@@ -1,6 +1,6 @@
 module github.com/ifeanyidike/cenphi
 
-go 1.23.1
+go 1.23
 
 require (
 	firebase.google.com/go/v4 v4.15.1
