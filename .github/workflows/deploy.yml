@@ -28,6 +28,25 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
+      # Add caching here, right after checkout
+      - name: Cache Go modules
+        if: ${{ matrix.service == 'api-server' }}
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Cache Python packages
+        if: ${{ matrix.service == 'ai-service' }}
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
       - name: Create .env.test file
         run: |
           cat <<EOF > .env.test
@@ -93,6 +112,38 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
+      # Add caching here, immediately after checkout
+      - name: Cache Docker layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ matrix.service }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-${{ matrix.service }}-
+
+      # Create necessary .env files for each service
+      - name: Create .env files
+        run: |
+          if [ "${{ matrix.service }}" == "api-server" ]; then
+            cat <<EOF > ./api-server/.env
+            DB_USERNAME=ifeanyidike
+            DB_PASSWORD=test_password
+            DB_HOST=cenphidb
+            DB_PORT=5432
+            DB_NAME=cenphidb
+            # Add other necessary API server variables
+            EOF
+          fi
+
+          if [ "${{ matrix.service }}" == "ai-service" ]; then
+            cat <<EOF > ./ai-service/.env
+            # Add necessary AI service variables here
+            PYTHONUNBUFFERED=1
+            TRANSFORMERS_CACHE=/root/.cache/huggingface
+            # Add other necessary AI service variables
+            EOF
+          fi
+
       # Install Docker Slim (Now known as Slim Toolkit)
       - name: Install Docker Slim
         run: |
@@ -106,12 +157,21 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
+      # Log in to Docker Hub with explicit settings
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+          logout: false
 
+      # Verify Docker login status
+      - name: Verify Docker login
+        run: |
+          echo "Checking Docker login status..."
+          docker info
+
+      # Build and push with more explicit options
       - name: Build and push ${{ matrix.service }} image
         uses: docker/build-push-action@v4
         with:
@@ -119,12 +179,27 @@ jobs:
           file: ./${{ matrix.service }}/Dockerfile
           push: true
           tags: lorddickson/${{ matrix.service }}:latest
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+        #   no-cache: false
+        #   build-args: |
+        #     BUILDKIT_INLINE_CACHE=1
 
       # For the AI service, run your slim process
       - name: Slim AI Service Image
         if: ${{ matrix.service == 'ai-service' }}
         working-directory: ai-service
-        run: make slim-docker-full IMAGE_NAME=lorddickson/ai-service:latest
+        run: |
+          # Make sure the image exists before trying to slim it
+          docker pull lorddickson/ai-service:latest || { echo "Failed to pull image, cannot slim"; exit 1; }
+          make slim-docker-full IMAGE_NAME=lorddickson/ai-service:latest
+
+          # Push the slimmed image if slimming was successful
+          if [ $? -eq 0 ]; then
+            docker push lorddickson/ai-service.slim:latest
+          else
+            echo "Slimming failed, using original image"
+          fi
 
   deploy_api:
     needs: build-and-push
@@ -141,7 +216,11 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           script: |
-            cd /home/opc && ./deploy.sh
+            cd /home/opc
+            # Pull the latest images
+            docker pull lorddickson/api-server:latest
+            # Run deploy script
+            ./deploy.sh
 
   deploy_ai:
     needs: build-and-push
@@ -158,4 +237,10 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           script: |
-            cd /home/opc && ./deploy.sh
+            cd /home/opc
+            # Pull the latest images
+            docker pull lorddickson/ai-service:latest
+            # Try to pull slim image if it exists
+            docker pull lorddickson/ai-service.slim:latest || echo "Slim image not found, will use regular image"
+            # Run deploy script
+            ./deploy.sh

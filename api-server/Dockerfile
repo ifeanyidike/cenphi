@@ -65,7 +65,7 @@ WORKDIR /app
 
 # Copy .env file to final container (if needed)
 #COPY --from=builder /app/.env /app/.env
-RUN if [ -f /app/.env ]; then cp /app/.env /app/.env; else echo ".env not found, skipping"; fi
+# RUN if [ -f /app/.env ]; then cp /app/.env /app/.env; else echo ".env not found, skipping"; fi
 
 # # Add SSL certificates (if needed for HTTPS calls)
 # COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
