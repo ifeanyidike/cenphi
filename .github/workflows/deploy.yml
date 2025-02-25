@@ -203,10 +203,32 @@ jobs:
   deploy_api:
     needs: build-and-push
     runs-on: ubuntu-latest
+    env:
+      DB_USERNAME: ${{ secrets.DB_USERNAME }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      DB_HOST: ${{ secrets.DB_HOST }}
+      DB_PORT: ${{ secrets.DB_PORT }}
+      DB_NAME: ${{ secrets.DB_NAME }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
 
+      - name: Upload deploy.sh to API Server
+        uses: appleboy/ssh-action@v0.1.4
+        with:
+          host: ${{ secrets.API_SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          source: "scripts/api-deploy.sh"
+          target: "/home/opc"
+          overwrite: true
+        #   script: |
+        #     cd /home/opc
+        #     # Pull the latest images
+        #     docker pull lorddickson/api-server:latest
+        #     # Run deploy script
+        #     ./deploy.sh
       - name: SSH Deploy to API Server
         uses: appleboy/ssh-action@v0.1.5
         with:
@@ -214,19 +236,33 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          envs: DB_USERNAME,DB_PASSWORD,DB_HOST,DB_PORT,DB_NAME
           script: |
             cd /home/opc
-            # Pull the latest images
-            docker pull lorddickson/api-server:latest
+            # Make deploy script executable
+            chmod +x api-deploy.sh
             # Run deploy script
-            ./deploy.sh
+            ./api-deploy.sh
 
   deploy_ai:
     needs: build-and-push
     runs-on: ubuntu-latest
+    env:
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
+
+      - name: Upload deploy.sh to AI Service
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.AI_SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          source: "scripts/ai-deploy.sh"
+          target: "/home/opc"
+          overwrite: true
 
       - name: SSH Deploy to AI Service
         uses: appleboy/ssh-action@v0.1.5
@@ -235,11 +271,18 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          envs: HF_TOKEN
           script: |
             cd /home/opc
-            # Pull the latest images
-            docker pull lorddickson/ai-service:latest
-            # Try to pull slim image if it exists
-            docker pull lorddickson/ai-service.slim:latest || echo "Slim image not found, will use regular image"
+            # Make deploy script executable
+            chmod +x ai-deploy.sh
             # Run deploy script
-            ./deploy.sh
+            ./ai-deploy.sh
+        #   script: |
+        #     cd /home/opc
+        #     # Pull the latest images
+        #     docker pull lorddickson/ai-service:latest
+        #     # Try to pull slim image if it exists
+        #     docker pull lorddickson/ai-service.slim:latest || echo "Slim image not found, will use regular image"
+        #     # Run deploy script
+        #     ./deploy.sh
