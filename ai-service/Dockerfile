@@ -351,6 +351,7 @@
 
 
 # Builder stage with minimal build dependencies
+
 FROM python:3.12-slim AS builder
 
 # Install only essential build dependencies
