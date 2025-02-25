@@ -24,6 +24,7 @@ func NewIntelligence() Intelligence {
 var GrpcClient *pb.IntelligenceClient
 
 func (i *Inteligencer) ConnectToService() (*grpc.ClientConn, error) {
+	//creds := credentials.NewClientTLSFromCert(nil, "cenphiaiservice.duckdns.org")
 	conn, err := grpc.NewClient("ai-service:50052", grpc.WithTransportCredentials(insecure.NewCredentials()))
 
 	if err != nil {

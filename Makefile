@@ -64,6 +64,14 @@ slim-docker-full:
 	--include-path '/root/.cache/huggingface' \
     --include-path '/opt/venv' \
 	cenphi-ai-service:latest
+
+slim-docker-full-v2:
+	docker-slim build \
+	--http-probe=false \
+	--env-file slim.env \
+	--include-path '/root/.cache/huggingface' \
+    --include-path '/opt/venv' \
+	cenphi-ai-service:latest
 # Produces a slim image of the ai container
 slim-docker:
 	slim build \
