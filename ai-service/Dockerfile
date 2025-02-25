@@ -416,7 +416,7 @@ WORKDIR /app
 
 # Copy virtual environment from builder
 # COPY --from=builder /opt/venv /opt/venv
-RUN if [ -f /app/.env ]; then cp /opt/venv /opt/venv; else echo ".env not found, skipping"; fi
+# RUN if [ -f /app/.env ]; then cp /opt/venv /opt/venv; else echo ".env not found, skipping"; fi
 
 
 # Set environment variables
@@ -441,6 +441,6 @@ COPY main.py ./
 EXPOSE 50052
 
 # Set default command
-CMD ["/opt/venv/bin/python", "main.py"]
-
+# CMD ["/opt/venv/bin/python", "main.py"]
+CMD ["sh", "-c", "if [ -f /app/.env ]; then source /app/.env; fi && /opt/venv/bin/python main.py"]
 
