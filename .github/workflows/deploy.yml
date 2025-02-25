@@ -93,14 +93,11 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # Install Docker Slim
+      # Install Docker Slim (Now known as Slim Toolkit)
       - name: Install Docker Slim
         run: |
-          wget -q https://github.com/docker-slim/docker-slim/releases/download/1.41.0/dist_linux.tar.gz
-          tar xzf dist_linux.tar.gz
-          chmod +x docker-slim
-          sudo mv docker-slim /usr/local/bin/
-          docker-slim --version
+          curl -sL https://raw.githubusercontent.com/slimtoolkit/slim/master/scripts/install-slim.sh | sudo -E bash -
+          slim --version
 
       # Set up Docker Buildx (for multi-platform builds if needed)
       - name: Set up QEMU
@@ -127,7 +124,7 @@ jobs:
       - name: Slim AI Service Image
         if: ${{ matrix.service == 'ai-service' }}
         working-directory: ai-service
-        run: make slim-docker-full-v2
+        run: make slim-docker-full IMAGE_NAME=lorddickson/ai-service:latest
 
   deploy_api:
     needs: build-and-push
