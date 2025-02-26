@@ -319,6 +319,7 @@ jobs:
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           source: "scripts/ai-deploy.sh"
           target: "/home/opc"
+          strip_components: 1
           overwrite: true
 
       - name: SSH Deploy to AI Service
