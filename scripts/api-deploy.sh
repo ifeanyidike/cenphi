@@ -1,33 +1,12 @@
-!/bin/bash
+#!/bin/bash
 set -e
 
 cd /home/opc/app
 
 
-# Check if DB_USERNAME is set
-if [ -z "$DB_USERNAME" ]; then
-    echo "Error: HF_TOKEN is not set!"
-    exit 1
-fi
-
-# Check if DB_PASSWORD is set
-if [ -z "$DB_PASSWORD" ]; then
-    echo "Error: DB_PASSWORD is not set!"
-    exit 1
-
-# Check if DB_HOST is set
-if [ -z "$DB_HOST" ]; then
-    echo "Error: DB_HOST is not set!"
-    exit 1
-
-# Check if DB_PORT is set
-if [ -z "$DB_PORT" ]; then
-    echo "Error: DB_PORT is not set!"
-    exit 1
-
-# Ensure .env file exists
-if [ ! -f ".env" ]; then
-    echo "Error: .env file not found!"
+if [ -z "$DB_USERNAME" ] || [ -z "$DB_PASSWORD" ] || [ -z "$DB_HOST" ] || [ -z "$DB_PORT" ] || [ -z "$DB_NAME" ]; then
+    echo "Error: One or more database environment variables are not set!"
+    echo "Required: DB_USERNAME, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME"
     exit 1
 fi
 
@@ -49,6 +28,10 @@ fi
 
 # Stop existing containers
 docker compose -f docker-compose.yaml -f docker-compose.prod.yaml down
+
+# Pull the latest image
+echo "Pulling the latest api-server image..."
+docker pull lorddickson/api-server:latest || { echo "Failed to pull image"; exit 1; }
 
 # Create production override to use pre-built Docker images
 cat > docker-compose.override.yaml << 'EOL'
@@ -77,11 +60,36 @@ services:
       - GO_ENV=production
 EOL
 
-# Pull the latest image from Docker Hub
-docker pull lorddickson/api-server:latest
+
 
 # Start the container using the pre-built image
 docker compose -f docker-compose.yaml -f docker-compose.prod.yaml -f docker-compose.override.yaml up -d api-server cenphidb
+
+sleep 5
+if [ $(docker ps | grep api-server | wc -l) -eq 0 ]; then
+    echo "ERROR: API server container failed to start. Check logs:"
+    docker logs $(docker ps -a | grep api-server | awk '{print $1}')
+    exit 1
+else
+    echo "API server container is running!"
+    # Display running container info
+    docker ps | grep api-server
+fi
+
+# Check container health after a short delay
+sleep 10
+API_CONTAINER_ID=$(docker ps | grep api-server | awk '{print $1}')
+if [ ! -z "$API_CONTAINER_ID" ]; then
+    # Print recent logs
+    echo "Recent API container logs:"
+    docker logs --tail 20 $API_CONTAINER_ID
+    
+    # Check if container is still running
+    if [ $(docker ps | grep api-server | wc -l) -eq 0 ]; then
+        echo "WARNING: API container started but has stopped. Check for errors."
+        exit 1
+    fi
+fi
 
 # Clean up
 rm docker-compose.override.yaml
