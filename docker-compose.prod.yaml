@@ -1,0 +1,13 @@
+# docker-compose.prod.yaml - for processes on production only
+services:
+  frontend:
+    build:
+      # Use your production Dockerfile (e.g., Dockerfile)
+      dockerfile: Dockerfile
+    ports:
+      - 3300:80
+    command: ["nginx", "-g", "daemon off;"]
+
+  ai-service:
+    build: null
+    image: cenphi-ai-service.slim

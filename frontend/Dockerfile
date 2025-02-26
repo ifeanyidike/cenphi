@@ -1,17 +1,27 @@
-# Use the official Node.js image
-FROM node:22.7.0-alpine
+# Stage 1: Build the React app
+FROM node:22.7.0-alpine AS builder
 
-WORKDIR /usr/src/app
+WORKDIR /app
 
-# Copy package.json and yarn.lock and install dependencies
+# Install dependencies
 COPY package.json yarn.lock ./
-# --ignore-platform is added to fix issue that occurs with vite
-RUN yarn install --ignore-platform 
+# RUN yarn install --frozen-lockfile
+RUN yarn install --frozen-lockfile --ignore-platform
 
-# Copy the rest of the application files
+# Copy all source files and build production assets
 COPY . .
+RUN yarn vite build
 
-EXPOSE 3300
+# Stage 2: Serve with Nginx
+FROM nginx:alpine
 
-CMD ["yarn", "vite", "--host"]
+# Copy the production build from the builder stage
+COPY --from=builder /app/dist /usr/share/nginx/html
 
+# (Optional) Replace default nginx configuration if needed
+# COPY nginx.conf /etc/nginx/nginx.conf
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]

@@ -1,0 +1,9 @@
+# docker-compose.dev.yaml - for dev docker compose processes
+services:
+  frontend:
+    build:
+      dockerfile: Dockerfile.dev
+    ports:
+      - 3300:3000
+    command: ["yarn", "vite", "--host"]
+    tty: true
