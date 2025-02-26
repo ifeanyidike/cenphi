@@ -13,7 +13,7 @@ fi
 if [ ! -f "ai-service/.env" ]; then
     echo "Creating ai-service .env file..."
     mkdir -p ai-service
-    cat > ai-service/.env << 'EOL'
+    cat > ai-service/.env << EOL
 HF_TOKEN=$HF_TOKEN
 MODEL_ENDPOINT=model_endpoint
 PYTHONUNBUFFERED=1
@@ -86,6 +86,7 @@ services:
       - PYTHONUNBUFFERED=1
       - TRANSFORMERS_CACHE=/root/.cache/huggingface
       - PYTHON_ENV=production
+      - HF_TOKEN=$HF_TOKEN
     depends_on: []
     command: ["/bin/bash", "-c", "if [ -d /opt/venv/bin ]; then exec /opt/venv/bin/python -m app; else exec python -m app; fi"]
 EOL
