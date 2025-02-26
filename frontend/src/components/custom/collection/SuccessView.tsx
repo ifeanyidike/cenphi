@@ -175,7 +175,7 @@ const SuccessView: React.FC<SuccessViewProps> = ({
           "#818cf8",
           "#93c5fd",
         ];
-        let newParticles = [...prev];
+        const newParticles = [...prev];
         if (newParticles.length >= maxParticles) {
           newParticles.shift();
         }

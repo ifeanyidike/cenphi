@@ -266,7 +266,8 @@ class AuthStore {
       this.setError();
       const email = await verifyPasswordResetCode(auth, actionCode);
       return email;
-    } catch (error) {
+    } catch (error: any) {
+      console.log("error", error?.message);
       this.setError({
         message: "Invalid or expired reset link",
       });

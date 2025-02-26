@@ -34,7 +34,7 @@ interface MediaOption {
 //   onOptionSelect: (option: OptionType) => void;
 // }
 
-const MediaSelectionModal: React.FC<{}> = observer(() => {
+const MediaSelectionModal: React.FC = observer(() => {
   // { isOpen, onClose, type, onOptionSelect }
   const navigate = useNavigate();
   const isDesktop = useMediaQuery("(min-width: 768px)");
