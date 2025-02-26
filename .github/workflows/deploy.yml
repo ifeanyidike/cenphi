@@ -285,13 +285,8 @@ jobs:
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           envs: DB_USERNAME,DB_PASSWORD,DB_HOST,DB_PORT,DB_NAME
           script: |
-            cd /home/opc
+            cd /home/opc/scripts
             # Make deploy script executable
-            cat > api-deploy.sh << 'EOL'
-            #!/bin/bash
-            set -e
-
-            cd /home/opc/app
 
             chmod +x api-deploy.sh
             ls -la  # Verify the file exists
@@ -335,12 +330,7 @@ jobs:
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           envs: HF_TOKEN
           script: |
-            cd /home/opc
-            cat > ai-deploy.sh << 'EOL'
-            #!/bin/bash
-            set -e
-
-            cd /home/opc/app
+            cd /home/opc/scripts
 
             # Rest of your deployment script...
             EOL
