@@ -317,7 +317,6 @@ jobs:
                 cat > /home/opc/app/docker-compose.prod.yaml << 'ENDOFFILE'
                 services:
                     api-server:
-                        build: null
                         image: lorddickson/ai-service:latest
                         ports:
                             - "8081:8081"
