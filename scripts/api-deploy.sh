@@ -48,7 +48,6 @@ services:
     command: ["tail", "-f", "/dev/null"]
 
   api-server:
-    build: null
     image: lorddickson/api-server:latest
     restart: always
     volumes:
