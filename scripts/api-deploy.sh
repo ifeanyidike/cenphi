@@ -4,9 +4,9 @@ set -e
 cd /home/opc/app
 
 
-if [ -z "$DB_USERNAME" ] || [ -z "$DB_PASSWORD" ] || [ -z "$DB_HOST" ] || [ -z "$DB_PORT" ] || [ -z "$DB_NAME" ]; then
+if [ -z "$DB_USERNAME" ] || [ -z "$DB_PASSWORD" ] || [ -z "$DB_HOST" ] || [ -z "$DB_PORT" ]; then
     echo "Error: One or more database environment variables are not set!"
-    echo "Required: DB_USERNAME, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME"
+    echo "Required: DB_USERNAME, DB_PASSWORD, DB_HOST, DB_PORT"
     exit 1
 fi
 
