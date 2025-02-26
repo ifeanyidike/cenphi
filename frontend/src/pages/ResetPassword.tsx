@@ -24,7 +24,8 @@ const ResetPasswordPage = observer(() => {
     try {
       const emailFromCode = await authStore.verifyResetCode(actionCode!);
       setEmail(emailFromCode || null);
-    } catch (error) {
+    } catch (error: any) {
+      console.log("password reset error", error.message);
       // Invalid code will show error through store
       navigate("/reset-password", { replace: true });
     }
