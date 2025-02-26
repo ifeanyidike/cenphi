@@ -271,7 +271,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          source: "./docker-compose.yaml,./docker-compose.prod.yaml"
+          source: "./docker-compose.prod.yaml"
           target: "/home/opc/app"
           overwrite: true
 
@@ -309,16 +309,16 @@ jobs:
             # Ensure app directory exists
             mkdir -p /home/opc/app
             # Verify Docker Compose files exist
-            if [ ! -f "/home/opc/app/docker-compose.yaml" ]; then
-                echo "ERROR: docker-compose.yaml not found in /home/opc/app"
-                echo "Creating a simple docker-compose.yaml file..."
+            if [ ! -f "/home/opc/app/docker-compose.prod.yaml" ]; then
+                echo "ERROR: docker-compose.prod.yaml not found in /home/opc/app"
+                echo "Creating a simple docker-compose.prod.yaml file..."
 
-                # Create a basic docker-compose.yaml file
-                cat > /home/opc/app/docker-compose.yaml << 'ENDOFFILE'
+                # Create a basic docker-compose.prod.yaml file
+                cat > /home/opc/app/docker-compose.prod.yaml << 'ENDOFFILE'
                 services:
                     api-server:
-                        build:
-                            context: ./api-server
+                        build: null
+                        image: lorddickson/ai-service:latest
                         ports:
                             - "8081:8081"
                         env_file:
@@ -327,15 +327,10 @@ jobs:
                             - ./api-server:/src
                             - ~/.aws:/root/.aws:ro
                             - /etc/ssl/certs:/etc/ssl/certs:ro
-                        command: ["/app/api"]
-            ENDOFFILE
-
-                    # Create a basic docker-compose.prod.yaml file
-                cat > /home/opc/app/docker-compose.prod.yaml << 'ENDOFFILE'
-                services:
-                    api-service:
+                        restart: always
                         environment:
                             - GO_ENV=production
+                        command: ["/app/api"]
             ENDOFFILE
 
                 echo "Created basic Docker Compose files"
@@ -367,7 +362,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          source: "./docker-compose.yaml,./docker-compose.prod.yaml"
+          source: "./docker-compose.prod.yaml"
           target: "/home/opc/app"
           overwrite: true
 
@@ -415,12 +410,12 @@ jobs:
             # Ensure app directory exists
             mkdir -p /home/opc/app
             # Verify Docker Compose files exist
-            if [ ! -f "/home/opc/app/docker-compose.yaml" ]; then
-                echo "ERROR: docker-compose.yaml not found in /home/opc/app"
-                echo "Creating a simple docker-compose.yaml file..."
+            if [ ! -f "/home/opc/app/docker-compose.prod.yaml" ]; then
+                echo "ERROR: docker-compose.prod.yaml not found in /home/opc/app"
+                echo "Creating a simple docker-compose.prod.yaml file..."
 
-                # Create a basic docker-compose.yaml file
-                cat > /home/opc/app/docker-compose.yaml << 'ENDOFFILE'
+                # Create a basic docker-compose.prod.yaml file
+                cat > /home/opc/app/docker-compose.prod.yaml << 'ENDOFFILE'
                 services:
                     ai-service:
                         image: lorddickson/ai-service:latest
@@ -433,15 +428,8 @@ jobs:
                     environment:
                         - PYTHONUNBUFFERED=1
                         - TRANSFORMERS_CACHE=/root/.cache/huggingface
+                        - PYTHON_ENV=production
                     command: ["/opt/venv/bin/python", "main.py"]
-            ENDOFFILE
-
-                    # Create a basic docker-compose.prod.yaml file
-                cat > /home/opc/app/docker-compose.prod.yaml << 'ENDOFFILE'
-                services:
-                    ai-service:
-                        environment:
-                            - PYTHON_ENV=production
             ENDOFFILE
 
                 echo "Created basic Docker Compose files"

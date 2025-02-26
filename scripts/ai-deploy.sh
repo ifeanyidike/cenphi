@@ -37,7 +37,7 @@ EOL
 fi
 
 # Stop existing containers
-docker compose -f docker-compose.yaml -f docker-compose.prod.yaml down
+docker compose -f docker-compose.prod.yaml down
 
 # Force pull the latest images first to ensure we have the newest versions
 echo "Pulling the latest images..."
@@ -67,7 +67,7 @@ else
 fi
 
 # Create production override to use the selected Docker image
-cat > docker-compose.override.yaml << 'EOL'
+cat > docker-compose.override.yaml << EOL
 services:
   # Disable services that are not needed in production
   frontend:
@@ -99,7 +99,7 @@ echo "Selected image size: $IMAGE_SIZE"
 
 # Start the container using the selected image
 echo "Starting AI service container using ${IMAGE_TO_USE}..."
-docker compose -f docker-compose.yaml -f docker-compose.prod.yaml -f docker-compose.override.yaml up -d ai-service
+docker compose -f docker-compose.prod.yaml -f docker-compose.override.yaml up -d ai-service
 
 # Verify container started properly
 sleep 5
