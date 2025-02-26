@@ -1,0 +1,2 @@
+grpcio-tools==1.62.1  # gRPC tools for development
+debugpy  # Debugging support (optional)

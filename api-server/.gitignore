@@ -1,2 +1,3 @@
 cenphiapp-service-account.json
-.env*
+.env.*
+!.env.test

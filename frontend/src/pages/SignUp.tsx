@@ -19,13 +19,16 @@ export const Signup = observer(() => {
     confirmPassword: string;
   }) => {
     if (password !== confirmPassword) {
-      alert("Passwords don't match!");
+      authStore.setError({
+        field: "confirmPassword",
+        message: "Passwords do not match",
+      });
       return;
     }
 
     try {
       console.log("name", name);
-      await authStore.signup(email, password);
+      if (!(await authStore.signup(email, password))) return;
       navigate("/dashboard");
     } catch (error) {
       console.error("Signup error:", error);

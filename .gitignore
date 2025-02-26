@@ -12,7 +12,8 @@ dist
 dist-ssr
 *.local
 *.env
-.env
+.env.*
+!.env.test
 
 # Editor directories and files
 .vscode/*
@@ -25,3 +26,9 @@ dist-ssr
 *.sln
 *.sw?
 
+ai-service/Dockerfile.optim
+ai-service/Dockerfile.optim0
+ai-service/slim.report.json
+deployment/
+.qodo/
+slim.report.json
