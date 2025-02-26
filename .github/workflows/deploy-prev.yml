@@ -1,0 +1,333 @@
+name: CI/CD Deploy
+
+on:
+  push:
+    branches: []
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:13
+        ports:
+          - 5434:5432
+        env:
+          POSTGRES_USER: ifeanyidike
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: cenphidb_test
+        options: >-
+          --health-cmd "pg_isready -U ifeanyidike" 
+          --health-interval 10s 
+          --health-timeout 5s 
+          --health-retries 5
+    strategy:
+      matrix:
+        service: [api-server, ai-service]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Cache Go modules
+        if: ${{ matrix.service == 'api-server' }}
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Cache Python packages
+        if: ${{ matrix.service == 'ai-service' }}
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Create .env.test file
+        run: |
+          cat > .env.test << 'ENDOFFILE'
+          DB_USERNAME=ifeanyidike
+          DB_PASSWORD=test_password
+          DB_HOST=127.0.0.1
+          DB_PORT=5434
+          DB_NAME=cenphidb_test
+          ENDOFFILE
+
+      - name: Wait for PostgreSQL to be ready
+        run: |
+          for i in {1..30}; do
+            if nc -z localhost 5434; then
+              echo "Postgres is up!"
+              exit 0
+            fi
+            echo "Waiting for Postgres..."
+            sleep 2
+          done
+          echo "Postgres did not start in time."
+          exit 1
+
+      - name: Set up Go for API Server
+        if: ${{ matrix.service == 'api-server' }}
+        uses: actions/setup-go@v2
+        with:
+          go-version: "1.23.1"
+
+      - name: Test API Server
+        if: ${{ matrix.service == 'api-server' }}
+        run: |
+          cd api-server
+          go test ./...
+
+      - name: Set up Python for AI Service
+        if: ${{ matrix.service == 'ai-service' }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies for AI Service
+        if: ${{ matrix.service == 'ai-service' }}
+        run: |
+          cd ai-service
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Test AI Service
+        if: ${{ matrix.service == 'ai-service' }}
+        run: |
+          cd ai-service
+          python -m pytest
+
+  build-and-push:
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [api-server, ai-service]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Cache Docker layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ matrix.service }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-${{ matrix.service }}-
+
+      - name: Create .env files
+        run: |
+          if [ "${{ matrix.service }}" == "api-server" ]; then
+            cat > ./api-server/.env << 'ENDOFFILE'
+          DB_USERNAME=ifeanyidike
+          DB_PASSWORD=test_password
+          DB_HOST=cenphidb
+          DB_PORT=5432
+          DB_NAME=cenphidb
+          # Add other necessary API server variables
+          ENDOFFILE
+          fi
+
+          if [ "${{ matrix.service }}" == "ai-service" ]; then
+            cat > ./ai-service/.env << 'ENDOFFILE'
+          # Add necessary AI service variables here
+          PYTHONUNBUFFERED=1
+          TRANSFORMERS_CACHE=/root/.cache/huggingface
+          # Add other necessary AI service variables
+          ENDOFFILE
+          fi
+
+      - name: Install Docker Slim
+        run: |
+          curl -sL https://raw.githubusercontent.com/slimtoolkit/slim/master/scripts/install-slim.sh | sudo -E bash -
+          slim --version
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          logout: false
+
+      - name: Verify Docker login
+        run: |
+          echo "Checking Docker login status..."
+          docker info
+
+      - name: Build and push ${{ matrix.service }} image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./${{ matrix.service }}
+          file: ./${{ matrix.service }}/Dockerfile
+          push: true
+          tags: lorddickson/${{ matrix.service }}:latest
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+
+      # Move cache for next job
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+      - name: Slim AI Service Image
+        if: ${{ matrix.service == 'ai-service' && success() }}
+        run: |
+          # Make sure the image exists before trying to slim it
+          docker pull lorddickson/ai-service:latest || { echo "Failed to pull image, cannot slim"; exit 1; }
+
+          echo "Creating slim version of the AI service image..."
+
+          cd ai-service
+          slim build --http-probe=false --include-path '/root/.cache/huggingface' --include-path '/opt/venv' --tag lorddickson/ai-service:slim lorddickson/ai-service:latest
+
+          # Push the slimmed image if slimming was successful
+          if [ $? -eq 0 ]; then
+            echo "Successfully created slim image, pushing to Docker Hub"
+            docker push lorddickson/ai-service:slim
+            echo "Slim image pushed successfully!"
+          else
+            echo "Slimming failed, original image will be used in deployment"
+          fi
+
+  deploy_api:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    env:
+      DB_USERNAME: ${{ secrets.DB_USERNAME }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      DB_HOST: ${{ secrets.DB_HOST }}
+      DB_PORT: ${{ secrets.DB_PORT }}
+      DB_NAME: ${{ secrets.DB_NAME }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Verify script exists
+        run: |
+          ls -la scripts/
+          if [ ! -f "scripts/api-deploy.sh" ]; then
+            echo "ERROR: scripts/api-deploy.sh does not exist in the repository!"
+            exit 1
+          fi
+
+      - name: Upload deploy.sh to API Server
+        uses: appleboy/ssh-action@v0.1.4
+        with:
+          host: ${{ secrets.API_SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          source: "scripts/api-deploy.sh"
+          target: "/home/opc"
+          strip_components: 1
+          overwrite: true
+        #   script: |
+        #     cd /home/opc
+        #     # Pull the latest images
+        #     docker pull lorddickson/api-server:latest
+        #     # Run deploy script
+        #     ./deploy.sh
+      - name: SSH Deploy to API Server
+        uses: appleboy/ssh-action@v0.1.5
+        with:
+          host: ${{ secrets.API_SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          envs: DB_USERNAME,DB_PASSWORD,DB_HOST,DB_PORT,DB_NAME
+          script: |
+            cd /home/opc
+            cat > api-deploy.sh << 'EOL'
+            #!/bin/bash
+            set -e
+
+            cd /home/opc/app
+
+            # Rest of your deployment script...
+            EOL
+
+            chmod +x api-deploy.sh
+            ls -la  # Verify the file exists
+        #   script: |
+        #     cd /home/opc
+        #     # Make deploy script executable
+
+        #     chmod +x api-deploy.sh
+        #     # Run deploy script
+        #     ./api-deploy.sh
+
+  deploy_ai:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    env:
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Verify script exists
+        run: |
+          ls -la scripts/
+          if [ ! -f "scripts/ai-deploy.sh" ]; then
+            echo "ERROR: scripts/ai-deploy.sh does not exist in the repository!"
+            exit 1
+          fi
+
+      - name: Upload deploy.sh to AI Service
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.AI_SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          source: "scripts/ai-deploy.sh"
+          target: "/home/opc"
+          strip_components: 1
+          overwrite: true
+
+      - name: SSH Deploy to AI Service
+        uses: appleboy/ssh-action@v0.1.5
+        with:
+          host: ${{ secrets.AI_SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          envs: HF_TOKEN
+          script: |
+            cd /home/opc
+            cat > aaipi-deploy.sh << 'EOL'
+            #!/bin/bash
+            set -e
+
+            cd /home/opc/app
+
+            # Rest of your deployment script...
+            EOL
+
+            chmod +x ai-deploy.sh
+            ls -la  # Verify the file exists
+        #   script: |
+        #     cd /home/opc
+        #     # Make deploy script executable
+        #     chmod +x ai-deploy.sh
+        #     # Run deploy script
+        #     ./ai-deploy.sh
+        #   script: |
+        #     cd /home/opc
+        #     # Pull the latest images
+        #     docker pull lorddickson/ai-service:latest
+        #     # Try to pull slim image if it exists
+        #     docker pull lorddickson/ai-service.slim:latest || echo "Slim image not found, will use regular image"
+        #     # Run deploy script
+        #     ./deploy.sh
