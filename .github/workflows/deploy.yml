@@ -328,7 +328,7 @@ jobs:
                             - ~/.aws:/root/.aws:ro
                             - /etc/ssl/certs:/etc/ssl/certs:ro
                         command: ["/app/api"]
-                ENDOFFILE
+            ENDOFFILE
 
                     # Create a basic docker-compose.prod.yaml file
                 cat > /home/opc/app/docker-compose.prod.yaml << 'ENDOFFILE'
@@ -336,7 +336,7 @@ jobs:
                     api-service:
                         environment:
                             - GO_ENV=production
-                ENDOFFILE
+            ENDOFFILE
 
                 echo "Created basic Docker Compose files"
             fi
@@ -434,7 +434,7 @@ jobs:
                         - PYTHONUNBUFFERED=1
                         - TRANSFORMERS_CACHE=/root/.cache/huggingface
                     command: ["/opt/venv/bin/python", "main.py"]
-                ENDOFFILE
+            ENDOFFILE
 
                     # Create a basic docker-compose.prod.yaml file
                 cat > /home/opc/app/docker-compose.prod.yaml << 'ENDOFFILE'
@@ -442,7 +442,7 @@ jobs:
                     ai-service:
                         environment:
                             - PYTHON_ENV=production
-                ENDOFFILE
+            ENDOFFILE
 
                 echo "Created basic Docker Compose files"
             fi
