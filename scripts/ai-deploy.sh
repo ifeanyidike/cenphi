@@ -80,7 +80,6 @@ services:
     profiles: ["disabled"]
   
   ai-service:
-    build: null
     image: ${IMAGE_TO_USE}
     restart: always
     environment:
