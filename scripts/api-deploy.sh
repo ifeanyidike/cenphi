@@ -15,13 +15,13 @@ if [ ! -f "api-server/.env" ]; then
     echo "Creating api-server .env file..."
     mkdir -p api-server
     cat > api-server/.env << 'EOL'
-DB_USERNAME=$DB_USERNAME
-DB_PASSWORD=$DB_PASSWORD
-DB_HOST=$DB_HOST
-DB_PORT=$DB_PORT
-DB_NAME=postgres
-AI_SERVICE_HOST=ai-service
-AI_SERVICE_PORT=50052
+      DB_USERNAME=$DB_USERNAME
+      DB_PASSWORD=$DB_PASSWORD
+      DB_HOST=$DB_HOST
+      DB_PORT=$DB_PORT
+      DB_NAME=postgres
+      AI_SERVICE_HOST=ai-service
+      AI_SERVICE_PORT=50052
 EOL
     echo "Created api-server .env file. Please update the values."
 fi
