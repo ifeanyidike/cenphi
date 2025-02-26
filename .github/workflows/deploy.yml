@@ -314,7 +314,7 @@ jobs:
                 echo "Creating a simple docker-compose.yaml file..."
 
                 # Create a basic docker-compose.yaml file
-                cat > /home/opc/app/docker-compose.yaml << 'EOL'
+                cat > /home/opc/app/docker-compose.yaml << 'ENDOFFILE'
                 services:
                     api-server:
                         build:
@@ -328,15 +328,15 @@ jobs:
                             - ~/.aws:/root/.aws:ro
                             - /etc/ssl/certs:/etc/ssl/certs:ro
                         command: ["/app/api"]
-                EOL
+                ENDOFFILE
 
                     # Create a basic docker-compose.prod.yaml file
-                cat > /home/opc/app/docker-compose.prod.yaml << 'EOL'
+                cat > /home/opc/app/docker-compose.prod.yaml << 'ENDOFFILE'
                 services:
                     api-service:
                         environment:
                             - GO_ENV=production
-                EOL
+                ENDOFFILE
 
                 echo "Created basic Docker Compose files"
             fi
@@ -420,7 +420,7 @@ jobs:
                 echo "Creating a simple docker-compose.yaml file..."
 
                 # Create a basic docker-compose.yaml file
-                cat > /home/opc/app/docker-compose.yaml << 'EOL'
+                cat > /home/opc/app/docker-compose.yaml << 'ENDOFFILE'
                 services:
                     ai-service:
                         image: lorddickson/ai-service:latest
@@ -434,15 +434,15 @@ jobs:
                         - PYTHONUNBUFFERED=1
                         - TRANSFORMERS_CACHE=/root/.cache/huggingface
                     command: ["/opt/venv/bin/python", "main.py"]
-                EOL
+                ENDOFFILE
 
                     # Create a basic docker-compose.prod.yaml file
-                cat > /home/opc/app/docker-compose.prod.yaml << 'EOL'
+                cat > /home/opc/app/docker-compose.prod.yaml << 'ENDOFFILE'
                 services:
                     ai-service:
                         environment:
                             - PYTHON_ENV=production
-                EOL
+                ENDOFFILE
 
                 echo "Created basic Docker Compose files"
             fi
