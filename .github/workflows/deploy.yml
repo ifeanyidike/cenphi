@@ -180,24 +180,67 @@ jobs:
           rm -rf /tmp/.buildx-cache
           mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
-      - name: Slim AI Service Image
-        if: ${{ matrix.service == 'ai-service' && success() }}
+      # Verify the original image size before slimming
+      - name: Verify original image size
+        if: ${{ matrix.service == 'ai-service' }}
         run: |
-          # Make sure the image exists before trying to slim it
-          docker pull lorddickson/ai-service:latest || { echo "Failed to pull image, cannot slim"; exit 1; }
+          docker pull lorddickson/ai-service:latest || { echo "Failed to pull image, cannot proceed"; exit 1; }
+          echo "Original image size:"
+          ORIGINAL_SIZE=$(docker images lorddickson/ai-service:latest --format "{{.Size}}")
+          echo "lorddickson/ai-service:latest - $ORIGINAL_SIZE"
+
+          # Extract size in MB for comparison
+          if [[ "$ORIGINAL_SIZE" == *"MB"* ]]; then
+            SIZE_NUM=$(echo $ORIGINAL_SIZE | sed 's/MB//')
+            echo "Size in MB: $SIZE_NUM"
+            # If image is already less than or equal to 150MB, skip slimming
+            if (( $(echo "$SIZE_NUM <= 150" | bc -l) )); then
+              echo "Image is already small enough (≤ 150MB), skipping slim process"
+              # Tag the original image as slim for consistency in deployment
+              docker tag lorddickson/ai-service:latest lorddickson/ai-service:slim
+              docker push lorddickson/ai-service:slim
+              # Create flag to skip slimming
+              touch /tmp/skip_slimming
+            fi
+          elif [[ "$ORIGINAL_SIZE" == *"GB"* ]]; then
+            echo "Image is in GB range, will proceed with slimming"
+          else
+            echo "Image is very small, skipping slim process"
+            docker tag lorddickson/ai-service:latest lorddickson/ai-service:slim
+            docker push lorddickson/ai-service:slim
+            touch /tmp/skip_slimming
+          fi
+
+      - name: Slim AI Service Image
+        if: ${{ matrix.service == 'ai-service' && success() && !contains(job.status, 'skip_slimming') }}
+        run: |
+          # Skip if the flag file exists
+          if [ -f "/tmp/skip_slimming" ]; then
+            echo "Skipping slimming as image is already small enough"
+            exit 0
+          fi
 
           echo "Creating slim version of the AI service image..."
 
           cd ai-service
           slim build --http-probe=false --include-path '/root/.cache/huggingface' --include-path '/opt/venv' --tag lorddickson/ai-service:slim lorddickson/ai-service:latest
 
-          # Push the slimmed image if slimming was successful
+          # Check if slimming was successful
           if [ $? -eq 0 ]; then
-            echo "Successfully created slim image, pushing to Docker Hub"
+            echo "Slimming completed. Checking size of slimmed image:"
+            SLIM_SIZE=$(docker images lorddickson/ai-service:slim --format "{{.Size}}")
+            echo "lorddickson/ai-service:slim - $SLIM_SIZE"
+            
+            echo "Pushing slimmed image to Docker Hub"
             docker push lorddickson/ai-service:slim
             echo "Slim image pushed successfully!"
           else
-            echo "Slimming failed, original image will be used in deployment"
+            echo "Slimming failed with exit code $?, original image will be used in deployment"
+            # Create a flag file to indicate we should use the original image
+            touch /tmp/use_original_image
+            # Tag original as slim for consistency
+            docker tag lorddickson/ai-service:latest lorddickson/ai-service:slim
+            docker push lorddickson/ai-service:slim
           fi
 
   deploy_api:
@@ -222,7 +265,7 @@ jobs:
           fi
 
       - name: Upload deploy.sh to API Server
-        uses: appleboy/ssh-action@v0.1.4
+        uses: appleboy/scp-action@v0.1.4
         with:
           host: ${{ secrets.API_SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
@@ -232,12 +275,7 @@ jobs:
           target: "/home/opc"
           strip_components: 1
           overwrite: true
-        #   script: |
-        #     cd /home/opc
-        #     # Pull the latest images
-        #     docker pull lorddickson/api-server:latest
-        #     # Run deploy script
-        #     ./deploy.sh
+
       - name: SSH Deploy to API Server
         uses: appleboy/ssh-action@v0.1.5
         with:
@@ -248,24 +286,10 @@ jobs:
           envs: DB_USERNAME,DB_PASSWORD,DB_HOST,DB_PORT,DB_NAME
           script: |
             cd /home/opc
-            cat > api-deploy.sh << 'EOL'
-            #!/bin/bash
-            set -e
-
-            cd /home/opc/app
-
-            # Rest of your deployment script...
-            EOL
-
+            # Make deploy script executable
             chmod +x api-deploy.sh
-            ls -la  # Verify the file exists
-        #   script: |
-        #     cd /home/opc
-        #     # Make deploy script executable
-
-        #     chmod +x api-deploy.sh
-        #     # Run deploy script
-        #     ./api-deploy.sh
+            # Run deploy script with environment variables
+            DB_USERNAME=$DB_USERNAME DB_PASSWORD=$DB_PASSWORD DB_HOST=$DB_HOST DB_PORT=$DB_PORT DB_NAME=$DB_NAME ./api-deploy.sh
 
   deploy_ai:
     needs: build-and-push
@@ -284,16 +308,15 @@ jobs:
             exit 1
           fi
 
-      - name: Upload deploy.sh to AI Service
+      - name: Upload improved deploy script to AI Service
         uses: appleboy/scp-action@v0.1.4
         with:
           host: ${{ secrets.AI_SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          source: "scripts/ai-deploy.sh"
+          source: "ai-deploy.sh"
           target: "/home/opc"
-          strip_components: 1
           overwrite: true
 
       - name: SSH Deploy to AI Service
@@ -306,28 +329,7 @@ jobs:
           envs: HF_TOKEN
           script: |
             cd /home/opc
-            cat > aaipi-deploy.sh << 'EOL'
-            #!/bin/bash
-            set -e
-
-            cd /home/opc/app
-
-            # Rest of your deployment script...
-            EOL
-
+            # Make deploy script executable
             chmod +x ai-deploy.sh
-            ls -la  # Verify the file exists
-        #   script: |
-        #     cd /home/opc
-        #     # Make deploy script executable
-        #     chmod +x ai-deploy.sh
-        #     # Run deploy script
-        #     ./ai-deploy.sh
-        #   script: |
-        #     cd /home/opc
-        #     # Pull the latest images
-        #     docker pull lorddickson/ai-service:latest
-        #     # Try to pull slim image if it exists
-        #     docker pull lorddickson/ai-service.slim:latest || echo "Slim image not found, will use regular image"
-        #     # Run deploy script
-        #     ./deploy.sh
+            # Run deploy script with environment variables
+            HF_TOKEN=$HF_TOKEN ./ai-deploy.sh
