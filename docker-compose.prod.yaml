@@ -15,8 +15,6 @@ services:
     image: lorddickson/api-server:latest
     ports:
       - "8081:8081"
-    env_file:
-      - ./api-server/.env
     volumes:
       - ./api-server:/src
       - ~/.aws:/root/.aws:ro
@@ -27,10 +25,7 @@ services:
     image: lorddickson/ai-service:slim
     ports:
       - "50052:50052"
-    env_file:
-      - ./ai-service/.env
     volumes:
-      - ./ai-service:/app
       - /app/venv
       - ai-model-cache:/root/.cache/huggingface
     environment:

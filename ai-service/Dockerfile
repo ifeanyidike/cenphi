@@ -442,6 +442,7 @@ COPY main.py ./
 EXPOSE 50052
 
 # Set default command
-# CMD ["/opt/venv/bin/python", "main.py"]
-CMD ["sh", "-c", "if [ -f /app/.env ]; then source /app/.env; fi && /opt/venv/bin/python main.py"]
+CMD ["/opt/venv/bin/python", "main.py"]
+# CMD ["sh", "-c", "if [ -f /app/.env ]; then source /app/.env; fi && /opt/venv/bin/python main.py"]
+
 
