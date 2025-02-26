@@ -13,7 +13,7 @@ fi
 if [ ! -f "ai-service/.env" ]; then
     echo "Creating ai-service .env file..."
     mkdir -p ai-service
-    cat > ai-service/.env << EOL
+    cat > ai-service/.env << 'EOL'
 HF_TOKEN=$HF_TOKEN
 MODEL_ENDPOINT=model_endpoint
 PYTHONUNBUFFERED=1
@@ -26,7 +26,7 @@ fi
 if [ ! -f "api-server/.env" ]; then
      echo "Creating api-server .env file..."
      mkdir -p api-server
-     cat > api-server/.env << EOL
+     cat > api-server/.env << 'EOL'
 DB_USERNAME=
 DB_PASSWORD=
 DB_HOST=
@@ -67,7 +67,7 @@ else
 fi
 
 # Create production override to use the selected Docker image
-cat > docker-compose.override.yaml << EOL
+cat > docker-compose.override.yaml << 'EOL'
 services:
   # Disable services that are not needed in production
   frontend:
