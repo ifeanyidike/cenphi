@@ -39,7 +39,34 @@ fi
 # Stop existing containers
 docker compose -f docker-compose.yaml -f docker-compose.prod.yaml down
 
-# Create production override to use pre-built Docker images
+# Force pull the latest images first to ensure we have the newest versions
+echo "Pulling the latest images..."
+docker pull lorddickson/ai-service:latest
+docker pull lorddickson/ai-service:slim || echo "Slim image not available, will use latest"
+
+# Get timestamps of the images to determine which is newer
+LATEST_TS=$(docker inspect --format='{{.Created}}' lorddickson/ai-service:latest 2>/dev/null || echo "")
+SLIM_TS=$(docker inspect --format='{{.Created}}' lorddickson/ai-service:slim 2>/dev/null || echo "")
+
+# Default to latest
+IMAGE_TO_USE="lorddickson/ai-service:latest"
+
+if [ -n "$SLIM_TS" ]; then
+    # Convert to Unix timestamps for comparison
+    LATEST_UNIX=$(date -d "$LATEST_TS" +%s 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%S" "$LATEST_TS" +%s 2>/dev/null)
+    SLIM_UNIX=$(date -d "$SLIM_TS" +%s 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%S" "$SLIM_TS" +%s 2>/dev/null)
+    
+    if [ "$SLIM_UNIX" -ge "$LATEST_UNIX" ]; then
+        echo "Slim image is newer or same age as latest. Using slim."
+        IMAGE_TO_USE="lorddickson/ai-service:slim"
+    else
+        echo "Latest image is newer than slim. Using latest."
+    fi
+else
+    echo "Slim image not available. Using latest."
+fi
+
+# Create production override to use the selected Docker image
 cat > docker-compose.override.yaml << EOL
 services:
   # Disable services that are not needed in production
@@ -54,46 +81,24 @@ services:
   
   ai-service:
     build: null
-    image: lorddickson/ai-service:slim
+    image: ${IMAGE_TO_USE}
     restart: always
     environment:
       - PYTHONUNBUFFERED=1
       - TRANSFORMERS_CACHE=/root/.cache/huggingface
       - PYTHON_ENV=production
     depends_on: []
+    volumes:
+      - ai-service-cache:/root/.cache/huggingface
+    command: ["/bin/bash", "-c", "if [ -d /opt/venv/bin ]; then exec /opt/venv/bin/python -m app; else exec python -m app; fi"]
 EOL
 
-# Try to pull the slim image first, fall back to regular if not available
-echo "Attempting to pull slim image..."
-if ! docker pull lorddickson/ai-service:slim; then
-    echo "Slim image not available, using regular image"
-    sed -i 's/lorddickson\/ai-service:slim/lorddickson\/ai-service:latest/' docker-compose.override.yaml
-    docker pull lorddickson/ai-service:latest
-else
-    # Verify image size
-    IMAGE_SIZE=$(docker images lorddickson/ai-service:slim --format "{{.Size}}")
-    echo "Slim image size: $IMAGE_SIZE"
-    
-    # Check if this is possibly a GIF or lightweight service
-    # Let's assume images under 2MB might be okay for certain cases,
-    # but issue a warning just in case
-    if [[ "$IMAGE_SIZE" == *"MB"* ]]; then
-        SIZE_NUM=$(echo $IMAGE_SIZE | sed 's/MB//')
-        if (( $(echo "$SIZE_NUM < 2" | bc -l) )); then
-            echo "WARNING: Slim image is very small (< 2MB). This is unusual for most services."
-            echo "If this is expected (e.g., a simple proxy or GIF service), you can ignore this warning."
-            echo "Otherwise, there might be an issue with the image build or slimming process."
-            echo "Continuing with deployment, but please monitor the service closely."
-        fi
-    elif [[ "$IMAGE_SIZE" == *"kB"* ]] || [[ "$IMAGE_SIZE" == *"KB"* ]]; then
-        echo "WARNING: Slim image is only kilobytes in size."
-        echo "This is extremely small for a container. If this is a minimal service, this might be expected."
-        echo "Continuing with deployment, but please verify the service works as expected."
-    fi
-fi
+# Verify image size
+IMAGE_SIZE=$(docker images ${IMAGE_TO_USE} --format "{{.Size}}")
+echo "Selected image size: $IMAGE_SIZE"
 
-# Start the container using the pre-built image
-echo "Starting AI service container..."
+# Start the container using the selected image
+echo "Starting AI service container using ${IMAGE_TO_USE}..."
 docker compose -f docker-compose.yaml -f docker-compose.prod.yaml -f docker-compose.override.yaml up -d ai-service
 
 # Verify container started properly
