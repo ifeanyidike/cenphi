@@ -87,8 +87,6 @@ services:
       - TRANSFORMERS_CACHE=/root/.cache/huggingface
       - PYTHON_ENV=production
     depends_on: []
-    volumes:
-      - ai-service-cache:/root/.cache/huggingface
     command: ["/bin/bash", "-c", "if [ -d /opt/venv/bin ]; then exec /opt/venv/bin/python -m app; else exec python -m app; fi"]
 EOL
 
