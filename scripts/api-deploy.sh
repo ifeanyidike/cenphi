@@ -27,7 +27,7 @@ EOL
 fi
 
 # Stop existing containers
-docker compose -f docker-compose.yaml -f docker-compose.prod.yaml down
+docker compose -f docker-compose.prod.yaml down
 
 # Pull the latest image
 echo "Pulling the latest api-server image..."
@@ -63,7 +63,7 @@ EOL
 
 
 # Start the container using the pre-built image
-docker compose -f docker-compose.yaml -f docker-compose.prod.yaml -f docker-compose.override.yaml up -d api-server cenphidb
+docker compose -f docker-compose.prod.yaml -f docker-compose.override.yaml up -d api-server cenphidb
 
 sleep 5
 if [ $(docker ps | grep api-server | wc -l) -eq 0 ]; then
