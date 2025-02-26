@@ -48,6 +48,7 @@ DROP TABLE IF EXISTS ai_processing_jobs;
 DROP TABLE IF EXISTS collection_portals;
 DROP TABLE IF EXISTS testimonials;
 DROP TABLE IF EXISTS team_members;
+DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS audit_log;
 DROP TABLE IF EXISTS workspaces;
 

@@ -7,15 +7,19 @@ import (
 )
 
 type Config struct {
-	Server   ServerConfig
-	Database DatabaseConfig
-	Redis    RedisConfig
-	AWS      AWSConfig
+	Server    ServerConfig
+	Database  DatabaseConfig
+	Redis     RedisConfig
+	AWS       AWSConfig
+	Providers ProviderConfig
 }
 
 type ServerConfig struct {
 	Address       string
 	MaxUploadSize int64
+	CertFile      string
+	KeyFile       string
+	Environment   string
 }
 
 type DatabaseConfig struct {

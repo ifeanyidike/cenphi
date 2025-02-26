@@ -91,6 +91,9 @@ const AUTH_ERROR_MAPPINGS: Record<string, ErrorMapping> = {
   "auth/internal-error": {
     message: "An internal error occurred. Please try again later.",
   },
+  "auth/invalid-credential": {
+    message: "Invalid username or password. Please try again.",
+  },
 };
 
 export class FirebaseErrorHandler {

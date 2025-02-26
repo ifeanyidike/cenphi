@@ -15,9 +15,10 @@ export const Login = observer(() => {
     password: string;
   }) => {
     try {
-      await authStore.login(email, password);
-      navigate("/dashboard");
-    } catch (error) {
+      if (!(await authStore.login(email, password))) return;
+      navigate("/");
+    } catch (error: any) {
+      authStore.setError(error);
       console.error("Login error:", error);
     }
   };
