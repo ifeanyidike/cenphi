@@ -285,11 +285,16 @@ jobs:
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           envs: DB_USERNAME,DB_PASSWORD,DB_HOST,DB_PORT,DB_NAME
           script: |
-            cd /home/opc/scripts
+            cd /home/opc
+            # Fix any potential line ending issues
+            sed -i 's/\r$//' api-deploy.sh
+            # Ensure the shebang line is correct
+            sed -i '1s/^.*$/\#!\/bin\/bash/' api-deploy.sh
             # Make deploy script executable
-
             chmod +x api-deploy.sh
-            ls -la  # Verify the file exists
+            # Verify the file exists and check its contents
+            ls -la api-deploy.sh
+            head -n 5 api-deploy.sh
             # Run deploy script with environment variables
             DB_USERNAME=$DB_USERNAME DB_PASSWORD=$DB_PASSWORD DB_HOST=$DB_HOST DB_PORT=$DB_PORT DB_NAME=$DB_NAME ./api-deploy.sh
 
@@ -331,13 +336,15 @@ jobs:
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           envs: HF_TOKEN
           script: |
-            cd /home/opc/scripts
-
-            # Rest of your deployment script...
-            EOL
-
+            cd /home/opc
+            # Fix any potential line ending issues
+            sed -i 's/\r$//' ai-deploy.sh
+            # Ensure the shebang line is correct
+            sed -i '1s/^.*$/\#!\/bin\/bash/' ai-deploy.sh
+            # Make deploy script executable
             chmod +x ai-deploy.sh
-            ls -la  # Verify the file exists
-
+            # Verify the file exists and check its contents
+            ls -la ai-deploy.sh
+            head -n 5 ai-deploy.sh
             # Run deploy script with environment variables
             HF_TOKEN=$HF_TOKEN ./ai-deploy.sh
