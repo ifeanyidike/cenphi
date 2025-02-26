@@ -87,9 +87,9 @@ const ReviewWidget = () => {
 
               {/* Images */}
               <div className="flex flex-wrap gap-2 my-3 md:my-4">
-                {review.images.map((img, index) => (
+                {review.images.map((d, index) => (
                   <div
-                    key={index}
+                    key={`${d}-${index}`}
                     className="w-14 h-14 md:w-16 md:h-16 rounded-md overflow-hidden bg-[#6B818C]/10"
                   >
                     <img
