@@ -13,7 +13,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { observer } from "mobx-react-lite";
 import { collectionStore } from "@/stores/collectionStore";
 
-const MobileTransfer: React.FC<{}> = observer(() => {
+const MobileTransfer: React.FC = observer(() => {
   const [transferUrl, setTransferUrl] = useState("");
   const [copied, setCopied] = useState(false);
   const [qrHovered, setQrHovered] = useState(false);
