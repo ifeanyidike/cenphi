@@ -13,7 +13,6 @@ services:
 
   api-server:
     image: lorddickson/api-server:latest
-    build: null
     ports:
       - "8081:8081"
     env_file:
@@ -26,7 +25,6 @@ services:
 
   ai-service:
     image: lorddickson/ai-service:slim
-    build: null
     ports:
       - "50052:50052"
     env_file:
