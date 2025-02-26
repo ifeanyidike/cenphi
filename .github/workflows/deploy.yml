@@ -287,6 +287,7 @@ jobs:
           script: |
             cd /home/opc
             # Make deploy script executable
+
             chmod +x api-deploy.sh
             # Run deploy script with environment variables
             DB_USERNAME=$DB_USERNAME DB_PASSWORD=$DB_PASSWORD DB_HOST=$DB_HOST DB_PORT=$DB_PORT DB_NAME=$DB_NAME ./api-deploy.sh
@@ -315,7 +316,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          source: "ai-deploy.sh"
+          source: "scripts/ai-deploy.sh"
           target: "/home/opc"
           overwrite: true
 
