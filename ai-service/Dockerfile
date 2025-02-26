@@ -416,7 +416,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 # Copy virtual environment from builder
-# COPY --from=builder /opt/venv /opt/venv
+COPY --from=builder /opt/venv /opt/venv
 # RUN if [ -f /app/.env ]; then cp /opt/venv /opt/venv; else echo ".env not found, skipping"; fi
 
 

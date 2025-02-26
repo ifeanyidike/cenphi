@@ -299,15 +299,19 @@ jobs:
             cd /home/opc
             # Fix any potential line ending issues
             sed -i 's/\r$//' api-deploy.sh
+
             # Ensure the shebang line is correct
             sed -i '1s/^.*$/\#!\/bin\/bash/' api-deploy.sh
             # Make deploy script executable
             chmod +x api-deploy.sh
+
             # Verify the file exists and check its contents
             ls -la api-deploy.sh
             head -n 5 api-deploy.sh
+
             # Ensure app directory exists
             mkdir -p /home/opc/app
+
             # Verify Docker Compose files exist
             if [ ! -f "/home/opc/app/docker-compose.prod.yaml" ]; then
                 echo "ERROR: docker-compose.prod.yaml not found in /home/opc/app"
@@ -320,8 +324,6 @@ jobs:
                         image: lorddickson/ai-service:latest
                         ports:
                             - "8081:8081"
-                        env_file:
-                            - ./api-server/.env
                         volumes:
                             - ./api-server:/src
                             - ~/.aws:/root/.aws:ro
@@ -420,8 +422,6 @@ jobs:
                         image: lorddickson/ai-service:latest
                     ports:
                         - "50052:50052"
-                    env_file:
-                        - ./ai-service/.env
                     volumes:
                         - ai-model-cache:/root/.cache/huggingface
                     environment:
