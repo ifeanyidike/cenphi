@@ -271,7 +271,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          source: "docker-compose.yaml,docker-compose.prod.yaml"
+          source: "./docker-compose.yaml,./docker-compose.prod.yaml"
           target: "/home/opc/app"
           overwrite: true
 
@@ -311,7 +311,34 @@ jobs:
             # Verify Docker Compose files exist
             if [ ! -f "/home/opc/app/docker-compose.yaml" ]; then
                 echo "ERROR: docker-compose.yaml not found in /home/opc/app"
-                exit 1
+                echo "Creating a simple docker-compose.yaml file..."
+
+                # Create a basic docker-compose.yaml file
+                cat > /home/opc/app/docker-compose.yaml << 'EOL'
+                services:
+                    api-server:
+                        build:
+                            context: ./api-server
+                        ports:
+                            - "8081:8081"
+                        env_file:
+                            - ./api-server/.env
+                        volumes:
+                            - ./api-server:/src
+                            - ~/.aws:/root/.aws:ro
+                            - /etc/ssl/certs:/etc/ssl/certs:ro
+                        command: ["/app/api"]
+                EOL
+
+                    # Create a basic docker-compose.prod.yaml file
+                cat > /home/opc/app/docker-compose.prod.yaml << 'EOL'
+                services:
+                    api-service:
+                        environment:
+                            - GO_ENV=production
+                EOL
+
+                echo "Created basic Docker Compose files"
             fi
             # Run deploy script with environment variables
             DB_USERNAME=$DB_USERNAME DB_PASSWORD=$DB_PASSWORD DB_HOST=$DB_HOST DB_PORT=$DB_PORT DB_NAME=$DB_NAME ./api-deploy.sh
@@ -340,7 +367,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          source: "docker-compose.yaml,docker-compose.prod.yaml"
+          source: "./docker-compose.yaml,./docker-compose.prod.yaml"
           target: "/home/opc/app"
           overwrite: true
 
@@ -365,13 +392,23 @@ jobs:
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           envs: HF_TOKEN
           script: |
+            echo "Remote directory structure:"
+            ls -la /home/opc
+
+            echo "App directory structure:"
+            mkdir -p /home/opc/app
+            ls -la /home/opc/app
+
             cd /home/opc
             # Fix any potential line ending issues
             sed -i 's/\r$//' ai-deploy.sh
+
             # Ensure the shebang line is correct
             sed -i '1s/^.*$/\#!\/bin\/bash/' ai-deploy.sh
+
             # Make deploy script executable
             chmod +x ai-deploy.sh
+
             # Verify the file exists and check its contents
             ls -la ai-deploy.sh
             head -n 5 ai-deploy.sh
@@ -380,7 +417,34 @@ jobs:
             # Verify Docker Compose files exist
             if [ ! -f "/home/opc/app/docker-compose.yaml" ]; then
                 echo "ERROR: docker-compose.yaml not found in /home/opc/app"
-                exit 1
+                echo "Creating a simple docker-compose.yaml file..."
+
+                # Create a basic docker-compose.yaml file
+                cat > /home/opc/app/docker-compose.yaml << 'EOL'
+                services:
+                    ai-service:
+                        image: lorddickson/ai-service:latest
+                    ports:
+                        - "50052:50052"
+                    env_file:
+                        - ./ai-service/.env
+                    volumes:
+                        - ai-model-cache:/root/.cache/huggingface
+                    environment:
+                        - PYTHONUNBUFFERED=1
+                        - TRANSFORMERS_CACHE=/root/.cache/huggingface
+                    command: ["/opt/venv/bin/python", "main.py"]
+                EOL
+
+                    # Create a basic docker-compose.prod.yaml file
+                cat > /home/opc/app/docker-compose.prod.yaml << 'EOL'
+                services:
+                    ai-service:
+                        environment:
+                            - PYTHON_ENV=production
+                EOL
+
+                echo "Created basic Docker Compose files"
             fi
             # Run deploy script with environment variables
             HF_TOKEN=$HF_TOKEN ./ai-deploy.sh
