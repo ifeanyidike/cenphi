@@ -88,7 +88,7 @@ services:
       - PYTHON_ENV=production
       - HF_TOKEN=$HF_TOKEN
     depends_on: []
-    command: ["/bin/bash", "-c", "if [ -d /opt/venv/bin ]; then exec /opt/venv/bin/python -m app; else exec python -m app; fi"]
+    command: ["/bin/bash", "-c", "if [ -d /opt/venv/bin ]; then exec /opt/venv/bin/python main.py; else exec python main.py; fi"]
 EOL
 
 # Verify image size
