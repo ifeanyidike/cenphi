@@ -10,4 +10,4 @@ services:
 
   ai-service:
     build: null
-    image: cenphi-ai-service.slim
+    image: lorddickson/ai-service:slim
