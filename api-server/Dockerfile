@@ -34,7 +34,55 @@
 # CMD ["/app/api"]
 
 
-# api-server Build Stage
+# # api-server Build Stage
+# FROM golang:1.23.1-alpine AS builder
+
+# WORKDIR /app
+
+# # Install build dependencies + timezone data if needed
+# RUN apk add --no-cache make git tzdata
+
+# COPY go.mod go.sum ./
+# RUN go mod download
+
+# COPY . .
+
+# # Copy .env file (if required inside the container)
+# # COPY .env /app/.env 
+
+# # Build static binary with optimizations
+# RUN CGO_ENABLED=0 go build \
+#     -ldflags="-s -w" \
+#     -trimpath \
+#     -o /app/api \
+#     ./cmd
+
+# # Final stage - Minimal Image
+# FROM scratch
+
+# # Set the working directory to /app
+# WORKDIR /app
+
+# # Copy .env file to final container (if needed)
+# #COPY --from=builder /app/.env /app/.env
+# # RUN if [ -f /app/.env ]; then cp /app/.env /app/.env; else echo ".env not found, skipping"; fi
+
+# # # Add SSL certificates (if needed for HTTPS calls)
+# # COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+
+# # Copy binary
+# COPY --from=builder /app/api .
+
+# # Health check (optional)
+# # HEALTHCHECK --interval=30s --timeout=3s CMD ["/app/api", "health"]
+
+# EXPOSE 8081
+
+# # Run as non-root user
+# # USER 1000:1000
+
+# ENTRYPOINT ["/app/api"]
+
 FROM golang:1.23.1-alpine AS builder
 
 WORKDIR /app
@@ -46,9 +94,6 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-
-# Copy .env file (if required inside the container)
-# COPY .env /app/.env 
 
 # Build static binary with optimizations
 RUN CGO_ENABLED=0 go build \
@@ -63,22 +108,15 @@ FROM scratch
 # Set the working directory to /app
 WORKDIR /app
 
-# Copy .env file to final container (if needed)
-#COPY --from=builder /app/.env /app/.env
-# RUN if [ -f /app/.env ]; then cp /app/.env /app/.env; else echo ".env not found, skipping"; fi
-
-# # Add SSL certificates (if needed for HTTPS calls)
-# COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+# Copy SSL certificates for HTTPS calls
+#COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 # Copy binary
 COPY --from=builder /app/api .
 
-# Health check (optional)
-# HEALTHCHECK --interval=30s --timeout=3s CMD ["/app/api", "health"]
+# Create a simple init script to handle .env file or env vars
+COPY --from=builder /app/scripts/docker-entrypoint.sh /app/docker-entrypoint.sh
 
 EXPOSE 8081
-
-# Run as non-root user
-# USER 1000:1000
 
 ENTRYPOINT ["/app/api"]
