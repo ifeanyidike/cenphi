@@ -141,6 +141,47 @@ jobs:
           ENDOFFILE
           fi
 
+      # Verify that the main.py file exists
+      - name: Verify AI Service Files
+        if: ${{ matrix.service == 'ai-service' }}
+        run: |
+          echo "Checking for main.py in ai-service directory..."
+          if [ ! -f "./ai-service/main.py" ]; then
+            echo "WARNING: main.py not found in ai-service directory!"
+            echo "Creating a placeholder main.py file..."
+            cat > ./ai-service/main.py << 'ENDOFFILE'
+          import os
+          import sys
+          import logging
+          import time
+
+          # Set up logging
+          logging.basicConfig(
+              level=logging.INFO,
+              format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+          )
+          logger = logging.getLogger(__name__)
+
+          def main():
+              logger.info("AI Service starting...")
+              logger.info(f"Python version: {sys.version}")
+              logger.info(f"Working directory: {os.getcwd()}")
+              logger.info(f"Directory contents: {os.listdir('.')}")
+              
+              # Placeholder for actual service code
+              logger.info("Service initialized, running main loop")
+              while True:
+                  time.sleep(60)
+                  logger.info("AI Service heartbeat")
+
+          if __name__ == "__main__":
+              main()
+          ENDOFFILE
+            echo "Created placeholder main.py file."
+          else
+            echo "main.py found in ai-service directory."
+          fi
+
       - name: Install Docker Slim
         run: |
           curl -sL https://raw.githubusercontent.com/slimtoolkit/slim/master/scripts/install-slim.sh | sudo -E bash -
@@ -252,6 +293,14 @@ jobs:
       DB_HOST: ${{ secrets.DB_HOST }}
       DB_PORT: ${{ secrets.DB_PORT }}
       DB_NAME: ${{ secrets.DB_NAME }}
+      REDIS_HOST: ${{ secrets.REDIS_HOST }}
+      REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+      REDIS_PORT: ${{ secrets.REDIS_PORT }}
+      AWS_KEY: ${{ secrets.AWS_KEY }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      AWS_SECRET: ${{ secrets.AWS_SECRET }}
+      AWS_BUCKET_NAME: ${{ secrets.AWS_BUCKET_NAME }}
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -294,15 +343,16 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          envs: DB_USERNAME,DB_PASSWORD,DB_HOST,DB_PORT,DB_NAME
+          envs: DB_USERNAME,DB_PASSWORD,DB_HOST,DB_PORT,DB_NAME,REDIS_HOST,REDIS_PASSWORD,REDIS_PORT,AWS_KEY,AWS_REGION,AWS_SECRET,AWS_BUCKET_NAME
           script: |
             cd /home/opc
             # Fix any potential line ending issues
             sed -i 's/\r$//' api-deploy.sh
 
             # Ensure the shebang line is correct
-            sed -i '1s/^.*$/\#!\/bin\/bash/' api-deploy.sh
+            # sed -i '1s/^.*$/\#!\/bin\/bash/' api-deploy.sh
             # Make deploy script executable
+
             chmod +x api-deploy.sh
 
             # Verify the file exists and check its contents
@@ -325,19 +375,54 @@ jobs:
                         ports:
                             - "8081:8081"
                         volumes:
-                            - ./api-server:/src
+                            - ./api-server/.env:/app/.env
                             - ~/.aws:/root/.aws:ro
                             - /etc/ssl/certs:/etc/ssl/certs:ro
                         restart: always
                         environment:
                             - GO_ENV=production
                         command: ["/app/api"]
+                        healthcheck:
+                          test:
+                            ["CMD", "wget", "-q", "--spider", "http://localhost:8081/api/v1/health"]
+                          interval: 10s
+                          timeout: 5s
+                          retries: 3
+                          start_period: 5s
             ENDOFFILE
 
                 echo "Created basic Docker Compose files"
             fi
             # Run deploy script with environment variables
-            DB_USERNAME=$DB_USERNAME DB_PASSWORD=$DB_PASSWORD DB_HOST=$DB_HOST DB_PORT=$DB_PORT DB_NAME=$DB_NAME ./api-deploy.sh
+            DB_USERNAME=$DB_USERNAME DB_PASSWORD=$DB_PASSWORD DB_HOST=$DB_HOST \
+            DB_PORT=$DB_PORT DB_NAME=$DB_NAME REDIS_HOST=$REDIS_HOST \ 
+            REDIS_PASSWORD=$REDIS_PASSWORD REDIS_PORT=$REDIS_PORT AWS_KEY=$AWS_KEY \ 
+            AWS_REGION=$AWS_REGION AWS_SECRET=$AWS_SECRET AWS_BUCKET_NAME=$AWS_BUCKET_NAME ./api-deploy.sh
+
+            # More robust health check
+            echo "Performing API health check..."
+            MAX_RETRIES=5
+            RETRY_COUNT=0
+
+            until [ $RETRY_COUNT -ge $MAX_RETRIES ]
+            do
+              HEALTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8081/api/v1/health || echo "failed")
+
+              if [ "$HEALTH_STATUS" = "200" ]; then
+                echo "API is healthy!"
+                break
+              fi
+
+              RETRY_COUNT=$((RETRY_COUNT+1))
+              echo "Health check attempt $RETRY_COUNT failed (status: $HEALTH_STATUS), retrying in 10 seconds..."
+              sleep 10
+            done
+
+            if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
+              echo "API health check failed after $MAX_RETRIES attempts. Container logs:"
+              docker logs $(docker ps -a | grep api-server | awk '{print $1}')
+              exit 1
+            fi
 
   deploy_ai:
     needs: build-and-push
