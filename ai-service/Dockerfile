@@ -417,11 +417,13 @@ WORKDIR /app
 
 # Copy virtual environment from builder
 COPY --from=builder /opt/venv /opt/venv
+COPY --from=builder /usr/local/lib/python3.12 /opt/venv/lib/python3.12
 # RUN if [ -f /app/.env ]; then cp /opt/venv /opt/venv; else echo ".env not found, skipping"; fi
 
 
 # Set environment variables
 ENV PATH="/opt/venv/bin:$PATH" \
+    PYTHONHOME="/opt/venv" \
     PYTHONPATH="/opt/venv/lib/python3.12/site-packages" \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \

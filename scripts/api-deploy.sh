@@ -53,6 +53,7 @@ services:
     volumes:
       # Remove development volume mounts
       - ~/.aws:/root/.aws:ro
+      - ./api-server/.env:/app/.env
     # Remove dependency on local PostgreSQL
     depends_on: []
     environment:
