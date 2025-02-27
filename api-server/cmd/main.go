@@ -7,7 +7,6 @@ import (
 	_ "github.com/ifeanyidike/cenphi/docs" // Import generated Swagger docs
 	"github.com/ifeanyidike/cenphi/internal/app"
 	"github.com/ifeanyidike/cenphi/internal/config"
-	"github.com/joho/godotenv"
 	"go.uber.org/zap"
 )
 
@@ -20,9 +19,10 @@ import (
 // @BasePath /api/v1
 func main() {
 	// Load environment variables
-	if err := godotenv.Load("../.env"); err != nil {
-		log.Fatalf("Error loading .env file: %v", err)
-	}
+	// if err := config.LoadEnv(); err != nil {
+	// 	log.Fatalf("Error loading .env file: %v", err)
+	// }
+	config.LoadEnv()
 
 	cfg := config.NewConfig()
 	db, redisClient, err := config.InitializeDatabase(cfg)

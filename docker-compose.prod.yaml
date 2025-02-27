@@ -16,10 +16,19 @@ services:
     ports:
       - "8081:8081"
     volumes:
-      - ./api-server:/src
+      - ./api-server/.env:/app/.env
       - ~/.aws:/root/.aws:ro
       - /etc/ssl/certs:/etc/ssl/certs:ro
+    environment:
+      - GO_ENV=production
     command: ["/app/api"]
+    healthcheck:
+      test:
+        ["CMD", "wget", "-q", "--spider", "http://localhost:8081/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
 
   ai-service:
     image: lorddickson/ai-service:slim
