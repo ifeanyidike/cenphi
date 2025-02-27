@@ -48,7 +48,7 @@ RUN go mod download
 COPY . .
 
 # Copy .env file (if required inside the container)
-COPY .env /app/.env 
+# COPY .env /app/.env 
 
 # Build static binary with optimizations
 RUN CGO_ENABLED=0 go build \
