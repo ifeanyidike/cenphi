@@ -223,7 +223,7 @@ jobs:
           echo "Creating slim version of the AI service image..."
 
           cd ai-service
-          slim build --http-probe=false --include-path '/root/.cache/huggingface' --include-path '/opt/venv' --tag lorddickson/ai-service:slim lorddickson/ai-service:latest
+          slim build --http-probe=false --include-path '/root/.cache/huggingface' --include-path '/opt/venv' --include-path '/opt/venv/lib/python3.12/encodings' --include-path '/opt/venv/lib/python3.12/lib-dynload' --tag lorddickson/ai-service:slim lorddickson/ai-service:latest
 
           # Check if slimming was successful
           if [ $? -eq 0 ]; then

@@ -20,7 +20,7 @@ import (
 // @BasePath /api/v1
 func main() {
 	// Load environment variables
-	if err := godotenv.Load(); err != nil {
+	if err := godotenv.Load("../.env"); err != nil {
 		log.Fatalf("Error loading .env file: %v", err)
 	}
 
