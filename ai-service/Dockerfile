@@ -254,9 +254,6 @@ RUN mkdir -p /root/.cache/huggingface /root/.cache/torch && \
 
 # Copy ALL application code - make sure to include everything needed
 COPY *.py ./
-COPY *.json ./
-# If you have module directories, copy them too
-COPY modules/ ./modules/
 
 # Expose port for gRPC
 EXPOSE 50052
