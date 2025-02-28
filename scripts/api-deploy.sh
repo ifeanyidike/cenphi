@@ -216,7 +216,7 @@ API_CONTAINER_ID=$(docker ps | grep api-server | awk '{print $1}')
 if [ ! -z "$API_CONTAINER_ID" ]; then
     # Print recent logs
     echo "Recent API container logs:"
-    docker logs --tail 20 $API_CONTAINER_ID
+    # docker logs --tail 20 $API_CONTAINER_ID
     
     # Check if container is still running
     if [ $(docker ps | grep api-server | wc -l) -eq 0 ]; then
