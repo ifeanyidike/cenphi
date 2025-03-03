@@ -65,14 +65,14 @@ const HomeTestimonialCard = ({
   return (
     <motion.div
       key={testimonial.id}
-      initial={{ opacity: 0, x: 100 }}
+      // initial={{ opacity: 0 }}
       animate={{
         opacity: 1,
         // opacity: inView ? 1 : 0,
         x: 0,
         // y: inView ? 0 : 50,
       }}
-      exit={{ opacity: 0, x: -100 }}
+      // exit={{ opacity: 1 }}
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
       style={{
         perspective: 2000,
@@ -83,10 +83,10 @@ const HomeTestimonialCard = ({
       onMouseLeave={handleCardMouseLeave}
       className="relative"
     >
-      <div className="relative bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-6 xl:p-16 shadow-[0_0_100px_rgba(59,130,246,0.15)] border border-white/10">
+      <div className="relative bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-6 xl:p-12 shadow-[0_0_100px_rgba(59,130,246,0.15)] border border-white/10">
         {/* AI-enhanced badge */}
-        <div className="absolute -top-4 -right-4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full px-6 py-2 text-sm font-medium text-white flex items-center gap-2">
-          <Brain className="w-4 h-4" />
+        <div className="absolute -top-4 -right-4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full px-4 py-1 text-xs font-medium text-white flex items-center gap-2">
+          <Brain className="w-3 h-3" />
           AI-Enhanced Content
         </div>
 
@@ -112,8 +112,8 @@ const HomeTestimonialCard = ({
             </div>
 
             {/* Quote */}
-            <Quote className="w-16 h-16 text-blue-500/80 mb-8" />
-            <p className="text-xl md:text-2xl text-white font-light leading-relaxed mb-12">
+            <Quote className="w-14 h-14 text-blue-500/80 mb-6" />
+            <p className="text-lg md:text-xl text-white font-light leading-relaxed mb-8">
               {testimonial.text}
             </p>
 
@@ -123,16 +123,16 @@ const HomeTestimonialCard = ({
                 <img
                   src={testimonial.image}
                   alt={testimonial.author}
-                  className="w-16 h-16 rounded-full ring-2 ring-white/10"
+                  className="w-14 h-14 rounded-full ring-2 ring-white/10"
                 />
                 {testimonial.verification.verified && (
                   <div className="absolute -top-2 -right-2 bg-blue-500 rounded-full p-1">
-                    <Star className="w-4 h-4 text-white" />
+                    <Star className="w-3 h-3 text-white" />
                   </div>
                 )}
               </div>
               <div>
-                <h3 className="text-xl text-white font-semibold mb-1">
+                <h3 className="text-lg text-white font-semibold mb-1">
                   {testimonial.author}
                 </h3>
                 <p className="text-slate-400">
@@ -168,7 +168,7 @@ const HomeTestimonialCard = ({
               value={testimonial.metrics.roi}
               icon={RefreshCw}
             />
-            <MetricCard
+            {/* <MetricCard
               label="Customer Satisfaction"
               value={testimonial.metrics.customerSatisfaction}
               icon={Star}
@@ -177,7 +177,7 @@ const HomeTestimonialCard = ({
               label="Referral Rate"
               value={testimonial.metrics.referralRate}
               icon={RefreshCw}
-            />
+            /> */}
           </div>
         </motion.div>
       </div>
@@ -212,7 +212,7 @@ const MetricCard = ({
       <div className="text-sm text-slate-400 mt-2 uppercase tracking-wider">
         {label}
       </div>
-      {hoveredMetric === label && (
+      {/* {hoveredMetric === label && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -220,7 +220,7 @@ const MetricCard = ({
         >
           Industry Average: +82%
         </motion.div>
-      )}
+      )} */}
     </motion.div>
   );
 };

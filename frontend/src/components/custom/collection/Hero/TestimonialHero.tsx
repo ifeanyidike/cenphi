@@ -20,6 +20,8 @@ import PreloaderAnimation from "./PreloaderAnimation";
 import HomeTestimonialCard from "./HomeTestimonialCard";
 import { features, testimonials } from "./constants";
 import FeatureCarousel from "./FeatureCarousel";
+import Navbar from "../../nav";
+import Navbar2 from "../../Navbar";
 
 const TestimonialHero = () => {
   const [activeIndex, setActiveIndex] = useState(0);
@@ -89,7 +91,7 @@ const TestimonialHero = () => {
       <section
         ref={containerRef}
         onMouseMove={handleMouseMove}
-        className="relative bg-black overflow-hidden py-12"
+        className="relative bg-black overflow-hidden py-6"
       >
         <motion.div
           className="absolute inset-0 w-full h-full"
@@ -104,7 +106,7 @@ const TestimonialHero = () => {
             style={{ filter: "brightness(0.8)" }}
           >
             <source
-              src="https://mortgagehub-bucket.s3.eu-west-1.amazonaws.com/assets/iStock-1190896635.mp4"
+              src="https://res.cloudinary.com/di6d28r5r/video/upload/v1740990576/assets/iStock-1190896635.mp4"
               type="video/mp4"
             />
           </video>
@@ -138,25 +140,27 @@ const TestimonialHero = () => {
           style={{ opacity: contentOpacity }}
         >
           {/* Premium header section */}
+          <div className="mb-20">{/* <Navbar2 /> */}</div>
+
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
-            className="text-center mb-20"
+            className="text-center mb-12"
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.2 }}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-blue-500/10 to-purple-500/10 backdrop-blur-xl border border-white/10 mb-8"
+              className="inline-flex items-center gap-2 px-2 py-2 rounded-full bg-gradient-to-r from-blue-500/10 to-purple-500/10 backdrop-blur-xl border border-white/10 mb-4"
             >
-              <Sparkles className="w-5 h-5 text-blue-400" />
-              <span className="text-blue-400 font-medium">
+              <Sparkles className="w-4 h-4 text-blue-400" />
+              <span className="text-blue-400 font-medium text-sm">
                 AI-Powered Testimonial Management
               </span>
             </motion.div>
 
-            <h1 className="text-6xl md:text-7xl font-black text-white mb-8 tracking-tight">
+            <h1 className="text-4xl md:text-6xl font-black text-white mb-6 tracking-tight">
               <span className="bg-gradient-to-r from-white via-blue-400 to-purple-400 bg-clip-text text-transparent">
                 Transform Customer Stories
               </span>
@@ -166,21 +170,21 @@ const TestimonialHero = () => {
               </span>
             </h1>
 
-            <p className="text-xl md:text-2xl text-slate-400 max-w-3xl mx-auto mb-12 leading-relaxed">
+            <p className="text-lg md:text-xl text-slate-400 max-w-3xl mx-auto mb-6 leading-relaxed">
               Harness the power of AI to collect, curate, and optimize
               testimonials that resonate with your target audience and drive
               unprecedented growth.
             </p>
 
             {/* Category navigation */}
-            <div className="flex flex-wrap justify-center gap-4 mb-16">
+            <div className="flex flex-wrap justify-center gap-4 mb-8">
               {categories.map((category) => (
                 <motion.button
                   key={category.id}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setSelectedCategory(category.id)}
-                  className={`flex items-center gap-2 px-6 py-3 rounded-full backdrop-blur-xl transition-all duration-300 ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm backdrop-blur-xl transition-all duration-300 ${
                     selectedCategory === category.id
                       ? "bg-blue-500 text-white"
                       : "bg-white/5 text-slate-400 hover:bg-white/10"
@@ -210,7 +214,7 @@ const TestimonialHero = () => {
 
             {/* Enhanced navigation controls */}
             <div className="flex items-center justify-between mt-8">
-              <div className="flex gap-3">
+              <div className="flex gap-2">
                 {filteredTestimonials.map((_, index) => (
                   <button
                     key={index}
@@ -250,7 +254,7 @@ const TestimonialHero = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
-            className="mt-24 text-center"
+            className="mt-8 text-center"
           >
             <div className="relative inline-block">
               <motion.div
@@ -265,7 +269,7 @@ const TestimonialHero = () => {
                   repeatType: "reverse",
                 }}
               />
-              <button className="group relative inline-flex items-center gap-3 px-8 py-4 text-lg font-semibold text-white bg-gradient-to-r from-blue-600 to-purple-500 rounded-xl overflow-hidden hover:shadow-2xl hover:shadow-blue-500/20 transition-all duration-300">
+              <button className="group relative inline-flex items-center gap-3 px-6 py-3 font-semibold text-white bg-gradient-to-r from-blue-600 to-purple-500 rounded-xl overflow-hidden hover:shadow-2xl hover:shadow-blue-500/20 transition-all duration-300">
                 <span className="absolute inset-0 bg-gradient-to-r from-purple-500 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                 <span className="relative flex items-center gap-2">
                   <Sparkles className="w-5 h-5" />
@@ -275,49 +279,7 @@ const TestimonialHero = () => {
               </button>
             </div>
 
-            {/* Feature highlights */}
-            {/* <div className="grid md:grid-cols-3 gap-8 mt-20">
-              {[
-                {
-                  icon: Brain,
-                  title: "AI-Powered Enhancement",
-                  description:
-                    "Automatically optimize testimonials for maximum impact and relevance",
-                },
-                {
-                  icon: RefreshCw,
-                  title: "Smart Curation",
-                  description:
-                    "Intelligently organize and display your most impactful customer stories",
-                },
-                {
-                  icon: Share,
-                  title: "Dynamic Distribution",
-                  description:
-                    "Share testimonials across all channels with perfect formatting",
-                },
-              ].map((feature, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.7 + index * 0.2 }}
-                  className="relative group"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  <div className="relative bg-slate-900/50 backdrop-blur-xl rounded-2xl p-8 border border-white/10">
-                    <feature.icon className="w-12 h-12 text-blue-400 mb-6" />
-                    <h3 className="text-xl font-semibold text-white mb-4">
-                      {feature.title}
-                    </h3>
-                    <p className="text-slate-400">{feature.description}</p>
-                  </div>
-                </motion.div>
-              ))}
-            </div> */}
-            <AnimatePresence mode="sync">
-              <FeatureCarousel features={features} autoPlayInterval={8000} />
-            </AnimatePresence>
+            <FeatureCarousel features={features} autoPlayInterval={8000} />
           </motion.div>
         </motion.div>
 
