@@ -73,7 +73,7 @@ const FeatureCarousel = ({
   const cardVariants = {
     enter: (direction: number) => ({
       x: direction > 0 ? 1000 : -1000,
-      opacity: 0,
+      opacity: 1,
       scale: 0.8,
     }),
     center: {
@@ -88,9 +88,9 @@ const FeatureCarousel = ({
       },
     },
     exit: (direction: number) => ({
-      x: direction > 0 ? -1000 : 1000,
-      opacity: 0,
-      scale: 0.8,
+      // x: direction > 0 ? -1000 : 1000,
+      // opacity: 1,
+      // scale: 0.8,
       transition: {
         duration: 0.5,
         type: "spring",
@@ -149,7 +149,7 @@ const FeatureCarousel = ({
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
-                  <Card className="relative bg-slate-900/50 backdrop-blur-xl border-white/10 overflow-hidden">
+                  <Card className="relative bg-gray-900/50 backdrop-blur-xl border-white/10 overflow-hidden">
                     <CardContent className="p-8">
                       {/* Animated gradient border */}
                       <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-blue-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />

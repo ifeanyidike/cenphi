@@ -1,47 +1,4 @@
-# __pycache__
-# *.pyc
-# *.pyo
-# *.pyd
-# .Python
-# env
-# pip-log.txt
-# pip-delete-this-directory.txt
-# .tox
-# .coverage
-# .coverage.*
-# .cache
-# nosetests.xml
-# coverage.xml
-# *.cover
-# *.log
-# .pytest_cache
-# .env
-# .venv
-# .git
-# .gitignore
-# .DS_Store
-# venv/
-# .gitignore
 
-# **/__pycache__
-# **/*.pyc
-# **/*.pyo
-# **/*.pyd
-# .github
-# .vscode
-# Dockerfile*
-# docker-compose.yml
-# tests/
-# docs/
-# *.egg-info
-# *.md
-# *.rst
-# *.txt
-# !requirements.txt
-# node_modules
-# build
-# dist
-# !dev.requirements.txt
 
 # Ignore everything
 *
@@ -49,6 +6,7 @@
 # Then explicitly allow only what's needed
 !main.py
 !requirements.txt
+!dev-requirements.txt
 
 # Ensure these are always ignored
 **/__pycache__
