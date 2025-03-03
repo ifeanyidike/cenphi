@@ -46,7 +46,7 @@ const TestimonialSlide = ({
           }}
         />
 
-        <div className="relative z-10 grid lg:grid-cols-2 h-full">
+        <div className="relative z-10 grid lg:grid-cols-2 h-full max-w-screen-xl mx-auto">
           {/* Content Section */}
           <div className="flex flex-col justify-center p-8 lg:p-16 xl:p-20">
             <motion.div
@@ -144,7 +144,7 @@ const PremiumHero = () => {
       company: "Future Corp",
       rating: 5,
       image:
-        "https://mortgagehub-bucket.s3.eu-west-1.amazonaws.com/assets/iStock-1357573240.jpg",
+        "https://res.cloudinary.com/di6d28r5r/image/upload/v1740990576/assets/iStock-1357573240.jpg",
       // color: "#FF3366",
       color: "rgba(59,130,246,0.3)",
     },
@@ -157,7 +157,7 @@ const PremiumHero = () => {
       company: "Future Corp",
       rating: 5,
       image:
-        "https://mortgagehub-bucket.s3.eu-west-1.amazonaws.com/assets/iStock-1339459004.jpg",
+        "https://res.cloudinary.com/di6d28r5r/image/upload/v1740990576/assets/iStock-1339459004.jpg",
       color: "#333366",
     },
     {
@@ -169,7 +169,7 @@ const PremiumHero = () => {
       company: "Future Corp",
       rating: 5,
       image:
-        "https://mortgagehub-bucket.s3.eu-west-1.amazonaws.com/assets/iStock-479137569.jpg",
+        "https://res.cloudinary.com/di6d28r5r/image/upload/v1740990576/assets/iStock-479137569.jpg",
       color: "#013366",
     },
     // Add more testimonials...
