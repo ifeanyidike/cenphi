@@ -53,10 +53,10 @@ const MobileMenuOverlay = ({
     },
   };
 
-  const backdropVariants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { duration: 0.3 } },
-  };
+  //   const backdropVariants = {
+  //     hidden: { opacity: 0 },
+  //     visible: { opacity: 1, transition: { duration: 0.3 } },
+  //   };
 
   const itemVariants = {
     hidden: { opacity: 0, x: 15 },
@@ -240,7 +240,7 @@ const MobileMenuOverlay = ({
               exit="hidden"
               className="overflow-hidden bg-gray-50 dark:bg-gray-800 rounded-xl mx-3 mb-3"
             >
-              {featuresMenuData.map((section, sIndex) => (
+              {featuresMenuData.map((section) => (
                 <div key={section.title} className="py-3 px-4">
                   <h3 className="px-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-3">
                     {section.title}

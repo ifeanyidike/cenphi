@@ -7,7 +7,7 @@ import {
   useSpring,
 } from "framer-motion";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Search } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { NavbarProps } from "./types";
 // import { navVariants } from "./data";
 import FeaturesMenu from "./FeaturesMenu";
@@ -21,7 +21,7 @@ const Navbar: React.FC<NavbarProps> = ({
   userLoggedIn = false,
   premiumUser = false,
   darkMode = false,
-  onToggleDarkMode = () => {},
+  // onToggleDarkMode = () => {},
   alwaysDarkText = false,
 }) => {
   const [isScrolled, setIsScrolled] = useState<boolean>(false);
@@ -29,7 +29,7 @@ const Navbar: React.FC<NavbarProps> = ({
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState<boolean>(true);
 
-  const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
+  const [isSearchOpen] = useState<boolean>(false);
   const [scrollProgress, setScrollProgress] = useState<number>(0);
   const [hasScrolled, setHasScrolled] = useState<boolean>(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState<boolean>(false);

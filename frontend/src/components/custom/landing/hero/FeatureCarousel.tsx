@@ -87,7 +87,7 @@ const FeatureCarousel = ({
         damping: 20,
       },
     },
-    exit: (direction: number) => ({
+    exit: () => ({
       // x: direction > 0 ? -1000 : 1000,
       // opacity: 1,
       // scale: 0.8,
