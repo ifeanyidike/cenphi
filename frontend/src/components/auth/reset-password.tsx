@@ -35,7 +35,7 @@ export function RequestResetForm({
 
   if (isSubmitted) {
     return (
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden z-10">
         <CardContent className="p-6 md:p-8">
           <div className="flex flex-col items-center text-center gap-6">
             <div className="rounded-full bg-primary/10 p-3">
