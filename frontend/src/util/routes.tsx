@@ -34,7 +34,7 @@ const DynamicRecorder = () => {
 };
 import WhyCenphi from "@/pages/WhyCenphi";
 import Pricing from "@/pages/Pricing";
-import LandingPage from "@/pages/LandingPage";
+import LandingPage from "@/pages/Landing";
 
 export const router = createBrowserRouter([
   {
