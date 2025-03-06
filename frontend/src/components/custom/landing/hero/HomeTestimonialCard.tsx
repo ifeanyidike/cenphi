@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from "react";
-import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
+import React from "react";
+import { motion } from "framer-motion";
 import { Testimonial } from "./types";
 import { Brain, Quote, RefreshCw, Share, Star, Zap } from "lucide-react";
 
@@ -9,95 +9,36 @@ const HomeTestimonialCard = ({
   testimonial: Testimonial;
   inView: boolean;
 }) => {
-  const mouseX = useMotionValue(0);
-  const mouseY = useMotionValue(0);
-  const [windowWidth, setWindowWidth] = useState(0);
-  const cardRef = useRef<HTMLDivElement>(null);
-  const [isHovered, setIsHovered] = useState(false);
-
-  useEffect(() => {
-    setWindowWidth(window.innerWidth);
-    const handleResize = () => setWindowWidth(window.innerWidth);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  const rotateX = useSpring(useTransform(mouseY, [-300, 300], [10, -10]), {
-    stiffness: 150,
-    damping: 10,
-    mass: 0.5,
-  });
-  const rotateY = useSpring(useTransform(mouseX, [-300, 300], [-10, 10]), {
-    stiffness: 150,
-    damping: 10,
-    mass: 0.5,
-  });
   // const [isInView, setIsInView] = useState(false);
 
-  const handleCardMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (windowWidth > 768) {
-      const rect = cardRef.current?.getBoundingClientRect();
-      if (rect) {
-        // Calculate position relative to card center
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
-
-        // Calculate distance from center as percentage
-        const deltaX = (e.clientX - centerX) / (rect.width / 2);
-        const deltaY = (e.clientY - centerY) / (rect.height / 2);
-
-        // Apply non-linear transformation to create more stable edges
-        const boundX = Math.sign(deltaX) * Math.min(Math.abs(deltaX), 1) * 200;
-        const boundY = Math.sign(deltaY) * Math.min(Math.abs(deltaY), 1) * 200;
-
-        mouseX.set(boundX);
-        mouseY.set(boundY);
-      }
-      setIsHovered(true);
-    }
-  };
-
-  const handleCardMouseLeave = () => {
-    mouseX.set(0);
-    mouseY.set(0);
-    setIsHovered(false);
-  };
   return (
     <motion.div
       key={testimonial.id}
-      // initial={{ opacity: 0 }}
+      initial={{ opacity: 1 }}
       animate={{
         opacity: 1,
         // opacity: inView ? 1 : 0,
-        x: 0,
+
         // y: inView ? 0 : 50,
       }}
-      // exit={{ opacity: 1 }}
-      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: 0.5, ease: "easeInOut" }}
+      exit={{ opacity: 1 }}
+      // transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
       style={{
         perspective: 2000,
         transformStyle: "preserve-3d",
         transform: "translateZ(0)",
       }}
-      onMouseMove={handleCardMouseMove}
-      onMouseLeave={handleCardMouseLeave}
       className="relative"
     >
-      <div className="relative bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-6 xl:p-12 shadow-[0_0_100px_rgba(59,130,246,0.15)] border border-white/10">
+      <div className="relative bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-6 xl:p-10 shadow-[0_0_100px_rgba(59,130,246,0.15)] border border-white/10">
         {/* AI-enhanced badge */}
         <div className="absolute -top-4 -right-4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full px-4 py-1 text-xs font-medium text-white flex items-center gap-2">
           <Brain className="w-3 h-3" />
           AI-Enhanced Content
         </div>
 
-        <motion.div
-          className="grid md:grid-cols-[1fr_auto] gap-12"
-          style={{
-            rotateX: isHovered ? rotateX : 0,
-            rotateY: isHovered ? rotateY : 0,
-            transformStyle: "preserve-3d",
-          }}
-        >
+        <motion.div className="grid md:grid-cols-[1fr_auto] gap-12">
           <div>
             {/* Keywords */}
             <div className="flex flex-wrap gap-3 mb-8">
@@ -196,13 +137,10 @@ const MetricCard = ({
   value: string;
   icon: React.FC<any>;
 }) => {
-  const [hoveredMetric, setHoveredMetric] = useState<string | null>(null);
   return (
     <motion.div
       whileHover={{ scale: 1.05 }}
       className="relative bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-2xl p-3  md:p-6 backdrop-blur-xl border border-white/10"
-      onMouseEnter={() => setHoveredMetric(label)}
-      onMouseLeave={() => setHoveredMetric(null)}
     >
       <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-2xl opacity-0 hover:opacity-100 transition-opacity duration-300" />
       <Icon className="w-6 h-6 text-blue-400 mb-3" />

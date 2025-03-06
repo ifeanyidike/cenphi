@@ -143,8 +143,7 @@ const PremiumHero = () => {
       role: "Chief Innovation Officer",
       company: "Future Corp",
       rating: 5,
-      image:
-        "https://res.cloudinary.com/di6d28r5r/image/upload/v1740990576/assets/iStock-1357573240.jpg",
+      image: "/media/img/iStock-1357573240.webp",
       // color: "#FF3366",
       color: "rgba(59,130,246,0.3)",
     },
@@ -156,8 +155,7 @@ const PremiumHero = () => {
       role: "Chief Innovation Officer",
       company: "Future Corp",
       rating: 5,
-      image:
-        "https://res.cloudinary.com/di6d28r5r/image/upload/v1740990576/assets/iStock-1339459004.jpg",
+      image: "/media/img/iStock-1339459004.webp",
       color: "#333366",
     },
     {
@@ -168,8 +166,7 @@ const PremiumHero = () => {
       role: "Chief Innovation Officer",
       company: "Future Corp",
       rating: 5,
-      image:
-        "https://res.cloudinary.com/di6d28r5r/image/upload/v1740990576/assets/iStock-479137569.jpg",
+      image: "/media/img/iStock-1354196176.webp",
       color: "#013366",
     },
     // Add more testimonials...
