@@ -26,7 +26,7 @@ const FeaturesMenu = (props: Props) => {
           "flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200",
           isActive
             ? "text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 shadow-sm"
-            : "text-gray-700 dark:text-gray-200 hover:!text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-50 dark:hover:bg-gray-800/50",
+            : "text-gray-700 dark:text-gray-200 hover:!text-indigo-600 dark:hover:!text-indigo-400 hover:bg-gray-50 dark:hover:!bg-gray-800/50",
           !isActive && className
         )}
       >
