@@ -37,7 +37,7 @@ const AIFeatureShowcase = () => {
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(true);
+  const [isDarkMode] = useState<boolean>(true);
 
   // Keep your existing aiFeatures array
   const aiFeatures: AIFeature[] = getAIFeatures();
