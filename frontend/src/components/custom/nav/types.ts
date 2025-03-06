@@ -18,5 +18,6 @@ export type NavbarProps = {
   premiumUser?: boolean;
   darkMode?: boolean;
   onToggleDarkMode?: () => void;
-  alwaysDarkText: boolean;
+  alwaysDarkText?: boolean;
+  className?: string;
 };

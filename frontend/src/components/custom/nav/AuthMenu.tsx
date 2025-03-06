@@ -128,12 +128,13 @@ const AuthMenu = ({
           <Link
             to="/login"
             className={cn(
-              "hidden md:inline-block px-4 py-2 rounded-lg text-sm font-medium text-gray-700 dark:!text-gray-200 hover:!text-indigo-600 dark:hover:!text-indigo-400 hover:bg-gray-50 da!rk:hover:!bg-gray-800/50 transition-all duration-200",
+              "hidden md:inline-block px-4 py-2 rounded-lg text-sm font-medium text-gray-700  transition-all duration-200",
               className
             )}
           >
             Log in
           </Link>
+          {/* dark:!text-gray-200 hover:!text-indigo-600 dark:hover:!text-indigo-400 hover:bg-gray-50 da!rk:hover:!bg-gray-800/50 */}
           <Link
             to="/signup"
             className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:!from-indigo-700 hover:!to-purple-700 shadow-sm hover:!shadow transition-all duration-200"

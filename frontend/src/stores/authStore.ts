@@ -21,7 +21,7 @@ import {
 import { auth } from "../config/firebase";
 import { AuthError, FirebaseErrorHandler } from "@/services/error";
 
-type SocialProvider = "google" | "apple" | "facebook";
+export type SocialProvider = "google" | "apple" | "facebook";
 
 class AuthStore {
   public user: User | null = null;
