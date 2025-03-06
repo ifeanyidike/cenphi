@@ -2,7 +2,6 @@
 import { createBrowserRouter } from "react-router-dom";
 
 import TestimonialsDashboard from "@/pages/TestimonialsDashboard";
-import LandingPage from "@/pages/landingpage";
 import { Login } from "@/pages/Login";
 import { Signup } from "@/pages/SignUp";
 import ResetPasswordPage from "@/pages/ResetPassword";
@@ -19,7 +18,6 @@ import MobileTransferPage from "@/pages/collection/MobileTransferPage";
 import ThankYouPage from "@/pages/collection/ThankYouPage";
 
 import { useParams } from "react-router-dom";
-import TestimonialHero from "@/pages/TestimonialHeroPage";
 
 // A dynamic component to choose the correct recorder based on the URL parameter.
 const DynamicRecorder = () => {
@@ -36,16 +34,18 @@ const DynamicRecorder = () => {
 };
 import WhyCenphi from "@/pages/WhyCenphi";
 import Pricing from "@/pages/Pricing";
+import LandingPage from "@/pages/Landing";
 
 export const router = createBrowserRouter([
   {
     path: "/",
-    element: <TestimonialsDashboard />,
-  },
-  {
-    path: "/home",
     element: <LandingPage />,
   },
+  {
+    path: "/dashboard",
+    element: <TestimonialsDashboard />,
+  },
+
   {
     path: "/why-Cenphi",
     element: <WhyCenphi />,
@@ -66,10 +66,7 @@ export const router = createBrowserRouter([
     path: "/reset-password",
     element: <ResetPasswordPage />,
   },
-  {
-    path: "/home2",
-    element: <TestimonialHero />,
-  },
+
   {
     // Parent route for the testimonial collection process.
     path: "/collection",
