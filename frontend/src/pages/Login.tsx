@@ -3,6 +3,7 @@ import { observer } from "mobx-react-lite";
 import { useNavigate } from "react-router-dom";
 import { authStore } from "@/stores/authStore";
 import { LoginForm } from "../components/auth/login-form";
+import Footer from "@/components/custom/footer";
 
 export const Login = observer(() => {
   const navigate = useNavigate();
@@ -24,14 +25,13 @@ export const Login = observer(() => {
   };
 
   return (
-    <div className="flex min-h-svh flex-col items-center justify-center bg-muted p-6 md:p-10">
-      <div className="w-full max-w-sm md:max-w-4xl">
-        <LoginForm
-          isLoading={authStore.loading}
-          error={authStore.error}
-          onSubmit={(data) => handleSubmit(data)}
-        />
-      </div>
+    <div>
+      <LoginForm
+        isLoading={authStore.loading}
+        error={authStore.error}
+        onSubmit={(data) => handleSubmit(data)}
+      />
+      <Footer />
     </div>
   );
 });
