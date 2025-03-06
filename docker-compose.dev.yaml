@@ -7,3 +7,11 @@ services:
       - 3300:3000
     command: ["yarn", "vite", "--host"]
     tty: true
+  api-server:
+    build:
+      dockerfile: Dockerfile.dev
+    command: ["air", "-c", ".air.toml"]
+  ai-service:
+    build:
+      dockerfile: Dockerfile.dev
+    command: ["python", "main.py"]

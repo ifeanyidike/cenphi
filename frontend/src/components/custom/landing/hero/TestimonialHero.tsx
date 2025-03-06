@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Play,
   Pause,
@@ -7,7 +7,8 @@ import {
   MessageSquare,
   RefreshCw,
   Zap,
-  ChevronRight,
+  ArrowRight,
+  Calendar,
 } from "lucide-react";
 import {
   motion,
@@ -18,13 +19,12 @@ import {
 import { useInView } from "react-intersection-observer";
 import PreloaderAnimation from "./PreloaderAnimation";
 import HomeTestimonialCard from "./HomeTestimonialCard";
-import { features, testimonials } from "./constants";
-import FeatureCarousel from "./FeatureCarousel";
+import { testimonials } from "./constants";
 
 const TestimonialHero = () => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [mousePosition] = useState({ x: 0, y: 0 });
   const [selectedCategory, setSelectedCategory] = useState("all");
   const containerRef = useRef<HTMLDivElement>(null);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -50,15 +50,6 @@ const TestimonialHero = () => {
     { id: "startup", label: "Startup", icon: Zap },
     { id: "saas", label: "SaaS", icon: RefreshCw },
   ];
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
-    if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    setMousePosition({
-      x: (e.clientX - rect.left) / rect.width,
-      y: (e.clientY - rect.top) / rect.height,
-    });
-  };
 
   useEffect(() => {
     // setIsInView(true);
@@ -88,14 +79,13 @@ const TestimonialHero = () => {
       </AnimatePresence>
       <section
         ref={containerRef}
-        onMouseMove={handleMouseMove}
-        className="relative bg-black overflow-hidden py-12"
+        className="relative bg-black overflow-hidden py-12 pt-20"
       >
         <motion.div
           className="absolute inset-0 w-full h-full"
           style={{ scale: videoScale }}
         >
-          <video
+          {/* <video
             autoPlay
             muted
             loop
@@ -104,10 +94,10 @@ const TestimonialHero = () => {
             style={{ filter: "brightness(0.8)" }}
           >
             <source
-              src="https://mortgagehub-bucket.s3.eu-west-1.amazonaws.com/assets/iStock-1190896635.mp4"
+              src="https://res.cloudinary.com/di6d28r5r/video/upload/v1740990576/assets/iStock-1190896635.mp4"
               type="video/mp4"
             />
-          </video>
+          </video> */}
 
           <motion.div
             className="absolute inset-0"
@@ -137,26 +127,25 @@ const TestimonialHero = () => {
           className="relative max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 z-20"
           style={{ opacity: contentOpacity }}
         >
-          {/* Premium header section */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
-            className="text-center mb-20"
+            className="text-center mb-14"
           >
-            <motion.div
+            {/* <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.2 }}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-blue-500/10 to-purple-500/10 backdrop-blur-xl border border-white/10 mb-8"
+              className="inline-flex items-center gap-2 px-2 py-2 rounded-full bg-gradient-to-r from-blue-500/10 to-purple-500/10 backdrop-blur-xl border border-white/10 mb-4"
             >
-              <Sparkles className="w-5 h-5 text-blue-400" />
-              <span className="text-blue-400 font-medium">
+              <Sparkles className="w-4 h-4 text-blue-400" />
+              <span className="text-blue-400 font-medium text-xs">
                 AI-Powered Testimonial Management
               </span>
-            </motion.div>
+            </motion.div> */}
 
-            <h1 className="text-6xl md:text-7xl font-black text-white mb-8 tracking-tight">
+            <h1 className="text-4xl md:text-6xl font-black text-white mb-10 tracking-tight">
               <span className="bg-gradient-to-r from-white via-blue-400 to-purple-400 bg-clip-text text-transparent">
                 Transform Customer Stories
               </span>
@@ -166,21 +155,21 @@ const TestimonialHero = () => {
               </span>
             </h1>
 
-            <p className="text-xl md:text-2xl text-slate-400 max-w-3xl mx-auto mb-12 leading-relaxed">
+            <p className="text-base text-slate-50 max-w-3xl mx-auto mb-10 leading-relaxed">
               Harness the power of AI to collect, curate, and optimize
               testimonials that resonate with your target audience and drive
               unprecedented growth.
             </p>
 
             {/* Category navigation */}
-            <div className="flex flex-wrap justify-center gap-4 mb-16">
+            <div className="flex flex-wrap justify-center gap-4 mb-8">
               {categories.map((category) => (
                 <motion.button
                   key={category.id}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setSelectedCategory(category.id)}
-                  className={`flex items-center gap-2 px-6 py-3 rounded-full backdrop-blur-xl transition-all duration-300 ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm backdrop-blur-xl transition-all duration-300 ${
                     selectedCategory === category.id
                       ? "bg-blue-500 text-white"
                       : "bg-white/5 text-slate-400 hover:bg-white/10"
@@ -195,7 +184,7 @@ const TestimonialHero = () => {
 
           {/* Enhanced testimonial display */}
           <div className="relative max-w-6xl mx-auto " ref={ref}>
-            <AnimatePresence mode="sync">
+            <AnimatePresence mode="wait">
               {filteredTestimonials.map(
                 (testimonial, index) =>
                   index === activeIndex && (
@@ -210,7 +199,7 @@ const TestimonialHero = () => {
 
             {/* Enhanced navigation controls */}
             <div className="flex items-center justify-between mt-8">
-              <div className="flex gap-3">
+              <div className="flex gap-2">
                 {filteredTestimonials.map((_, index) => (
                   <button
                     key={index}
@@ -250,74 +239,11 @@ const TestimonialHero = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
-            className="mt-24 text-center"
+            className="mt-6 text-center"
           >
-            <div className="relative inline-block">
-              <motion.div
-                className="absolute -inset-4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl opacity-20 blur-xl"
-                animate={{
-                  scale: [1, 1.1, 1],
-                  opacity: [0.2, 0.3, 0.2],
-                }}
-                transition={{
-                  duration: 4,
-                  repeat: Infinity,
-                  repeatType: "reverse",
-                }}
-              />
-              <button className="group relative inline-flex items-center gap-3 px-8 py-4 text-lg font-semibold text-white bg-gradient-to-r from-blue-600 to-purple-500 rounded-xl overflow-hidden hover:shadow-2xl hover:shadow-blue-500/20 transition-all duration-300">
-                <span className="absolute inset-0 bg-gradient-to-r from-purple-500 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                <span className="relative flex items-center gap-2">
-                  <Sparkles className="w-5 h-5" />
-                  Start Your Journey Now
-                </span>
-                <ChevronRight className="relative w-5 h-5 transform group-hover:translate-x-1 transition-transform" />
-              </button>
-            </div>
+            <CTA />
 
-            {/* Feature highlights */}
-            {/* <div className="grid md:grid-cols-3 gap-8 mt-20">
-              {[
-                {
-                  icon: Brain,
-                  title: "AI-Powered Enhancement",
-                  description:
-                    "Automatically optimize testimonials for maximum impact and relevance",
-                },
-                {
-                  icon: RefreshCw,
-                  title: "Smart Curation",
-                  description:
-                    "Intelligently organize and display your most impactful customer stories",
-                },
-                {
-                  icon: Share,
-                  title: "Dynamic Distribution",
-                  description:
-                    "Share testimonials across all channels with perfect formatting",
-                },
-              ].map((feature, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.7 + index * 0.2 }}
-                  className="relative group"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  <div className="relative bg-slate-900/50 backdrop-blur-xl rounded-2xl p-8 border border-white/10">
-                    <feature.icon className="w-12 h-12 text-blue-400 mb-6" />
-                    <h3 className="text-xl font-semibold text-white mb-4">
-                      {feature.title}
-                    </h3>
-                    <p className="text-slate-400">{feature.description}</p>
-                  </div>
-                </motion.div>
-              ))}
-            </div> */}
-            <AnimatePresence mode="sync">
-              <FeatureCarousel features={features} autoPlayInterval={8000} />
-            </AnimatePresence>
+            {/* <FeatureCarousel features={features} autoPlayInterval={8000} /> */}
           </motion.div>
         </motion.div>
 
@@ -341,3 +267,109 @@ const TestimonialHero = () => {
 };
 
 export default TestimonialHero;
+
+const CTA = () => {
+  return (
+    <div className="relative flex flex-col md:flex-row gap-8 md:gap-12 justify-center items-center">
+      {/* Journey Button - Bold, adventurous with action-oriented design */}
+      <div className="relative group">
+        {/* Dynamic background effect */}
+        <motion.div
+          className="absolute -inset-3 bg-gradient-to-r from-indigo-600 via-blue-500 to-cyan-400 rounded-2xl opacity-30 blur-xl"
+          animate={{
+            scale: [1, 1.1, 1],
+            opacity: [0.3, 0.5, 0.3],
+          }}
+          transition={{
+            duration: 3,
+            repeat: Infinity,
+            repeatType: "reverse",
+          }}
+        />
+
+        <button className="group relative w-64 h-16 flex items-center justify-between px-6 py-4 font-bold text-white bg-gradient-to-r from-indigo-600 to-blue-600 rounded-xl overflow-hidden hover:shadow-2xl hover:shadow-blue-500/30 transition-all duration-300">
+          {/* Particle effect on hover */}
+          <div className="absolute inset-0 w-full h-full">
+            {[...Array(20)].map((_, i) => (
+              <motion.div
+                key={i}
+                className="absolute w-1 h-1 bg-white rounded-full opacity-0"
+                initial={{ opacity: 0 }}
+                animate={{
+                  opacity: [0, 0.8, 0],
+                  scale: [0, 1, 0],
+                  x: [0, Math.random() * 100 - 50],
+                  y: [0, Math.random() * -80],
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  delay: Math.random() * 2,
+                  repeatDelay: Math.random() * 2,
+                }}
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  top: `${Math.random() * 100}%`,
+                }}
+              />
+            ))}
+          </div>
+
+          {/* Button content */}
+          <span className="relative flex items-center gap-3">
+            <Sparkles className="w-5 h-5" />
+            <span className="text-base">Start Your Journey</span>
+          </span>
+          <span className="relative flex items-center justify-center w-8 h-8 bg-white bg-opacity-20 rounded-full">
+            <ArrowRight className="w-4 h-4 text-white transform group-hover:translate-x-1 transition-transform" />
+          </span>
+        </button>
+      </div>
+
+      {/* Demo Button - Professional, video-focused with enterprise feel */}
+      <div className="relative group">
+        {/* Dynamic background effect */}
+        <motion.div
+          className="absolute -inset-3 bg-gradient-to-r from-purple-600 via-violet-500 to-fuchsia-400 rounded-2xl opacity-30 blur-xl"
+          animate={{
+            scale: [1, 1.1, 1],
+            opacity: [0.3, 0.5, 0.3],
+          }}
+          transition={{
+            duration: 4,
+            repeat: Infinity,
+            repeatType: "reverse",
+          }}
+        />
+
+        <button className="group relative w-64 h-16 flex items-center justify-between px-6 py-4 font-bold text-white bg-gradient-to-r from-purple-600 to-violet-600 rounded-xl overflow-hidden hover:shadow-2xl hover:shadow-purple-500/30 transition-all duration-300">
+          {/* Video play pulse effect */}
+          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+            <motion.div
+              className="absolute w-16 h-16 rounded-full bg-white bg-opacity-10"
+              animate={{
+                scale: [1, 1.5],
+                opacity: [0.5, 0],
+              }}
+              transition={{
+                duration: 1.5,
+                repeat: Infinity,
+              }}
+            />
+          </div>
+
+          {/* Button content */}
+          <span className="relative flex items-center gap-3">
+            <div className="relative flex items-center justify-center w-6 h-6 bg-white rounded-full">
+              <Play className="w-3 h-3 text-purple-600 ml-0.5" />
+            </div>
+            <span className="text-base">Book a Demo</span>
+          </span>
+          <span className="relative flex items-center justify-center w-8 h-8 bg-white bg-opacity-20 rounded-full">
+            <Calendar className="w-4 h-4 text-white" />
+          </span>
+        </button>
+      </div>
+    </div>
+  );
+};
