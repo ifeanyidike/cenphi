@@ -102,7 +102,7 @@ const FeatureCarousel = ({
 
   return (
     <motion.div
-      className="relative w-full py-12"
+      className="relative w-full py-8"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
@@ -159,7 +159,7 @@ const FeatureCarousel = ({
                         whileHover={{ scale: 1.05 }}
                         className="relative z-10"
                       >
-                        <feature.icon className="w-12 h-12 text-blue-400 mb-6" />
+                        <feature.icon className="w-8 h-8 text-blue-400 mb-3" />
                         <motion.h3
                           className="text-xl font-semibold text-white mb-4"
                           initial={{ y: 20, opacity: 0 }}
