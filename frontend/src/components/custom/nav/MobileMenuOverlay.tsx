@@ -21,10 +21,9 @@ const MobileMenuOverlay = ({
   activeMenu,
   toggleMenu,
   isMobileMenuOpen,
-  closeMobileMenu,
 }: Props) => {
   const controls = useAnimation();
-  const [menuPosition, setMenuPosition] = useState("right");
+  const [menuPosition] = useState("right");
 
   useEffect(() => {
     if (isMobileMenuOpen) {
@@ -127,7 +126,7 @@ const MobileMenuOverlay = ({
               exit="hidden"
               className="overflow-hidden bg-gray-50 dark:bg-gray-800 rounded-xl mx-3 mb-3"
             >
-              {resourcesMenuData.map((section, sIndex) => (
+              {resourcesMenuData.map((section) => (
                 <div key={section.title} className="py-3 px-4">
                   <h3 className="px-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-3">
                     {section.title}

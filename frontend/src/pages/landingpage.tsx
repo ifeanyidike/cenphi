@@ -1,33 +1,24 @@
-import Navbar from "@/components/custom/nav-bar-simple";
-import TransformationCard from "@/components/custom/transformationcard";
-import MyHeroSection from "@/components/custom/herosection2";
-import ProductTestimonial from "@/components/custom/producttextimonialsection";
-import FeaturedCarousel1 from "@/components/custom/featuredcarousel";
-import Widget from "@/components/custom/widgetcomponent";
-import TestimonialSection2 from "@/components/custom/testimonialsection2";
-import IntegrationSection from "@/components/custom/integrationsection";
-import TestimonialSharingSection3 from "@/components/custom/testimonialsection3";
-import ReviewSection from "@/components/custom/reviewsection";
+import AIFeaturesShowcase from "@/components/custom/landing/AIShowcase";
+import UserTestimonial from "@/components/custom/landing/hero/UserTestimonial";
+import TestimonialHero from "@/components/custom/landing/hero/TestimonialHero";
+import HowItWorksSection from "@/components/custom/landing/HowItWorksSection";
+import Navbar from "@/components/custom/nav";
+import CollectionSection from "@/components/custom/landing/CollectionSection";
+import FeatureSection from "@/components/custom/landing/topfeatures";
 import Footer from "@/components/custom/footer";
 
 const LandingPage = () => {
   return (
     <>
-      <Navbar />
-      <MyHeroSection />
-      <TransformationCard />
-      <ProductTestimonial />
-      <FeaturedCarousel1 />
-      <Widget />
-      <TestimonialSection2 />
-      <IntegrationSection />
-      <TestimonialSharingSection3 />
-      <ReviewSection />
+      <Navbar alwaysDarkText={false} />
+      <TestimonialHero />
+      <HowItWorksSection />
+
+      <UserTestimonial />
+      <FeatureSection />
+      <AIFeaturesShowcase />
+      <CollectionSection />
       <Footer />
-      {/* <HeroSection />
-      {/* <TestimonialShowcase />
-      <TestimonialsSection />
-      <HowItWorks /> */}
     </>
   );
 };

@@ -20,7 +20,7 @@ const SolutionsMenu = ({ isActive, toggleMenu, className }: Props) => {
 
           isActive
             ? "text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 shadow-sm"
-            : "text-gray-700 dark:text-gray-200 hover:!text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-50 dark:hover:bg-gray-800/50",
+            : "text-gray-700 dark:text-gray-200 hover:!text-indigo-600 dark:hover:!text-indigo-400 hover:bg-gray-50 dark:hover:bg-gray-800/50",
           !isActive && className
         )}
       >
@@ -82,7 +82,7 @@ const SolutionsMenu = ({ isActive, toggleMenu, className }: Props) => {
                         </div>
 
                         {/* Animated gradient border effect */}
-                        <div className="absolute inset-0 border-2 border-transparent opacity-0 group-hover:opacity-100 rounded-xl overflow-hidden pointer-events-none">
+                        <div className="absolute inset-0 border-2 border-transparent opacity-0 group-hover:opacity-10 rounded-xl overflow-hidden pointer-events-none">
                           <div
                             className="absolute inset-0 bg-gradient-to-r from-transparent via-indigo-500 to-transparent animate-gradient-x"
                             style={{
