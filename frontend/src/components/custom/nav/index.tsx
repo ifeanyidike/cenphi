@@ -16,12 +16,14 @@ import ResourcesMenu from "./ResourcesMenu";
 import NotificationBell from "./NotificationBell";
 import MobileMenuOverlay from "./MobileMenuOverlay";
 import AuthMenu from "./AuthMenu";
+import { cn } from "@/lib/utils";
 
 const Navbar: React.FC<NavbarProps> = ({
   userLoggedIn = false,
   premiumUser = false,
   darkMode = false,
   // onToggleDarkMode = () => {},
+  className = "",
   alwaysDarkText = false,
 }) => {
   const [isScrolled, setIsScrolled] = useState<boolean>(false);
@@ -172,7 +174,7 @@ const Navbar: React.FC<NavbarProps> = ({
   return (
     <div
       ref={navRef}
-      className={darkMode ? "dark " : ""}
+      className={cn(darkMode ? "dark " : "", className)}
       onMouseMove={handleMouseMove}
     >
       {/* Scroll Progress Indicator */}
@@ -263,7 +265,12 @@ const Navbar: React.FC<NavbarProps> = ({
                     />
                   </div>
 
-                  <span className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent transform transition-transform group-hover:translate-x-0.5">
+                  <span
+                    className={cn(
+                      "text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 font-playball md:dark:from-white md:dark:to-gray-100  bg-clip-text text-transparent transform transition-transform group-hover:translate-x-0.5",
+                      isScrolled && "dark:!from-indigo-600 dark:!to-purple-600"
+                    )}
+                  >
                     Cenphi
                   </span>
                 </Link>
@@ -277,7 +284,7 @@ const Navbar: React.FC<NavbarProps> = ({
                   toggleMenu={toggleMenu}
                   className={
                     isScrolled || alwaysDarkText
-                      ? "text-gray-700 hover:text-indigo-600"
+                      ? "!text-gray-700 hover:!text-indigo-600 "
                       : "text-white hover:text-indigo-200"
                   }
                 />
@@ -288,7 +295,7 @@ const Navbar: React.FC<NavbarProps> = ({
                   toggleMenu={toggleMenu}
                   className={
                     isScrolled || alwaysDarkText
-                      ? "text-gray-700 hover:text-indigo-600"
+                      ? "!text-gray-700 hover:!text-indigo-600"
                       : "text-white hover:text-indigo-200"
                   }
                 />
@@ -299,7 +306,7 @@ const Navbar: React.FC<NavbarProps> = ({
                   toggleMenu={toggleMenu}
                   className={
                     isScrolled || alwaysDarkText
-                      ? "text-gray-700 hover:text-indigo-600"
+                      ? "!text-gray-700 hover:!text-indigo-600"
                       : "text-white hover:text-indigo-200"
                   }
                 />
@@ -356,7 +363,7 @@ const Navbar: React.FC<NavbarProps> = ({
                   userMenuRef={userMenuRef}
                   className={
                     isScrolled || alwaysDarkText
-                      ? "text-gray-700 hover:text-indigo-600"
+                      ? "!text-gray-700 hover:!text-indigo-600"
                       : "text-white hover:text-indigo-200"
                   }
                 />
