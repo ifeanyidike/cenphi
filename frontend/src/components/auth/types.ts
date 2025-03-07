@@ -5,6 +5,12 @@ export interface AuthFormProps extends React.ComponentProps<"div"> {
   isLoading?: boolean;
 }
 
+export interface PasswordResetAuthFormProps
+  extends React.ComponentProps<"div"> {
+  onSubmit: (data: any) => Promise<void>;
+  isLoading?: boolean;
+}
+
 // Reusable styled input component
 export interface FormInputProps extends React.ComponentProps<"div"> {
   label: string;

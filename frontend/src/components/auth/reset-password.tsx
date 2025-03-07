@@ -11,7 +11,7 @@ import {
   ArrowLeftIcon,
   CheckCircleIcon,
 } from "lucide-react";
-import { AuthFormProps } from "./types";
+import { AuthFormProps, PasswordResetAuthFormProps } from "./types";
 import { FormInput } from "./auth-utlis";
 import { getAuth } from "firebase/auth";
 import { observer } from "mobx-react-lite";
@@ -25,7 +25,7 @@ export const RequestResetForm = observer(
     isLoading,
     onBack,
     ...props
-  }: AuthFormProps & { onBack?: () => void }) => {
+  }: PasswordResetAuthFormProps & { onBack?: () => void }) => {
     const [email, setEmail] = useState("");
     const [isSubmitted, setIsSubmitted] = useState(false);
     const errors = authStore.errors;
@@ -126,7 +126,12 @@ export const RequestResetForm = observer(
 
 // Reset Password Form (after clicking email link)
 export const ResetPasswordForm = observer(
-  ({ className, onSubmit, isLoading, ...props }: AuthFormProps) => {
+  ({
+    className,
+    onSubmit,
+    isLoading,
+    ...props
+  }: PasswordResetAuthFormProps) => {
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [isSuccess, setIsSuccess] = useState(false);
