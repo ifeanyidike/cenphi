@@ -11,7 +11,7 @@ import {
   ArrowLeftIcon,
   CheckCircleIcon,
 } from "lucide-react";
-import { AuthFormProps, PasswordResetAuthFormProps } from "./types";
+import { PasswordResetAuthFormProps } from "./types";
 import { FormInput } from "./auth-utlis";
 import { getAuth } from "firebase/auth";
 import { observer } from "mobx-react-lite";
