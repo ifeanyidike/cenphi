@@ -24,18 +24,19 @@ type database struct {
 var DB Database
 
 func retryConnection(dsn string, maxRetries int, delay time.Duration) (*sql.DB, error) {
-	for i := 0; i < maxRetries; i++ {
+	for range maxRetries {
 		db, err := sql.Open("postgres", dsn)
 
 		if err == nil {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			if err := db.PingContext(ctx); err != nil {
+			if err := db.PingContext(ctx); err == nil {
+				db.SetMaxOpenConns(30)
+				db.SetConnMaxIdleTime(time.Duration(15 * 60))
+				db.SetMaxIdleConns(30)
 				return db, nil
 			}
-			db.SetMaxOpenConns(30)
-			db.SetConnMaxIdleTime(time.Duration(15 * 60))
-			db.SetMaxIdleConns(30)
+
 		}
 
 		log.Printf("Database connection failed: %v. Retrying in %v...", err, delay)

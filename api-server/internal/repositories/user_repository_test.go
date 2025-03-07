@@ -28,8 +28,7 @@ func TestUserRepository(t *testing.T) {
 			Email:         utils.GenerateRandomEmail(),
 			FirebaseUID:   utils.RandomString(10),
 			EmailVerified: true,
-			FirstName:     utils.RandomString(8),
-			LastName:      utils.RandomString(8),
+			Name:          utils.RandomString(12),
 			CreatedAt:     time.Now(),
 			UpdatedAt:     time.Now(),
 		}
@@ -40,8 +39,7 @@ func TestUserRepository(t *testing.T) {
 		storedUser, err := repo.FindByUID(context.Background(), user.FirebaseUID, db)
 		require.NoError(t, err)
 		assert.Equal(t, user.Email, storedUser.Email)
-		assert.Equal(t, user.FirstName, storedUser.FirstName)
-		assert.Equal(t, user.LastName, storedUser.LastName)
+		assert.Equal(t, user.Name, storedUser.Name)
 	})
 
 	t.Run("UpdateUser", func(t *testing.T) {
@@ -51,8 +49,7 @@ func TestUserRepository(t *testing.T) {
 			Email:         utils.GenerateRandomEmail(),
 			FirebaseUID:   utils.RandomString(10),
 			EmailVerified: false,
-			FirstName:     utils.RandomString(8),
-			LastName:      utils.RandomString(8),
+			Name:          utils.RandomString(12),
 			CreatedAt:     time.Now(),
 			UpdatedAt:     time.Now(),
 		}
@@ -60,8 +57,8 @@ func TestUserRepository(t *testing.T) {
 		require.NoError(t, err)
 
 		// Update the user.
-		user.FirstName = "UpdatedFirstName"
-		user.LastName = "UpdatedLastName"
+		newUserName := utils.RandomString(10)
+		user.Name = newUserName
 		user.UpdatedAt = time.Now()
 		err = repo.Update(context.Background(), user, user.ID, db)
 		require.NoError(t, err)
@@ -69,8 +66,7 @@ func TestUserRepository(t *testing.T) {
 		// Verify the update.
 		storedUser, err := repo.FindByUID(context.Background(), user.FirebaseUID, db)
 		require.NoError(t, err)
-		assert.Equal(t, "UpdatedFirstName", storedUser.FirstName)
-		assert.Equal(t, "UpdatedLastName", storedUser.LastName)
+		assert.Equal(t, newUserName, storedUser.Name)
 	})
 
 	t.Run("DeleteUser", func(t *testing.T) {
@@ -80,8 +76,7 @@ func TestUserRepository(t *testing.T) {
 			Email:         utils.GenerateRandomEmail(),
 			FirebaseUID:   utils.RandomString(10),
 			EmailVerified: false,
-			FirstName:     utils.RandomString(8),
-			LastName:      utils.RandomString(8),
+			Name:          utils.RandomString(12),
 			CreatedAt:     time.Now(),
 			UpdatedAt:     time.Now(),
 		}

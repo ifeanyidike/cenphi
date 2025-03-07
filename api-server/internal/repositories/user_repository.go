@@ -29,15 +29,14 @@ func NewUserRepository(redis *redis.Client) UserRepository {
 func (r *userRepository) Create(ctx context.Context, user *models.User, db DB) error {
 	query := `
 		INSERT INTO users 
-			(id, email, email_verified, first_name, last_name, firebase_uid, last_active_at, created_at) 
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+			(id, email, email_verified, name, firebase_uid, last_active_at, created_at) 
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
 	_, err := db.ExecContext(ctx, query,
 		user.ID,
 		user.Email,
 		user.EmailVerified,
-		user.FirstName,
-		user.LastName,
+		user.Name,
 		user.FirebaseUID,
 		time.Now(),
 		time.Now(),
@@ -48,10 +47,10 @@ func (r *userRepository) Create(ctx context.Context, user *models.User, db DB) e
 func (r *userRepository) Update(ctx context.Context, user *models.User, id uuid.UUID, db DB) error {
 	query :=
 		`UPDATE users 
-		 	SET email = $1, first_name = $2, last_name = $3, last_active_at = $4 
-		 WHERE id = $5
+		 	SET email = $1, name = $2, last_active_at = $3
+		 WHERE id = $4
 		`
-	_, err := db.ExecContext(ctx, query, user.Email, user.FirstName, user.LastName, time.Now(), id)
+	_, err := db.ExecContext(ctx, query, user.Email, user.Name, time.Now(), id)
 	return err
 }
 
@@ -60,14 +59,14 @@ func (r *userRepository) GetByID(ctx context.Context, id uuid.UUID, db DB) (*mod
 	query :=
 		`
 		SELECT 
-			id, email, first_name, last_name, email_verified, last_active_at, created_at
+			id, email, name, email_verified, last_active_at, created_at
 		FROM users
 		WHERE id = $1
 		`
 	row := db.QueryRowContext(ctx, query, id)
 
 	var user models.User
-	err := row.Scan(&user.ID, &user.Email, &user.FirstName, &user.LastName, &user.EmailVerified, &user.LastActiveAt, &user.CreatedAt)
+	err := row.Scan(&user.ID, &user.Email, &user.Name, &user.EmailVerified, &user.LastActiveAt, &user.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -78,14 +77,14 @@ func (r *userRepository) FindByEmail(ctx context.Context, firebase_uid string, d
 	query :=
 		`
 		SELECT 
-			id, email, first_name, last_name, email_verified, last_active_at, created_at
+			id, email, name, email_verified, last_active_at, created_at
 		FROM users
 		WHERE firebase_uid = $1
 		`
 	row := db.QueryRowContext(ctx, query, firebase_uid)
 
 	var user models.User
-	err := row.Scan(&user.ID, &user.Email, &user.FirstName, &user.LastName, &user.EmailVerified, &user.LastActiveAt, &user.CreatedAt)
+	err := row.Scan(&user.ID, &user.Email, &user.Name, &user.EmailVerified, &user.LastActiveAt, &user.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -96,13 +95,13 @@ func (r *userRepository) FindByUID(ctx context.Context, uid string, db DB) (*mod
 	query :=
 		`
 		SELECT 
-			id, email, first_name, last_name, email_verified, last_active_at, created_at
+			id, email, name, email_verified, last_active_at, created_at
 		FROM users
 		WHERE firebase_uid = $1
 		`
 	row := db.QueryRowContext(ctx, query, uid)
 	var user models.User
-	err := row.Scan(&user.ID, &user.Email, &user.FirstName, &user.LastName, &user.EmailVerified, &user.LastActiveAt, &user.CreatedAt)
+	err := row.Scan(&user.ID, &user.Email, &user.Name, &user.EmailVerified, &user.LastActiveAt, &user.CreatedAt)
 	if err != nil {
 		return nil, err
 	}

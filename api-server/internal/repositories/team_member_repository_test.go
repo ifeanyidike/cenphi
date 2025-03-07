@@ -28,8 +28,7 @@ func setupTestEntities(t *testing.T, db *sql.DB, redisClient *redis.Client) (*mo
 		ID:          uuid.New(),
 		Email:       utils.GenerateRandomEmail(),
 		FirebaseUID: utils.RandomString(10),
-		FirstName:   utils.RandomString(5),
-		LastName:    utils.RandomString(6),
+		Name:        utils.RandomString(12),
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 	}
@@ -100,8 +99,7 @@ func TestTeamMemberRepository(t *testing.T) {
 		storedTeamMember, err := teamMemberRepo.GetDataByID(context.Background(), teamMember.ID, db)
 		require.NoError(t, err)
 		assert.Equal(t, teamMember.UserID, storedTeamMember.UserID)
-		assert.Equal(t, user.FirstName, storedTeamMember.FirstName)
-		assert.Equal(t, user.LastName, storedTeamMember.LastName)
+		assert.Equal(t, user.Name, storedTeamMember.Name)
 		assert.Equal(t, user.Email, storedTeamMember.Email)
 		assert.Equal(t, user.FirebaseUID, storedTeamMember.FirebaseUID)
 		assert.Equal(t, workspace.Name, storedTeamMember.WorkspaceName)

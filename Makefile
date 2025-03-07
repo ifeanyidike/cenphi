@@ -13,8 +13,9 @@ GO_PROTO=protoc --proto_path=. \
     protobuf/intelligence.proto
 
 DOCKER_COMPOSE=docker-compose
-DOCKER_COMPOSE_DEV=docker-compose -f docker-compose.yaml -f docker-compose.dev.yaml
-DOCKER_COMPOSE_PROD=docker-compose -f docker-compose.yaml -f docker-compose.prod.yaml
+# DOCKER_COMPOSE_DEV=docker-compose -f docker-compose.yaml -f docker-compose.dev.yaml
+DOCKER_COMPOSE_DEV=$(DOCKER_COMPOSE)
+DOCKER_COMPOSE_PROD=docker-compose -f docker-compose.prod.yaml
 SLIM_IMAGE_NAME ?= cenphi-ai-service:latest
 
 # Targets
