@@ -66,7 +66,6 @@ const ResetPasswordPage = observer(() => {
       <ResetPasswordForm
         onSubmit={handlePasswordReset}
         isLoading={authStore.loading}
-        error={authStore.error}
       />
     );
   }
@@ -86,13 +85,11 @@ const ResetPasswordPage = observer(() => {
           <ResetPasswordForm
             onSubmit={handlePasswordReset}
             isLoading={authStore.loading}
-            error={authStore.error}
           />
         ) : (
           <RequestResetForm
             onSubmit={handleRequestReset}
             isLoading={authStore.loading}
-            error={authStore.error}
             onBack={() => navigate("/login")}
           />
         )}

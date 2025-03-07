@@ -113,7 +113,7 @@ const AIFeatureShowcase = () => {
   //https://res.cloudinary.com/di6d28r5r/image/upload/v1740990576/assets/iStock-1357573240.jpg
   return (
     <section
-      className={`py-16 relative overflow-hidden ${
+      className={`py-24 relative overflow-hidden ${
         isDarkMode ? "bg-black" : "bg-white"
       }`}
       style={{
@@ -197,7 +197,7 @@ const AIFeatureShowcase = () => {
 
           <div className="text-center mb-20 relative">
             {/* Small decorative elements */}
-            <div className="absolute -top-10 left-1/2 transform -translate-x-1/2">
+            <div className="absolute -top-14 left-1/2 transform -translate-x-1/2">
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
