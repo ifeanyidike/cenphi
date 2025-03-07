@@ -123,7 +123,7 @@ export const VideoRecorder: React.FC<VideoRecorderProps> = observer(
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const chunksRef = useRef<Blob[]>([]);
     const streamRef = useRef<MediaStream | null>(null);
-    const timerRef = useRef<NodeJS.Timeout | null>(null);
+    const timerRef = useRef<number | null>(null);
     const audioAnalyserRef = useRef<AnalyserNode | null>(null);
     const audioContextRef = useRef<AudioContext | null>(null);
 
