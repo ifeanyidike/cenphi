@@ -9,6 +9,14 @@ interface ErrorMapping {
   message: string;
 }
 
+export type AuthErrorField =
+  | "name"
+  | "email"
+  | "password"
+  | "confirmPassword"
+  | "generic";
+export type AuthErrors = Record<AuthErrorField, AuthError | undefined>;
+
 const AUTH_ERROR_MAPPINGS: Record<string, ErrorMapping> = {
   // Email-related errors
   "auth/email-already-in-use": {

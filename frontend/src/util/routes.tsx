@@ -35,6 +35,9 @@ const DynamicRecorder = () => {
 import WhyCenphi from "@/pages/WhyCenphi";
 import Pricing from "@/pages/Pricing";
 import LandingPage from "@/pages/Landing";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import EmailVerificationPage from "@/pages/EmailVerification";
+import OnboardingPage from "@/pages/OnboardingPage";
 
 export const router = createBrowserRouter([
   {
@@ -42,8 +45,21 @@ export const router = createBrowserRouter([
     element: <LandingPage />,
   },
   {
-    path: "/dashboard",
-    element: <TestimonialsDashboard />,
+    element: <ProtectedRoute />,
+    children: [
+      {
+        path: "/dashboard",
+        element: <TestimonialsDashboard />,
+      },
+    ],
+  },
+  {
+    path: "/verify-email",
+    element: <EmailVerificationPage />,
+  },
+  {
+    path: "/onboarding",
+    element: <OnboardingPage />,
   },
 
   {
