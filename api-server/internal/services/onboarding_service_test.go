@@ -66,8 +66,7 @@ func TestOnboardingService_OnboardOwner(t *testing.T) {
 		ID:          userID,
 		Email:       utils.GenerateRandomEmail(),
 		FirebaseUID: utils.RandomString(10),
-		FirstName:   utils.RandomString(5),
-		LastName:    utils.RandomString(5),
+		Name:        utils.RandomString(10),
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 	}, nil)

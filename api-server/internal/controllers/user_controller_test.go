@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/ifeanyidike/cenphi/internal/models"
 	"github.com/ifeanyidike/cenphi/internal/services/mocks"
+	"github.com/ifeanyidike/cenphi/internal/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/zap"
@@ -38,11 +39,10 @@ func TestUserController(t *testing.T) {
 	t.Run("RegisterUser", func(t *testing.T) {
 		user := &models.User{
 			ID:            uuid.New(),
-			Email:         "test@example.com",
-			FirebaseUID:   "test-uid",
-			FirstName:     "John",
-			LastName:      "Doe",
-			EmailVerified: true,
+			Email:         utils.GenerateRandomEmail(),
+			FirebaseUID:   utils.RandomString(10),
+			EmailVerified: false,
+			Name:          utils.RandomString(12),
 			CreatedAt:     time.Now(),
 			UpdatedAt:     time.Now(),
 		}
@@ -61,8 +61,7 @@ func TestUserController(t *testing.T) {
 		user := &models.User{
 			ID:            uuid.New(),
 			Email:         "test@example.com",
-			FirstName:     "John",
-			LastName:      "Doe",
+			Name:          utils.RandomString(12),
 			EmailVerified: true,
 			CreatedAt:     time.Now(),
 			UpdatedAt:     time.Now(),
