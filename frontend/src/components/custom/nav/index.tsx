@@ -212,7 +212,7 @@ const Navbar: React.FC<NavbarProps> = ({
               {/* Logo with enhanced animation */}
               <div className="flex-shrink-0 flex items-center">
                 <Link
-                  to="/home"
+                  to="/"
                   className="flex items-center space-x-2 group"
                   onMouseEnter={() => {
                     // Add logo hover animation logic

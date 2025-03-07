@@ -299,7 +299,7 @@ jobs:
       AWS_REGION: ${{ secrets.AWS_REGION }}
       AWS_SECRET: ${{ secrets.AWS_SECRET }}
       AWS_BUCKET_NAME: ${{ secrets.AWS_BUCKET_NAME }}
-
+      FIREBASE_KEY_JSON: ${{ secrets.FIREBASE_KEY_JSON }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -342,7 +342,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          envs: DB_USERNAME,DB_PASSWORD,DB_HOST,DB_PORT,REDIS_HOST,REDIS_PASSWORD,REDIS_PORT,AWS_KEY,AWS_REGION,AWS_SECRET,AWS_BUCKET_NAME
+          envs: DB_USERNAME,DB_PASSWORD,DB_HOST,DB_PORT,REDIS_HOST,REDIS_PASSWORD,REDIS_PORT,AWS_KEY,AWS_REGION,AWS_SECRET,AWS_BUCKET_NAME,FIREBASE_KEY_JSON
           script: |
             cd /home/opc
             # Fix any potential line ending issues
@@ -393,7 +393,7 @@ jobs:
                 echo "Created basic Docker Compose files"
             fi
             # Run deploy script with environment variables
-            DB_USERNAME=$DB_USERNAME DB_PASSWORD=$DB_PASSWORD DB_HOST=$DB_HOST DB_PORT=$DB_PORT DB_NAME=$DB_NAME REDIS_HOST=$REDIS_HOST REDIS_PASSWORD=$REDIS_PASSWORD REDIS_PORT=$REDIS_PORT AWS_KEY=$AWS_KEY AWS_REGION=$AWS_REGION AWS_SECRET=$AWS_SECRET AWS_BUCKET_NAME=$AWS_BUCKET_NAME ./api-deploy.sh
+            DB_USERNAME=$DB_USERNAME DB_PASSWORD=$DB_PASSWORD DB_HOST=$DB_HOST DB_PORT=$DB_PORT DB_NAME=$DB_NAME REDIS_HOST=$REDIS_HOST REDIS_PASSWORD=$REDIS_PASSWORD REDIS_PORT=$REDIS_PORT AWS_KEY=$AWS_KEY AWS_REGION=$AWS_REGION AWS_SECRET=$AWS_SECRET AWS_BUCKET_NAME=$AWS_BUCKET_NAME FIREBASE_KEY_JSON=$FIREBASE_KEY_JSON ./api-deploy.sh
 
             # More robust health check
             echo "Performing API health check..."

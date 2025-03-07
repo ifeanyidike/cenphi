@@ -1,9 +1,14 @@
-import { AuthError } from "@/services/error";
+import { UserCredential } from "firebase/auth";
 
 export interface AuthFormProps extends React.ComponentProps<"div"> {
+  onSubmit: (data: any) => Promise<UserCredential | undefined>;
+  isLoading?: boolean;
+}
+
+export interface PasswordResetAuthFormProps
+  extends React.ComponentProps<"div"> {
   onSubmit: (data: any) => Promise<void>;
   isLoading?: boolean;
-  error?: AuthError;
 }
 
 // Reusable styled input component

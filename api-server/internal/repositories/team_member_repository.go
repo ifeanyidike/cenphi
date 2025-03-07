@@ -67,7 +67,7 @@ func (r *teamMemberRepository) GetByID(ctx context.Context, id uuid.UUID, db DB)
 			return nil, fmt.Errorf("failed to unmarshal settings JSON: %v", err)
 		}
 	} else {
-		member.Settings = make(map[string]interface{})
+		member.Settings = make(map[string]any)
 	}
 
 	return &member, nil
@@ -77,7 +77,7 @@ func (r *teamMemberRepository) GetDataByID(ctx context.Context, id uuid.UUID, db
 	query :=
 		`
         SELECT
-            t.workspace_id, t.user_id, t.role, t.permissions, t.settings, u.first_name, u.last_name, u.email, u.email_verified,
+            t.workspace_id, t.user_id, t.role, t.permissions, t.settings, u.name, u.email, u.email_verified,
 			u.firebase_uid, w.name as workspace_name, w.plan as workspace_plan, w.website_url
 
         FROM team_members t
@@ -98,8 +98,7 @@ func (r *teamMemberRepository) GetDataByID(ctx context.Context, id uuid.UUID, db
 		&member.Role,
 		&permissionsJSON,
 		&settingsJSON,
-		&member.FirstName,
-		&member.LastName,
+		&member.Name,
 		&member.Email,
 		&member.EmailVerified,
 		&member.FirebaseUID,

@@ -17,16 +17,24 @@ import {
   signInWithPopup,
   getRedirectResult,
   UserCredential,
+  sendEmailVerification,
 } from "firebase/auth";
 import { auth } from "../config/firebase";
-import { AuthError, FirebaseErrorHandler } from "@/services/error";
+import {
+  AuthError,
+  AuthErrorField,
+  AuthErrors,
+  FirebaseErrorHandler,
+} from "@/services/error";
 
 export type SocialProvider = "google" | "apple" | "facebook";
 
 class AuthStore {
   public user: User | null = null;
   public loading: boolean = false;
-  public error: AuthError | undefined = undefined;
+  // public error: AuthError | undefined = undefined;
+  public errors: AuthErrors = {} as AuthErrors;
+  private server = import.meta.env.VITE_API_URL;
 
   private providers = {
     google: new GoogleAuthProvider(),
@@ -36,7 +44,6 @@ class AuthStore {
 
   constructor() {
     makeAutoObservable(this);
-
     // Set up auth state listener
     onAuthStateChanged(auth, (user) => {
       runInAction(() => {
@@ -65,32 +72,49 @@ class AuthStore {
   }
 
   public setError(error?: AuthError) {
-    this.error = error;
-  }
-
-  private async handleCredential(credential: UserCredential) {
-    runInAction(() => {
-      this.user = credential.user;
-    });
-
-    // Handle Apple specific data if available
-    if (credential.providerId === "apple.com") {
-      const displayName = credential.user.displayName;
-      if (displayName) {
-        console.log("displayName: ", displayName);
-        // Store the display name as Apple doesn't send it in subsequent logins
-        // You might want to store this in your database
-      }
+    if (error?.field) {
+      this.errors[error.field as AuthErrorField] = error;
+    } else {
+      this.errors["generic"] = error;
     }
-
-    return credential.user;
   }
+
+  public clearError(key: string) {
+    delete this.errors[key as AuthErrorField];
+  }
+  public clearAllErrors() {
+    this.errors = {} as AuthErrors;
+  }
+
+  // private async handleCredential(credential: UserCredential) {
+  //   runInAction(() => {
+  //     this.user = credential.user;
+  //   });
+
+  //   // Handle Apple specific data if available
+  //   // if (credential.providerId === "apple.com") {
+  //   //   const displayName = credential.user.displayName;
+  //   //   if (displayName) {
+  //   //     console.log("displayName: ", displayName);
+  //   //     // Store the display name as Apple doesn't send it in subsequent logins
+  //   //     // You might want to store this in your database
+  //   //   }
+  //   // }
+
+  //   return credential;
+  // }
 
   private async handleRedirectResult() {
     try {
       const result = await getRedirectResult(auth);
       if (result) {
-        await this.handleCredential(result);
+        this.user = result.user;
+        this.registerUser(
+          result,
+          this.user.displayName || "",
+          this.user.email!
+        );
+        // await this.handleCredential(result);
       }
     } catch (error: any) {
       this.setError(FirebaseErrorHandler.checkFirebaseErrorsAndThrow(error));
@@ -119,8 +143,15 @@ class AuthStore {
         });
       }
 
-      const result = await signInWithPopup(auth, authProvider);
-      return await this.handleCredential(result);
+      const creds = await signInWithPopup(auth, authProvider);
+      this.user = creds.user;
+
+      await this.registerUser(
+        creds,
+        creds.user.displayName!,
+        creds.user.email!
+      );
+      return creds;
     } catch (error: any) {
       this.setError(FirebaseErrorHandler.checkFirebaseErrorsAndThrow(error));
 
@@ -164,7 +195,41 @@ class AuthStore {
     }
   }
 
-  public async signup(email: string, password: string) {
+  private async registerUser(
+    cred: UserCredential,
+    name: string,
+    email: string
+  ) {
+    try {
+      const response = await fetch(`${this.server}/users/register`, {
+        method: "POST",
+        body: JSON.stringify({
+          id: crypto.randomUUID(),
+          name,
+          email,
+          email_verified: cred.user.emailVerified,
+          firebase_uid: cred.user.uid,
+        }),
+      });
+
+      if (!response.ok) {
+        console.log("response.status", response.statusText);
+        this.setError({
+          message: response.statusText,
+        });
+        return;
+      }
+      const result = await response.json();
+      console.log("result", result);
+      return result;
+    } catch (error: any) {
+      this.setError({
+        message: error.message,
+      });
+    }
+  }
+
+  public async signup(name: string, email: string, password: string) {
     try {
       this.setLoading(true);
       this.setError();
@@ -175,7 +240,7 @@ class AuthStore {
           field: "email",
           message: "Invalid email format. Please enter a valid email address.",
         });
-        return false;
+        return;
       }
 
       const passwordError = FirebaseErrorHandler.validatePassword(password);
@@ -184,12 +249,15 @@ class AuthStore {
           field: "password",
           message: passwordError,
         });
-        return false;
+        return;
       }
 
       const cred = await createUserWithEmailAndPassword(auth, email, password);
-      return true;
-      console.log("signup cred", cred);
+      console.log("credential", cred);
+      sendEmailVerification(cred.user);
+
+      await this.registerUser(cred, name, email);
+      return cred;
     } catch (error: any) {
       // Handle Firebase auth errors
       this.setError(FirebaseErrorHandler.checkFirebaseErrorsAndThrow(error));
@@ -214,12 +282,11 @@ class AuthStore {
       }
 
       const cred = await signInWithEmailAndPassword(auth, email, password);
-      return true;
-      console.log("login cred", cred);
+
+      return cred;
     } catch (error: any) {
       console.error("login error", error);
       this.setError(FirebaseErrorHandler.checkFirebaseErrorsAndThrow(error));
-      return false;
     } finally {
       this.setLoading(false);
     }
