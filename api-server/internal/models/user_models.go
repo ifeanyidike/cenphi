@@ -12,8 +12,7 @@ type User struct {
 	Email         string      `json:"email"`
 	EmailVerified bool        `json:"email_verified"`
 	FirebaseUID   string      `json:"firebase_uid"`
-	FirstName     string      `json:"first_name"`
-	LastName      string      `json:"last_name"`
+	Name          string      `json:"name"`
 	Settings      interface{} `json:"settings"`
 	Permissions   interface{} `json:"permissions"`
 	LastActiveAt  time.Time   `json:"last_active_at"`
@@ -22,6 +21,6 @@ type User struct {
 }
 
 // FullName returns the user's full name.
-func (u *User) FullName() string {
-	return u.FirstName + " " + u.LastName
-}
+// func (u *User) FullName() string {
+// 	return u.FirstName + " " + u.LastName
+// }
