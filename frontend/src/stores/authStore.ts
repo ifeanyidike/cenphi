@@ -86,23 +86,23 @@ class AuthStore {
     this.errors = {} as AuthErrors;
   }
 
-  private async handleCredential(credential: UserCredential) {
-    runInAction(() => {
-      this.user = credential.user;
-    });
+  // private async handleCredential(credential: UserCredential) {
+  //   runInAction(() => {
+  //     this.user = credential.user;
+  //   });
 
-    // Handle Apple specific data if available
-    // if (credential.providerId === "apple.com") {
-    //   const displayName = credential.user.displayName;
-    //   if (displayName) {
-    //     console.log("displayName: ", displayName);
-    //     // Store the display name as Apple doesn't send it in subsequent logins
-    //     // You might want to store this in your database
-    //   }
-    // }
+  //   // Handle Apple specific data if available
+  //   // if (credential.providerId === "apple.com") {
+  //   //   const displayName = credential.user.displayName;
+  //   //   if (displayName) {
+  //   //     console.log("displayName: ", displayName);
+  //   //     // Store the display name as Apple doesn't send it in subsequent logins
+  //   //     // You might want to store this in your database
+  //   //   }
+  //   // }
 
-    return credential;
-  }
+  //   return credential;
+  // }
 
   private async handleRedirectResult() {
     try {
