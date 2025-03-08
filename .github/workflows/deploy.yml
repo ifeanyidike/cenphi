@@ -211,7 +211,9 @@ jobs:
           context: ./${{ matrix.service }}
           file: ./${{ matrix.service }}/Dockerfile
           push: true
-          tags: lorddickson/${{ matrix.service }}:latest
+          tags: |
+            lorddickson/${{ matrix.service }}:latest
+            lorddickson/${{ matrix.service }}:${{ github.sha }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
 
@@ -300,6 +302,7 @@ jobs:
       AWS_SECRET: ${{ secrets.AWS_SECRET }}
       AWS_BUCKET_NAME: ${{ secrets.AWS_BUCKET_NAME }}
       FIREBASE_KEY_JSON: ${{ secrets.FIREBASE_KEY_JSON }}
+      GITHUB_SHA: ${{ github.sha }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -342,7 +345,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          envs: DB_USERNAME,DB_PASSWORD,DB_HOST,DB_PORT,REDIS_HOST,REDIS_PASSWORD,REDIS_PORT,AWS_KEY,AWS_REGION,AWS_SECRET,AWS_BUCKET_NAME,FIREBASE_KEY_JSON
+          envs: DB_USERNAME,DB_PASSWORD,DB_HOST,DB_PORT,REDIS_HOST,REDIS_PASSWORD,REDIS_PORT,AWS_KEY,AWS_REGION,AWS_SECRET,AWS_BUCKET_NAME,FIREBASE_KEY_JSON,GITHUB_SHA
           script: |
             cd /home/opc
             # Fix any potential line ending issues
@@ -393,7 +396,7 @@ jobs:
                 echo "Created basic Docker Compose files"
             fi
             # Run deploy script with environment variables
-            DB_USERNAME=$DB_USERNAME DB_PASSWORD=$DB_PASSWORD DB_HOST=$DB_HOST DB_PORT=$DB_PORT DB_NAME=$DB_NAME REDIS_HOST=$REDIS_HOST REDIS_PASSWORD=$REDIS_PASSWORD REDIS_PORT=$REDIS_PORT AWS_KEY=$AWS_KEY AWS_REGION=$AWS_REGION AWS_SECRET=$AWS_SECRET AWS_BUCKET_NAME=$AWS_BUCKET_NAME FIREBASE_KEY_JSON=$FIREBASE_KEY_JSON ./api-deploy.sh
+            DB_USERNAME=$DB_USERNAME DB_PASSWORD=$DB_PASSWORD DB_HOST=$DB_HOST DB_PORT=$DB_PORT DB_NAME=$DB_NAME REDIS_HOST=$REDIS_HOST REDIS_PASSWORD=$REDIS_PASSWORD REDIS_PORT=$REDIS_PORT AWS_KEY=$AWS_KEY AWS_REGION=$AWS_REGION AWS_SECRET=$AWS_SECRET AWS_BUCKET_NAME=$AWS_BUCKET_NAME FIREBASE_KEY_JSON=$FIREBASE_KEY_JSON GITHUB_SHA=$GITHUB_SHA ./api-deploy.sh
 
             # More robust health check
             echo "Performing API health check..."
@@ -424,6 +427,7 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     env:
+      GITHUB_SHA: ${{ github.sha }}
       HF_TOKEN: ${{ secrets.HF_TOKEN }}
     steps:
       - name: Checkout Code
@@ -467,7 +471,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          envs: HF_TOKEN
+          envs: HF_TOKEN,GITHUB_SHA
           script: |
             echo "Remote directory structure:"
             ls -la /home/opc
@@ -515,4 +519,4 @@ jobs:
                 echo "Created basic Docker Compose files"
             fi
             # Run deploy script with environment variables
-            HF_TOKEN=$HF_TOKEN ./ai-deploy.sh
+            HF_TOKEN=$HF_TOKEN GITHUB_SHA=$GITHUB_SHA ./ai-deploy.sh
