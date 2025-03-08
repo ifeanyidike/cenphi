@@ -3,7 +3,7 @@ import { appService } from "./services/appService";
 
 const App = () => {
   useEffect(() => {
-    appService.startHealthCheck(60 * 60 * 1000);
+    appService.startHealthCheck(4 * 60 * 60 * 1000);
     return () => {
       appService.stopHealthCheck();
     };
