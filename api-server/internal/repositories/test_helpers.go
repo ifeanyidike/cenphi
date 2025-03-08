@@ -182,7 +182,6 @@ func SetupTestDB() (*sql.DB, func()) {
 	// Connect to the PostgreSQL database
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
-		log.Println("DB PARAMS", os.Getenv("DB_USERNAME"), " ", os.Getenv("DB_PASSWORD"), " ", os.Getenv("DB_HOST"), " ", os.Getenv("DB_PORT"), " ", os.Getenv("DB_NAME"))
 		log.Fatalf("Failed to connect to test database: %v", err)
 	}
 
