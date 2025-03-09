@@ -1,38 +1,12 @@
-// import PricingSection from "@/components/custom/pricingfreesection";
-// import PricingPreiumSection from "@/components/custom/presingsectionpremium";
-// import FAQSection from "@/components/custom/faq";
-// import TestimonialSection4 from "@/components/custom/testimonialsection4";
-// import ReviewSection from "@/components/custom/reviewsection";
-// import Footer from "@/components/custom/footer";
-// import PricingComponent from "@/components/pricing";
-
-// const Pricing = () => {
-//   return (
-//     <>
-//       <PricingComponent />
-//       <PricingSection />
-//       <PricingPreiumSection />
-//       <FAQSection />
-//       <TestimonialSection4 />
-//       <ReviewSection />
-//       <Footer />
-//     </>
-//   );
-// };
-
-// export default Pricing;
-
 import { useState, useRef, useEffect } from "react";
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
-import Decoration from "@/components/pricing/Decoration";
-import Header from "@/components/pricing/Header";
-import { containerVariants, plans } from "@/components/pricing/data";
-import PricingCard from "@/components/pricing/PricingCard";
-import TestimonialSlider from "@/components/pricing/TestimonialSlider";
-import FAQ from "@/components/pricing/FAQ";
-import CTA from "@/components/pricing/CTA";
-import Navbar from "@/components/nav";
-import Footer from "@/components/custom/footer";
+import PricingCard from "./PricingCard";
+import { containerVariants, plans } from "./data";
+import Header from "./Header";
+import TestimonialSlider from "./TestimonialSlider";
+import FAQ from "./FAQ";
+import CTA from "./CTA";
+import Decoration from "./Decoration";
 
 const PricingPage = () => {
   const [annual, setAnnual] = useState(true);
@@ -64,11 +38,10 @@ const PricingPage = () => {
 
   return (
     <div className="min-h-screen text-black overflow-hidden">
-      <Navbar alwaysDarkText />
       <Decoration />
 
       {/* Content */}
-      <div className="relative mt-6">
+      <div className="relative">
         {/* Header */}
         <Header
           annual={annual}
@@ -110,7 +83,6 @@ const PricingPage = () => {
         {/* CTA section */}
         <CTA />
       </div>
-      <Footer />
     </div>
   );
 };

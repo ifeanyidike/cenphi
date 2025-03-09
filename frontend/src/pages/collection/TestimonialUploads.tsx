@@ -1,8 +1,8 @@
-import ChangeRenderType from "@/components/custom/collection/ChangeRenderType";
-import { GUIDED_PROMPTS } from "@/components/custom/collection/constants";
-import FileUpload from "@/components/custom/collection/FileUpload";
-import TestimonialProgress from "@/components/custom/collection/TestimonialProgress";
-import { TestimonialType } from "@/components/custom/collection/types";
+import ChangeRenderType from "@/components/collection/ChangeRenderType";
+import { GUIDED_PROMPTS } from "@/components/collection/constants";
+import FileUpload from "@/components/collection/FileUpload";
+import TestimonialProgress from "@/components/collection/TestimonialProgress";
+import { TestimonialType } from "@/components/collection/types";
 import { collectionStore } from "@/stores/collectionStore";
 import { AnimatePresence, motion, useMotionValue } from "framer-motion";
 import { runInAction } from "mobx";

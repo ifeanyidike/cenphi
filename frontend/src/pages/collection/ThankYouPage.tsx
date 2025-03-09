@@ -1,4 +1,4 @@
-import SuccessView from "@/components/custom/collection/SuccessView";
+import SuccessView from "@/components/collection/SuccessView";
 
 const ThankYouPage = () => {
   return <SuccessView />;

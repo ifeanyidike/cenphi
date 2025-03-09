@@ -7,7 +7,7 @@ import {
   RequestResetForm,
   ResetPasswordForm,
 } from "@/components/auth/reset-password";
-import Navbar from "@/components/custom/nav";
+import Navbar from "@/components/nav";
 import Footer from "@/components/custom/footer";
 
 const ResetPasswordPage = observer(() => {
