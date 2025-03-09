@@ -78,7 +78,7 @@ func (r *teamMemberRepository) GetDataByID(ctx context.Context, id uuid.UUID, db
 		`
         SELECT
             t.workspace_id, t.user_id, t.role, t.permissions, t.settings, u.name, u.email, u.email_verified,
-			u.firebase_uid, w.name as workspace_name, w.plan as workspace_plan, w.website_url
+			u.firebase_uid, w.name as workspace_name, w.plan as workspace_plan, w.website_url, w.industry
 
         FROM team_members t
 		INNER JOIN users u ON t.user_id = u.id
@@ -105,6 +105,7 @@ func (r *teamMemberRepository) GetDataByID(ctx context.Context, id uuid.UUID, db
 		&member.WorkspaceName,
 		&member.WorkspacePlan,
 		&member.WebsiteURL,
+		&member.Industry,
 	)
 
 	if err != nil {
@@ -116,7 +117,7 @@ func (r *teamMemberRepository) GetDataByID(ctx context.Context, id uuid.UUID, db
 			return nil, fmt.Errorf("failed to unmarshal permissions JSON: %v", err)
 		}
 	} else {
-		member.Permissions = make(map[string]interface{})
+		member.Permissions = make(map[string]any)
 	}
 
 	if len(settingsJSON) > 0 {
@@ -124,7 +125,7 @@ func (r *teamMemberRepository) GetDataByID(ctx context.Context, id uuid.UUID, db
 			return nil, fmt.Errorf("failed to unmarshal settings JSON: %v", err)
 		}
 	} else {
-		member.Settings = make(map[string]interface{})
+		member.Settings = make(map[string]any)
 	}
 
 	return &member, nil
@@ -134,16 +135,14 @@ func (r *teamMemberRepository) Create(ctx context.Context, team_member *models.T
 	log.Println("Startingto create")
 	query := `
 		INSERT INTO team_members 
-			(id, workspace_id, user_id, role, permissions, settings) 
-		VALUES ($1, $2, $3, $4, $5, $6)
+			(id, workspace_id, user_id, role) 
+		VALUES ($1, $2, $3, $4)
 	`
 	_, err := db.ExecContext(ctx, query,
 		team_member.ID,
 		team_member.WorkspaceID,
 		team_member.UserID,
 		team_member.Role,
-		team_member.Permissions,
-		team_member.Settings,
 	)
 	log.Println("Finished creating")
 	return err

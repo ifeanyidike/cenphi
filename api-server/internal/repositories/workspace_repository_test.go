@@ -22,24 +22,25 @@ func TestWorkspaceRepository(t *testing.T) {
 
 	t.Run("CreateWorkspace", func(t *testing.T) {
 		workspace := &models.Workspace{
-			ID:           uuid.New(),
-			Name:         "my-org-workspace",
-			Plan:         "free",
-			CustomDomain: "my-org.cenphi.app",
-			CreatedAt:    time.Now(),
-			UpdatedAt:    time.Now(),
+			ID:       uuid.New(),
+			Name:     "my-org-workspace",
+			Plan:     models.PlanEssential,
+			Industry: "health",
+			// CustomDomain: "my-org.cenphi.app",
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
 			BrandingSettings: &models.BrandingSettings{
 				LogoURL:      "https://example.com/logo.png",
 				PrimaryColor: "#000000",
 			},
-			AnalyticsSettings: map[string]interface{}{
+			AnalyticsSettings: map[string]any{
 				"google_analytics_id": "UA-12345678-90",
 			},
 			IntegrationSettings: &models.IntegrationSettings{
 				GoogleAnalyticsID: "UA-12345678-90",
 				SlackWebhookURL:   "https://hooks.slack.com/services/T0000000/B0000000/XXXXXXXXXXXXXXXXXXXXXXXXXX",
 			},
-			Settings: map[string]interface{}{
+			Settings: map[string]any{
 				"theme": "dark",
 			},
 			WebsiteURL: "https://my-org.cenphi.app",
@@ -66,30 +67,31 @@ func TestWorkspaceRepository(t *testing.T) {
 		assert.Equal(t, workspace.Name, storedUser.Name)
 		assert.Equal(t, workspace.ID, storedUser.ID)
 		assert.Equal(t, workspace.WebsiteURL, storedUser.WebsiteURL)
-		assert.Equal(t, workspace.CustomDomain, storedUser.CustomDomain)
+		assert.Equal(t, workspace.Industry, storedUser.Industry)
 	})
 
 	t.Run("UpdateWorkspace", func(t *testing.T) {
 		// Create a workspace to update.
 		workspace := &models.Workspace{
-			ID:           uuid.New(),
-			Name:         "my-org-workspace",
-			Plan:         "free",
-			CustomDomain: "my-org.cenphi.app",
-			CreatedAt:    time.Now(),
-			UpdatedAt:    time.Now(),
+			ID:       uuid.New(),
+			Name:     "my-org-workspace",
+			Plan:     models.PlanEssential,
+			Industry: "education",
+			// CustomDomain: "my-org.cenphi.app",
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
 			BrandingSettings: &models.BrandingSettings{
 				LogoURL:      "https://example.com/logo.png",
 				PrimaryColor: "#000000",
 			},
-			AnalyticsSettings: map[string]interface{}{
+			AnalyticsSettings: map[string]any{
 				"google_analytics_id": "UA-12345678-90",
 			},
 			IntegrationSettings: &models.IntegrationSettings{
 				GoogleAnalyticsID: "UA-12345678-90",
 				SlackWebhookURL:   "https://hooks.slack.com/services/T0000000/B0000000/XXXXXXXXXXXXXXXXXXXXXXXXXX",
 			},
-			Settings: map[string]interface{}{
+			Settings: map[string]any{
 				"theme": "dark",
 			},
 			WebsiteURL: "https://my-org.cenphi.app",
@@ -99,8 +101,9 @@ func TestWorkspaceRepository(t *testing.T) {
 
 		// Update the workspace.
 		workspace.Name = "my-updated-org-workspace"
-		workspace.Plan = "pro"
+		workspace.Plan = models.PlanAccelerate
 		workspace.CustomDomain = "updated-my-org.cenphi.app"
+		workspace.Industry = "government"
 		// workspace.BrandingSettings.LogoURL = "https://example.com/updated-logo.png"
 		// workspace.AnalyticsSettings["google_analytics_id"] = "UA-98765432-10"
 		// workspace.IntegrationSettings.GoogleAnalyticsID = "UA-98765432-10"
@@ -119,30 +122,20 @@ func TestWorkspaceRepository(t *testing.T) {
 		assert.Equal(t, workspace.ID, storedWorkspace.ID)
 		assert.Equal(t, workspace.WebsiteURL, storedWorkspace.WebsiteURL)
 		assert.Equal(t, workspace.CustomDomain, storedWorkspace.CustomDomain)
+		assert.Equal(t, workspace.Industry, storedWorkspace.Industry)
 
 	})
 
 	t.Run("DeleteUser", func(t *testing.T) {
 		// Create a workspace to delete.
 		workspace := &models.Workspace{
-			ID:           uuid.New(),
-			Name:         "my-org-workspace",
-			Plan:         "free",
-			CustomDomain: "my-org.cenphi.app",
-			CreatedAt:    time.Now(),
-			UpdatedAt:    time.Now(),
-			BrandingSettings: &models.BrandingSettings{
-				LogoURL:      "https://example.com/logo.png",
-				PrimaryColor: "#000000",
-			},
-			AnalyticsSettings: map[string]interface{}{
-				"google_analytics_id": "UA-12345678-90",
-			},
-			IntegrationSettings: &models.IntegrationSettings{
-				GoogleAnalyticsID: "UA-12345678-90",
-				SlackWebhookURL:   "https://hooks.slack.com/services/T0000000/B0000000/XXXXXXXXXXXXXXXXXXXXXXXXXX",
-			},
-			Settings: map[string]interface{}{
+			ID:        uuid.New(),
+			Name:      "my-org-workspace",
+			Plan:      models.PlanEssential,
+			Industry:  "software",
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+			Settings: map[string]any{
 				"theme": "dark",
 			},
 			WebsiteURL: "https://my-org.cenphi.app",

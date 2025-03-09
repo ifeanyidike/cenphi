@@ -1,4 +1,4 @@
-import TestimonialCollectionUI from "@/components/custom/collection/TestimonialCollection";
+import TestimonialCollectionUI from "@/components/collection/TestimonialCollection";
 
 const TestimonialCollection = () => {
   return <TestimonialCollectionUI />;

@@ -1,32 +1,38 @@
 import React, { useEffect, useState } from "react";
-import { getAuth, applyActionCode } from "firebase/auth";
+import { getAuth, applyActionCode, sendEmailVerification } from "firebase/auth";
 import { CheckCircle, AlertTriangle, Loader2 } from "lucide-react";
 import confetti from "canvas-confetti";
-import Navbar from "@/components/custom/nav";
+import Navbar from "@/components/nav";
 import Footer from "@/components/custom/footer";
+import { FirebaseErrorHandler } from "@/services/error";
 
 // Verification states
 type VerificationStatus = "loading" | "success" | "error";
 
-const EmailVerificationPage: React.FC = () => {
+type Props = {
+  oobCode: string | null;
+  mode: "verifyEmail";
+};
+
+const EmailVerificationPage: React.FC<Props> = (props) => {
   const [status, setStatus] = useState<VerificationStatus>("loading");
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [countdown, setCountdown] = useState<number>(5);
+  const auth = getAuth();
 
   useEffect(() => {
     const verifyEmail = async () => {
       try {
-        const auth = getAuth();
-        const actionCode = new URLSearchParams(window.location.search).get(
-          "oobCode"
-        );
-        const mode = new URLSearchParams(window.location.search).get("mode");
+        // const actionCode = new URLSearchParams(window.location.search).get(
+        //   "oobCode"
+        // );
+        // const mode = new URLSearchParams(window.location.search).get("mode");
 
-        if (!actionCode || mode !== "verifyEmail") {
+        if (!props.oobCode || props.mode !== "verifyEmail") {
           throw new Error("Invalid verification link");
         }
 
-        await applyActionCode(auth, actionCode);
+        await applyActionCode(auth, props.oobCode);
 
         // If successful, update status and trigger confetti
         setStatus("success");
@@ -44,7 +50,7 @@ const EmailVerificationPage: React.FC = () => {
             if (prev <= 1) {
               clearInterval(timer);
               // Redirect to onboarding
-              window.location.href = "/onboarding";
+              window.location.href = "/pricing?workflow=onboarding";
               return 0;
             }
             return prev - 1;
@@ -54,8 +60,10 @@ const EmailVerificationPage: React.FC = () => {
         return () => clearInterval(timer);
       } catch (error) {
         setStatus("error");
+        console.log("error", error);
         setErrorMessage(
-          error instanceof Error ? error.message : "Verification failed"
+          FirebaseErrorHandler.checkFirebaseErrorsAndThrow(error)
+          // error instanceof Error ? error.message : "Verification failed"
         );
       }
     };
@@ -70,9 +78,9 @@ const EmailVerificationPage: React.FC = () => {
         <div className="w-full max-w-md">
           <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
             <div className="px-8 pt-8 pb-2">
-              <div className="flex justify-center mb-4 font-playball text-2xl">
+              {/* <div className="flex justify-center mb-4 font-playball text-2xl">
                 Cenphi
-              </div>
+              </div> */}
               <h1 className="text-2xl font-bold text-center text-gray-800">
                 Email Verification
               </h1>
@@ -129,9 +137,11 @@ const EmailVerificationPage: React.FC = () => {
                   </p>
                   <div className="flex flex-col gap-3 w-full">
                     <button
-                      onClick={() =>
-                        (window.location.href = "/resend-verification")
-                      }
+                      onClick={() => {
+                        if (auth.currentUser) {
+                          sendEmailVerification(auth.currentUser);
+                        }
+                      }}
                       className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
                     >
                       Resend Verification Email

@@ -1,6 +1,6 @@
-import { GUIDED_PROMPTS } from "@/components/custom/collection/constants";
-import { TestimonialType } from "@/components/custom/collection/TestimonialTypeSelection";
-import { TestimonialState } from "@/components/custom/collection/types";
+import { GUIDED_PROMPTS } from "@/components/collection/constants";
+import { TestimonialType } from "@/components/collection/TestimonialTypeSelection";
+import { TestimonialState } from "@/components/collection/types";
 import { MotionValue } from "framer-motion";
 import { makeAutoObservable } from "mobx";
 
