@@ -228,7 +228,7 @@ import { BsFacebook, BsArrowRight } from "react-icons/bs";
 import { HiOutlineMail } from "react-icons/hi";
 import { RiLockPasswordLine } from "react-icons/ri";
 import { FiUser, FiEye, FiEyeOff } from "react-icons/fi";
-import Navbar from "@/components/custom/nav";
+import Navbar from "@/components/nav";
 import { AuthFormProps } from "./types";
 import { authStore, SocialProvider } from "@/stores/authStore";
 import { cn } from "@/lib/utils";

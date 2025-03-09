@@ -14,8 +14,6 @@ export type MegaMenuSection = {
 };
 
 export type NavbarProps = {
-  userLoggedIn?: boolean;
-  premiumUser?: boolean;
   darkMode?: boolean;
   onToggleDarkMode?: () => void;
   alwaysDarkText?: boolean;
