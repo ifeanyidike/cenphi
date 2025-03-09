@@ -7,6 +7,8 @@ import { Login } from "@/pages/Login";
 import { Signup } from "@/pages/SignUp";
 import ResetPasswordPage from "@/pages/ResetPassword";
 import NotFoundPage from "@/pages/NotFoundPage";
+import EmailPage from "@/pages/EmailPage";
+import AllReviewsPage from "@/pages/AllReviewsPage";
 
 // Testimonial Collection Process
 import TestimonialCollectionLayout from "@/layouts/TestimonialCollectionLayout";
@@ -20,6 +22,9 @@ import ThankYouPage from "@/pages/collection/ThankYouPage";
 
 import { useParams } from "react-router-dom";
 import TestimonialHero from "@/pages/TestimonialHeroPage";
+import WhyCenphi from "@/pages/WhyCenphi";
+import Pricing from "@/pages/Pricing";
+import ReviewPage from "@/components/custom/dashboard/ReviewPage";
 
 // A dynamic component to choose the correct recorder based on the URL parameter.
 const DynamicRecorder = () => {
@@ -34,8 +39,7 @@ const DynamicRecorder = () => {
     return <NotFoundPage />;
   }
 };
-import WhyCenphi from "@/pages/WhyCenphi";
-import Pricing from "@/pages/Pricing";
+
 
 export const router = createBrowserRouter([
   {
@@ -53,6 +57,19 @@ export const router = createBrowserRouter([
   {
     path: "/pricing",
     element: <Pricing />,
+  },
+  {
+    path: "/emailpage",
+    element: <EmailPage />,
+  },
+  {
+    path: "/reviewpage",
+    element: <ReviewPage />,
+  },
+
+  {
+    path: "/all-reviewpage",
+    element: <AllReviewsPage />,
   },
   {
     path: "/login",
