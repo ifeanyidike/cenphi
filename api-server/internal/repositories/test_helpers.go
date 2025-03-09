@@ -232,7 +232,7 @@ func SetupTestDB() (*sql.DB, func()) {
 	// Create schema (replace with your schema)
 	if _, err := db.Exec(`
 		CREATE EXTENSION IF NOT EXISTS "uuid-ossp"; 
-		CREATE TYPE workspace_plan AS ENUM ('free', 'pro', 'enterprise');
+		CREATE TYPE workspace_plan AS ENUM ('essentials', 'growth', 'accelerate', 'transform', 'enterprise');
 		CREATE TYPE member_role AS ENUM ('owner', 'admin', 'editor', 'viewer');
 		
 		CREATE TABLE users (
@@ -250,8 +250,9 @@ func SetupTestDB() (*sql.DB, func()) {
 		CREATE TABLE workspaces (
     		id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
 		    name VARCHAR(255) NOT NULL,
+			industry VARCHAR(100) NOT NULL,
 		    website_url VARCHAR(255) NOT NULL,
-		    plan workspace_plan DEFAULT 'free',
+		    plan workspace_plan DEFAULT 'essentials',
 		    settings JSONB DEFAULT '{}',
 		    branding_settings JSONB DEFAULT '{}',
 		    custom_domain VARCHAR(255),
