@@ -18,6 +18,7 @@ import {
   getRedirectResult,
   UserCredential,
   sendEmailVerification,
+  updateProfile,
 } from "firebase/auth";
 import { auth } from "../config/firebase";
 import {
@@ -253,6 +254,7 @@ class AuthStore {
       }
 
       const cred = await createUserWithEmailAndPassword(auth, email, password);
+      await updateProfile(cred.user, { displayName: name });
       console.log("credential", cred);
       sendEmailVerification(cred.user);
 
@@ -388,6 +390,21 @@ class AuthStore {
 
   get isAuthenticated() {
     return !!this.user;
+  }
+
+  get fallbackName() {
+    if (!this.user) return "";
+    const displayname = this.user?.displayName;
+    const email = this.user?.email;
+    if (displayname) {
+      return displayname[0] + displayname[1];
+    } else if (email) {
+      return email[0] + email[1];
+    }
+  }
+
+  get currentUser() {
+    return this.user || auth.currentUser;
   }
 }
 

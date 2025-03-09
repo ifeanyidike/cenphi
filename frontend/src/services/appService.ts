@@ -1,3 +1,4 @@
+import { Plan } from "@/types/app";
 import { flow, makeAutoObservable, reaction, runInAction } from "mobx";
 
 class AppService {
@@ -54,6 +55,42 @@ class AppService {
 
   get isHealthRunning(): boolean {
     return this.healthInterval !== null;
+  }
+
+  async onboard(
+    user_id: string,
+    name: string,
+    website_url: string,
+    industry: string
+  ) {
+    await fetch(`${this.server}/onboard/full`, {
+      method: "POST",
+      body: JSON.stringify({
+        user_id,
+        workspace: {
+          name,
+          website_url,
+          industry,
+          plan: "essentials",
+        },
+        team_member: {
+          role: "owner",
+        },
+      }),
+    });
+  }
+
+  async onboard_partial(user_id: string, plan: Plan) {
+    const response = await fetch(`${this.server}/onboard/part`, {
+      method: "POST",
+      body: JSON.stringify({
+        user_id,
+        workspace: { plan },
+        team_member: { role: "owner" },
+      }),
+    });
+    console.log("response", response.ok);
+    return response.ok;
   }
 }
 export const appService = new AppService();
