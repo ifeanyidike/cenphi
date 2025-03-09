@@ -4,7 +4,7 @@ CREATE EXTENSION IF NOT EXISTS "pg_trgm";       -- For text search
 CREATE EXTENSION IF NOT EXISTS "hstore";         -- For key-value pairs
 
 -- Create ENUM types
-CREATE TYPE workspace_plan AS ENUM ('free', 'pro', 'enterprise');
+CREATE TYPE workspace_plan AS ENUM ('essentials', 'growth', 'accelerate', 'transform', 'enterprise');
 
 CREATE TYPE member_role AS ENUM ('owner', 'admin', 'editor', 'viewer');
 
@@ -59,7 +59,8 @@ CREATE TABLE workspaces (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(255) NOT NULL,
     website_url VARCHAR(255) NOT NULL,
-    plan workspace_plan DEFAULT 'free',
+    industry VARCHAR(100) NOT NULL,
+    plan workspace_plan DEFAULT 'essentials',
     settings JSONB DEFAULT '{}',
     branding_settings JSONB DEFAULT '{}',
     custom_domain VARCHAR(255),

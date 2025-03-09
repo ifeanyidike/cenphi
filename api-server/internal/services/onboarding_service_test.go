@@ -48,7 +48,7 @@ func TestOnboardingService_OnboardOwner(t *testing.T) {
 		ID:           uuid.New(),
 		Name:         utils.RandomString(12),
 		WebsiteURL:   utils.GenerateRandomUrl(),
-		Plan:         "free",
+		Plan:         models.PlanEssential,
 		CustomDomain: utils.GenerateRandomUrl(),
 	}
 	teamMember := &models.TeamMember{
@@ -118,7 +118,7 @@ func TestOnboardingService_OnboardOwner_Error(t *testing.T) {
 		ID:           uuid.New(),
 		Name:         utils.RandomString(14),
 		WebsiteURL:   utils.GenerateRandomUrl(),
-		Plan:         "free",
+		Plan:         models.PlanEssential,
 		CustomDomain: utils.GenerateRandomUrl(),
 	}
 	teamMember := &models.TeamMember{
