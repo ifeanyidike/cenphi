@@ -22,7 +22,7 @@ func TestWorkspaceService(t *testing.T) {
 		user := &models.Workspace{
 			ID:           uuid.New(),
 			Name:         "Test Workspace",
-			Plan:         "free",
+			Plan:         models.PlanEssential,
 			CustomDomain: "test-workspace.cenphi.app",
 			WebsiteURL:   "https://org.cenphi.app",
 			CreatedAt:    time.Now(),
@@ -40,7 +40,7 @@ func TestWorkspaceService(t *testing.T) {
 		workspace := &models.Workspace{
 			ID:           uuid.New(),
 			Name:         "Test Workspace1",
-			Plan:         "free",
+			Plan:         models.PlanEssential,
 			CustomDomain: "test-workspace.cenphi.app",
 			WebsiteURL:   "https://org.cenphi.app",
 			CreatedAt:    time.Now(),

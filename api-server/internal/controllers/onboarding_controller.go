@@ -24,7 +24,7 @@ type onboardingController struct {
 
 // Define a struct to encapsulate both workspace and team member data
 type OnboardRequest struct {
-	UserId     uuid.UUID         `json:"userId"`
+	UserId     uuid.UUID         `json:"user_id"`
 	Workspace  models.Workspace  `json:"workspace"`
 	TeamMember models.TeamMember `json:"team_member"`
 }
