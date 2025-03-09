@@ -12,9 +12,17 @@ import (
 
 type Plan string
 
+// const (
+// 	PlanFree       Plan = "free"
+// 	PlanPro        Plan = "pro"
+// 	PlanEnterprise Plan = "enterprise"
+// )
+
 const (
-	PlanFree       Plan = "free"
-	PlanPro        Plan = "pro"
+	PlanEssential  Plan = "essentials" //free
+	PlanGrowth     Plan = "growth"
+	PlanAccelerate Plan = "accelerate"
+	PlanTransform  Plan = "transform"
 	PlanEnterprise Plan = "enterprise"
 )
 
@@ -29,17 +37,18 @@ type IntegrationSettings struct {
 }
 
 type Workspace struct {
-	ID                  uuid.UUID              `json:"id" db:"id"`
-	Name                string                 `json:"name" db:"name" validate:"required,min=3,max=100"`
-	WebsiteURL          string                 `json:"website_url,omitempty" db:"website_url" validate:"omitempty,url"`
-	Plan                Plan                   `json:"plan" db:"plan" validate:"required,oneof=free basic pro enterprise"`
-	CustomDomain        string                 `json:"custom_domain,omitempty" db:"custom_domain" validate:"omitempty,hostname_rfc1123"`
-	Settings            map[string]interface{} `json:"settings,omitempty" db:"settings"`
-	BrandingSettings    *BrandingSettings      `json:"branding_settings,omitempty" db:"branding_settings"`
-	AnalyticsSettings   map[string]interface{} `json:"analytics_settings,omitempty" db:"analytics_settings"`
-	IntegrationSettings *IntegrationSettings   `json:"integration_settings,omitempty" db:"integration_settings"`
-	CreatedAt           time.Time              `json:"created_at" db:"created_at"`
-	UpdatedAt           time.Time              `json:"updated_at" db:"updated_at"`
+	ID                  uuid.UUID            `json:"id" db:"id"`
+	Name                string               `json:"name" db:"name" validate:"required,min=3,max=255"`
+	WebsiteURL          string               `json:"website_url,omitempty" db:"website_url" validate:"omitempty,url"`
+	Industry            string               `json:"industry" db:"industry" validate:"required,min=3,max=100"`
+	Plan                Plan                 `json:"plan" db:"plan" validate:"required,oneof=essentials growth accelerate transform enterprise"`
+	CustomDomain        string               `json:"custom_domain,omitempty" db:"custom_domain" validate:"omitempty,hostname_rfc1123"`
+	Settings            map[string]any       `json:"settings,omitempty" db:"settings"`
+	BrandingSettings    *BrandingSettings    `json:"branding_settings,omitempty" db:"branding_settings"`
+	AnalyticsSettings   map[string]any       `json:"analytics_settings,omitempty" db:"analytics_settings"`
+	IntegrationSettings *IntegrationSettings `json:"integration_settings,omitempty" db:"integration_settings"`
+	CreatedAt           time.Time            `json:"created_at" db:"created_at"`
+	UpdatedAt           time.Time            `json:"updated_at" db:"updated_at"`
 }
 
 func ValidateWorkspace(workspace *Workspace) error {
