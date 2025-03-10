@@ -20,7 +20,7 @@ func setupTestEntities(t *testing.T, db *sql.DB, redisClient *redis.Client) (*mo
 	workspace := &models.Workspace{
 		ID:         uuid.New(),
 		Name:       utils.RandomString(11),
-		Plan:       "free",
+		Plan:       models.PlanEssential,
 		WebsiteURL: "https://my-org.cenphi.app",
 	}
 
@@ -38,8 +38,6 @@ func setupTestEntities(t *testing.T, db *sql.DB, redisClient *redis.Client) (*mo
 		WorkspaceID: workspace.ID,
 		UserID:      user.ID,
 		Role:        models.Admin,
-		Settings:    make(map[string]interface{}),
-		Permissions: make(map[string]interface{}),
 		CreatedAt:   time.Now(),
 	}
 

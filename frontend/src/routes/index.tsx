@@ -18,12 +18,17 @@ import AudioTestimonialRecorder from "@/pages/collection/AudioTestimonialRecorde
 import TextTestimonialCollection from "@/pages/collection/TextTestimonialCollection";
 import MobileTransferPage from "@/pages/collection/MobileTransferPage";
 import ThankYouPage from "@/pages/collection/ThankYouPage";
-
-import { useParams } from "react-router-dom";
-// import TestimonialHero from "@/pages/TestimonialHeroPage";
 import WhyCenphi from "@/pages/WhyCenphi";
 import Pricing from "@/pages/Pricing";
+import AuthFlow from "@/pages/authflow";
+
+import { useParams } from "react-router-dom";
+
 import ReviewPage from "@/components/custom/dashboard/ReviewPage";
+import Checkout from "@/pages/Checkout";
+import LandingPage from "@/pages/Landing";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import OnboardingPage from "@/pages/OnboardingPage";
 
 // A dynamic component to choose the correct recorder based on the URL parameter.
 const DynamicRecorder = () => {
@@ -40,13 +45,6 @@ const DynamicRecorder = () => {
   }
 };
 
-// import WhyCenphi from "@/pages/WhyCenphi";
-// import Pricing from "@/pages/Pricing";
-import LandingPage from "@/pages/Landing";
-import ProtectedRoute from "@/components/auth/ProtectedRoute";
-import EmailVerificationPage from "@/pages/EmailVerification";
-import OnboardingPage from "@/pages/OnboardingPage";
-
 export const router = createBrowserRouter([
   {
     path: "/",
@@ -59,12 +57,17 @@ export const router = createBrowserRouter([
         path: "/dashboard",
         element: <TestimonialsDashboard />,
       },
+      {
+        path: "/authflow",
+        element: <AuthFlow />,
+      },
     ],
   },
   {
-    path: "/verify-email",
-    element: <EmailVerificationPage />,
+    path: "/checkout",
+    element: <Checkout />,
   },
+
   {
     path: "/onboarding",
     element: <OnboardingPage />,

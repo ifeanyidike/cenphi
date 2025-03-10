@@ -1,14 +1,14 @@
 import { observer } from "mobx-react-lite";
 import { collectionStore } from "@/stores/collectionStore";
 import { AnimatePresence, motion, useMotionValue } from "framer-motion";
-import TestimonialProgress from "@/components/custom/collection/TestimonialProgress";
+import TestimonialProgress from "@/components/collection/TestimonialProgress";
 import {
   GUIDED_PROMPTS,
   MAX_RECORDING_DURATION,
-} from "@/components/custom/collection/constants";
-import DisplayQuestion from "@/components/custom/collection/DisplayQuestion";
-import AudioRecorder from "@/components/custom/collection/AudioRecorder";
-import ChangeRenderType from "@/components/custom/collection/ChangeRenderType";
+} from "@/components/collection/constants";
+import DisplayQuestion from "@/components/collection/DisplayQuestion";
+import AudioRecorder from "@/components/collection/AudioRecorder";
+import ChangeRenderType from "@/components/collection/ChangeRenderType";
 
 const AudioTestimonialRecorder = observer(() => {
   const state = collectionStore.state;
