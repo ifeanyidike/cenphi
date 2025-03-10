@@ -1,4 +1,4 @@
-import TestimonialTypeSelection from "@/components/custom/collection/TestimonialTypeSelection";
+import TestimonialTypeSelection from "@/components/collection/TestimonialTypeSelection";
 import { AnimatePresence } from "framer-motion";
 
 const TypeSelection = () => {

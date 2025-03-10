@@ -1,4 +1,4 @@
-import TextCollection from "@/components/custom/collection/TextCollection";
+import TextCollection from "@/components/collection/TextCollection";
 import { AnimatePresence } from "framer-motion";
 
 const TextTestimonialCollection = () => {

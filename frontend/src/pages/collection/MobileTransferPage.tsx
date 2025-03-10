@@ -1,10 +1,10 @@
 import { collectionStore } from "@/stores/collectionStore";
 import { observer } from "mobx-react-lite";
 import { AnimatePresence, motion, useMotionValue } from "framer-motion";
-import TestimonialProgress from "@/components/custom/collection/TestimonialProgress";
-import ChangeRenderType from "@/components/custom/collection/ChangeRenderType";
-import { GUIDED_PROMPTS } from "@/components/custom/collection/constants";
-import MobileTransfer from "@/components/custom/collection/MobileTransfer";
+import TestimonialProgress from "@/components/collection/TestimonialProgress";
+import ChangeRenderType from "@/components/collection/ChangeRenderType";
+import { GUIDED_PROMPTS } from "@/components/collection/constants";
+import MobileTransfer from "@/components/collection/MobileTransfer";
 import { useSearchParams } from "react-router-dom";
 
 const MobileTransferPage = observer(() => {

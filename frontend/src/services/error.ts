@@ -92,7 +92,8 @@ const AUTH_ERROR_MAPPINGS: Record<string, ErrorMapping> = {
     message: "The password reset link has expired. Please request a new one.",
   },
   "auth/invalid-action-code": {
-    message: "The password reset link is invalid. Please request a new one.",
+    message:
+      "The action code is invalid. Please request a new one or try again.",
   },
 
   // Other errors

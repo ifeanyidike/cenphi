@@ -8,7 +8,7 @@ import (
 func RegisterWorkspaceRoutes(r chi.Router, controller controllers.WorkspaceController) {
 	r.Route("/workspaces", func(r chi.Router) {
 		r.Get("/", controller.GetWorkspace)
-		r.Post("/", controller.CreateWorkspace)
+		r.Post("/create", controller.CreateWorkspace)
 		r.Put("/{id}", controller.UpdateWorkspace)
 		r.Delete("/{id}", controller.DeleteWorkspace)
 	})
