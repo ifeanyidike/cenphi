@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { Play, Pause } from "lucide-react"; // or the appropriate library/file
 
 // Define the ExtendedReview type

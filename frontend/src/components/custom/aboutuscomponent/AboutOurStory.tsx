@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { motion } from 'framer-motion';
 import { Trophy, Globe, Zap } from 'lucide-react';
 import CollaborativeTeam from "@/assets/collaborativeteam.jpg"

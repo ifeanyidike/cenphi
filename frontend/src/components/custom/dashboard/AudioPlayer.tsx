@@ -1,11 +1,15 @@
 // Audio player component
 import { useState } from "react";
 import { Volume2, Play, Pause } from "lucide-react";
+import { Review } from "@/types/types";
 
 // Define or import the ExtendedReview type
-interface ExtendedReview {
+
+export type ExtendedReview = Review & {
   id: string;
   duration: string;
+  audioUrl: string;
+  thumbnailUrl: string;
 }
 
 export const AudioPlayer = ({ review }: { review: ExtendedReview }) => {
