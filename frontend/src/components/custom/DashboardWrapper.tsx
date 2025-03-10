@@ -14,7 +14,8 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import SidebarContent from "./sidebar-content";
+// import SidebarContent from "./sidebar-content";
+import SideBarContent2 from "@/components/custom/SideBarContent2"
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import EmptyDashboard from "@/components/custom/emptydashboardpage";
@@ -119,7 +120,7 @@ export default function DashboardWrapper() {
             </Button>
           </div>
 
-          {hasUser ? <SidebarContent /> : <EmptyDashboard />}
+          {hasUser ? <SideBarContent2 /> : <EmptyDashboard />}
         </div>
       </SidebarInset>
     </SidebarProvider>
