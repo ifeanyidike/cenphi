@@ -62,7 +62,7 @@ const AllReviews = () => {
             ];
    
     // Complete list of reviews
-    const allReviews = [
+    const allReviews: ExtendedReview[] = [
       {
         id: 1,
         name: "John Doe",
@@ -207,7 +207,12 @@ const AllReviews = () => {
         thumbnailUrl: "/images/review-emily-thumb.jpg",
         duration: "2:35"
       },
-    ];
+    ].map(review => ({
+      ...review,
+      duration: review.duration || "",
+      mediaUrl: review.mediaUrl || "",
+      thumbnailUrl: review.thumbnailUrl || ""
+    })) as ExtendedReview[];
 
   const filteredReviews = useMemo(() => {
     return allReviews.filter(review => {
