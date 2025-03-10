@@ -1,4 +1,4 @@
-import React from "react";
+
 import { motion } from "framer-motion";
 import { Testimonial } from "./types";
 import { Brain, Quote, RefreshCw, Share, Star, Zap } from "lucide-react";
