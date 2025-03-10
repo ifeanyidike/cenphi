@@ -14,7 +14,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import SidebarContent from "./sidebar-content";
+// import SidebarContent from "./sidebar-content";
 import SideBarContent2 from "@/components/custom/SideBarContent2"
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";

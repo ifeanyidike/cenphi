@@ -1,5 +1,4 @@
 // types.ts
-import { ReactNode } from "react";
 
 export interface Review {
   mediaType: string;

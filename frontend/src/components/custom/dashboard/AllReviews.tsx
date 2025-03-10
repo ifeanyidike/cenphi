@@ -18,7 +18,6 @@ const AllReviews = () => {
     const [hasMore, setHasMore] = useState(true);
     const loaderRef = useRef<HTMLDivElement>(null);
     const [searchQuery, setSearchQuery] = useState("");
-    const initialLoadDone = useRef(false);
     const itemsPerPage = 5;
   
              // Complete filter options
