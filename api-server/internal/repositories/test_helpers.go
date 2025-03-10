@@ -174,6 +174,7 @@ func SetupTestDB() (*sql.DB, func()) {
 	}
 
 	// Build the connection string
+
 	dsn := "postgres://" + os.Getenv("DB_USERNAME") + ":" + os.Getenv("DB_PASSWORD") +
 		"@" + os.Getenv("DB_HOST") + ":" + os.Getenv("DB_PORT") +
 		"/" + os.Getenv("DB_NAME") + "?sslmode=disable"
@@ -239,8 +240,7 @@ func SetupTestDB() (*sql.DB, func()) {
 		    firebase_uid VARCHAR(128) NOT NULL UNIQUE,
     		email VARCHAR(255) NOT NULL UNIQUE,
     		email_verified BOOLEAN DEFAULT FALSE,
-    		first_name VARCHAR(100),
-    		last_name VARCHAR(100),
+    		name VARCHAR(255),
     		settings JSONB DEFAULT '{}',
     		permissions JSONB DEFAULT '{}',
     		last_active_at TIMESTAMPTZ,

@@ -20,7 +20,7 @@ type AuthMiddleware struct {
 }
 
 func NewAuthMiddleware(projectID string, logger *zap.Logger) (*AuthMiddleware, error) {
-	opt := option.WithCredentialsFile("../../cenphiapp-service-account.json")
+	opt := option.WithCredentialsFile("../../cenphiio-service-account.json")
 	app, err := firebase.NewApp(context.Background(), nil, opt)
 	if err != nil {
 		return nil, err
