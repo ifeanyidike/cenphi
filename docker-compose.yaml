@@ -4,15 +4,20 @@ services:
   frontend:
     build:
       context: ./frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - 3300:3000
     volumes:
       - ./frontend:/usr/src/app
     tty: true
     depends_on:
       - api-server
+    command: ["yarn", "vite", "--host"]
 
   api-server:
     build:
       context: ./api-server
+      dockerfile: Dockerfile.dev
     ports:
       - "8081:8081"
     env_file:
@@ -20,16 +25,17 @@ services:
     volumes:
       - ./api-server:/src
       - ~/.aws:/root/.aws:ro
-      - /etc/ssl/certs:/etc/ssl/certs:ro
+      # - /etc/ssl/certs:/etc/ssl/certs:ro
     depends_on:
       - cenphidb
-    command: ["/app/api"]
+    command: ["air", "-c", ".air.toml"]
+    # command: ["/app/api"]
 
   ai-service:
     # image: cenphi-ai-service.slim # the slim image is for production
     build:
       context: ./ai-service
-    platform: linux/amd64
+      dockerfile: Dockerfile.dev
     ports:
       - "50052:50052"
     env_file:
@@ -44,7 +50,8 @@ services:
       - TRANSFORMERS_CACHE=/root/.cache/huggingface
     depends_on:
       - api-server
-    command: ["/opt/venv/bin/python", "main.py"]
+    # command: ["/opt/venv/bin/python", "main.py"]
+    command: ["python", "main.py"]
 
   cenphidb:
     image: postgres:latest

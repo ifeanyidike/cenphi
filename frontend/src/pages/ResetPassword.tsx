@@ -7,6 +7,8 @@ import {
   RequestResetForm,
   ResetPasswordForm,
 } from "@/components/auth/reset-password";
+import Navbar from "@/components/custom/nav";
+import Footer from "@/components/custom/footer";
 
 const ResetPasswordPage = observer(() => {
   const [searchParams] = useSearchParams();
@@ -64,21 +66,35 @@ const ResetPasswordPage = observer(() => {
       <ResetPasswordForm
         onSubmit={handlePasswordReset}
         isLoading={authStore.loading}
-        error={authStore.error}
       />
     );
   }
 
   return (
-    <div className="flex min-h-svh flex-col items-center justify-center bg-muted p-6 md:p-10">
-      <div className="w-full max-w-sm md:max-w-xl">
-        <RequestResetForm
-          onSubmit={handleRequestReset}
-          isLoading={authStore.loading}
-          error={authStore.error}
-          onBack={() => navigate("/login")}
-        />
+    <div className="min-h-svh flex flex-col">
+      <img
+        src="/media/img/telling-story.jpg"
+        className="max-h-96 max-sm:mt-16"
+      />
+      <Navbar alwaysDarkText={true} />
+
+      <div className="w-full max-w-sm md:max-w-xl mx-auto py-8 xl:py-20 2xl:py-24">
+        {actionCode && !email ? (
+          <div>Verifying reset link...</div>
+        ) : actionCode && email ? (
+          <ResetPasswordForm
+            onSubmit={handlePasswordReset}
+            isLoading={authStore.loading}
+          />
+        ) : (
+          <RequestResetForm
+            onSubmit={handleRequestReset}
+            isLoading={authStore.loading}
+            onBack={() => navigate("/login")}
+          />
+        )}
       </div>
+      <Footer />
     </div>
   );
 });
