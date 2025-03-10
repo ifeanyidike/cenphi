@@ -33,8 +33,9 @@ export interface MetricItem {
   trend: "up" | "down";
 }
 
-export interface ExtendedReview {
+export interface ExtendedReview extends Omit<Review, 'id'> {
   id: number;
+  duration: string;
   name: string;
   initials: string;
   rating: number;
@@ -43,4 +44,5 @@ export interface ExtendedReview {
   status: string;
   mediaType: string;
   _animate?: boolean; 
+  thumbnailUrl: string;
 }

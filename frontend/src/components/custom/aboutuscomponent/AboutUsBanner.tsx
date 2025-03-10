@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import { useRef } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { ChevronRight, ArrowDownRight } from 'lucide-react';
 import AboutBackgroundVideo from "@/assets/aboutbannervideo.mp4"

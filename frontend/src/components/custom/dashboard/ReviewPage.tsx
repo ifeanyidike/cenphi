@@ -1,4 +1,4 @@
-import React from 'react'
+
 import ReviewInvitationFooter from '@/components/custom/dashboard/ReviewInvitationFooter'
 import ReviewComponent from '@/components/custom/dashboard/ReviewComponent'
 
