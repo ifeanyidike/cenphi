@@ -27,7 +27,8 @@ import ReviewPage from "@/components/custom/dashboard/ReviewPage";
 
 // A dynamic component to choose the correct recorder based on the URL parameter.
 const DynamicRecorder = () => {
-  const { type } = useParams<{ type: "video" | "audio" | "text" }>();
+  // const { type } = useParams<{ type: "video" | "audio" | "text" }>();
+  const { type } = useParams() as { type?: "video" | "audio" | "image" | "text" };
   if (type === "video") {
     return <VideoTestimonialRecorder />;
   } else if (type === "audio") {

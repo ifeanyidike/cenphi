@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { motion } from 'framer-motion';
 import { Star, Quote } from 'lucide-react';
 
@@ -41,7 +41,14 @@ const testimonials = [
   }
 ];
 
-const TestimonialCard = ({ name, role, text, rating }) => {
+interface TestimonialCardProps {
+  name: string;
+  role: string;
+  text: string;
+  rating: number;
+}
+
+const TestimonialCard = ({ name, role, text, rating }: TestimonialCardProps) => {
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
