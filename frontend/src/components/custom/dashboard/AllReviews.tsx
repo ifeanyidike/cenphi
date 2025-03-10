@@ -1,5 +1,3 @@
-// Second component: Fixed AllReviews Component
-// Desc: This component displays all reviews in a card or list view with filter options and search functionality.
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Grid, List, Download, ArrowLeft, X, SearchX, RefreshCw } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -7,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { ReviewCardView } from "@/components/custom/dashboard/ReviewCardView";
 import { ReviewListView } from "@/components/custom/dashboard/ReviewListView";
 import FilterMenu from "@/components/custom/dashboard/FilterMenu";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { ExtendedReview } from "@/types/types";
 
 const AllReviews = () => {

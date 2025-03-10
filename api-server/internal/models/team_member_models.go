@@ -37,8 +37,7 @@ func ValidateTeamMember(team_member *TeamMember) error {
 
 type TeamMemberGetParams struct {
 	TeamMember
-	FirstName     string `json:"first_name" db:"first_name"`
-	LastName      string `json:"last_name" db:"last_name"`
+	Name          string `json:"name" db:"name"`
 	Email         string `json:"email" db:"email"`
 	FirebaseUID   string `json:"firebase_uid" db:"firebase_uid"`
 	EmailVerified bool   `json:"email_verified" db:"email_verified"`

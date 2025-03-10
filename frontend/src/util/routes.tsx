@@ -2,7 +2,6 @@
 import { createBrowserRouter } from "react-router-dom";
 
 import TestimonialsDashboard from "@/pages/TestimonialsDashboard";
-import LandingPage from "@/pages/landingpage";
 import { Login } from "@/pages/Login";
 import { Signup } from "@/pages/SignUp";
 import ResetPasswordPage from "@/pages/ResetPassword";
@@ -21,7 +20,7 @@ import MobileTransferPage from "@/pages/collection/MobileTransferPage";
 import ThankYouPage from "@/pages/collection/ThankYouPage";
 
 import { useParams } from "react-router-dom";
-import TestimonialHero from "@/pages/TestimonialHeroPage";
+// import TestimonialHero from "@/pages/TestimonialHeroPage";
 import WhyCenphi from "@/pages/WhyCenphi";
 import Pricing from "@/pages/Pricing";
 import ReviewPage from "@/components/custom/dashboard/ReviewPage";
@@ -40,16 +39,36 @@ const DynamicRecorder = () => {
   }
 };
 
+// import WhyCenphi from "@/pages/WhyCenphi";
+// import Pricing from "@/pages/Pricing";
+import LandingPage from "@/pages/Landing";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import EmailVerificationPage from "@/pages/EmailVerification";
+import OnboardingPage from "@/pages/OnboardingPage";
 
 export const router = createBrowserRouter([
   {
     path: "/",
-    element: <TestimonialsDashboard />,
-  },
-  {
-    path: "/home",
     element: <LandingPage />,
   },
+  {
+    element: <ProtectedRoute />,
+    children: [
+      {
+        path: "/dashboard",
+        element: <TestimonialsDashboard />,
+      },
+    ],
+  },
+  {
+    path: "/verify-email",
+    element: <EmailVerificationPage />,
+  },
+  {
+    path: "/onboarding",
+    element: <OnboardingPage />,
+  },
+
   {
     path: "/why-Cenphi",
     element: <WhyCenphi />,
@@ -83,10 +102,7 @@ export const router = createBrowserRouter([
     path: "/reset-password",
     element: <ResetPasswordPage />,
   },
-  {
-    path: "/home2",
-    element: <TestimonialHero />,
-  },
+
   {
     // Parent route for the testimonial collection process.
     path: "/collection",

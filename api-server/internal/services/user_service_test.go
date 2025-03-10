@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/ifeanyidike/cenphi/internal/models"
 	"github.com/ifeanyidike/cenphi/internal/repositories/mocks"
+	"github.com/ifeanyidike/cenphi/internal/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -21,10 +22,9 @@ func TestUserService(t *testing.T) {
 	t.Run("RegisterUser", func(t *testing.T) {
 		user := &models.User{
 			ID:          uuid.New(),
-			Email:       "create@example.com",
-			FirebaseUID: "firebase-uid",
-			FirstName:   "New",
-			LastName:    "User",
+			Email:       utils.GenerateRandomEmail(),
+			FirebaseUID: utils.RandomString(10),
+			Name:        utils.RandomString(12),
 			CreatedAt:   time.Now(),
 			UpdatedAt:   time.Now(),
 		}
@@ -39,10 +39,9 @@ func TestUserService(t *testing.T) {
 	t.Run("GetUser", func(t *testing.T) {
 		user := &models.User{
 			ID:          uuid.New(),
-			Email:       "get@example.com",
-			FirebaseUID: "firebase-uuid",
-			FirstName:   "Get",
-			LastName:    "User",
+			Email:       utils.GenerateRandomEmail(),
+			FirebaseUID: utils.RandomString(10),
+			Name:        utils.RandomString(12),
 			CreatedAt:   time.Now(),
 			UpdatedAt:   time.Now(),
 		}
