@@ -7,7 +7,9 @@ import {
   Download,
   FileText,
   Filter,
+  Grid,
   Heart,
+  List,
   MessageSquare,
   Share2,
   Star,
@@ -16,8 +18,11 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Badge } from "../ui/badge";
+import { useState } from "react";
 
 const SidebarContent = () => {
+  const [viewMode, setViewMode] = useState("card"); // 'card' or 'list'
+  
   const stats: Record<string, string | number> = {
     totalTestimonials: 154,
     averageRating: 4.8,
@@ -26,6 +31,65 @@ const SidebarContent = () => {
     conversionRate: "24%",
     totalViews: "2.4K",
   };
+  
+  const reviews = [
+    {
+      id: 1,
+      name: "John Doe",
+      initials: "JD",
+      rating: 5,
+      timeAgo: "2 days ago",
+      content: "The product exceeded all my expectations. The team was incredibly responsive and helpful throughout the entire process.",
+      status: "New",
+    },
+    {
+      id: 2,
+      name: "Sarah Johnson",
+      initials: "SJ",
+      rating: 5,
+      timeAgo: "3 days ago",
+      content: "Simply amazing! I've tried many similar products but this one stands head and shoulders above the rest. The attention to detail is remarkable.",
+      status: "Replied",
+    },
+    {
+      id: 3,
+      name: "Mike Thompson",
+      initials: "MT",
+      rating: 4,
+      timeAgo: "1 week ago",
+      content: "Very satisfied with my purchase. The only minor issue was the delivery time, but the quality of the product more than makes up for it.",
+      status: "Verified",
+    },
+    {
+      id: 4,
+      name: "Emily Wilson",
+      initials: "EW",
+      rating: 5,
+      timeAgo: "2 weeks ago",
+      content: "This is exactly what I needed. The customer support team was incredibly helpful when I had questions about how to use some of the features.",
+      status: "Featured",
+    },
+  ];
+
+
+
+
+
+  const getBadgeColor = (status: string): string => {
+    switch (status) {
+      case "New":
+        return "text-purple-600 bg-purple-50";
+      case "Replied":
+        return "text-blue-600 bg-blue-50";
+      case "Verified":
+        return "text-green-600 bg-green-50";
+      case "Featured":
+        return "text-amber-600 bg-amber-50";
+      default:
+        return "text-gray-600 bg-gray-50";
+    }
+  };
+
   return (
     <div className="p-4 lg:p-8 overflow-hidden">
       {/* Stats Overview */}
@@ -100,6 +164,29 @@ const SidebarContent = () => {
                   Your Customers
                 </CardTitle>
                 <div className="flex space-x-2">
+                  {/* View toggle buttons */}
+                  <div className="mr-2 flex bg-gray-100 rounded-lg p-1">
+                    <button 
+                      onClick={() => setViewMode("card")}
+                      className={`p-2 rounded-lg transition-all duration-300 ${
+                        viewMode === "card" 
+                          ? "bg-white text-purple-600 shadow-sm" 
+                          : "text-gray-500 hover:bg-gray-200"
+                      }`}
+                    >
+                      <Grid className="h-5 w-5" />
+                    </button>
+                    <button 
+                      onClick={() => setViewMode("list")}
+                      className={`p-2 rounded-lg transition-all duration-300 ${
+                        viewMode === "list" 
+                          ? "bg-white text-purple-600 shadow-sm" 
+                          : "text-gray-500 hover:bg-gray-200"
+                      }`}
+                    >
+                      <List className="h-5 w-5" />
+                    </button>
+                  </div>
                   <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
                     <Filter className="h-5 w-5 text-gray-500" />
                   </button>
@@ -110,67 +197,132 @@ const SidebarContent = () => {
               </div>
             </CardHeader>
             <CardContent className="p-6">
-              <div className="space-y-8">
-                {[1, 2, 3, 4].map((review) => (
-                  <div
-                    key={review}
-                    className="p-8 border rounded-xl hover:shadow-md transition-all duration-200 bg-white"
-                  >
-                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
-                      <div className="flex space-x-4">
-                        <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-purple-600 rounded-xl flex items-center justify-center text-white font-semibold text-lg flex-shrink-0">
-                          JD
+              {viewMode === "card" ? (
+                // Card View
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {reviews.map((review) => (
+                    <div
+                      key={review.id}
+                      className="p-6 border rounded-xl hover:shadow-md transition-all duration-200 bg-white group"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex space-x-3">
+                          <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-purple-600 rounded-xl flex items-center justify-center text-white font-semibold text-lg flex-shrink-0 shadow-md">
+                            {review.initials}
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-gray-900">
+                              {review.name}
+                            </h4>
+                            <div className="flex items-center gap-2 mt-1">
+                              <div className="flex">
+                                {[...Array(5)].map((_, i) => (
+                                  <Star
+                                    key={i}
+                                    className={`h-4 w-4 ${
+                                      i < review.rating
+                                        ? "text-yellow-400 fill-yellow-400"
+                                        : "text-gray-300"
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                              <span className="text-sm text-gray-500">
+                                {review.timeAgo}
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <h4 className="font-semibold text-gray-900">
-                            John Doe
-                          </h4>
-                          <div className="flex flex-wrap items-center gap-2 mt-1">
+                        <Badge
+                          variant="outline"
+                          className={`${getBadgeColor(review.status)} px-3 py-1`}
+                        >
+                          {review.status}
+                        </Badge>
+                      </div>
+                      <p className="mt-4 text-gray-600 leading-relaxed line-clamp-3">
+                        "{review.content}"
+                      </p>
+                      <div className="mt-4 flex justify-between items-center pt-4 border-t">
+                        <div className="flex space-x-4">
+                          <button className="text-gray-600 hover:text-purple-600 flex items-center space-x-1 transition-colors">
+                            <MessageSquare className="h-4 w-4" />
+                            <span className="text-sm font-medium">Reply</span>
+                          </button>
+                          <button className="text-gray-600 hover:text-purple-600 flex items-center space-x-1 transition-colors">
+                            <Share2 className="h-4 w-4" />
+                            <span className="text-sm font-medium">Share</span>
+                          </button>
+                        </div>
+                        <button className="text-purple-600 hover:text-purple-700 flex items-center space-x-1 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                          <span className="text-sm">View</span>
+                          <ChevronRight className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                // List View
+                <div className="space-y-4">
+                  {reviews.map((review) => (
+                    <div
+                      key={review.id}
+                      className="p-4 border-b last:border-b-0 hover:bg-gray-50 transition-colors flex items-center justify-between"
+                    >
+                      <div className="flex items-center space-x-4">
+                        <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-purple-600 rounded-lg flex items-center justify-center text-white font-semibold text-sm flex-shrink-0 shadow-sm">
+                          {review.initials}
+                        </div>
+                        <div className="flex-grow">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-medium text-gray-900">
+                              {review.name}
+                            </h4>
+                            <Badge
+                              variant="outline"
+                              className={`${getBadgeColor(review.status)} px-2 py-0.5 text-xs`}
+                            >
+                              {review.status}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
                             <div className="flex">
-                              {[1, 2, 3, 4, 5].map((star) => (
+                              {[...Array(5)].map((_, i) => (
                                 <Star
-                                  key={star}
-                                  className="h-4 w-4 text-yellow-400 fill-current"
+                                  key={i}
+                                  className={`h-3 w-3 ${
+                                    i < review.rating
+                                      ? "text-yellow-400 fill-yellow-400"
+                                      : "text-gray-300"
+                                  }`}
                                 />
                               ))}
                             </div>
-                            <span className="text-sm text-gray-500">
-                              2 days ago
+                            <span className="text-xs text-gray-500">
+                              {review.timeAgo}
                             </span>
                           </div>
+                          <p className="text-sm text-gray-600 mt-1 line-clamp-1">
+                            "{review.content}"
+                          </p>
                         </div>
                       </div>
-                      <Badge
-                        variant="outline"
-                        className="text-purple-600 bg-purple-50 px-3 py-1"
-                      >
-                        New
-                      </Badge>
-                    </div>
-                    <p className="mt-8 text-gray-600 leading-relaxed">
-                      "The product exceeded all my expectations. The team was
-                      incredibly responsive and helpful throughout the entire
-                      process."
-                    </p>
-                    <div className="mt-8 flex flex-col sm:flex-row sm:justify-between sm:items-center pt-8 border-t gap-4">
-                      <div className="flex flex-wrap gap-4">
-                        <button className="text-gray-600 hover:text-purple-600 flex items-center space-x-2 transition-colors">
+                      <div className="flex items-center space-x-2">
+                        <button className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500 hover:text-purple-600">
                           <MessageSquare className="h-4 w-4" />
-                          <span className="text-sm font-medium">Reply</span>
                         </button>
-                        <button className="text-gray-600 hover:text-purple-600 flex items-center space-x-2 transition-colors">
+                        <button className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500 hover:text-purple-600">
                           <Share2 className="h-4 w-4" />
-                          <span className="text-sm font-medium">Share</span>
+                        </button>
+                        <button className="ml-2 p-2 hover:bg-purple-50 rounded-full transition-colors text-purple-600">
+                          <ChevronRight className="h-4 w-4" />
                         </button>
                       </div>
-                      <button className="text-purple-600 hover:text-purple-700 flex items-center space-x-1 font-medium">
-                        <span className="text-sm">View Details</span>
-                        <ChevronRight className="h-4 w-4" />
-                      </button>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -230,7 +382,7 @@ const SidebarContent = () => {
               <CardTitle className="text-lg font-semibold">
                 Performance Metrics
               </CardTitle>
-            </CardHeader>
+                </CardHeader>
             <CardContent className="p-6">
               <div className="space-y-4">
                 {[

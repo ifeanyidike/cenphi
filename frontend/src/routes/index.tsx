@@ -6,6 +6,8 @@ import { Login } from "@/pages/Login";
 import { Signup } from "@/pages/SignUp";
 import ResetPasswordPage from "@/pages/ResetPassword";
 import NotFoundPage from "@/pages/NotFoundPage";
+import EmailPage from "@/pages/EmailPage";
+import AllReviewsPage from "@/pages/AllReviewsPage";
 
 // Testimonial Collection Process
 import TestimonialCollectionLayout from "@/layouts/TestimonialCollectionLayout";
@@ -18,17 +20,20 @@ import MobileTransferPage from "@/pages/collection/MobileTransferPage";
 import ThankYouPage from "@/pages/collection/ThankYouPage";
 import WhyCenphi from "@/pages/WhyCenphi";
 import Pricing from "@/pages/Pricing";
-import LandingPage from "@/pages/Landing";
-import ProtectedRoute from "@/components/auth/ProtectedRoute";
-import OnboardingPage from "@/pages/OnboardingPage";
 import AuthFlow from "@/pages/authflow";
 
 import { useParams } from "react-router-dom";
+
+import ReviewPage from "@/components/custom/dashboard/ReviewPage";
 import Checkout from "@/pages/Checkout";
+import LandingPage from "@/pages/Landing";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import OnboardingPage from "@/pages/OnboardingPage";
 
 // A dynamic component to choose the correct recorder based on the URL parameter.
 const DynamicRecorder = () => {
-  const { type } = useParams<{ type: "video" | "audio" | "text" }>();
+  // const { type } = useParams<{ type: "video" | "audio" | "text" }>();
+  const { type } = useParams() as { type?: "video" | "audio" | "image" | "text" };
   if (type === "video") {
     return <VideoTestimonialRecorder />;
   } else if (type === "audio") {
@@ -75,6 +80,19 @@ export const router = createBrowserRouter([
   {
     path: "/pricing",
     element: <Pricing />,
+  },
+  {
+    path: "/emailpage",
+    element: <EmailPage />,
+  },
+  {
+    path: "/reviewpage",
+    element: <ReviewPage />,
+  },
+
+  {
+    path: "/all-reviewpage",
+    element: <AllReviewsPage />,
   },
   {
     path: "/login",
