@@ -1,20 +1,19 @@
-import React, { useState } from 'react';
+import * as React from 'react';
+import { useState } from 'react';
 import { StarIcon, PenIcon, InfoIcon, CalendarIcon } from 'lucide-react';
 
 interface CenphiReviewFormProps {
   companyName: string;
   companyUrl: string;
   logoUrl?: string;
-  customerName?: string;
   experienceDate?: string;
 }
 
 const ReviewComponent: React.FC<CenphiReviewFormProps> = ({
   companyName = "Cenphi",
   companyUrl = "cenphi.io",
-  logoUrl,
-  customerName,
-  experienceDate = new Date().toLocaleDateString('en-GB')
+  logoUrl="",
+  experienceDate=""
 }) => {
   const [rating, setRating] = useState<number | null>(null);
   const [hoveredRating, setHoveredRating] = useState<number | null>(null);

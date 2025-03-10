@@ -71,37 +71,9 @@ const SidebarContent = () => {
     },
   ];
 
-  interface Review {
-    id: number;
-    name: string;
-    initials: string;
-    rating: number;
-    timeAgo: string;
-    content: string;
-    status: string;
-  }
 
-  interface Stat {
-    title: string;
-    value: string | number;
-    icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-    change: string;
-    trend: "up" | "down";
-  }
 
-  interface Action {
-    label: string;
-    icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-    color: string;
-    description: string;
-  }
 
-  interface Metric {
-    label: string;
-    value: string;
-    icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-    trend: "up" | "down";
-  }
 
   const getBadgeColor = (status: string): string => {
     switch (status) {

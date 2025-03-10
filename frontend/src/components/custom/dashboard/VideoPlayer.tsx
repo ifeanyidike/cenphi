@@ -63,7 +63,7 @@ export const VideoPlayer = ({ review }: { review: ExtendedReview }) => {
     );
   };
 
-function setPlayingMedia(arg0: string | null) {
-    throw new Error("Function not implemented.");
-}
+const setPlayingMedia = (mediaId: string | null) => {
+  console.log(`Playing media with id: ${mediaId}`);
+};
   
