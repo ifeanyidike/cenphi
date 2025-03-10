@@ -10,7 +10,7 @@ interface ExtendedReview {
 
 export const AudioPlayer = ({ review }: { review: ExtendedReview }) => {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [progress] = useState(0);
 
   const togglePlay = () => {
     if (isPlaying) {
@@ -51,5 +51,5 @@ export const AudioPlayer = ({ review }: { review: ExtendedReview }) => {
 };
 
 function setPlayingMedia(arg0: string | null) {
-  // Implement the function logic here
+  console.log(`Playing media ID: ${arg0}`);
 }

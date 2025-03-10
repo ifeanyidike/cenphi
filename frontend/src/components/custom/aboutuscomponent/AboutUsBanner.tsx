@@ -14,7 +14,7 @@ const AboutUsBanner = () => {
   });
 
   // Parallax and transform animations
-  const backgroundY = useTransform(scrollYProgress, [0, 1], ["0%", "50%"]);
+  // const backgroundY = useTransform(scrollYProgress, [0, 1], ["0%", "50%"]);
   const textY = useTransform(scrollYProgress, [0, 1], ["0%", "150%"]);
   const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
 
@@ -138,7 +138,7 @@ const AboutUsBanner = () => {
         ref={nextSectionRef} 
         
       >
-        <AboutMission scrollToApproach={handleLearnMore} />
+        <AboutMission approachRef={nextSectionRef} />
         {/* <div className="text-center">
           <h2 className="text-5xl font-bold text-gray-800">Our Next Section</h2>
           <p className="text-xl text-gray-600 mt-4">
