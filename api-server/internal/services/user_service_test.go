@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"database/sql"
 	"testing"
 	"time"
 
@@ -52,6 +53,36 @@ func TestUserService(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, user.Email, result.Email)
 		mockRepo.AssertCalled(t, "GetByID", mock.Anything, user.ID, db)
+	})
+
+	t.Run("UpdateUser", func(t *testing.T) {
+		user := &models.User{
+			ID:          uuid.New(),
+			Email:       utils.GenerateRandomEmail(),
+			FirebaseUID: utils.RandomString(10),
+			Name:        utils.RandomString(12),
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
+		}
+
+		mockRepo.On("Create", mock.Anything, user, db).Return(nil)
+		err := svc.RegisterUser(context.Background(), user)
+		assert.NoError(t, err)
+
+		updates := map[string]any{
+			"email_verified": true,
+		}
+
+		mockRepo.On("UpdateAny",
+			mock.MatchedBy(func(ctx context.Context) bool { return true }),
+			updates,
+			user.FirebaseUID,
+			mock.MatchedBy(func(db *sql.DB) bool { return true }),
+		).Return(nil)
+
+		err = svc.UpdateUser(context.Background(), user.FirebaseUID, updates)
+		assert.NoError(t, err)
+		mockRepo.AssertExpectations(t)
 	})
 
 }

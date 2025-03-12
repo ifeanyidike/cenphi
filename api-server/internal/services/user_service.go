@@ -1,4 +1,7 @@
+// user_service.go
 package services
+
+//go:generate mockery --name=UserService --output=./mocks --case=underscore
 
 import (
 	"context"
@@ -14,6 +17,7 @@ type UserService interface {
 	GetUser(ctx context.Context, id uuid.UUID) (*models.User, error)
 	FindByUID(ctx context.Context, uid string) (*models.User, error)
 	RegisterUser(ctx context.Context, user *models.User) error
+	UpdateUser(ctx context.Context, uid string, updates map[string]any) error
 }
 
 type userService struct {
@@ -43,4 +47,8 @@ func (s *userService) FindByUID(ctx context.Context, uid string) (*models.User, 
 
 func (s *userService) RegisterUser(ctx context.Context, user *models.User) error {
 	return s.repo.Create(ctx, user, s.db)
+}
+
+func (s *userService) UpdateUser(ctx context.Context, uid string, updates map[string]any) error {
+	return s.repo.UpdateAny(ctx, updates, uid, s.db)
 }

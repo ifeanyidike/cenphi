@@ -32,7 +32,7 @@ export type SocialProvider = "google" | "apple" | "facebook";
 
 class AuthStore {
   public user: User | null = null;
-  public loading: boolean = false;
+  public loading: boolean = true;
   // public error: AuthError | undefined = undefined;
   public errors: AuthErrors = {} as AuthErrors;
   private server = import.meta.env.VITE_API_URL;
@@ -47,8 +47,10 @@ class AuthStore {
     makeAutoObservable(this);
     // Set up auth state listener
     onAuthStateChanged(auth, (user) => {
+      console.log("onAuthStateChanged triggered", user);
       runInAction(() => {
         this.user = user;
+        this.loading = false;
       });
     });
 
@@ -405,6 +407,34 @@ class AuthStore {
 
   get currentUser() {
     return this.user || auth.currentUser;
+  }
+
+  async verifyEmail() {
+    if (!this.user?.uid) return { error: "Invalid user" };
+
+    const token = await this.user?.getIdToken();
+
+    if (!token) return { error: "Token not found, Unauthorized!" };
+
+    try {
+      const response = await fetch(`${this.server}/users/${this.user?.uid}`, {
+        method: "PUT",
+        body: JSON.stringify({ email_verified: true }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) {
+        return { error: "Unauthorized user! verification failed." };
+      }
+
+      if (response.ok) {
+        return { success: true };
+      }
+    } catch (error: any) {
+      return { error: error.message };
+    }
   }
 }
 
