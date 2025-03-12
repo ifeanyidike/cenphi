@@ -229,7 +229,7 @@ export const LoginForm = observer(
         </div>
 
         {/* Content */}
-        <div className="relative z-10 flex py-20 items-center justify-center px-4 py-12">
+        <div className="relative z-10 flex items-center justify-center px-4 py-12">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={controls}

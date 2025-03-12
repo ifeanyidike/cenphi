@@ -20,7 +20,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/oauth2"
 
-	mmiddleware "github.com/ifeanyidike/cenphi/internal/middleware"
+	midware "github.com/ifeanyidike/cenphi/internal/middleware"
 	"go.uber.org/zap"
 )
 
@@ -28,6 +28,7 @@ type Application struct {
 	Config                *config.Config
 	Logger                *zap.Logger
 	DB                    *sql.DB
+	AuthMiddleware        *midware.AuthMiddleware
 	RedisClient           *redis.Client
 	GrpcClient            *pb.IntelligenceClient
 	HealthController      *controllers.HealthController
@@ -45,6 +46,11 @@ func NewApplication(cfg *config.Config, db *sql.DB, redisClient *redis.Client, g
 		log.Fatalf("Error initializing zap logger: %v", err)
 	}
 
+	authMiddleware, err := midware.NewAuthMiddleware(cfg.Server.FirebaseProjectID, logger)
+	if err != nil {
+		log.Fatalf("failed to create auth middleware: %v", err)
+	}
+
 	// Initialize controllers
 	repo := repositories.NewRepositoryManager(redisClient)
 
@@ -52,13 +58,9 @@ func NewApplication(cfg *config.Config, db *sql.DB, redisClient *redis.Client, g
 	userService := services.NewUserService(userRepo, db)
 	userController := controllers.NewUserController(userService, logger)
 
-	workspaceRepo := repositories.NewWorkspaceRepository(redisClient)
-	workspaceService := services.NewWorkspaceService(workspaceRepo, db)
-	workspaceController := controllers.NewWorkspaceController(workspaceService, logger)
-
 	teamMemberRepo := repositories.NewTeamMemberRepository(redisClient)
 	teamMemberService := services.NewTeamMemberService(teamMemberRepo, db)
-	teamMemberController := controllers.NewTeamMemberController(teamMemberService, logger)
+	teamMemberController := controllers.NewTeamMemberController(teamMemberService, userService, logger)
 
 	onboardingService := services.NewOnboardingService(repo, db)
 	onboardingController := controllers.NewOnboardingController(onboardingService, logger)
@@ -95,9 +97,14 @@ func NewApplication(cfg *config.Config, db *sql.DB, redisClient *redis.Client, g
 
 	testimonialController := controllers.NewTestimonialController(testimonialService, *providerService, logger)
 
+	workspaceRepo := repositories.NewWorkspaceRepository(redisClient)
+	workspaceService := services.NewWorkspaceService(workspaceRepo, db)
+	workspaceController := controllers.NewWorkspaceController(workspaceService, testimonialService, logger)
+
 	return &Application{
 		Config:                cfg,
 		Logger:                logger,
+		AuthMiddleware:        authMiddleware,
 		HealthController:      healthController,
 		UserController:        &userController,
 		SwaggerController:     swaggerController,
@@ -160,7 +167,7 @@ func (app *Application) Run(mux http.Handler) error {
 func (app *Application) Mount() http.Handler {
 	r := chi.NewRouter()
 
-	m := mmiddleware.NewMiddleware(app.Logger)
+	m := midware.NewMiddleware(app.Logger)
 
 	r.Use(m.Logging)
 	r.Use(middleware.RequestID)
@@ -182,12 +189,14 @@ func (app *Application) Mount() http.Handler {
 	r.Use(middleware.Timeout(60 * time.Second))
 
 	routes.RegisterRoutes(r,
+		app.AuthMiddleware,
 		app.HealthController,
 		*app.UserController,
 		app.SwaggerController,
 		app.WorkspaceController,
 		app.TeamMemberController,
 		app.OnboardingController,
+		app.TestimonialController,
 	)
 
 	return r

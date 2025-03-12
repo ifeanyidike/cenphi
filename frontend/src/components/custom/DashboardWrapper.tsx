@@ -19,57 +19,57 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import EmptyDashboard from "@/components/custom/emptydashboardpage";
 
-const FullscreenIcon = () => (
-  <svg
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    <path
-      d="M3 3h6v2H5v4H3V3zm18 0h-6v2h4v4h2V3zM3 21h6v-2H5v-4H3v6zm18 0h-6v-2h4v-4h2v6z"
-      fill="currentColor"
-    />
-  </svg>
-);
+// const FullscreenIcon = () => (
+//   <svg
+//     width="24"
+//     height="24"
+//     viewBox="0 0 24 24"
+//     fill="none"
+//     xmlns="http://www.w3.org/2000/svg"
+//   >
+//     <path
+//       d="M3 3h6v2H5v4H3V3zm18 0h-6v2h4v4h2V3zM3 21h6v-2H5v-4H3v6zm18 0h-6v-2h4v-4h2v6z"
+//       fill="currentColor"
+//     />
+//   </svg>
+// );
 
-const FullscreenExitIcon = () => (
-  <svg
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    <path
-      d="M3 12h6v-2H5V6H3v6zm18 0h-6v-2h4V6h2v6zM3 18h6v2H5v4H3v-6zm18 0h-6v2h4v4h2v-6z"
-      fill="currentColor"
-    />
-  </svg>
-);
+// const FullscreenExitIcon = () => (
+//   <svg
+//     width="24"
+//     height="24"
+//     viewBox="0 0 24 24"
+//     fill="none"
+//     xmlns="http://www.w3.org/2000/svg"
+//   >
+//     <path
+//       d="M3 12h6v-2H5V6H3v6zm18 0h-6v-2h4V6h2v6zM3 18h6v2H5v4H3v-6zm18 0h-6v2h4v4h2v-6z"
+//       fill="currentColor"
+//     />
+//   </svg>
+// );
 
 export default function DashboardWrapper() {
   const [hasUser, setHasUser] = useState(true);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  // const [isFullscreen, setIsFullscreen] = useState(false);
 
   const toggleDashboard = () => {
     setHasUser((prev) => !prev);
   };
 
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch((err) => {
-        console.error(`Error attempting to enable fullscreen: ${err.message}`);
-      });
-      setIsFullscreen(true);
-    } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen();
-        setIsFullscreen(false);
-      }
-    }
-  };
+  // const toggleFullscreen = () => {
+  //   if (!document.fullscreenElement) {
+  //     document.documentElement.requestFullscreen().catch((err) => {
+  //       console.error(`Error attempting to enable fullscreen: ${err.message}`);
+  //     });
+  //     setIsFullscreen(true);
+  //   } else {
+  //     if (document.exitFullscreen) {
+  //       document.exitFullscreen();
+  //       setIsFullscreen(false);
+  //     }
+  //   }
+  // };
 
   return (
     <SidebarProvider className="flex w-screen">
@@ -88,18 +88,18 @@ export default function DashboardWrapper() {
                   </BreadcrumbItem>
                   <BreadcrumbSeparator className="hidden md:block" />
                   <BreadcrumbItem>
-                    <BreadcrumbPage>Data Fetching</BreadcrumbPage>
+                    <BreadcrumbPage>Home</BreadcrumbPage>
                   </BreadcrumbItem>
                 </BreadcrumbList>
               </Breadcrumb>
             </div>
-            <button
+            {/* <button
               onClick={toggleFullscreen}
               className="p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-600"
               aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
             >
               {isFullscreen ? <FullscreenExitIcon /> : <FullscreenIcon />}
-            </button>
+            </button> */}
           </div>
         </header>
         {/* <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
