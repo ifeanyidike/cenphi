@@ -1,6 +1,8 @@
 // team_member_service.go
 package services
 
+//go:generate mockery --name=TeamMemberService --output=./mocks --case=underscore
+
 import (
 	"context"
 	"database/sql"
@@ -15,6 +17,7 @@ type TeamMemberService interface {
 	RemoveTeamMember(ctx context.Context, id uuid.UUID) error
 	GetTeamMembers(ctx context.Context, workspaceID uuid.UUID, page, pageSize int) ([]*models.TeamMember, error)
 	GetTeamMemberData(ctx context.Context, id uuid.UUID) (*models.TeamMemberGetParams, error)
+	GetTeamMemberDataByUserID(ctx context.Context, id uuid.UUID) (*models.TeamMemberGetParams, error)
 }
 
 type teamMemberService struct {
@@ -40,4 +43,8 @@ func (s *teamMemberService) GetTeamMembers(ctx context.Context, workspaceID uuid
 
 func (s *teamMemberService) GetTeamMemberData(ctx context.Context, id uuid.UUID) (*models.TeamMemberGetParams, error) {
 	return s.repo.GetDataByID(ctx, id, s.db)
+}
+
+func (s *teamMemberService) GetTeamMemberDataByUserID(ctx context.Context, id uuid.UUID) (*models.TeamMemberGetParams, error) {
+	return s.repo.GetDataByUserID(ctx, id, s.db)
 }

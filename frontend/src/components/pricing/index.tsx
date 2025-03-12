@@ -7,12 +7,20 @@ import TestimonialSlider from "./TestimonialSlider";
 import FAQ from "./FAQ";
 import CTA from "./CTA";
 import Decoration from "./Decoration";
+import { observer } from "mobx-react-lite";
+import { workspaceRepo } from "@/repositories/workspaceRepository";
 
-const PricingPage = () => {
+const PricingPage = observer(() => {
   const [annual, setAnnual] = useState(true);
   const [activePlan, setActivePlan] = useState("accelerate");
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const containerRef = useRef(null);
+
+  useEffect(() => {
+    (async () => {
+      await workspaceRepo.membersManager.getUser();
+    })();
+  }, []);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -65,10 +73,14 @@ const PricingPage = () => {
           >
             {plans.map((plan) => (
               <PricingCard
+                key={plan.name}
                 plan={plan}
                 activePlan={activePlan}
                 setActivePlan={setActivePlan}
                 annual={annual}
+                currentPlan={
+                  workspaceRepo.membersManager.member?.workspace_plan
+                }
               />
             ))}
           </motion.div>
@@ -85,6 +97,6 @@ const PricingPage = () => {
       </div>
     </div>
   );
-};
+});
 
 export default PricingPage;

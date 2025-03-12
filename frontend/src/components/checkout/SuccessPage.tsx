@@ -2,8 +2,15 @@
 import { motion } from "framer-motion";
 import { ChevronRightIcon, CheckIcon } from "lucide-react";
 import { Plan } from "@/components/pricing/types";
+import { Link, useSearchParams } from "react-router-dom";
 
 const SuccessPage = ({ plan }: { plan: Plan }) => {
+  const [searchParams] = useSearchParams();
+  const workflow = searchParams.get("workflow");
+  const query = `plan=${plan.id}`;
+  if (workflow) {
+    query.concat(`&workflow=${workflow}`);
+  }
   return (
     <motion.div
       className="text-center py-12"
@@ -48,10 +55,13 @@ const SuccessPage = ({ plan }: { plan: Plan }) => {
         </ul>
       </div>
 
-      <button className="inline-flex items-center px-6 py-3 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-        Go to Dashboard
+      <Link
+        to={workflow ? `/onboarding?${query}` : "/dashboard"}
+        className="inline-flex items-center px-6 py-3 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+      >
+        {workflow ? "Proceed with Onboarding" : "Go to Dashboard"}
         <ChevronRightIcon className="w-4 h-4 ml-2" />
-      </button>
+      </Link>
     </motion.div>
   );
 };

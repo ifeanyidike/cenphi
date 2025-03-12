@@ -18,6 +18,7 @@ import (
 type UserController interface {
 	GetUser(w http.ResponseWriter, r *http.Request)
 	RegisterUser(w http.ResponseWriter, r *http.Request)
+	UpdateUser(w http.ResponseWriter, r *http.Request)
 }
 
 type userController struct {
@@ -100,4 +101,40 @@ func (c *userController) RegisterUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.RespondWithJSON(w, http.StatusCreated, "User registered successfully")
+}
+
+// UpdateUser updates a new user.
+// @Summary Update User
+// @Description Update a new user.
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param user body models.User true "User data"
+// @Param firebase_uid path string true "Firebase UID"
+// @Success 200 {string} string "User updateed successfully"
+// @Failure 400 {object} utils.ErrorResponse
+// @Failure 500 {object} utils.ErrorResponse
+// @Router /users [post]
+func (c *userController) UpdateUser(w http.ResponseWriter, r *http.Request) {
+	uid := chi.URLParam(r, "uid")
+
+	var updates map[string]any
+
+	// Parse and validate the input
+	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
+		c.logger.Error("invalid request payload", zap.Error(err))
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	if err := c.service.UpdateUser(ctx, uid, updates); err != nil {
+		c.logger.Error("failed to update user", zap.Error(err))
+		utils.RespondWithError(w, http.StatusInternalServerError, "Failed to update user")
+		return
+	}
+
+	utils.RespondWithJSON(w, http.StatusCreated, "User updated successfully")
 }

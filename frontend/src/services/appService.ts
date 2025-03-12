@@ -1,4 +1,5 @@
-import { Plan } from "@/types/app";
+import { auth } from "@/config/firebase";
+import { Plan } from "@/types/workspace";
 import { flow, makeAutoObservable, reaction, runInAction } from "mobx";
 
 class AppService {
@@ -57,40 +58,59 @@ class AppService {
     return this.healthInterval !== null;
   }
 
-  async onboard(
-    user_id: string,
-    name: string,
-    website_url: string,
-    industry: string
-  ) {
-    await fetch(`${this.server}/onboard/full`, {
-      method: "POST",
-      body: JSON.stringify({
-        user_id,
-        workspace: {
-          name,
-          website_url,
-          industry,
-          plan: "essentials",
-        },
-        team_member: {
-          role: "owner",
-        },
-      }),
-    });
-  }
+  // async onboard(
+  //   user_id: string,
+  //   name: string,
+  //   website_url: string,
+  //   industry: string
+  // ) {
+  //   await fetch(`${this.server}/onboard/full`, {
+  //     method: "POST",
+  //     body: JSON.stringify({
+  //       user_id,
+  //       workspace: {
+  //         name,
+  //         website_url,
+  //         industry,
+  //         plan: "essentials",
+  //       },
+  //       team_member: {
+  //         role: "owner",
+  //       },
+  //     }),
+  //   });
+  // }
 
   async onboard_partial(user_id: string, plan: Plan) {
-    const response = await fetch(`${this.server}/onboard/part`, {
-      method: "POST",
-      body: JSON.stringify({
-        user_id,
-        workspace: { plan },
-        team_member: { role: "owner" },
-      }),
-    });
-    console.log("response", response.ok);
-    return response.ok;
+    const token = await auth.currentUser?.getIdToken();
+    if (!token) throw new Error("Token not found, Unauthorized!");
+    console.log("user_id", user_id);
+    try {
+      const response = await fetch(`${this.server}/onboard/partial`, {
+        method: "POST",
+        body: JSON.stringify({
+          firebase_uid: user_id,
+          workspace: {
+            id: crypto.randomUUID(),
+            plan,
+            industry: "",
+            name: "",
+            website_url: "",
+          },
+          team_member: { id: crypto.randomUUID(), role: "owner" },
+        }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const responseJson = await response.json();
+      console.log("response JSON", responseJson);
+      return response.ok;
+    } catch (error) {
+      console.log("error", error);
+      throw error;
+    }
   }
 }
 export const appService = new AppService();
