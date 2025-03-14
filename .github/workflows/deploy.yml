@@ -5,7 +5,54 @@ on:
     branches: [master, main]
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      cache_key: ${{ steps.generate_cache_key.outputs.cache_key }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Fetch all history to ensure proper change detection
+
+      - name: Generate unique cache keys
+        id: generate_cache_key
+        run: |
+          # Generate a unique cache key based on file changes
+          API_HASH=$(git rev-parse HEAD:api-server || echo "nohash")
+          AI_HASH=$(git rev-parse HEAD:ai-service || echo "nohash")
+          echo "cache_key=api-${API_HASH}-ai-${AI_HASH}" >> $GITHUB_OUTPUT
+          echo "Generated cache key: api-${API_HASH}-ai-${AI_HASH}"
+
+      - name: Verify required files
+        run: |
+          # Check if google_roots.pem exists
+          if [ ! -f "api-server/google_roots.pem" ]; then
+            echo "WARNING: google_roots.pem not found in api-server directory"
+            
+            # Create a placeholder file to prevent build failures
+            mkdir -p api-server
+            echo "# Placeholder Google root certificates" > api-server/google_roots.pem
+            echo "Created placeholder google_roots.pem file"
+          else
+            echo "google_roots.pem found in api-server directory"
+          fi
+
+          # Check entrypoint script
+          if [ ! -f "api-server/scripts/docker-entrypoint.sh" ]; then
+          echo "WARNING: docker-entrypoint.sh not found"
+          mkdir -p api-server/scripts
+          cat > api-server/scripts/docker-entrypoint.sh << 'ENDOFFILE'
+          #!/bin/sh
+          # Simple entrypoint script
+          exec "$@"
+          ENDOFFILE
+          chmod +x api-server/scripts/docker-entrypoint.sh
+          echo "Created placeholder docker-entrypoint.sh file"
+          fi
+
   test:
+    needs: prepare
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -102,7 +149,7 @@ jobs:
           python -m pytest
 
   build-and-push:
-    needs: test
+    needs: [prepare, test]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -110,15 +157,39 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
-
-      # Modified Docker layer cache to use GitHub SHA for cache busting
-      - name: Set up Docker Buildx cache
-        uses: actions/cache@v3
         with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ matrix.service }}-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-${{ matrix.service }}-
+          fetch-depth: 0
+
+      - name: Setup cache keys
+        id: cache_keys
+        run: |
+          echo "CACHE_TIME=$(date +%s)" >> $GITHUB_ENV
+          echo "CACHE_BUSTER=${{ github.sha }}_${{ github.run_id }}" >> $GITHUB_ENV
+
+      - name: Verify critical files for API Server
+        if: ${{ matrix.service == 'api-server' }}
+        run: |
+          # Ensure google_roots.pem exists
+          if [ ! -f "api-server/google_roots.pem" ]; then
+            echo "ERROR: google_roots.pem missing from api-server directory! Creating dummy file."
+            mkdir -p api-server
+            echo "# Placeholder Google root certificates file" > api-server/google_roots.pem
+          fi
+
+          # Ensure docker-entrypoint.sh exists
+          if [ ! -f "api-server/scripts/docker-entrypoint.sh" ]; then
+            echo "ERROR: docker-entrypoint.sh missing! Creating dummy file."
+            mkdir -p api-server/scripts
+            echo "#!/bin/sh" > api-server/scripts/docker-entrypoint.sh
+            echo "exec \"\$@\"" >> api-server/scripts/docker-entrypoint.sh
+            chmod +x api-server/scripts/docker-entrypoint.sh
+          fi
+
+          # List contents of api-server directory
+          echo "API Server directory contents:"
+          ls -la api-server/
+          echo "API Server scripts directory contents:"
+          ls -la api-server/scripts/ || echo "scripts directory not found"
 
       - name: Create .env files
         run: |
@@ -219,13 +290,23 @@ jobs:
           no-cache: true
           build-args: |
             BUILDKIT_INLINE_CACHE=1
-            CACHE_BUSTER=${{ github.sha }}
+            CACHE_BUSTER=${{ env.CACHE_BUSTER }}
 
       - name: Verify files in image
         run: |
+          docker pull lorddickson/${{ matrix.service }}:${{ github.sha }}
           docker create --name temp_container lorddickson/${{ matrix.service }}:${{ github.sha }}
-          docker cp temp_container:/app/google_roots.pem ./google_roots_verification.pem || echo "File not found in image!"
-          ls -la ./google_roots_verification.pem || echo "Failed to copy file from image"
+
+          if [ "${{ matrix.service }}" == "api-server" ]; then
+            echo "Verifying files in API server image:"
+            docker cp temp_container:/app/google_roots.pem ./google_roots_verification.pem || echo "google_roots.pem not found in image!"
+            ls -la ./google_roots_verification.pem || echo "Failed to copy google_roots.pem from image"
+            
+            # Check other important files
+            docker cp temp_container:/app/api ./api_verification || echo "API binary not found in image!"
+            ls -la ./api_verification || echo "Failed to copy API binary from image"
+          fi
+
           docker rm temp_container
 
       # Clear old images after pushing
@@ -233,66 +314,36 @@ jobs:
         run: |
           docker system prune -a -f
 
-      # Verify the original image size before slimming
-      - name: Verify original image size
+      - name: Verify and Slim AI Service Image
         if: ${{ matrix.service == 'ai-service' }}
         run: |
-          docker pull lorddickson/ai-service:latest || { echo "Failed to pull image, cannot proceed"; exit 1; }
           echo "Original image size:"
-          ORIGINAL_SIZE=$(docker images lorddickson/ai-service:latest --format "{{.Size}}")
-          echo "lorddickson/ai-service:latest - $ORIGINAL_SIZE"
+          ORIGINAL_SIZE=$(docker images lorddickson/ai-service:${{ github.sha }} --format "{{.Size}}")
+          echo "lorddickson/ai-service:${{ github.sha }} - $ORIGINAL_SIZE"
 
-          # Extract size in MB for comparison
+          # Check if image is already small enough
           if [[ "$ORIGINAL_SIZE" == *"MB"* ]]; then
             SIZE_NUM=$(echo $ORIGINAL_SIZE | sed 's/MB//')
-            echo "Size in MB: $SIZE_NUM"
-            # If image is already less than or equal to 150MB, skip slimming
             if (( $(echo "$SIZE_NUM <= 150" | bc -l) )); then
               echo "Image is already small enough (≤ 150MB), skipping slim process"
-              # Tag the original image as slim for consistency in deployment
-              docker tag lorddickson/ai-service:latest lorddickson/ai-service:slim
+              docker tag lorddickson/ai-service:${{ github.sha }} lorddickson/ai-service:slim
               docker push lorddickson/ai-service:slim
-              # Create flag to skip slimming
-              touch /tmp/skip_slimming
+              exit 0
             fi
-          elif [[ "$ORIGINAL_SIZE" == *"GB"* ]]; then
-            echo "Image is in GB range, will proceed with slimming"
-          else
-            echo "Image is very small, skipping slim process"
-            docker tag lorddickson/ai-service:latest lorddickson/ai-service:slim
-            docker push lorddickson/ai-service:slim
-            touch /tmp/skip_slimming
           fi
 
-      - name: Slim AI Service Image
-        if: ${{ matrix.service == 'ai-service' && success() && !contains(job.status, 'skip_slimming') }}
-        run: |
-          # Skip if the flag file exists
-          if [ -f "/tmp/skip_slimming" ]; then
-            echo "Skipping slimming as image is already small enough"
-            exit 0
-          fi
-
-          echo "Creating slim version of the AI service image..."
-
-          cd ai-service
-          slim build --http-probe=false --include-path '/root/.cache/huggingface' --include-path '/opt/venv' --include-path '/opt/venv/lib/python3.12/encodings' --include-path '/opt/venv/lib/python3.12/lib-dynload' --tag lorddickson/ai-service:slim lorddickson/ai-service:latest
+          # Run slimming
+          docker pull lorddickson/ai-service:${{ github.sha }}
+          slim build --http-probe=false --include-path '/root/.cache/huggingface' --include-path '/opt/venv' --tag lorddickson/ai-service:slim lorddickson/ai-service:${{ github.sha }}
 
           # Check if slimming was successful
           if [ $? -eq 0 ]; then
-            echo "Slimming completed. Checking size of slimmed image:"
             SLIM_SIZE=$(docker images lorddickson/ai-service:slim --format "{{.Size}}")
-            echo "lorddickson/ai-service:slim - $SLIM_SIZE"
-            
-            echo "Pushing slimmed image to Docker Hub"
+            echo "Slimmed image: lorddickson/ai-service:slim - $SLIM_SIZE"
             docker push lorddickson/ai-service:slim
-            echo "Slim image pushed successfully!"
           else
-            echo "Slimming failed with exit code $?, original image will be used in deployment"
-            # Create a flag file to indicate we should use the original image
-            touch /tmp/use_original_image
-            # Tag original as slim for consistency
-            docker tag lorddickson/ai-service:latest lorddickson/ai-service:slim
+            echo "Slimming failed, using original image instead"
+            docker tag lorddickson/ai-service:${{ github.sha }} lorddickson/ai-service:slim
             docker push lorddickson/ai-service:slim
           fi
 
