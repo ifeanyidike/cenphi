@@ -1,8 +1,13 @@
 package repositories
 
+//go:generate mockery --name=UserRepository --output=./mocks --case=underscore
+
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -14,6 +19,7 @@ type UserRepository interface {
 	Repository[models.User]
 	FindByEmail(ctx context.Context, email string, db DB) (*models.User, error)
 	FindByUID(ctx context.Context, uid string, db DB) (*models.User, error)
+	UpdateAny(ctx context.Context, updates map[string]any, uid string, db DB) error
 }
 
 type userRepository struct {
@@ -51,6 +57,65 @@ func (r *userRepository) Update(ctx context.Context, user *models.User, id uuid.
 		 WHERE id = $4
 		`
 	_, err := db.ExecContext(ctx, query, user.Email, user.Name, time.Now(), id)
+	return err
+}
+
+func (r *userRepository) UpdateAny(ctx context.Context, updates map[string]any, uid string, db DB) error {
+	var setStatements []string
+	var args []any
+
+	// The first argument is the uid for the WHERE clause.
+	args = append(args, uid)
+	argCount := 1
+
+	for field, value := range updates {
+		var dbField string
+		switch field {
+		case "email", "name":
+			dbField = field
+		case "email_verified":
+			dbField = field
+			// Ensure the value is a boolean.
+			switch v := value.(type) {
+			case bool:
+				// Already a boolean.
+			case int:
+				value = v != 0
+			case float64:
+				value = v != 0
+			default:
+				return fmt.Errorf("unexpected type for %s: %T", field, value)
+			}
+		case "settings", "permissions":
+			dbField = field
+			jsonValue, err := json.Marshal(value)
+			if err != nil {
+				return fmt.Errorf("failed to marshal JSON for %s: %w", field, err)
+			}
+			value = jsonValue
+		default:
+			// Skip fields we don't want to update.
+			continue
+		}
+
+		argCount++
+		setStatements = append(setStatements, fmt.Sprintf("%s = $%d", dbField, argCount))
+		args = append(args, value)
+	}
+
+	// Always update the updated_at field.
+	setStatements = append(setStatements, "updated_at = NOW()")
+
+	fmt.Println("setStatements", setStatements, args)
+	if len(setStatements) == 0 {
+		return nil
+	}
+
+	// Build the final query.
+	query := fmt.Sprintf("UPDATE users SET %s WHERE firebase_uid = $1", strings.Join(setStatements, ", "))
+
+	// Execute the query.
+	_, err := db.ExecContext(ctx, query, args...)
 	return err
 }
 
@@ -101,7 +166,9 @@ func (r *userRepository) FindByUID(ctx context.Context, uid string, db DB) (*mod
 		`
 	row := db.QueryRowContext(ctx, query, uid)
 	var user models.User
+
 	err := row.Scan(&user.ID, &user.Email, &user.Name, &user.EmailVerified, &user.LastActiveAt, &user.CreatedAt)
+
 	if err != nil {
 		return nil, err
 	}

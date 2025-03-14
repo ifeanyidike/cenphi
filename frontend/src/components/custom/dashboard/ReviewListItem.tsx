@@ -4,18 +4,14 @@ import { Review } from "@/types/types";
 import { getBadgeColor } from "@/util/utils";
 
 export const ReviewListItem = ({ review }: { review: Review }) => (
-  <div
-    className="p-4 border-b last:border-b-0 hover:bg-gray-50 transition-colors flex items-center justify-between"
-  >
+  <div className="p-4 border-b last:border-b-0 hover:bg-gray-50 transition-colors flex items-center justify-between">
     <div className="flex items-center space-x-4">
       <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-purple-600 rounded-lg flex items-center justify-center text-white font-semibold text-sm flex-shrink-0 shadow-sm">
         {review.initials}
       </div>
       <div className="flex-grow">
         <div className="flex items-center gap-2">
-          <h4 className="font-medium text-gray-900">
-            {review.name}
-          </h4>
+          <h4 className="font-medium text-gray-900">{review.name}</h4>
           <Badge
             variant="outline"
             className={`${getBadgeColor(review.status)} px-2 py-0.5 text-xs`}
@@ -36,9 +32,7 @@ export const ReviewListItem = ({ review }: { review: Review }) => (
               />
             ))}
           </div>
-          <span className="text-xs text-gray-500">
-            {review.timeAgo}
-          </span>
+          <span className="text-xs text-gray-500">{review.timeAgo}</span>
         </div>
         <p className="text-sm text-gray-600 mt-1 line-clamp-1">
           "{review.content}"

@@ -14,14 +14,18 @@ import OrderSummary from "@/components/checkout/OrderSummary";
 import PaymentForm from "@/components/checkout/PaymentForm";
 import SuccessPage from "@/components/checkout/SuccessPage";
 import { useSearchParams } from "react-router-dom";
+import { observer } from "mobx-react-lite";
+import { authStore } from "@/stores/authStore";
+import { appService } from "@/services/appService";
+import { Plan } from "@/types/workspace";
 
 // Stripe promise initialization
 const stripePromise = loadStripe("your_publishable_key");
 
 // Main checkout component
-const Checkout = () => {
+const Checkout = observer(() => {
   const [searchParams] = useSearchParams();
-  //   const workflow = searchParams.get("workflow");
+
   const planId = searchParams.get("plan");
   const selectedPlan = plans.find((p) => p.id === planId);
   const [currentStep, setCurrentStep] = useState(0);
@@ -34,6 +38,12 @@ const Checkout = () => {
     monthly: { x: 0 },
     yearly: { x: "100%" },
   };
+
+  async function onComplete() {
+    const user = authStore.currentUser;
+    await appService.onboard_partial(user?.uid || "", planId as Plan);
+    setCurrentStep(2);
+  }
 
   if (!selectedPlan) return;
 
@@ -185,7 +195,7 @@ const Checkout = () => {
                       plan={selectedPlan}
                       billingCycle={billingCycle}
                       onBack={() => setCurrentStep(0)}
-                      onComplete={() => setCurrentStep(2)}
+                      onComplete={onComplete}
                     />
                   </Elements>
                 </motion.div>
@@ -207,6 +217,6 @@ const Checkout = () => {
       </div>
     </div>
   );
-};
+});
 
 export default Checkout;

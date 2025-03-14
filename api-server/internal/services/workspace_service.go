@@ -1,8 +1,11 @@
 package services
 
+//go:generate mockery --name=WorkspaceService --output=./mocks --case=underscore
+
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/ifeanyidike/cenphi/internal/models"
@@ -12,7 +15,7 @@ import (
 type WorkspaceService interface {
 	GetWorkspace(ctx context.Context, id uuid.UUID) (*models.Workspace, error)
 	CreateWorkspace(ctx context.Context, workspace *models.Workspace) error
-	UpdateWorkspace(ctx context.Context, id uuid.UUID, workspace *models.Workspace) error
+	UpdateWorkspace(ctx context.Context, id uuid.UUID, updates map[string]any) error
 	DeleteWorkspace(ctx context.Context, id uuid.UUID) error
 }
 
@@ -33,8 +36,9 @@ func (w *workspaceService) CreateWorkspace(ctx context.Context, workspace *model
 	return w.repo.Create(ctx, workspace, w.db)
 }
 
-func (w *workspaceService) UpdateWorkspace(ctx context.Context, id uuid.UUID, workspace *models.Workspace) error {
-	return w.repo.Update(ctx, workspace, id, w.db)
+func (w *workspaceService) UpdateWorkspace(ctx context.Context, id uuid.UUID, updates map[string]any) error {
+	fmt.Println("id", id, "workspace", updates)
+	return w.repo.UpdateAny(ctx, updates, id, w.db)
 }
 
 func (w *workspaceService) DeleteWorkspace(ctx context.Context, id uuid.UUID) error {

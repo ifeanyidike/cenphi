@@ -1,11 +1,10 @@
 // router.tsx
 import { createBrowserRouter } from "react-router-dom";
 
-import TestimonialsDashboard from "@/pages/TestimonialsDashboard";
 import { Login } from "@/pages/Login";
 import { Signup } from "@/pages/SignUp";
 import ResetPasswordPage from "@/pages/ResetPassword";
-import NotFoundPage from "@/pages/NotFoundPage";
+
 import EmailPage from "@/pages/EmailPage";
 import AllReviewsPage from "@/pages/AllReviewsPage";
 
@@ -19,21 +18,39 @@ import TextTestimonialCollection from "@/pages/collection/TextTestimonialCollect
 import MobileTransferPage from "@/pages/collection/MobileTransferPage";
 import ThankYouPage from "@/pages/collection/ThankYouPage";
 import WhyCenphi from "@/pages/WhyCenphi";
-import Pricing from "@/pages/Pricing";
 import AuthFlow from "@/pages/authflow";
 
 import { useParams } from "react-router-dom";
 
 import ReviewPage from "@/components/custom/dashboard/ReviewPage";
 import Checkout from "@/pages/Checkout";
-import LandingPage from "@/pages/Landing";
-import ProtectedRoute from "@/components/auth/ProtectedRoute";
-import OnboardingPage from "@/pages/OnboardingPage";
+import { lazy } from "react";
+import {
+  DashboardErrorComponent,
+  OnboardingErrorComponent,
+  OnboardingLoadingComponent,
+} from "@/components/ComponentRegistry";
+import LoadingIndicator from "@/components/LoadingIndicator";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import OnboardingError from "@/components/onboarding/OnboardingError";
+import DashboardProtectedRoute from "@/components/auth/protected_routes/Dashboard";
+import GenericProtectedRoute from "@/components/auth/protected_routes/Generic";
+import OnboardingProtectedRoute from "@/components/auth/protected_routes/Onboarding";
 
-// A dynamic component to choose the correct recorder based on the URL parameter.
+// lazy load
+const LandingPage = lazy(() => import("@/pages/Landing"));
+const Pricing = lazy(() => import("@/pages/Pricing"));
+const OnboardingPage = lazy(() => import("@/pages/OnboardingPage"));
+const TestimonialsDashboard = lazy(
+  () => import("@/pages/TestimonialsDashboard")
+);
+const NotFoundPage = lazy(() => import("@/pages/NotFoundPage"));
+
 const DynamicRecorder = () => {
   // const { type } = useParams<{ type: "video" | "audio" | "text" }>();
-  const { type } = useParams() as { type?: "video" | "audio" | "image" | "text" };
+  const { type } = useParams() as {
+    type?: "video" | "audio" | "image" | "text";
+  };
   if (type === "video") {
     return <VideoTestimonialRecorder />;
   } else if (type === "audio") {
@@ -51,26 +68,59 @@ export const router = createBrowserRouter([
     element: <LandingPage />,
   },
   {
-    element: <ProtectedRoute />,
+    element: <DashboardProtectedRoute />,
     children: [
       {
         path: "/dashboard",
-        element: <TestimonialsDashboard />,
-      },
-      {
-        path: "/authflow",
-        element: <AuthFlow />,
+        element: (
+          <ErrorBoundary
+            ErrorComponent={DashboardErrorComponent}
+            LoadingComponent={LoadingIndicator}
+            componentName="Dashboard"
+          >
+            <TestimonialsDashboard />
+          </ErrorBoundary>
+        ),
       },
     ],
   },
   {
-    path: "/checkout",
-    element: <Checkout />,
+    element: <OnboardingProtectedRoute />,
+    children: [
+      {
+        path: "/onboarding",
+        element: (
+          <ErrorBoundary
+            ErrorComponent={OnboardingError}
+            LoadingComponent={OnboardingLoadingComponent}
+            componentName="Onboarding"
+          >
+            <OnboardingPage />
+          </ErrorBoundary>
+        ),
+      },
+    ],
   },
-
   {
-    path: "/onboarding",
-    element: <OnboardingPage />,
+    element: <GenericProtectedRoute />,
+    children: [
+      {
+        path: "/authflow",
+        element: <AuthFlow />,
+      },
+      {
+        path: "/checkout",
+        element: (
+          <ErrorBoundary
+            ErrorComponent={OnboardingErrorComponent}
+            LoadingComponent={OnboardingLoadingComponent}
+            componentName="Checkout"
+          >
+            <Checkout />
+          </ErrorBoundary>
+        ),
+      },
+    ],
   },
 
   {

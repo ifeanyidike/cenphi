@@ -9,7 +9,6 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	uuid "github.com/google/uuid"
 	models "github.com/ifeanyidike/cenphi/internal/models"
 )
 
@@ -37,15 +36,15 @@ func (m *MockOnboardingService) EXPECT() *MockOnboardingServiceMockRecorder {
 }
 
 // OnboardOwner mocks base method.
-func (m *MockOnboardingService) OnboardOwner(ctx context.Context, userId uuid.UUID, workspace *models.Workspace, team_member *models.TeamMember) error {
+func (m *MockOnboardingService) OnboardOwner(ctx context.Context, uid string, workspace *models.Workspace, team_member *models.TeamMember) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "OnboardOwner", ctx, userId, workspace, team_member)
+	ret := m.ctrl.Call(m, "OnboardOwner", ctx, uid, workspace, team_member)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // OnboardOwner indicates an expected call of OnboardOwner.
-func (mr *MockOnboardingServiceMockRecorder) OnboardOwner(ctx, userId, workspace, team_member interface{}) *gomock.Call {
+func (mr *MockOnboardingServiceMockRecorder) OnboardOwner(ctx, uid, workspace, team_member interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OnboardOwner", reflect.TypeOf((*MockOnboardingService)(nil).OnboardOwner), ctx, userId, workspace, team_member)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OnboardOwner", reflect.TypeOf((*MockOnboardingService)(nil).OnboardOwner), ctx, uid, workspace, team_member)
 }
