@@ -294,6 +294,12 @@ else
     docker ps | grep api-server
 fi
 
+# Verify that critical files exist in the container
+echo "Verifying critical files in container..."
+CONTAINER_ID=$(docker ps -q -f name=api-server)
+docker exec $CONTAINER_ID ls -la /app/google_roots.pem || echo "WARNING: google_roots.pem not found in container!"
+docker exec $CONTAINER_ID ls -la /etc/ssl/certs/ca-certificates.crt || echo "WARNING: ca-certificates.crt not found in container!"
+
 # Print recent logs to verify everything is working
 API_CONTAINER_ID=$(docker ps | grep api-server | awk '{print $1}')
 if [ -n "$API_CONTAINER_ID" ]; then
