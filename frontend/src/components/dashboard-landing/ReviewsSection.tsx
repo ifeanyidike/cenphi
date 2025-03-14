@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import FilterMenu from "@/components/custom/dashboard/FilterMenu";
 import { useNavigate } from "react-router-dom";
 import { observer } from "mobx-react-lite";
-import { workspaceRepo } from "@/repositories/WorkspaceRepo";
+import { workspaceRepo } from "@/repositories/workspace";
 import { ReviewCard } from "./ReviewCard";
 import { ReviewListItem } from "./ReviewListItem";
 import LoadingSkeleton from "./LoadingSkeleton";

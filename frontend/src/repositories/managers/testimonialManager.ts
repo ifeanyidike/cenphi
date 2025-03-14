@@ -1,5 +1,5 @@
 // repositories/managers/testimonialManager.ts
-import { WorkspaceRepository } from "../WorkspaceRepo";
+import { WorkspaceRepository } from "../workspace";
 import { Testimonial } from "@/types/testimonial";
 import { MembersManager } from "./memberManager";
 
