@@ -153,6 +153,9 @@ RUN apk add --no-cache ca-certificates
 # Copy SSL certificates for HTTPS calls
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
+# Copy Google's root certificates
+COPY google_roots.pem /app/google_roots.pem
+
 # Copy binary
 COPY --from=builder /app/api .
 

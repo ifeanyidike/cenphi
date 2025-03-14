@@ -22,6 +22,10 @@ func main() {
 	// if err := config.LoadEnv(); err != nil {
 	// 	log.Fatalf("Error loading .env file: %v", err)
 	// }
+	if os.Getenv("DEBUG_TLS") == "true" {
+		os.Setenv("GODEBUG", "x509roots=1,x509cert=1")
+	}
+
 	config.LoadEnv()
 
 	cfg := config.NewConfig()
