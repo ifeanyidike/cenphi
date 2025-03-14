@@ -41,7 +41,7 @@ const Checkout = observer(() => {
 
   async function onComplete() {
     const user = authStore.currentUser;
-    await appService.onboard_partial(user?.uid!, planId as Plan);
+    await appService.onboard_partial(user?.uid || "", planId as Plan);
     setCurrentStep(2);
   }
 
