@@ -12,9 +12,9 @@ class AppService {
 
     reaction(
       () => this.healthy,
-      (healthy) => {
-        console.log("Health changed:", healthy);
-        // You could trigger notifications, update other state, etc.
+      (healthy: boolean) => {
+      console.log("Health changed:", healthy);
+      // You could trigger notifications, update other state, etc.
       }
     );
   }

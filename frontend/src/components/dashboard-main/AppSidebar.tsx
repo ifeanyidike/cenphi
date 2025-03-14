@@ -5,11 +5,11 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import { NavMain } from "./nav-main";
-import { NavProjects } from "./nav-projects";
-import { NavUser } from "./nav-user";
-import { TeamSwitcher } from "./team-switcher";
-import CenphiLogo from "./cenphi-logo";
+import { NavMain } from "./NavMain";
+import { NavProjects } from "./NavProjects";
+import { NavUser } from "./NavUser";
+import { TeamSwitcher } from "./TeamSwitcher";
+import CenphiLogo from "../custom/cenphi-logo";
 import * as React from "react";
 import {
   BarChart2,
@@ -27,6 +27,7 @@ import {
   Film,
   Trophy,
 } from "lucide-react";
+import { motion } from "framer-motion";
 
 const data = {
   user: {
@@ -326,19 +327,39 @@ const data = {
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  // const { theme } = useTheme();
+  const [mounted, setMounted] = React.useState(false);
+
+  // Handle hydration issues
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
   return (
-    <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
-      </SidebarHeader>
-      <SidebarContent>
-        <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
-      </SidebarContent>
-      <SidebarFooter>
-        <NavUser user={data.user} />
-      </SidebarFooter>
-      <SidebarRail />
-    </Sidebar>
+    <motion.div
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.5, ease: "easeOut" }}
+    >
+      <Sidebar
+        collapsible="icon"
+        className="backdrop-blur-lg bg-sidebar-bg/95 border-r border-sidebar-border/30 shadow-xl"
+        {...props}
+      >
+        <SidebarHeader className="px-2 py-3">
+          <TeamSwitcher teams={data.teams} />
+        </SidebarHeader>
+        <SidebarContent className="scrollbar-thin">
+          <NavMain items={data.navMain} />
+          <NavProjects projects={data.projects} />
+        </SidebarContent>
+        <SidebarFooter>
+          <NavUser user={data.user} />
+        </SidebarFooter>
+        <SidebarRail />
+      </Sidebar>
+    </motion.div>
   );
 }

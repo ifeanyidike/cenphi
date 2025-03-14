@@ -1,6 +1,7 @@
+// repositories/managers/memberManager.ts
 import { MemberDataParams } from "@/types/member";
 import { WorkspaceRepository } from "../workspaceRepository";
-import { runInAction } from "mobx";
+import { makeAutoObservable, runInAction } from "mobx";
 
 export class MembersManager {
   private server = import.meta.env.VITE_API_URL + "/team-member";
@@ -10,11 +11,11 @@ export class MembersManager {
 
   constructor(workspaceRepository: WorkspaceRepository) {
     this.workspaceRepository = workspaceRepository;
+    makeAutoObservable(this);
   }
 
   getUser = async (uid?: string) => {
-    const { token, currentUser } =
-      await this.workspaceRepository?.getFirebaseToken();
+    const { token, currentUser } = await this.workspaceRepository.getToken();
 
     const id = uid ?? currentUser.uid;
     this.loadingMembers = true;
@@ -39,9 +40,12 @@ export class MembersManager {
       console.log("response", await response.json());
       throw new Error("could not get user");
     } catch (error) {
+      console.error("Error fetching members:", error);
       throw error;
     } finally {
-      this.loadingMembers = false;
+      runInAction(() => {
+        this.loadingMembers = false;
+      });
     }
   };
 }

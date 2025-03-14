@@ -1,3 +1,4 @@
+// repositories/WorkspaceRepository.ts
 import { auth } from "@/config/firebase";
 import { Workspace } from "@/types/workspace";
 import { makeAutoObservable, observable } from "mobx";
@@ -19,7 +20,7 @@ export class WorkspaceRepository {
     });
   }
 
-  public async getFirebaseToken() {
+  public async getToken() {
     const currentUser = auth.currentUser;
     const token = await currentUser?.getIdToken();
     if (!currentUser?.uid || !token)
@@ -28,7 +29,7 @@ export class WorkspaceRepository {
   }
 
   async update(updates: Partial<Workspace>) {
-    const { token, currentUser } = await this.getFirebaseToken();
+    const { token, currentUser } = await this.getToken();
 
     let member = this.membersManager.member;
     if (!member) {
