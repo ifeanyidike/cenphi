@@ -12,11 +12,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { observer } from "mobx-react-lite";
-import { workspaceRepo } from "@/repositories/workspaceRepository";
+import { workspaceRepo } from "@/repositories/WorkspaceRepo";
 import { containerVariants, itemVariants } from "./constants";
 import { StatCard } from "./components";
 import { ContentView } from "./ContentView";
 import { EmptyStateView } from "./EmptyView";
+import { Testimonial } from "@/types/testimonial";
 
 const DashboardView: React.FC = observer(() => {
   useEffect(() => {
@@ -30,14 +31,14 @@ const DashboardView: React.FC = observer(() => {
 
   const hasTestimonials = testimonials?.length;
   const totalRating = testimonials?.reduce(
-    (acc, curr) => acc + (curr.rating || 0),
+    (acc: number, curr: Testimonial) => acc + (curr.rating || 0),
     0
   );
   const avgRating = testimonials?.length
     ? totalRating! / testimonials.length
     : "";
   const conversionRate = testimonials?.reduce(
-    (acc, curr) => acc + (curr.conversion_count || 0),
+    (acc: number, curr: Testimonial) => acc + (curr.conversion_count || 0),
     0
   );
 

@@ -8,7 +8,7 @@ import FAQ from "./FAQ";
 import CTA from "./CTA";
 import Decoration from "./Decoration";
 import { observer } from "mobx-react-lite";
-import { workspaceRepo } from "@/repositories/workspaceRepository";
+import { workspaceRepo } from "@/repositories/WorkspaceRepo";
 
 const PricingPage = observer(() => {
   const [annual, setAnnual] = useState(true);
