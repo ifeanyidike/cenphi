@@ -33,7 +33,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-go-
 
@@ -42,7 +42,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-pip-
 
@@ -111,7 +111,8 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Cache Docker layers
+      # Modified Docker layer cache to use GitHub SHA for cache busting
+      - name: Set up Docker Buildx cache
         uses: actions/cache@v3
         with:
           path: /tmp/.buildx-cache
@@ -182,11 +183,6 @@ jobs:
             echo "main.py found in ai-service directory."
           fi
 
-      - name: Install Docker Slim
-        run: |
-          curl -sL https://raw.githubusercontent.com/slimtoolkit/slim/master/scripts/install-slim.sh | sudo -E bash -
-          slim --version
-
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
 
@@ -205,6 +201,7 @@ jobs:
           echo "Checking Docker login status..."
           docker info
 
+      # Force rebuilding images with --no-cache option
       - name: Build and push ${{ matrix.service }} image
         uses: docker/build-push-action@v4
         with:
@@ -216,12 +213,20 @@ jobs:
             lorddickson/${{ matrix.service }}:${{ github.sha }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+            CACHE_BUSTER=${{ github.sha }}
 
       # Move cache for next job
       - name: Move cache
         run: |
           rm -rf /tmp/.buildx-cache
           mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+      # Clear old images after pushing
+      - name: Clean up old images
+        run: |
+          docker system prune -a -f
 
       # Verify the original image size before slimming
       - name: Verify original image size
@@ -374,7 +379,7 @@ jobs:
                 cat > /home/opc/app/docker-compose.prod.yaml << 'ENDOFFILE'
                 services:
                     api-server:
-                        image: lorddickson/ai-service:latest
+                        image: lorddickson/api-server:latest
                         ports:
                             - "8081:8081"
                         volumes:
@@ -396,6 +401,10 @@ jobs:
 
                 echo "Created basic Docker Compose files"
             fi
+
+            # Always force pull latest image before running deploy script
+            docker pull lorddickson/api-server:latest
+
             # Run deploy script with environment variables
             DB_USERNAME=$DB_USERNAME DB_PASSWORD=$DB_PASSWORD DB_HOST=$DB_HOST DB_PORT=$DB_PORT DB_NAME=$DB_NAME REDIS_HOST=$REDIS_HOST REDIS_PASSWORD=$REDIS_PASSWORD REDIS_PORT=$REDIS_PORT AWS_KEY=$AWS_KEY AWS_REGION=$AWS_REGION AWS_SECRET=$AWS_SECRET AWS_BUCKET_NAME=$AWS_BUCKET_NAME FIREBASE_KEY_JSON=$FIREBASE_KEY_JSON FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID GITHUB_SHA=$GITHUB_SHA ./api-deploy.sh
 
@@ -506,18 +515,25 @@ jobs:
                 services:
                     ai-service:
                         image: lorddickson/ai-service:latest
-                    ports:
-                        - "50052:50052"
-                    volumes:
-                        - ai-model-cache:/root/.cache/huggingface
-                    environment:
-                        - PYTHONUNBUFFERED=1
-                        - TRANSFORMERS_CACHE=/root/.cache/huggingface
-                        - PYTHON_ENV=production
-                    command: ["/opt/venv/bin/python", "main.py"]
+                        ports:
+                            - "50052:50052"
+                        volumes:
+                            - ai-model-cache:/root/.cache/huggingface
+                        environment:
+                            - PYTHONUNBUFFERED=1
+                            - TRANSFORMERS_CACHE=/root/.cache/huggingface
+                            - PYTHON_ENV=production
+                        command: ["/opt/venv/bin/python", "main.py"]
+                volumes:
+                    ai-model-cache:
             ENDOFFILE
 
                 echo "Created basic Docker Compose files"
             fi
+
+            # Always force pull latest image before running deploy script
+            docker pull lorddickson/ai-service:latest
+            docker pull lorddickson/ai-service:slim
+
             # Run deploy script with environment variables
             HF_TOKEN=$HF_TOKEN GITHUB_SHA=$GITHUB_SHA ./ai-deploy.sh
