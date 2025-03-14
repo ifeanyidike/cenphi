@@ -3,6 +3,7 @@ package models
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -38,9 +39,9 @@ type IntegrationSettings struct {
 
 type Workspace struct {
 	ID                  uuid.UUID            `json:"id" db:"id"`
-	Name                string               `json:"name" db:"name" validate:"required,min=3,max=255"`
+	Name                string               `json:"name" db:"name" validate:"omitempty,min=3,max=255"`
 	WebsiteURL          string               `json:"website_url,omitempty" db:"website_url" validate:"omitempty,url"`
-	Industry            string               `json:"industry" db:"industry" validate:"required,min=3,max=100"`
+	Industry            string               `json:"industry" db:"industry" validate:"omitempty,min=3,max=100"`
 	Plan                Plan                 `json:"plan" db:"plan" validate:"required,oneof=essentials growth accelerate transform enterprise"`
 	CustomDomain        string               `json:"custom_domain,omitempty" db:"custom_domain" validate:"omitempty,hostname_rfc1123"`
 	Settings            map[string]any       `json:"settings,omitempty" db:"settings"`
@@ -51,22 +52,66 @@ type Workspace struct {
 	UpdatedAt           time.Time            `json:"updated_at" db:"updated_at"`
 }
 
-func ValidateWorkspace(workspace *Workspace) error {
-	validate := validator.New()
-	if workspace.BrandingSettings != nil {
-		if err := validate.Struct(workspace.BrandingSettings); err != nil {
-			return fmt.Errorf("%w: %w", apperrors.ErrValidationFailed, err)
-		}
+func PrepareURL(url string) string {
+	// If the URL doesn't have a scheme, add https://
+	if url != "" && !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
+		return "https://" + url
 	}
-	if workspace.IntegrationSettings != nil {
-		if err := validate.Struct(workspace.IntegrationSettings); err != nil {
-			return fmt.Errorf("%w: %w", apperrors.ErrValidationFailed, err)
+	return url
+}
+
+func ValidateWorkspace(updates map[string]any) error {
+	validate := validator.New()
+	for field, value := range updates {
+		switch field {
+		case "name":
+			if name, ok := value.(string); ok {
+				if err := validate.Var(name, "omitempty,min=3,max=255"); err != nil {
+					return fmt.Errorf("%w: invalid name: %w", apperrors.ErrValidationFailed, err)
+				}
+			}
+		case "website_url":
+			if url, ok := value.(string); ok {
+				if err := validate.Var(url, "omitempty,url"); err != nil {
+					return fmt.Errorf("%w: invalid website URL: %w", apperrors.ErrValidationFailed, err)
+				}
+			}
+		case "industry":
+			if industry, ok := value.(string); ok {
+				if err := validate.Var(industry, "omitempty,min=3,max=100"); err != nil {
+					return fmt.Errorf("%w: invalid industry: %w", apperrors.ErrValidationFailed, err)
+				}
+			}
+		case "plan":
+			if plan, ok := value.(string); ok {
+				if err := validate.Var(plan, "required,oneof=essentials growth accelerate transform enterprise"); err != nil {
+					return fmt.Errorf("%w: invalid plan: %w", apperrors.ErrValidationFailed, err)
+				}
+			}
+		case "custom_domain":
+			if domain, ok := value.(string); ok {
+				if domain != "" {
+					if err := validate.Var(domain, "omitempty,hostname_rfc1123"); err != nil {
+						return fmt.Errorf("%w: invalid custom domain: %w", apperrors.ErrValidationFailed, err)
+					}
+				}
+			}
+		case "branding_settings":
+			if settings, ok := value.(*BrandingSettings); ok && settings != nil {
+				if err := validate.Struct(settings); err != nil {
+					return fmt.Errorf("%w: invalid branding settings: %w", apperrors.ErrValidationFailed, err)
+				}
+			}
+
+		case "integration_settings":
+			if settings, ok := value.(*IntegrationSettings); ok && settings != nil {
+				if err := validate.Struct(settings); err != nil {
+					return fmt.Errorf("%w: invalid integration settings: %w", apperrors.ErrValidationFailed, err)
+				}
+			}
 		}
 	}
 
-	if err := validate.Struct(workspace); err != nil {
-		return fmt.Errorf("%w: %w", apperrors.ErrValidationFailed, err)
-	}
 	return nil
 }
 

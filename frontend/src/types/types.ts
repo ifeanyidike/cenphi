@@ -20,9 +20,13 @@ export interface StatItem {
 }
 
 export interface ActionItem {
+  id?: string;
   label: string;
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   color: string;
+  bgColor?: string;
+  borderColor?: string;
+  hoverColor?: string;
   description: string;
 }
 
@@ -33,7 +37,7 @@ export interface MetricItem {
   trend: "up" | "down";
 }
 
-export interface ExtendedReview extends Omit<Review, 'id'> {
+export interface ExtendedReview extends Omit<Review, "id"> {
   id: number;
   duration: string;
   name: string;
@@ -43,6 +47,6 @@ export interface ExtendedReview extends Omit<Review, 'id'> {
   content: string;
   status: string;
   mediaType: string;
-  _animate?: boolean; 
+  _animate?: boolean;
   thumbnailUrl: string;
 }

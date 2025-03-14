@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   motion,
   AnimatePresence,
@@ -276,7 +276,8 @@ export const SignUpForm: React.FC<AuthFormProps & { onBack?: () => void }> =
             password: formData.password,
             confirmPassword: formData.confirmPassword,
           });
-          if (result?.user?.emailVerified) return navigate("/dashboard");
+          if (result?.user?.emailVerified)
+            return navigate("/pricing?workflow=onboarding");
           setStep(2);
         }
       };
@@ -284,7 +285,7 @@ export const SignUpForm: React.FC<AuthFormProps & { onBack?: () => void }> =
       const handleSocialLogin = async (provider: SocialProvider) => {
         const cred = await authStore.socialLoginPopup(provider);
         if (cred?.user?.emailVerified) {
-          return navigate("/dashboard");
+          return navigate("/pricing?workflow=onboarding");
         }
       };
 
@@ -930,6 +931,11 @@ export const SignUpForm: React.FC<AuthFormProps & { onBack?: () => void }> =
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                             className="group py-4 px-8 rounded-lg relative overflow-hidden"
+                            onClick={() => {
+                              if (authStore.user?.emailVerified) {
+                                navigate(`/pricing?workflow=onboarding`);
+                              }
+                            }}
                           >
                             <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 transition-all duration-300" />
                             <div className="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-300" />

@@ -89,6 +89,74 @@ h1 {
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* New test styles */
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+
+    /* Light mode sidebar */
+    --sidebar-bg: 210 40% 98%;
+    --sidebar-border: 216 34% 88%;
+    --sidebar-rail: 210 40% 96%;
+    --sidebar-foreground: 222.2 84% 4.9%;
+    --sidebar-muted: 215 16% 47%;
+    --sidebar-accent: 221 83% 53%;
+    --sidebar-primary: 221 83% 53%;
+    --sidebar-secondary: 262 83% 58%;
+    --sidebar-icon: 215 16% 47%;
+
+    /* Sidebar item states - light mode */
+    --sidebar-item-active: 221 83% 97%;
+    --sidebar-item-active-foreground: 221 83% 53%;
+    --sidebar-item-active-icon: 221 83% 53%;
+    --sidebar-item-hover: 216 34% 94%;
+    --sidebar-item-icon: 215 16% 47%;
+
+    /* Sidebar subitem states - light mode */
+    --sidebar-subitem-hover: 216 34% 94%;
+    --sidebar-subitem-foreground: 215 25% 27%;
+    --sidebar-subitem-icon: 215 16% 47%;
+
+    /* Sidebar action states - light mode */
+    --sidebar-action-hover: 216 34% 94%;
+    --sidebar-action-icon: 215 16% 47%;
+    --sidebar-action-icon-hover: 221 83% 53%;
+
+    /* Sidebar project states - light mode */
+    --sidebar-project-icon: 262 83% 58%;
+    --sidebar-project-accent: 262 83% 58%;
+
+    /* Sidebar user states - light mode */
+    --sidebar-user-hover: 221 83% 53%;
+    --sidebar-user-active: 221 83% 53%;
+    --sidebar-user-border: 210 40% 98%;
+    --sidebar-user-fallback-from: 221 83% 53%;
+    --sidebar-user-fallback-to: 262 83% 58%;
+    --sidebar-user-fallback-text: 210 40% 98%;
+
+    /* Dropdown menu - light mode */
+    --dropdown-bg: 210 40% 98%;
+    --dropdown-border: 216 34% 88%;
+    --dropdown-foreground: 222.2 84% 4.9%;
+    --dropdown-muted: 215 16% 47%;
+    --dropdown-muted-foreground: 215 16% 47%;
+    --dropdown-hover: 216 34% 94%;
+    --dropdown-accent: 221 83% 53%;
+    --dropdown-primary: 221 83% 53%;
+    --dropdown-secondary: 262 83% 58%;
+    --dropdown-icon: 215 16% 47%;
+    --dropdown-icon-hover: 221 83% 53%;
+    --dropdown-selected: 221 83% 53%;
+    --dropdown-selected-foreground: 210 40% 98%;
+    --dropdown-danger: 0 91% 71%;
+    --dropdown-badge: 221 83% 53%;
+    --dropdown-badge-foreground: 210 40% 98%;
+
+    /* Dropdown user states - light mode */
+    --dropdown-user-border: 210 40% 98%;
+    --dropdown-user-fallback-from: 221 83% 53%;
+    --dropdown-user-fallback-to: 262 83% 58%;
+    --dropdown-user-fallback-text: 210 40% 98%;
   }
   .dark {
     --background: 0 0% 3.9%;
@@ -123,6 +191,68 @@ h1 {
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* New test styles */
+    --sidebar-bg: 224 71% 4%;
+    --sidebar-border: 215 27% 17%;
+    --sidebar-rail: 222 47% 11%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-muted: 215 20% 65%;
+    --sidebar-accent: 217 91% 60%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-secondary: 263 85% 74%;
+    --sidebar-icon: 215 20% 65%;
+
+    /* Sidebar item states - dark mode */
+    --sidebar-item-active: 217 91% 12%;
+    --sidebar-item-active-foreground: 210 40% 98%;
+    --sidebar-item-active-icon: 217 91% 60%;
+    --sidebar-item-hover: 215 27% 16%;
+    --sidebar-item-icon: 215 20% 65%;
+
+    /* Sidebar subitem states - dark mode */
+    --sidebar-subitem-hover: 215 27% 16%;
+    --sidebar-subitem-foreground: 215 20% 80%;
+    --sidebar-subitem-icon: 215 20% 65%;
+
+    /* Sidebar action states - dark mode */
+    --sidebar-action-hover: 215 27% 16%;
+    --sidebar-action-icon: 215 20% 65%;
+    --sidebar-action-icon-hover: 217 91% 60%;
+
+    /* Sidebar project states - dark mode */
+    --sidebar-project-icon: 263 85% 74%;
+    --sidebar-project-accent: 263 85% 74%;
+
+    /* Sidebar user states - dark mode */
+    --sidebar-user-hover: 217 91% 60%;
+    --sidebar-user-active: 217 91% 60%;
+    --sidebar-user-border: 222 47% 11%;
+    --sidebar-user-fallback-from: 217 91% 60%;
+    --sidebar-user-fallback-to: 263 85% 74%;
+    --sidebar-user-fallback-text: 210 40% 98%;
+
+    /* Dropdown menu - dark mode */
+    --dropdown-bg: 224 71% 4%;
+    --dropdown-border: 215 27% 17%;
+    --dropdown-foreground: 210 40% 98%;
+    --dropdown-muted: 215 20% 65%;
+    --dropdown-muted-foreground: 215 20% 65%;
+    --dropdown-hover: 215 27% 16%;
+    --dropdown-accent: 217 91% 60%;
+    --dropdown-primary: 217 91% 60%;
+    --dropdown-secondary: 263 85% 74%;
+    --dropdown-icon: 215 20% 65%;
+    --dropdown-icon-hover: 217 91% 60%;
+    --dropdown-selected: 217 91% 60%;
+    --dropdown-selected-foreground: 210 40% 98%;
+    --dropdown-danger: 0 91% 71%;
+    --dropdown-badge: 217 91% 60%;
+    --dropdown-badge-foreground: 210 40% 98%;
+
+    /* Dropdown user states - dark mode */
+    --dropdown-user-border: 222 47% 11%;
+    --dropdown-user-fallback-from: 217 91% 60%;
   }
 }
 

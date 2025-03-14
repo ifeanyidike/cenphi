@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"github.com/ifeanyidike/cenphi/internal/models"
 	"github.com/ifeanyidike/cenphi/internal/services"
 	"github.com/ifeanyidike/cenphi/internal/utils"
@@ -14,6 +15,7 @@ import (
 type TestimonialController interface {
 	HandleAPISubmission(w http.ResponseWriter, r *http.Request)
 	TriggerSync(w http.ResponseWriter, r *http.Request)
+	GetByWorkspaceID(w http.ResponseWriter, r *http.Request)
 }
 
 type testimonialController struct {
@@ -56,4 +58,26 @@ func (c *testimonialController) TriggerSync(w http.ResponseWriter, r *http.Reque
 	}
 
 	utils.RespondWithJSON(w, http.StatusOK, "sync initiated")
+}
+
+func (c *testimonialController) GetByWorkspaceID(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "workspaceID")
+	id, err := uuid.Parse(idStr)
+	if err != nil || id == uuid.Nil {
+		c.logger.Error("invalid workspace ID", zap.String("workspace ID", idStr), zap.Error(err))
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid or missing ID")
+		return
+	}
+
+	queryParams := r.URL.Query()
+	filters := models.GetFilterFromParam(queryParams)
+
+	testimonials, err := c.svc.FetchByWorkspaceID(r.Context(), id, filters)
+	if err != nil {
+		c.logger.Error("failed to get testimonial", zap.String("testimonial ID", id.String()), zap.Error(err))
+		utils.RespondWithError(w, http.StatusNotFound, err.Error())
+		return
+	}
+
+	utils.RespondWithJSON(w, http.StatusOK, testimonials)
 }

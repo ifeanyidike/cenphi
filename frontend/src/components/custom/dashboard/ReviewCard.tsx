@@ -23,10 +23,13 @@ export const ReviewCard = ({ review }: { review: Review }) => (
             <Badge
               variant="outline"
               className={
-                review.status === "New" ? "bg-green-50 text-green-600" :
-                review.status === "Replied" ? "bg-blue-50 text-blue-600" :
-                review.status === "Verified" ? "bg-yellow-50 text-yellow-600" :
-                "bg-purple-50 text-purple-600"
+                review.status === "New"
+                  ? "bg-green-50 text-green-600"
+                  : review.status === "Replied"
+                  ? "bg-blue-50 text-blue-600"
+                  : review.status === "Verified"
+                  ? "bg-yellow-50 text-yellow-600"
+                  : "bg-purple-50 text-purple-600"
               }
             >
               {review.status}
@@ -39,20 +42,26 @@ export const ReviewCard = ({ review }: { review: Review }) => (
           <Star
             key={i}
             className={`h-4 w-4 ${
-              i < review.rating ? "text-yellow-400 fill-yellow-400" : "text-gray-200"
+              i < review.rating
+                ? "text-yellow-400 fill-yellow-400"
+                : "text-gray-200"
             }`}
           />
         ))}
       </div>
     </div>
-    
+
     <div className="mt-3">
       <p className="text-gray-700">{review.content}</p>
     </div>
-    
-    {review.mediaType === "audio" && <AudioPlayer review={review as ExtendedReview} />}
-    {review.mediaType === "video" && <VideoPlayer review={review as ExtendedReview} />}
-    
+
+    {review.mediaType === "audio" && (
+      <AudioPlayer review={review as ExtendedReview} />
+    )}
+    {review.mediaType === "video" && (
+      <VideoPlayer review={review as ExtendedReview} />
+    )}
+
     <div className="mt-4 pt-4 border-t flex justify-between">
       <div className="flex space-x-2">
         <button className="text-gray-500 flex items-center hover:text-purple-600">

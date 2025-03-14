@@ -5,6 +5,8 @@ import confetti from "canvas-confetti";
 import Navbar from "@/components/nav";
 import Footer from "@/components/custom/footer";
 import { FirebaseErrorHandler } from "@/services/error";
+import { authStore } from "@/stores/authStore";
+import { observer } from "mobx-react-lite";
 
 // Verification states
 type VerificationStatus = "loading" | "success" | "error";
@@ -14,7 +16,7 @@ type Props = {
   mode: "verifyEmail";
 };
 
-const EmailVerificationPage: React.FC<Props> = (props) => {
+const EmailVerificationPage: React.FC<Props> = observer((props) => {
   const [status, setStatus] = useState<VerificationStatus>("loading");
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [countdown, setCountdown] = useState<number>(5);
@@ -33,6 +35,13 @@ const EmailVerificationPage: React.FC<Props> = (props) => {
         }
 
         await applyActionCode(auth, props.oobCode);
+        const resp = await authStore.verifyEmail();
+
+        if (resp?.error) {
+          setStatus("error");
+          setErrorMessage(resp.error);
+          return;
+        }
 
         // If successful, update status and trigger confetti
         setStatus("success");
@@ -115,7 +124,9 @@ const EmailVerificationPage: React.FC<Props> = (props) => {
                     </p>
                   </div>
                   <button
-                    onClick={() => (window.location.href = "/onboarding")}
+                    onClick={() =>
+                      (window.location.href = "/pricing?workflow=onboarding")
+                    }
                     className="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
                   >
                     Go to Onboarding Now
@@ -169,6 +180,6 @@ const EmailVerificationPage: React.FC<Props> = (props) => {
       <Footer />
     </div>
   );
-};
+});
 
 export default EmailVerificationPage;

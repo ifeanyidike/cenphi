@@ -154,6 +154,12 @@ if [ -z "$AWS_KEY" ] || [ -z "$AWS_REGION" ] || [ -z "$AWS_SECRET" ] || [ -z "$A
     exit 1
 fi
 
+if [ -z "$FIREBASE_KEY_JSON" ] || [ -z "$FIREBASE_PROJECT_ID" ]; then
+    echo "Error: Firebase Key JSON or Firebase Project ID are not set!"
+    echo "Required: FIREBASE_KEY_JSON, FIREBASE_PROJECT_ID"
+    exit 1
+fi
+
 # Check for GITHUB_SHA
 if [ -n "$GITHUB_SHA" ]; then
     echo "Deploying specific version: $GITHUB_SHA"
@@ -183,6 +189,7 @@ AWS_KEY=$AWS_KEY
 AWS_REGION=$AWS_REGION
 AWS_SECRET=$AWS_SECRET
 AWS_BUCKET_NAME=$AWS_BUCKET_NAME
+FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID
 DB_NAME=postgres
 AI_SERVICE_HOST=ai-service
 AI_SERVICE_PORT=50052

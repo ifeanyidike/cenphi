@@ -2,10 +2,12 @@ package middleware
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 
 	firebase "firebase.google.com/go/v4"
+	"github.com/ifeanyidike/cenphi/internal/config"
 	"go.uber.org/zap"
 	"google.golang.org/api/option"
 )
@@ -20,7 +22,14 @@ type AuthMiddleware struct {
 }
 
 func NewAuthMiddleware(projectID string, logger *zap.Logger) (*AuthMiddleware, error) {
-	opt := option.WithCredentialsFile("../../cenphiio-service-account.json")
+	credentialsFile := "cenphiio-service-account.json"
+	path, err := config.FindFile(credentialsFile)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to find credentials file: %w", err)
+	}
+
+	opt := option.WithCredentialsFile(path)
 	app, err := firebase.NewApp(context.Background(), nil, opt)
 	if err != nil {
 		return nil, err

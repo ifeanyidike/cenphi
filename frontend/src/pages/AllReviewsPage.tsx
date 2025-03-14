@@ -1,11 +1,10 @@
-
-import AllReviews from '@/components/custom/dashboard/AllReviews'
+import AllReviews from "@/components/custom/dashboard/AllReviews";
 const AllReviewsPage = () => {
   return (
     <div>
-        <AllReviews /> 
+      <AllReviews />
     </div>
-  )
-}
+  );
+};
 
-export default AllReviewsPage
+export default AllReviewsPage;

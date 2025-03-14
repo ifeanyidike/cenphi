@@ -44,25 +44,23 @@ func TestOnboardingService_OnboardOwner(t *testing.T) {
 
 	// Test data
 	userID := uuid.New()
+	uid := "firebase_uid"
 	workspace := &models.Workspace{
-		ID:           uuid.New(),
-		Name:         utils.RandomString(12),
-		WebsiteURL:   utils.GenerateRandomUrl(),
-		Plan:         models.PlanEssential,
-		CustomDomain: utils.GenerateRandomUrl(),
+		ID:   uuid.New(),
+		Plan: models.PlanEssential,
 	}
 	teamMember := &models.TeamMember{
 		ID:          uuid.New(),
 		Role:        models.Admin,
 		UserID:      userID,
 		WorkspaceID: workspace.ID,
-		Settings:    make(map[string]interface{}),
-		Permissions: make(map[string]interface{}),
+		Settings:    make(map[string]any),
+		Permissions: make(map[string]any),
 		CreatedAt:   time.Now(),
 	}
 
 	// Mock repository responses
-	mockUserRepo.On("GetByID", mock.Anything, userID, mock.AnythingOfType("*sql.Tx")).Return(&models.User{
+	mockUserRepo.On("FindByUID", mock.Anything, uid, mock.AnythingOfType("*sql.Tx")).Return(&models.User{
 		ID:          userID,
 		Email:       utils.GenerateRandomEmail(),
 		FirebaseUID: utils.RandomString(10),
@@ -74,7 +72,7 @@ func TestOnboardingService_OnboardOwner(t *testing.T) {
 	mockTeamMemberRepo.On("Create", mock.Anything, teamMember, mock.AnythingOfType("*sql.Tx")).Return(nil)
 
 	// Test the OnboardOwner method
-	err = svc.OnboardOwner(context.Background(), userID, workspace, teamMember)
+	err = svc.OnboardOwner(context.Background(), uid, workspace, teamMember)
 	assert.NoError(t, err)
 
 	// Assert that all expectations were met
@@ -113,6 +111,7 @@ func TestOnboardingService_OnboardOwner_Error(t *testing.T) {
 	svc := NewOnboardingService(mockRepo, db)
 
 	// Test data
+	uid := "firebase_uid"
 	userID := uuid.New()
 	workspace := &models.Workspace{
 		ID:           uuid.New(),
@@ -132,10 +131,10 @@ func TestOnboardingService_OnboardOwner_Error(t *testing.T) {
 	}
 
 	// Mock repository responses to simulate an error
-	mockUserRepo.On("GetByID", mock.Anything, userID, mock.AnythingOfType("*sql.Tx")).Return(nil, sql.ErrNoRows)
+	mockUserRepo.On("FindByUID", mock.Anything, uid, mock.AnythingOfType("*sql.Tx")).Return(nil, sql.ErrNoRows)
 
 	// Test the OnboardOwner method
-	err = svc.OnboardOwner(context.Background(), userID, workspace, teamMember)
+	err = svc.OnboardOwner(context.Background(), uid, workspace, teamMember)
 	assert.Error(t, err)
 	assert.Equal(t, sql.ErrNoRows, err)
 

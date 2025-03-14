@@ -8,9 +8,13 @@ DB_URL ?= postgres://${DB_USERNAME}:${DB_PASSWORD}@${DB_HOST}/${DB_NAME}?sslmode
 MIGRATIONS_DIR=./scripts/migrations
 NETWORK=$(shell docker network ls --filter name=cenphi_default --filter driver=bridge --format "{{.ID}}")
 MIGRATE_CMD=docker run --rm --network=${NETWORK} -v $(shell pwd)/scripts/migrations:/migrations migrate/migrate 
+MOCKGEN  ?= mockgen
+SRC_DIR  ?= ./internal/services
+DEST_DIR ?= ./internal/services/mocks
+SERVICE  ?= onboarding_service
 
 # Targets
-.PHONY: all up down create init-db swagger
+.PHONY: all up down create init-db swagger mock
 
 all: up
 
@@ -44,3 +48,6 @@ init-db:
 	docker exec -it cenphi_postgres psql -U ${DB_USERNAME} -d ${DB_NAME} -f ./scripts/init_db.sql
 swagger:
 	swag init -g cmd/main.go --parseDependency
+
+mock:
+	$(MOCKGEN) -source=$(SRC_DIR)/$(SERVICE).go -destination=$(DEST_DIR)/mock_$(SERVICE).go -package=mocks
