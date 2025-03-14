@@ -7,7 +7,7 @@ import { FormErrors, OnboardingFormData } from "./types";
 import { companySizes, industries, stepSetup } from "./data";
 import FeaturesColumn from "./FeaturesColumn";
 import Form from "./Form";
-import { workspaceRepo } from "@/repositories/workspaceRepository";
+import { workspaceRepo } from "@/repositories/WorkspaceRepo";
 import { observer } from "mobx-react-lite";
 
 const Onboarding: React.FC = observer(() => {

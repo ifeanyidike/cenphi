@@ -10,7 +10,7 @@ import CTA from "@/components/pricing/CTA";
 import Navbar from "@/components/nav";
 import Footer from "@/components/custom/footer";
 import { observer } from "mobx-react-lite";
-import { workspaceRepo } from "@/repositories/workspaceRepository";
+import { workspaceRepo } from "@/repositories/WorkspaceRepo";
 
 const PricingPage = observer(() => {
   const [annual, setAnnual] = useState(true);
