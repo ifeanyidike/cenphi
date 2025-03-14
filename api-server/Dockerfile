@@ -83,12 +83,51 @@
 
 # ENTRYPOINT ["/app/api"]
 
+# FROM golang:1.23.1-alpine AS builder
+
+# WORKDIR /app
+
+# # Install build dependencies + timezone data if needed
+# RUN apk add --no-cache make git tzdata
+
+# COPY go.mod go.sum ./
+# RUN go mod download
+
+# COPY . .
+
+# # Build static binary with optimizations
+# RUN CGO_ENABLED=0 go build \
+#     -ldflags="-s -w" \
+#     -trimpath \
+#     -o /app/api \
+#     ./cmd
+
+# # Final stage - Minimal Image
+# FROM scratch
+
+# # Set the working directory to /app
+# WORKDIR /app
+
+# # Copy SSL certificates for HTTPS calls
+# #COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+
+# # Copy binary
+# COPY --from=builder /app/api .
+
+# # Create a simple init script to handle .env file or env vars
+# COPY --from=builder /app/scripts/docker-entrypoint.sh /app/docker-entrypoint.sh
+
+# EXPOSE 8081
+
+# ENTRYPOINT ["/app/api"]
+
+
 FROM golang:1.23.1-alpine AS builder
 
 WORKDIR /app
 
 # Install build dependencies + timezone data if needed
-RUN apk add --no-cache make git tzdata
+RUN apk add --no-cache make git tzdata ca-certificates
 
 COPY go.mod go.sum ./
 RUN go mod download
@@ -103,13 +142,16 @@ RUN CGO_ENABLED=0 go build \
     ./cmd
 
 # Final stage - Minimal Image
-FROM scratch
+FROM alpine:latest
 
 # Set the working directory to /app
 WORKDIR /app
 
+# Install CA certificates
+RUN apk add --no-cache ca-certificates
+
 # Copy SSL certificates for HTTPS calls
-#COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 # Copy binary
 COPY --from=builder /app/api .
