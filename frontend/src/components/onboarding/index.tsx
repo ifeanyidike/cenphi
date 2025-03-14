@@ -7,8 +7,10 @@ import { FormErrors, OnboardingFormData } from "./types";
 import { companySizes, industries, stepSetup } from "./data";
 import FeaturesColumn from "./FeaturesColumn";
 import Form from "./Form";
+import { observer } from "mobx-react-lite";
+import { workspaceHub } from "@/repo/workspace_hub";
 
-const Onboarding: React.FC = () => {
+const Onboarding: React.FC = observer(() => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState<OnboardingFormData>({
     businessName: "",
@@ -21,6 +23,11 @@ const Onboarding: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [progress, setProgress] = useState(25);
   const [formCompleted, setFormCompleted] = useState(false);
+  // const [initialized, setInitialized] = useState(false);
+
+  // useEffect(() => {
+  //   if (initialized) return;
+  // }, []);
 
   useEffect(() => {
     setProgress(currentStep * 25);
@@ -98,7 +105,13 @@ const Onboarding: React.FC = () => {
 
     try {
       // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      //   await new Promise((resolve) => setTimeout(resolve, 1500));
+      const updates = {
+        name: formData.businessName,
+        website_url: formData.websiteUrl,
+        industry: formData.industry,
+      };
+      await workspaceHub.update(updates);
       setFormCompleted(true);
     } catch (error) {
       console.error("Onboarding error:", error);
@@ -275,22 +288,6 @@ const Onboarding: React.FC = () => {
               <FeaturesColumn />
             </div>
           )}
-
-          {/* Footer */}
-          {/* <footer className="mt-16 text-center text-sm text-gray-500">
-            <div className="flex justify-center space-x-6 mb-4">
-              <a href="#" className="hover:text-gray-800 transition-colors">
-                Privacy Policy
-              </a>
-              <a href="#" className="hover:text-gray-800 transition-colors">
-                Terms of Service
-              </a>
-              <a href="#" className="hover:text-gray-800 transition-colors">
-                Help Center
-              </a>
-            </div>
-            <p>© {new Date().getFullYear()} Cenphi.io. All rights reserved.</p>
-          </footer> */}
         </div>
       </div>
       <Footer />
@@ -349,6 +346,6 @@ const Onboarding: React.FC = () => {
       `}</style>
     </div>
   );
-};
+});
 
 export default Onboarding;

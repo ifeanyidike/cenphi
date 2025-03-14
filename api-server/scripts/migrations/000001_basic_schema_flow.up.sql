@@ -57,9 +57,9 @@ CREATE TABLE audit_log (
 -- Core tables
 CREATE TABLE workspaces (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name VARCHAR(255) NOT NULL,
-    website_url VARCHAR(255) NOT NULL,
-    industry VARCHAR(100) NOT NULL,
+    name VARCHAR(255),
+    website_url VARCHAR(255),
+    industry VARCHAR(100),
     plan workspace_plan DEFAULT 'essentials',
     settings JSONB DEFAULT '{}',
     branding_settings JSONB DEFAULT '{}',
@@ -79,6 +79,7 @@ CREATE TABLE users (
     settings JSONB DEFAULT '{}',
     permissions JSONB DEFAULT '{}',
     last_active_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -89,6 +90,7 @@ CREATE TABLE team_members (
     role member_role NOT NULL,
     settings JSONB DEFAULT '{}',
     permissions JSONB DEFAULT '{}',
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(workspace_id, user_id)
 );

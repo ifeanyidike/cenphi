@@ -69,6 +69,37 @@ func TestUserRepository(t *testing.T) {
 		assert.Equal(t, newUserName, storedUser.Name)
 	})
 
+	t.Run("UpdateUserAny", func(t *testing.T) {
+		// Create a user to update.
+		user := &models.User{
+			ID:            uuid.New(),
+			Email:         utils.GenerateRandomEmail(),
+			FirebaseUID:   utils.RandomString(10),
+			EmailVerified: false,
+			Name:          utils.RandomString(12),
+			CreatedAt:     time.Now(),
+			UpdatedAt:     time.Now(),
+		}
+		err := repo.Create(context.Background(), user, db)
+		require.NoError(t, err)
+
+		newUserName := utils.RandomString(10)
+
+		updates := map[string]any{
+			"email_verified": true,
+			"name":           newUserName,
+			"updated_at":     time.Now(),
+		}
+
+		err = repo.UpdateAny(context.Background(), updates, user.FirebaseUID, db)
+		require.NoError(t, err)
+
+		// Verify the update.
+		storedUser, err := repo.FindByUID(context.Background(), user.FirebaseUID, db)
+		require.NoError(t, err)
+		assert.Equal(t, newUserName, storedUser.Name)
+	})
+
 	t.Run("DeleteUser", func(t *testing.T) {
 		// Create a user to delete.
 		user := &models.User{

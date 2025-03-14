@@ -18,6 +18,8 @@ import (
 
 type TeamMemberController interface {
 	GetTeamMember(w http.ResponseWriter, r *http.Request)
+	GetTeamMemberByUserID(w http.ResponseWriter, r *http.Request)
+	GetTeamMemberByFirebaseUID(w http.ResponseWriter, r *http.Request)
 	CreateTeamMember(w http.ResponseWriter, r *http.Request)
 	DeleteTeamMember(w http.ResponseWriter, r *http.Request)
 	GetTeamMembers(w http.ResponseWriter, r *http.Request)
@@ -26,10 +28,11 @@ type TeamMemberController interface {
 type teamMemberController struct {
 	logger  *zap.Logger
 	service services.TeamMemberService
+	userSvc services.UserService
 }
 
-func NewTeamMemberController(service services.TeamMemberService, logger *zap.Logger) TeamMemberController {
-	return &teamMemberController{logger: logger, service: service}
+func NewTeamMemberController(service services.TeamMemberService, userSvc services.UserService, logger *zap.Logger) TeamMemberController {
+	return &teamMemberController{logger: logger, service: service, userSvc: userSvc}
 }
 
 // GetTeamMember Gets team member data by its ID.
@@ -60,6 +63,72 @@ func (c *teamMemberController) GetTeamMember(w http.ResponseWriter, r *http.Requ
 	}
 
 	utils.RespondWithJSON(w, http.StatusOK, user)
+}
+
+// GetTeamMemberByUserID Gets team member data by userID.
+// @Summary Get Team Member by by userID.
+// @Description Fetch a team member by userID.
+// @Tags TeamMembers
+// @Accept json
+// @Produce json
+// @Param id path string true "ID"
+// @Success 200 {object} models.TeamMember
+// @Failure 400 {object} utils.ErrorResponse
+// @Failure 404 {object} utils.ErrorResponse
+// @Router /team-member [get]
+func (c *teamMemberController) GetTeamMemberByUserID(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idStr)
+	if err != nil || id == uuid.Nil {
+		c.logger.Error("invalid team member ID", zap.String("team member ID", idStr), zap.Error(err))
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid or missing ID")
+		return
+	}
+
+	teammember, err := c.service.GetTeamMemberDataByUserID(r.Context(), id)
+	if err != nil {
+		c.logger.Error("failed to get team member", zap.String("team member ID", id.String()), zap.Error(err))
+		utils.RespondWithError(w, http.StatusNotFound, err.Error())
+		return
+	}
+
+	utils.RespondWithJSON(w, http.StatusOK, teammember)
+}
+
+// GetTeamMemberByFirebaseUID Gets team member data by FirebaseUID.
+// @Summary Get Team Member by by FirebaseUID.
+// @Description Fetch a team member by FirebaseUID.
+// @Tags TeamMembers
+// @Accept json
+// @Produce json
+// @Param id path string true "ID"
+// @Success 200 {object} models.TeamMember
+// @Failure 400 {object} utils.ErrorResponse
+// @Failure 404 {object} utils.ErrorResponse
+// @Router /team-member [get]
+func (c *teamMemberController) GetTeamMemberByFirebaseUID(w http.ResponseWriter, r *http.Request) {
+	uid := chi.URLParam(r, "id")
+	if uid == "" {
+		c.logger.Error("invalid user firebase uid", zap.String("user firebase uid", uid))
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid or missing ID")
+		return
+	}
+
+	user, err := c.userSvc.FindByUID(r.Context(), uid)
+	if err != nil {
+		c.logger.Error("failed to get user", zap.String("Firebase UID", uid), zap.Error(err))
+		utils.RespondWithError(w, http.StatusNotFound, err.Error())
+		return
+	}
+
+	member, err := c.service.GetTeamMemberDataByUserID(r.Context(), user.ID)
+	if err != nil {
+		c.logger.Error("failed to get team member", zap.String("team member ID", user.ID.String()), zap.Error(err))
+		utils.RespondWithError(w, http.StatusNotFound, err.Error())
+		return
+	}
+
+	utils.RespondWithJSON(w, http.StatusOK, member)
 }
 
 // CreateTeamMember creates a new team member.
