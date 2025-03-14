@@ -183,6 +183,11 @@ jobs:
             echo "main.py found in ai-service directory."
           fi
 
+      - name: Install Docker Slim
+        run: |
+          curl -sL https://raw.githubusercontent.com/slimtoolkit/slim/master/scripts/install-slim.sh | sudo -E bash -
+          slim --version
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
 
