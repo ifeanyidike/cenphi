@@ -10,7 +10,7 @@ import CTA from "@/components/pricing/CTA";
 import Navbar from "@/components/nav";
 import Footer from "@/components/custom/footer";
 import { observer } from "mobx-react-lite";
-import { workspaceRepo } from "@/repositories/workspace";
+import { workspaceHub } from "@/repo/workspace";
 
 const PricingPage = observer(() => {
   const [annual, setAnnual] = useState(true);
@@ -20,7 +20,7 @@ const PricingPage = observer(() => {
 
   useEffect(() => {
     (async () => {
-      await workspaceRepo.membersManager.getUser();
+      await workspaceHub.memberManager.getUser();
     })();
   }, []);
 
@@ -81,9 +81,7 @@ const PricingPage = observer(() => {
                 activePlan={activePlan}
                 setActivePlan={setActivePlan}
                 annual={annual}
-                currentPlan={
-                  workspaceRepo.membersManager.member?.workspace_plan
-                }
+                currentPlan={workspaceHub.memberManager.member?.workspace_plan}
               />
             ))}
           </motion.div>

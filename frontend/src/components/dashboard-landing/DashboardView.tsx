@@ -12,22 +12,22 @@ import {
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { observer } from "mobx-react-lite";
-import { workspaceRepo } from "@/repositories/workspace";
 import { containerVariants, itemVariants } from "./constants";
 import { StatCard } from "./components";
 import { ContentView } from "./ContentView";
 import { EmptyStateView } from "./EmptyView";
 import { Testimonial } from "@/types/testimonial";
+import { workspaceHub } from "@/repo/workspace";
 
 const DashboardView: React.FC = observer(() => {
   useEffect(() => {
     (async () => {
-      await workspaceRepo.testimonialManager.getTestimonials();
+      await workspaceHub.testimonialManager.getTestimonials();
     })();
   }, []);
 
-  const testimonials = workspaceRepo.testimonialManager.testimonials;
-  const isLoading = workspaceRepo.testimonialManager.loading_testimonials;
+  const testimonials = workspaceHub.testimonialManager.testimonials;
+  const isLoading = workspaceHub.testimonialManager.loading_testimonials;
 
   const hasTestimonials = testimonials?.length;
   const totalRating = testimonials?.reduce(

@@ -1,5 +1,5 @@
 import { auth } from "@/config/firebase";
-import { workspaceRepo } from "@/repositories/workspace";
+import { workspaceHub } from "@/repo/workspace";
 import { MemberDataParams } from "@/types/member";
 import { useEffect, useState } from "react";
 
@@ -13,7 +13,7 @@ const useGetMember = (authLoading: boolean) => {
         return;
       }
 
-      let member = workspaceRepo.membersManager.member;
+      let member = workspaceHub.memberManager.member;
       if (member) {
         setMember(member);
         return;
@@ -23,7 +23,7 @@ const useGetMember = (authLoading: boolean) => {
       const uid = auth.currentUser?.uid;
 
       if (uid && !member) {
-        member = await workspaceRepo.membersManager.getUser(uid);
+        member = await workspaceHub.memberManager.getUser(uid);
         setMember(member);
       }
       setLoading(false);
