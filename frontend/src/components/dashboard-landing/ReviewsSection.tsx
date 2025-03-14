@@ -265,40 +265,46 @@ export const ReviewsSection = observer(
           </div>
 
           {/* Category tabs */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
-            <TabsList className="bg-gray-100 dark:bg-gray-700 p-1">
-              <TabsTrigger
-                value="all"
-                className="text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800"
-              >
-                All Reviews
-              </TabsTrigger>
-              <TabsTrigger
-                value="new"
-                className="text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800"
-              >
-                New
-              </TabsTrigger>
-              <TabsTrigger
-                value="featured"
-                className="text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800"
-              >
-                Featured
-              </TabsTrigger>
-              <TabsTrigger
-                value="verified"
-                className="text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800"
-              >
-                Verified
-              </TabsTrigger>
-              <TabsTrigger
-                value="media"
-                className="text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800"
-              >
-                With Media
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <div className="mt-4 overflow-x-auto scrollbar-hide">
+            <Tabs
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="mt-4"
+            >
+              <TabsList className="bg-gray-100 dark:bg-gray-700 p-1">
+                <TabsTrigger
+                  value="all"
+                  className="text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800"
+                >
+                  All Reviews
+                </TabsTrigger>
+                <TabsTrigger
+                  value="new"
+                  className="text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800"
+                >
+                  New
+                </TabsTrigger>
+                <TabsTrigger
+                  value="featured"
+                  className="text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800"
+                >
+                  Featured
+                </TabsTrigger>
+                <TabsTrigger
+                  value="verified"
+                  className="text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800"
+                >
+                  Verified
+                </TabsTrigger>
+                <TabsTrigger
+                  value="media"
+                  className="text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800"
+                >
+                  With Media
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
 
           {/* Show active filters if any */}
           {activeFilters.length > 0 && (
