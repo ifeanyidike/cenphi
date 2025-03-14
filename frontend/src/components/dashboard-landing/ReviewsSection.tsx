@@ -17,10 +17,11 @@ import { Button } from "@/components/ui/button";
 import FilterMenu from "@/components/custom/dashboard/FilterMenu";
 import { useNavigate } from "react-router-dom";
 import { observer } from "mobx-react-lite";
-import { workspaceRepo } from "@/repositories/workspaceRepository";
+import { workspaceRepo } from "@/repositories/WorkspaceRepo";
 import { ReviewCard } from "./ReviewCard";
 import { ReviewListItem } from "./ReviewListItem";
 import LoadingSkeleton from "./LoadingSkeleton";
+import { Testimonial } from "@/types/testimonial";
 
 interface ReviewsSectionProps {
   fullWidth?: boolean;
@@ -119,7 +120,7 @@ export const ReviewsSection = observer(
     ];
 
     // Filter reviews based on activeFilters and tab
-    const filteredReviews = recentTestimonials.filter((review) => {
+    const filteredReviews = recentTestimonials.filter((review: Testimonial) => {
       // First filter by tab
       if (activeTab !== "all") {
         switch (activeTab) {
@@ -355,7 +356,7 @@ export const ReviewsSection = observer(
                       : "md:grid-cols-2"
                   } gap-4`}
                 >
-                  {filteredReviews.map((review) => (
+                  {filteredReviews.map((review: Testimonial) => (
                     <ReviewCard key={review.id} review={review!} />
                   ))}
                 </motion.div>
@@ -367,7 +368,7 @@ export const ReviewsSection = observer(
                   exit={{ opacity: 0 }}
                   className="space-y-3"
                 >
-                  {filteredReviews.map((review) => (
+                  {filteredReviews.map((review: Testimonial) => (
                     <ReviewListItem key={review.id} review={review!} />
                   ))}
                 </motion.div>

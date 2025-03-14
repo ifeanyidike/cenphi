@@ -5,7 +5,7 @@ import LoadingIndicator from "../LoadingIndicator";
 import { useEffect, useState } from "react";
 import { auth } from "@/config/firebase";
 import { MemberDataParams } from "@/types/member";
-import { workspaceRepo } from "@/repositories/workspaceRepository";
+import { workspaceRepo } from "@/repositories/WorkspaceRepo";
 
 const ProtectedRoute = observer(() => {
   const dashboardRoute = location.pathname.includes("dashboard");

@@ -21,7 +21,7 @@ import { Button } from "../ui/button";
 import { AIActionsCard } from "./AIActionsCard";
 import { StepItem } from "./components";
 import { observer } from "mobx-react-lite";
-import { workspaceRepo } from "@/repositories/workspaceRepository";
+import { workspaceRepo } from "@/repositories/WorkspaceRepo";
 import LoadingSkeleton from "./LoadingSkeleton";
 
 export const EmptyStateView = observer(() => {
