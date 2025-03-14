@@ -216,11 +216,17 @@ jobs:
           tags: |
             lorddickson/${{ matrix.service }}:latest
             lorddickson/${{ matrix.service }}:${{ github.sha }}
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+          no-cache: true
           build-args: |
             BUILDKIT_INLINE_CACHE=1
             CACHE_BUSTER=${{ github.sha }}
+
+      - name: Verify files in image
+        run: |
+          docker create --name temp_container lorddickson/${{ matrix.service }}:${{ github.sha }}
+          docker cp temp_container:/app/google_roots.pem ./google_roots_verification.pem || echo "File not found in image!"
+          ls -la ./google_roots_verification.pem || echo "Failed to copy file from image"
+          docker rm temp_container
 
       # Move cache for next job
       - name: Move cache
