@@ -1,5 +1,5 @@
 import { auth } from "@/config/firebase";
-import { workspaceHub } from "@/repo/workspace";
+import { workspaceHub } from "@/repo/workspace_hub";
 import { MemberDataParams } from "@/types/member";
 import { useEffect, useState } from "react";
 

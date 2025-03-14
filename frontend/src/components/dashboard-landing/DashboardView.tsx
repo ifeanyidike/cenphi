@@ -17,7 +17,7 @@ import { StatCard } from "./components";
 import { ContentView } from "./ContentView";
 import { EmptyStateView } from "./EmptyView";
 import { Testimonial } from "@/types/testimonial";
-import { workspaceHub } from "@/repo/workspace";
+import { workspaceHub } from "@/repo/workspace_hub";
 
 const DashboardView: React.FC = observer(() => {
   useEffect(() => {
