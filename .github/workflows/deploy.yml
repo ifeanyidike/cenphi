@@ -228,12 +228,6 @@ jobs:
           ls -la ./google_roots_verification.pem || echo "Failed to copy file from image"
           docker rm temp_container
 
-      # Move cache for next job
-      - name: Move cache
-        run: |
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
-
       # Clear old images after pushing
       - name: Clean up old images
         run: |
