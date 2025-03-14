@@ -22,7 +22,7 @@ import { AIActionsCard } from "./AIActionsCard";
 import { StepItem } from "./components";
 import { observer } from "mobx-react-lite";
 import LoadingSkeleton from "./LoadingSkeleton";
-import { workspaceHub } from "@/repo/workspace";
+import { workspaceHub } from "@/repo/workspace_hub";
 
 export const EmptyStateView = observer(() => {
   const isLoading = workspaceHub.testimonialManager.loading_testimonials;
