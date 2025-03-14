@@ -21,7 +21,7 @@ import { ReviewCard } from "./ReviewCard";
 import { ReviewListItem } from "./ReviewListItem";
 import LoadingSkeleton from "./LoadingSkeleton";
 import { Testimonial } from "@/types/testimonial";
-import { workspaceHub } from "@/repo/workspace";
+import { workspaceHub } from "@/repo/workspace_hub";
 
 interface ReviewsSectionProps {
   fullWidth?: boolean;

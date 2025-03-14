@@ -8,7 +8,7 @@ import { companySizes, industries, stepSetup } from "./data";
 import FeaturesColumn from "./FeaturesColumn";
 import Form from "./Form";
 import { observer } from "mobx-react-lite";
-import { workspaceHub } from "@/repo/workspace";
+import { workspaceHub } from "@/repo/workspace_hub";
 
 const Onboarding: React.FC = observer(() => {
   const navigate = useNavigate();
