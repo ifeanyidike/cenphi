@@ -21,11 +21,11 @@ import { Button } from "../ui/button";
 import { AIActionsCard } from "./AIActionsCard";
 import { StepItem } from "./components";
 import { observer } from "mobx-react-lite";
-import { workspaceRepo } from "@/repositories/workspace";
 import LoadingSkeleton from "./LoadingSkeleton";
+import { workspaceHub } from "@/repo/workspace";
 
 export const EmptyStateView = observer(() => {
-  const isLoading = workspaceRepo.testimonialManager.loading_testimonials;
+  const isLoading = workspaceHub.testimonialManager.loading_testimonials;
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
       {/* Main Testimonials Area */}

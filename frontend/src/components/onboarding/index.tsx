@@ -7,8 +7,8 @@ import { FormErrors, OnboardingFormData } from "./types";
 import { companySizes, industries, stepSetup } from "./data";
 import FeaturesColumn from "./FeaturesColumn";
 import Form from "./Form";
-import { workspaceRepo } from "@/repositories/WorkspaceRepo";
 import { observer } from "mobx-react-lite";
+import { workspaceHub } from "@/repo/workspace";
 
 const Onboarding: React.FC = observer(() => {
   const navigate = useNavigate();
@@ -111,7 +111,7 @@ const Onboarding: React.FC = observer(() => {
         website_url: formData.websiteUrl,
         industry: formData.industry,
       };
-      await workspaceRepo.update(updates);
+      await workspaceHub.update(updates);
       setFormCompleted(true);
     } catch (error) {
       console.error("Onboarding error:", error);

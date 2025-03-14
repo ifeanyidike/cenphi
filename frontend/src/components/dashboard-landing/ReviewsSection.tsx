@@ -17,11 +17,11 @@ import { Button } from "@/components/ui/button";
 import FilterMenu from "@/components/custom/dashboard/FilterMenu";
 import { useNavigate } from "react-router-dom";
 import { observer } from "mobx-react-lite";
-import { workspaceRepo } from "@/repositories/workspace";
 import { ReviewCard } from "./ReviewCard";
 import { ReviewListItem } from "./ReviewListItem";
 import LoadingSkeleton from "./LoadingSkeleton";
 import { Testimonial } from "@/types/testimonial";
+import { workspaceHub } from "@/repo/workspace";
 
 interface ReviewsSectionProps {
   fullWidth?: boolean;
@@ -35,9 +35,9 @@ export const ReviewsSection = observer(
     const [activeFilters, setActiveFilters] = useState<string[]>([]);
     const [searchQuery, setSearchQuery] = useState<string>("");
     const [activeTab, setActiveTab] = useState("all");
-    const isLoading = workspaceRepo.testimonialManager.loading_testimonials;
+    const isLoading = workspaceHub.testimonialManager.loading_testimonials;
     const recentTestimonials =
-      workspaceRepo.testimonialManager.testimonials?.slice(0, 6) || [];
+      workspaceHub.testimonialManager.testimonials?.slice(0, 6) || [];
 
     // Sample Data
     // const recentTestimonials = [
