@@ -132,6 +132,9 @@ RUN apk add --no-cache make git tzdata ca-certificates
 COPY go.mod go.sum ./
 RUN go mod download
 
+ARG CACHE_BUSTER=unknown
+RUN echo "Cache buster: ${CACHE_BUSTER}"
+
 COPY . .
 
 # Build static binary with optimizations

@@ -241,6 +241,7 @@ services:
       - ./api-server/.env:/app/.env
       - ./api-server/cenphiio-service-account.json:/app/cenphiio-service-account.json
       - ~/.aws:/root/.aws:ro
+      - /etc/ssl/certs:/etc/ssl/certs:ro
     # Remove dependency on local PostgreSQL
     depends_on: []
     environment:
