@@ -1,6 +1,6 @@
 // repositories/managers/memberManager.ts
 import { MemberDataParams } from "@/types/member";
-import { WorkspaceRepository } from "../WorkspaceRepo";
+import { WorkspaceRepository } from "../workspace";
 import { makeAutoObservable, runInAction } from "mobx";
 
 export class MembersManager {

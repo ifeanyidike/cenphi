@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { observer } from "mobx-react-lite";
-import { workspaceRepo } from "@/repositories/WorkspaceRepo";
+import { workspaceRepo } from "@/repositories/workspace";
 import { containerVariants, itemVariants } from "./constants";
 import { StatCard } from "./components";
 import { ContentView } from "./ContentView";
