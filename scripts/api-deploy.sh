@@ -410,18 +410,19 @@ RETRY_DELAY=10
 until [ $RETRY_COUNT -ge $MAX_RETRIES ]
 do
   echo "Health check attempt $((RETRY_COUNT+1))..."
-  HEALTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8081/api/v1/health || echo "failed")
+  # Use docker exec to check health from inside the container to avoid network issues
+  HEALTH_STATUS=$(docker exec $CONTAINER_ID wget -q -O - http://localhost:8081/api/v1/health 2>/dev/null || echo "failed")
   
-  if [ "$HEALTH_STATUS" = "200" ]; then
+  if [[ "$HEALTH_STATUS" == *"\"status\":\"ok\""* ]] || [[ "$HEALTH_STATUS" == "200" ]]; then
     echo "API server is healthy!"
     break
   fi
   
   RETRY_COUNT=$((RETRY_COUNT+1))
   if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
-    echo "Health check returned status: $HEALTH_STATUS, retrying in $RETRY_DELAY seconds..."
+    echo "Health check returned: $HEALTH_STATUS, retrying in $RETRY_DELAY seconds..."
     
-    # Check if container is still running
+    # Check if container is still running and get its logs
     if ! docker ps | grep -q api-server; then
       echo "ERROR: Container stopped during health check. Logs:"
       CONTAINER_ID=$(docker ps -a -q -f name=api-server)
@@ -435,12 +436,7 @@ do
     
     # Show recent logs to help diagnose issues
     echo "Recent container logs:"
-    CONTAINER_ID=$(docker ps -a -q -f name=api-server)
-    if [ -n "$CONTAINER_ID" ]; then
-      docker logs --tail 20 $CONTAINER_ID
-    else
-      echo "No container found with name api-server"
-    fi
+    docker logs --tail 20 $CONTAINER_ID
     
     sleep $RETRY_DELAY
   fi
