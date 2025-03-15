@@ -264,6 +264,9 @@ if [ -z "$FIREBASE_KEY_JSON" ] || [ -z "$FIREBASE_PROJECT_ID" ]; then
     exit 1
 fi
 
+# First, change directory to where the Docker Compose files are located
+cd /home/opc/app
+
 # Create .env file from environment variables if not provided externally
 if [ ! -f "api-server/.env" ]; then
     echo "Creating api-server .env file..."
@@ -296,7 +299,7 @@ EOL
     fi
 fi
 
-# Create docker-compose override for production
+# Create docker-compose override for production IN THE CORRECT DIRECTORY
 cat > docker-compose.override.yaml << EOFDC
 services:
   # Disable services that are not needed in production
@@ -338,10 +341,8 @@ services:
       - DB_NAME=postgres
 EOFDC
 
-
 # Stop any existing containers
 echo "Stopping existing containers..."
-cd /home/opc/app
 docker compose -f docker-compose.prod.yaml -f docker-compose.override.yaml down api-server || true
 
 # Clean up any old containers with the same name
@@ -369,14 +370,20 @@ echo "Image created: $IMAGE_CREATED"
 
 # Start the service
 echo "Starting API server..."
-cd /home/opc/app
 docker compose -f docker-compose.prod.yaml -f docker-compose.override.yaml up -d api-server
 
 # Verify the container is running with the correct image
 CONTAINER_ID=$(docker ps -q -f name=api-server)
 if [ -z "$CONTAINER_ID" ]; then
     echo "ERROR: API server container failed to start!"
-    docker compose -f docker-compose.prod.yaml -f docker-compose.override.yaml logs api-server
+    # Look for the container even if it's stopped
+    FAILED_CONTAINER=$(docker ps -a -q -f name=api-server)
+    if [ -n "$FAILED_CONTAINER" ]; then
+        echo "Container logs for failed container:"
+        docker logs $FAILED_CONTAINER
+    else
+        echo "No container found with name api-server"
+    fi
     exit 1
 fi
 
@@ -417,13 +424,23 @@ do
     # Check if container is still running
     if ! docker ps | grep -q api-server; then
       echo "ERROR: Container stopped during health check. Logs:"
-      docker logs $(docker ps -a -q -f name=api-server)
+      CONTAINER_ID=$(docker ps -a -q -f name=api-server)
+      if [ -n "$CONTAINER_ID" ]; then
+        docker logs $CONTAINER_ID
+      else
+        echo "No container found with name api-server"
+      fi
       exit 1
     fi
     
     # Show recent logs to help diagnose issues
     echo "Recent container logs:"
-    docker logs --tail 20 $(docker ps -a -q -f name=api-server)
+    CONTAINER_ID=$(docker ps -a -q -f name=api-server)
+    if [ -n "$CONTAINER_ID" ]; then
+      docker logs --tail 20 $CONTAINER_ID
+    else
+      echo "No container found with name api-server"
+    fi
     
     sleep $RETRY_DELAY
   fi
@@ -431,11 +448,16 @@ done
 
 if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
   echo "Health check failed after $MAX_RETRIES attempts. Container logs:"
-  docker logs $(docker ps -a -q -f name=api-server)
+  CONTAINER_ID=$(docker ps -a -q -f name=api-server)
+  if [ -n "$CONTAINER_ID" ]; then
+    docker logs $CONTAINER_ID
+  else
+    echo "No container found with name api-server"
+  fi
   exit 1
 fi
 
-# Clean up override file
+# Clean up override file (commented out for debugging, uncomment if desired)
 # rm docker-compose.override.yaml
 
 echo "API server deployment completed successfully!"
