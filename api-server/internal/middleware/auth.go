@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"time"
@@ -119,24 +120,67 @@ func NewAuthMiddleware(projectID string, logger *zap.Logger) (*AuthMiddleware, e
 		rootCAs = x509.NewCertPool()
 	}
 
-	// Try to add Google's root certificates
-	googleCertsPath := "google_roots.pem"
-	googleCertsFullPath, err := config.FindFile(googleCertsPath)
-	if err == nil {
-		// Found the Google certs file
-		googleCerts, err := os.ReadFile(googleCertsFullPath)
+	// Try multiple locations for Google's root certificates
+	possiblePaths := []string{
+		"google_roots.pem",      // Current directory
+		"/app/google_roots.pem", // App directory
+		"/usr/local/share/ca-certificates/google_roots.crt", // Where we installed in Dockerfile
+		"/etc/ssl/certs/ca-certificates.crt",                // System certificates
+	}
+
+	certsLoaded := false
+	for _, certPath := range possiblePaths {
+		fullPath, _ := config.FindFile(certPath)
+		if fullPath == "" {
+			fullPath = certPath // Use absolute path if FindFile fails
+		}
+
+		certs, err := os.ReadFile(fullPath)
 		if err != nil {
-			logger.Warn("Failed to read Google root certificates", zap.Error(err), zap.String("path", googleCertsFullPath))
+			logger.Debug("Could not read certificates from path", zap.String("path", fullPath), zap.Error(err))
+			continue
+		}
+
+		if !rootCAs.AppendCertsFromPEM(certs) {
+			logger.Warn("Failed to append certificates to pool", zap.String("path", fullPath))
+			continue
+		}
+
+		logger.Info("Successfully added certificates", zap.String("path", fullPath))
+		certsLoaded = true
+	}
+
+	if !certsLoaded {
+		logger.Warn("Could not load any certificates, trying direct download")
+		// Try direct download as last resort
+		client := &http.Client{
+			Timeout: 30 * time.Second,
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: true, // Only for this certificate download
+				},
+			},
+		}
+
+		resp, err := client.Get("https://pki.goog/roots.pem")
+		if err != nil {
+			logger.Warn("Failed to download Google certificates", zap.Error(err))
 		} else {
-			// Add Google certs to our pool
-			if !rootCAs.AppendCertsFromPEM(googleCerts) {
-				logger.Warn("Failed to append Google certificates to pool", zap.String("path", googleCertsFullPath))
+			defer resp.Body.Close()
+			googleCerts, err := io.ReadAll(resp.Body)
+			if err != nil {
+				logger.Warn("Failed to read downloaded certificates", zap.Error(err))
+			} else if !rootCAs.AppendCertsFromPEM(googleCerts) {
+				logger.Warn("Failed to append downloaded certificates to pool")
 			} else {
-				logger.Info("Successfully added Google certificates", zap.String("path", googleCertsFullPath))
+				logger.Info("Successfully downloaded and added Google certificates")
+				certsLoaded = true
 			}
 		}
-	} else {
-		logger.Warn("Google root certificates file not found", zap.Error(err))
+	}
+
+	if !certsLoaded {
+		logger.Error("Could not load any certificates, SSL verification will likely fail")
 	}
 
 	// Create a custom HTTP client with our certificate pool
@@ -152,6 +196,19 @@ func NewAuthMiddleware(projectID string, logger *zap.Logger) (*AuthMiddleware, e
 			IdleConnTimeout:       90 * time.Second,
 		},
 		Timeout: 60 * time.Second,
+	}
+
+	// Test connection to Google API before proceeding
+	testCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	testReq, _ := http.NewRequestWithContext(testCtx, "HEAD",
+		"https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com", nil)
+	testResp, testErr := httpClient.Do(testReq)
+	if testErr != nil {
+		logger.Error("Test connection to Google API failed", zap.Error(testErr))
+	} else {
+		testResp.Body.Close()
+		logger.Info("Test connection to Google API succeeded", zap.Int("status", testResp.StatusCode))
 	}
 
 	// Create Firebase app with our custom client
