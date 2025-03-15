@@ -231,9 +231,11 @@ COPY --from=builder /app/api /app/
 # Copy Google's root certificates
 COPY --from=builder /app/google_roots.pem /app/google_roots.pem
 
-# Copy the entrypoint script
+# Copy the entrypoint script and ensure it has Unix line endings and is executable
 COPY scripts/docker-entrypoint.sh /app/docker-entrypoint.sh
-RUN chmod +x /app/docker-entrypoint.sh
+# Fix line endings and make executable - this is critical
+RUN sed -i 's/\r$//' /app/docker-entrypoint.sh && \
+    chmod +x /app/docker-entrypoint.sh
 
 # Create directory for app data
 RUN mkdir -p /app/data && \
