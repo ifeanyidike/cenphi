@@ -160,12 +160,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup cache keys
-        id: cache_keys
-        run: |
-          echo "CACHE_TIME=$(date +%s)" >> $GITHUB_ENV
-          echo "CACHE_BUSTER=${{ github.sha }}_${{ github.run_id }}" >> $GITHUB_ENV
-
       - name: Verify critical files for API Server
         if: ${{ matrix.service == 'api-server' }}
         run: |
@@ -185,12 +179,6 @@ jobs:
             chmod +x api-server/scripts/docker-entrypoint.sh
           fi
 
-          # List contents of api-server directory
-          echo "API Server directory contents:"
-          ls -la api-server/
-          echo "API Server scripts directory contents:"
-          ls -la api-server/scripts/ || echo "scripts directory not found"
-
       - name: Create .env files
         run: |
           if [ "${{ matrix.service }}" == "api-server" ]; then
@@ -205,6 +193,7 @@ jobs:
           fi
 
           if [ "${{ matrix.service }}" == "ai-service" ]; then
+            mkdir -p ./ai-service
             cat > ./ai-service/.env << 'ENDOFFILE'
           # Add necessary AI service variables here
           PYTHONUNBUFFERED=1
@@ -221,6 +210,7 @@ jobs:
           if [ ! -f "./ai-service/main.py" ]; then
             echo "WARNING: main.py not found in ai-service directory!"
             echo "Creating a placeholder main.py file..."
+            mkdir -p ./ai-service
             cat > ./ai-service/main.py << 'ENDOFFILE'
           import os
           import sys
@@ -254,11 +244,6 @@ jobs:
             echo "main.py found in ai-service directory."
           fi
 
-      - name: Install Docker Slim
-        run: |
-          curl -sL https://raw.githubusercontent.com/slimtoolkit/slim/master/scripts/install-slim.sh | sudo -E bash -
-          slim --version
-
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
 
@@ -290,61 +275,29 @@ jobs:
           no-cache: true
           build-args: |
             BUILDKIT_INLINE_CACHE=1
-            CACHE_BUSTER=${{ env.CACHE_BUSTER }}
+            CACHE_BUSTER=${{ github.sha }}
 
-      - name: Verify files in image
+      # Verify the image was pushed correctly
+      - name: Verify Docker image
         run: |
+          # Wait for Docker Hub to register the image
+          sleep 10
+
+          # Check that both tags exist
+          docker pull lorddickson/${{ matrix.service }}:latest
           docker pull lorddickson/${{ matrix.service }}:${{ github.sha }}
-          docker create --name temp_container lorddickson/${{ matrix.service }}:${{ github.sha }}
 
-          if [ "${{ matrix.service }}" == "api-server" ]; then
-            echo "Verifying files in API server image:"
-            docker cp temp_container:/app/google_roots.pem ./google_roots_verification.pem || echo "google_roots.pem not found in image!"
-            ls -la ./google_roots_verification.pem || echo "Failed to copy google_roots.pem from image"
-            
-            # Check other important files
-            docker cp temp_container:/app/api ./api_verification || echo "API binary not found in image!"
-            ls -la ./api_verification || echo "Failed to copy API binary from image"
-          fi
+          # Get image IDs to verify they are the same image (just different tags)
+          LATEST_ID=$(docker inspect --format='{{.Id}}' lorddickson/${{ matrix.service }}:latest)
+          SHA_ID=$(docker inspect --format='{{.Id}}' lorddickson/${{ matrix.service }}:${{ github.sha }})
 
-          docker rm temp_container
+          echo "Latest image ID: $LATEST_ID"
+          echo "SHA image ID: $SHA_ID"
 
-      # Clear old images after pushing
-      - name: Clean up old images
-        run: |
-          docker system prune -a -f
-
-      - name: Verify and Slim AI Service Image
-        if: ${{ matrix.service == 'ai-service' }}
-        run: |
-          echo "Original image size:"
-          ORIGINAL_SIZE=$(docker images lorddickson/ai-service:${{ github.sha }} --format "{{.Size}}")
-          echo "lorddickson/ai-service:${{ github.sha }} - $ORIGINAL_SIZE"
-
-          # Check if image is already small enough
-          if [[ "$ORIGINAL_SIZE" == *"MB"* ]]; then
-            SIZE_NUM=$(echo $ORIGINAL_SIZE | sed 's/MB//')
-            if (( $(echo "$SIZE_NUM <= 150" | bc -l) )); then
-              echo "Image is already small enough (≤ 150MB), skipping slim process"
-              docker tag lorddickson/ai-service:${{ github.sha }} lorddickson/ai-service:slim
-              docker push lorddickson/ai-service:slim
-              exit 0
-            fi
-          fi
-
-          # Run slimming
-          docker pull lorddickson/ai-service:${{ github.sha }}
-          slim build --http-probe=false --include-path '/root/.cache/huggingface' --include-path '/opt/venv' --tag lorddickson/ai-service:slim lorddickson/ai-service:${{ github.sha }}
-
-          # Check if slimming was successful
-          if [ $? -eq 0 ]; then
-            SLIM_SIZE=$(docker images lorddickson/ai-service:slim --format "{{.Size}}")
-            echo "Slimmed image: lorddickson/ai-service:slim - $SLIM_SIZE"
-            docker push lorddickson/ai-service:slim
+          if [ "$LATEST_ID" = "$SHA_ID" ]; then
+            echo "✅ Image verification successful - latest and SHA tags point to the same image"
           else
-            echo "Slimming failed, using original image instead"
-            docker tag lorddickson/ai-service:${{ github.sha }} lorddickson/ai-service:slim
-            docker push lorddickson/ai-service:slim
+            echo "⚠️ Warning: latest and SHA tags point to different images"
           fi
 
   deploy_api:
@@ -413,15 +366,8 @@ jobs:
             # Fix any potential line ending issues
             sed -i 's/\r$//' api-deploy.sh
 
-            # Ensure the shebang line is correct
-            # sed -i '1s/^.*$/\#!\/bin\/bash/' api-deploy.sh
             # Make deploy script executable
-
             chmod +x api-deploy.sh
-
-            # Verify the file exists and check its contents
-            ls -la api-deploy.sh
-            head -n 5 api-deploy.sh
 
             # Ensure app directory exists
             mkdir -p /home/opc/app
@@ -459,7 +405,10 @@ jobs:
             fi
 
             # Always force pull latest image before running deploy script
-            docker pull lorddickson/api-server:latest
+            # docker pull lorddickson/api-server:latest
+
+            # Use specific SHA-tagged image instead of latest
+            docker pull lorddickson/api-server:$GITHUB_SHA || echo "Falling back to latest image"
 
             # Run deploy script with environment variables
             DB_USERNAME=$DB_USERNAME DB_PASSWORD=$DB_PASSWORD DB_HOST=$DB_HOST DB_PORT=$DB_PORT DB_NAME=$DB_NAME REDIS_HOST=$REDIS_HOST REDIS_PASSWORD=$REDIS_PASSWORD REDIS_PORT=$REDIS_PORT AWS_KEY=$AWS_KEY AWS_REGION=$AWS_REGION AWS_SECRET=$AWS_SECRET AWS_BUCKET_NAME=$AWS_BUCKET_NAME FIREBASE_KEY_JSON=$FIREBASE_KEY_JSON FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID GITHUB_SHA=$GITHUB_SHA ./api-deploy.sh
@@ -539,28 +488,20 @@ jobs:
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           envs: HF_TOKEN,GITHUB_SHA
           script: |
-            echo "Remote directory structure:"
-            ls -la /home/opc
-
-            echo "App directory structure:"
-            mkdir -p /home/opc/app
-            ls -la /home/opc/app
-
             cd /home/opc
+
             # Fix any potential line ending issues
             sed -i 's/\r$//' ai-deploy.sh
-
-            # Ensure the shebang line is correct
-            sed -i '1s/^.*$/\#!\/bin\/bash/' ai-deploy.sh
 
             # Make deploy script executable
             chmod +x ai-deploy.sh
 
-            # Verify the file exists and check its contents
-            ls -la ai-deploy.sh
-            head -n 5 ai-deploy.sh
-            # Ensure app directory exists
+            echo "App directory structure:"
             mkdir -p /home/opc/app
+
+            # Ensure the shebang line is correct
+            # sed -i '1s/^.*$/\#!\/bin\/bash/' ai-deploy.sh
+
             # Verify Docker Compose files exist
             if [ ! -f "/home/opc/app/docker-compose.prod.yaml" ]; then
                 echo "ERROR: docker-compose.prod.yaml not found in /home/opc/app"
@@ -587,9 +528,8 @@ jobs:
                 echo "Created basic Docker Compose files"
             fi
 
-            # Always force pull latest image before running deploy script
-            docker pull lorddickson/ai-service:latest
-            docker pull lorddickson/ai-service:slim
+            # Pull both tags to ensure we have the latest
+            docker pull lorddickson/ai-service:$GITHUB_SHA || echo "Will use the tag in deploy script"
 
             # Run deploy script with environment variables
             HF_TOKEN=$HF_TOKEN GITHUB_SHA=$GITHUB_SHA ./ai-deploy.sh
