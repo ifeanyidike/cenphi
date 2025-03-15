@@ -320,7 +320,7 @@ services:
       - "8081:8081"
     volumes:
       - ./api-server/.env:/app/.env
-      - ./api-server/cenphiio-service-account.json:/app/cenphiio-service-account.json\
+      - ./api-server/cenphiio-service-account.json:/app/cenphiio-service-account.json
       - /etc/ssl/certs:/etc/ssl/certs:ro
       - /etc/ca-certificates:/etc/ca-certificates:ro
     depends_on: []
