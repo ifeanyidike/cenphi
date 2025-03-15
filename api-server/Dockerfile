@@ -207,20 +207,24 @@ FROM alpine:latest
 WORKDIR /app
 
 # Install CA certificates and other runtime dependencies
-RUN apk add --no-cache ca-certificates curl tzdata && \
+# Use a more comprehensive approach for certificates
+RUN apk add --no-cache ca-certificates curl tzdata openssl && \
     update-ca-certificates
 
 # Create a non-root user to run the application
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 # Set environment variables to tell Go where to find cert files
-ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt 
 ENV SSL_CERT_DIR=/etc/ssl/certs
 
-# Download and install Google's root certificates directly
+# Download and install Google's root certificates
 RUN curl -sSL https://pki.goog/roots.pem -o /usr/local/share/ca-certificates/google_roots.crt && \
     chmod 644 /usr/local/share/ca-certificates/google_roots.crt && \
     update-ca-certificates && \
+    # Also save a copy to app directory for direct use
+    mkdir -p /app && \
+    cp /usr/local/share/ca-certificates/google_roots.crt /app/google_roots.pem && \
     # Verify certificate setup
     echo "Certificate verification:" && \
     curl -sSL --head https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com || echo "Warning: Certificate verification failed"
@@ -228,7 +232,7 @@ RUN curl -sSL https://pki.goog/roots.pem -o /usr/local/share/ca-certificates/goo
 # Copy the binary from the builder stage
 COPY --from=builder /app/api /app/
 
-# Copy Google's root certificates
+# Copy Google's root certificates (redundant but ensures they're available)
 COPY --from=builder /app/google_roots.pem /app/google_roots.pem
 
 # Copy the entrypoint script and ensure it has Unix line endings and is executable
