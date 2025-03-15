@@ -294,6 +294,11 @@ AI_SERVICE_HOST=ai-service
 AI_SERVICE_PORT=50052
 EOL
     echo "Created api-server .env file."
+        # Create Firebase service account file if FIREBASE_KEY_JSON is provided
+    if [ -n "$FIREBASE_KEY_JSON" ]; then
+        echo "$FIREBASE_KEY_JSON" > api-server/cenphiio-service-account.json
+        echo "Created Firebase service account file."
+    fi
 fi
 
 # Always create fresh Firebase service account file
@@ -348,7 +353,6 @@ services:
       - AWS_BUCKET_NAME=$AWS_BUCKET_NAME
       - DB_NAME=postgres
       - FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID
-      - FIREBASE_KEY_JSON=$FIREBASE_KEY_JSON
       - SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
       - SSL_CERT_DIR=/etc/ssl/certs
 EOFDC
