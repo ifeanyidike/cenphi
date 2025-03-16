@@ -124,6 +124,8 @@ func NewAuthMiddleware(projectID string, logger *zap.Logger) (*AuthMiddleware, e
 	possiblePaths := []string{
 		"google_roots.pem",      // Current directory
 		"/app/google_roots.pem", // App directory
+		"/app/certs/google_roots.pem",
+		"/app/certs/cacert.pem",
 		"/usr/local/share/ca-certificates/google_roots.crt", // Where we installed in Dockerfile
 		"/etc/ssl/certs/ca-certificates.crt",                // System certificates
 	}
