@@ -335,7 +335,6 @@ services:
     volumes:
       - ./api-server/.env:/app/.env
       - ./api-server/cenphiio-service-account.json:/app/cenphiio-service-account.json
-      - ./api-server/google_roots.pem:/app/google_roots.pem
     depends_on: []
     environment:
       - GO_ENV=production
