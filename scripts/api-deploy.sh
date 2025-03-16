@@ -228,7 +228,7 @@
 # echo "API server deployment completed successfully!"
 # set +x  # Disable command tracing
 
-
+# scripts/api-deploy.sh
 
 #!/bin/bash
 set -e
@@ -352,8 +352,7 @@ services:
       - AWS_BUCKET_NAME=$AWS_BUCKET_NAME
       - DB_NAME=postgres
       - FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID
-      - SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
-      - SSL_CERT_DIR=/etc/ssl/certs
+      - SSL_CERT_FILE=/app/certs/cacert.pem
 EOFDC
 
 # Stop any existing containers
@@ -410,6 +409,12 @@ if [[ "$CONTAINER_IMAGE" != "$IMAGE_TAG" ]]; then
     echo "Expected: $IMAGE_TAG"
     echo "Actual: $CONTAINER_IMAGE"
 fi
+
+# Test certificate availability inside the container
+echo "Testing certificate availability in container..."
+docker exec $CONTAINER_ID ls -la /app/certs/
+docker exec $CONTAINER_ID cat /app/certs/cacert.pem | head -n 5
+docker exec $CONTAINER_ID cat /app/certs/google_roots.pem | head -n 5
 
 # Verify that critical files exist in the container
 echo "Verifying critical files in container..."

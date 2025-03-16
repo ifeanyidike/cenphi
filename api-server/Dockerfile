@@ -197,43 +197,23 @@ RUN CGO_ENABLED=0 go build \
     -o /app/api \
     ./cmd
 
-# Download Google's root certificates during build
-RUN curl -sSL https://pki.goog/roots.pem -o /app/google_roots.pem
+# Create a custom certificate directory and download certificates
+RUN mkdir -p /app/certs && \
+    curl -sSL https://pki.goog/roots.pem -o /app/certs/google_roots.pem && \
+    curl -sSL https://curl.se/ca/cacert.pem -o /app/certs/cacert.pem
 
 # Final stage - Minimal production image
 FROM alpine:latest
 
-# Set working directory
-WORKDIR /app
+# Install only essential packages
+RUN apk add --no-cache curl tzdata bind-tools
 
-# Install CA certificates and other runtime dependencies
-RUN apk add --no-cache ca-certificates curl tzdata openssl bind-tools && \
-    update-ca-certificates
+# Create app directories
+RUN mkdir -p /app/certs /app/data
 
-# Set environment variables to tell Go where to find cert files
-ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
-ENV SSL_CERT_DIR=/etc/ssl/certs
-
-# Download and install Google's root certificates
-RUN curl -sSL https://pki.goog/roots.pem -o /usr/local/share/ca-certificates/google_roots.crt && \
-    chmod 644 /usr/local/share/ca-certificates/google_roots.crt && \
-    update-ca-certificates && \
-    # Also save a copy to app directory for direct use
-    mkdir -p /app && \
-    cp /usr/local/share/ca-certificates/google_roots.crt /app/google_roots.pem && \
-    # Create data directory
-    mkdir -p /app/data && \
-    # Verify certificate setup
-    echo "Certificate verification:" && \
-    curl -sSL --head https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com || echo "Warning: Certificate verification failed"
-
-# Copy the binary from the builder stage
+# Copy the binary and certificates from the builder stage
 COPY --from=builder /app/api /app/api
-RUN chmod 755 /app/api
-
-# Copy Google's root certificates (redundant but ensures they're available)
-COPY --from=builder /app/google_roots.pem /app/google_roots.pem
-RUN chmod 644 /app/google_roots.pem
+COPY --from=builder /app/certs/ /app/certs/
 
 # Copy the entrypoint script
 COPY scripts/docker-entrypoint.sh /app/docker-entrypoint.sh
@@ -241,8 +221,15 @@ COPY scripts/docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN sed -i 's/\r$//' /app/docker-entrypoint.sh && \
     chmod 755 /app/docker-entrypoint.sh
 
+# Set environment variables to point to our custom certificate locations
+ENV SSL_CERT_FILE=/app/certs/cacert.pem
+ENV GOOGLE_APPLICATION_CREDENTIALS=/app/cenphiio-service-account.json
+
 # Set the PORT environment variable for platforms that require it
 ENV PORT=8081
+
+# Set working directory
+WORKDIR /app
 
 # Expose the port
 EXPOSE 8081
