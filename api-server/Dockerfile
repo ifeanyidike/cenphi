@@ -207,15 +207,11 @@ FROM alpine:latest
 WORKDIR /app
 
 # Install CA certificates and other runtime dependencies
-# Use a more comprehensive approach for certificates
-RUN apk add --no-cache ca-certificates curl tzdata openssl && \
+RUN apk add --no-cache ca-certificates curl tzdata openssl bind-tools && \
     update-ca-certificates
 
-# Create a non-root user to run the application
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-
 # Set environment variables to tell Go where to find cert files
-ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt 
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 ENV SSL_CERT_DIR=/etc/ssl/certs
 
 # Download and install Google's root certificates
@@ -225,31 +221,25 @@ RUN curl -sSL https://pki.goog/roots.pem -o /usr/local/share/ca-certificates/goo
     # Also save a copy to app directory for direct use
     mkdir -p /app && \
     cp /usr/local/share/ca-certificates/google_roots.crt /app/google_roots.pem && \
+    # Create data directory
+    mkdir -p /app/data && \
     # Verify certificate setup
     echo "Certificate verification:" && \
     curl -sSL --head https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com || echo "Warning: Certificate verification failed"
 
 # Copy the binary from the builder stage
-COPY --from=builder /app/api /app/
+COPY --from=builder /app/api /app/api
+RUN chmod 755 /app/api
 
 # Copy Google's root certificates (redundant but ensures they're available)
 COPY --from=builder /app/google_roots.pem /app/google_roots.pem
+RUN chmod 644 /app/google_roots.pem
 
-# Copy the entrypoint script and ensure it has Unix line endings and is executable
+# Copy the entrypoint script
 COPY scripts/docker-entrypoint.sh /app/docker-entrypoint.sh
-# Fix line endings and make executable - this is critical
+# Fix line endings and make executable
 RUN sed -i 's/\r$//' /app/docker-entrypoint.sh && \
-    chmod +x /app/docker-entrypoint.sh
-
-# Create directory for app data
-RUN mkdir -p /app/data && \
-    chown -R appuser:appgroup /app
-
-# Set permissions on the application directory
-RUN chown -R appuser:appgroup /app
-
-# Switch to non-root user
-USER appuser
+    chmod 755 /app/docker-entrypoint.sh
 
 # Set the PORT environment variable for platforms that require it
 ENV PORT=8081
