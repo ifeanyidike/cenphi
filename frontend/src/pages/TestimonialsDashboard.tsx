@@ -1,4 +1,4 @@
-import DashboardWrapper from "@/components/custom/DashboardWrapper";
+import DashboardWrapper from "@/components/custom/dashboard/DashboardWrapper";
 import { observer } from "mobx-react-lite";
 
 const TestimonialsDashboard = observer(() => {

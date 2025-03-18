@@ -32,3 +32,4 @@ ai-service/slim.report.json
 deployment/
 .qodo/
 slim.report.json
+.qodo

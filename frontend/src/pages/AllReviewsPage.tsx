@@ -1,9 +1,9 @@
 
-import AllReviews from '@/components/custom/dashboard/AllReviews'
+import Reviews from '@/components/custom/dashboard/Reviews'
 const AllReviewsPage = () => {
   return (
     <div>
-        <AllReviews /> 
+        <Reviews /> 
     </div>
   )
 }
