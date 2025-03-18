@@ -86,12 +86,12 @@ export const router = createBrowserRouter([
     element: <EmailPage />,
   },
   {
-    path: "/reviewpage",
+    path: "/review",
     element: <ReviewPage />,
   },
 
   {
-    path: "/all-reviewpage",
+    path: "/reviews",
     element: <AllReviewsPage />,
   },
   {

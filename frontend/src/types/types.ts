@@ -9,6 +9,13 @@ export interface Review {
   timeAgo: string;
   content: string;
   status: string;
+  thumbnailUrl: string;
+  duration: string;
+  audioUrl: string;
+  videoUrl: string;
+  imageUrl: string;
+  mediaUrl: string;
+  _animate?: boolean;
 }
 
 export interface StatItem {
@@ -44,5 +51,10 @@ export interface ExtendedReview extends Omit<Review, 'id'> {
   status: string;
   mediaType: string;
   _animate?: boolean; 
+  mediaUrl: string;
   thumbnailUrl: string;
+  audioUrl: string;
+  videoUrl: string;
+  imageUrl: string;
 }
+

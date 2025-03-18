@@ -18,7 +18,7 @@ import {
 import SideBarContent2 from "@/components/custom/SideBarContent2"
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import EmptyDashboard from "@/components/custom/emptydashboardpage";
+import EmptyDashboard from "@/components/custom/dashboard/EmptyDashboard";
 
 const FullscreenIcon = () => (
   <svg

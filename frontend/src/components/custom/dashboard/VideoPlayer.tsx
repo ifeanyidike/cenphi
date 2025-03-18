@@ -67,3 +67,4 @@ const setPlayingMedia = (mediaId: string | null) => {
   console.log(`Playing media with id: ${mediaId}`);
 };
   
+

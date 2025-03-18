@@ -8,13 +8,16 @@ import { ReviewCardView } from "@/components/custom/dashboard/ReviewCardView";
 import { ReviewListView } from "@/components/custom/dashboard/ReviewListView";
 import FilterMenu from "@/components/custom/dashboard/FilterMenu";  
 import { useNavigate } from "react-router-dom"; 
-// import { useRouter } from "next/router"; // Import router for navigation
 
-interface ExtendedReview extends Review {
+
+interface ExtendedReview extends Omit<Review, 'thumbnailUrl' | 'duration'> {
   mediaType: "text" | "audio" | "video" | "image";
   mediaUrl?: string;
-  thumbnailUrl?: string; 
+  thumbnailUrl?: string | undefined; 
   duration?: string; 
+  audioUrl?: string;
+  videoUrl?: string;
+  imageUrl?: string;
 }
 
 export const ReviewsSection2 = () => {
@@ -98,8 +101,9 @@ export const ReviewsSection2 = () => {
       content: "Great product with intuitive design. Would recommend to colleagues looking for similar solutions.",
       status: "Verified",
       mediaType: "image",
-      thumbnailUrl: "/images/review-michael.jpg"
+        mediaUrl: "/media/img/iStock-1354196176.webp",
     },
+    
     {
       id: 4,
       name: "David Chen",
@@ -158,10 +162,10 @@ export const ReviewsSection2 = () => {
               Recent Reviews
             </CardTitle>
             <button 
-             onClick={() => navigate("/all-reviewpage")} 
+             onClick={() => navigate("/reviews")} 
               className="text-purple-600 flex items-center font-medium text-sm hover:underline"
             >
-              View All Reviews <ChevronRight className="h-4 w-4 ml-1" />
+              All Reviews <ChevronRight className="h-4 w-4 ml-1" />
             </button>
           </div>
           <div className="flex space-x-2">
