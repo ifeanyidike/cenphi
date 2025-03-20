@@ -1,27 +1,3 @@
-// import PricingSection from "@/components/custom/pricingfreesection";
-// import PricingPreiumSection from "@/components/custom/presingsectionpremium";
-// import FAQSection from "@/components/custom/faq";
-// import TestimonialSection4 from "@/components/custom/testimonialsection4";
-// import ReviewSection from "@/components/custom/reviewsection";
-// import Footer from "@/components/custom/footer";
-// import PricingComponent from "@/components/pricing";
-
-// const Pricing = () => {
-//   return (
-//     <>
-//       <PricingComponent />
-//       <PricingSection />
-//       <PricingPreiumSection />
-//       <FAQSection />
-//       <TestimonialSection4 />
-//       <ReviewSection />
-//       <Footer />
-//     </>
-//   );
-// };
-
-// export default Pricing;
-
 import { useState, useRef, useEffect } from "react";
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import Decoration from "@/components/pricing/Decoration";
@@ -33,12 +9,20 @@ import FAQ from "@/components/pricing/FAQ";
 import CTA from "@/components/pricing/CTA";
 import Navbar from "@/components/nav";
 import Footer from "@/components/custom/footer";
+import { observer } from "mobx-react-lite";
+import { workspaceHub } from "@/repo/workspace_hub";
 
-const PricingPage = () => {
+const PricingPage = observer(() => {
   const [annual, setAnnual] = useState(true);
   const [activePlan, setActivePlan] = useState("accelerate");
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const containerRef = useRef(null);
+
+  useEffect(() => {
+    (async () => {
+      await workspaceHub.memberManager.getUser();
+    })();
+  }, []);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -92,10 +76,12 @@ const PricingPage = () => {
           >
             {plans.map((plan) => (
               <PricingCard
+                key={plan.id}
                 plan={plan}
                 activePlan={activePlan}
                 setActivePlan={setActivePlan}
                 annual={annual}
+                currentPlan={workspaceHub.memberManager.member?.workspace_plan}
               />
             ))}
           </motion.div>
@@ -113,6 +99,6 @@ const PricingPage = () => {
       <Footer />
     </div>
   );
-};
+});
 
 export default PricingPage;

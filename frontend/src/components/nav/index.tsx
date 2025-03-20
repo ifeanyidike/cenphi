@@ -29,7 +29,7 @@ const Navbar: React.FC<NavbarProps> = observer(
     const [isScrolled, setIsScrolled] = useState<boolean>(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
     const [activeMenu, setActiveMenu] = useState<string | null>(null);
-    const [isUserMenuOpen, setIsUserMenuOpen] = useState<boolean>(true);
+    const [isUserMenuOpen, setIsUserMenuOpen] = useState<boolean>(false);
 
     const [isSearchOpen] = useState<boolean>(false);
     const [scrollProgress, setScrollProgress] = useState<number>(0);

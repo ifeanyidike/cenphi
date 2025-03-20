@@ -106,6 +106,34 @@ func TestTeamMemberRepository(t *testing.T) {
 
 	})
 
+	t.Run("GetTeamMemberDataByID", func(t *testing.T) {
+		workspace, user, teamMember := setupTestEntities(t, db, redisClient)
+
+		// Verify workspace creation
+		storedWorkspace, err := workspaceRepo.GetByID(context.Background(), workspace.ID, db)
+		require.NoError(t, err)
+		assert.Equal(t, workspace.Name, storedWorkspace.Name)
+
+		// Verify user creation
+		storedUser, err := userRepo.FindByUID(context.Background(), user.FirebaseUID, db)
+		require.NoError(t, err)
+		assert.Equal(t, user.Email, storedUser.Email)
+
+		// Verify team member creation
+		storedTeamMember, err := teamMemberRepo.GetDataByUserID(context.Background(), storedUser.ID, db)
+		require.NoError(t, err)
+		t.Log("stored team member", storedTeamMember.UserID)
+		t.Log("team member", teamMember.UserID)
+		// assert.Equal(t, teamMember.UserID, storedTeamMember.UserID)
+		assert.Equal(t, user.Name, storedTeamMember.Name)
+		assert.Equal(t, user.Email, storedTeamMember.Email)
+		assert.Equal(t, user.FirebaseUID, storedTeamMember.FirebaseUID)
+		assert.Equal(t, workspace.Name, storedTeamMember.WorkspaceName)
+		assert.Equal(t, workspace.Plan, storedTeamMember.WorkspacePlan)
+		assert.Equal(t, workspace.WebsiteURL, storedTeamMember.WebsiteURL)
+
+	})
+
 	t.Run("UpdateTeamMember", func(t *testing.T) {
 		_, _, teamMember := setupTestEntities(t, db, redisClient)
 

@@ -20,7 +20,13 @@ export type Feature = {
 };
 
 const PricingCard = observer(
-  ({ plan, activePlan, setActivePlan, annual }: PricingCardProps) => {
+  ({
+    plan,
+    activePlan,
+    setActivePlan,
+    annual,
+    currentPlan,
+  }: PricingCardProps) => {
     const [isHovering, setIsHovering] = useState(false);
     const [searchParams] = useSearchParams();
     const user = authStore.currentUser;
@@ -30,11 +36,19 @@ const PricingCard = observer(
     const workflow = searchParams.get("workflow");
 
     const isActive = activePlan === plan.id;
+    const isCurrentPlan =
+      currentPlan?.toLowerCase() === plan.name.toLowerCase();
 
     async function handleStartPlan() {
+      if (isCurrentPlan) return;
       if (!user?.uid) {
         return navigate(`/login`, { state: { from: location, plan: plan.id } });
       }
+      let query = `plan=${plan.id}`;
+      if (workflow) {
+        query += `&workflow=${workflow}`;
+      }
+
       if (plan.id === "essentials") {
         const resp = await appService.onboard_partial(user?.uid, plan.id);
         if (!resp) {
@@ -47,9 +61,9 @@ const PricingCard = observer(
           return;
         }
 
-        navigate(`/onboarding?workflow=${workflow}&plan=essentials`);
+        navigate(`/onboarding?${query}`);
       } else if (plan.id !== "enterprise") {
-        navigate(`/checkout?workflow=${workflow}&plan=${plan.id}`);
+        navigate(`/checkout?${query}`);
       }
     }
 
@@ -163,8 +177,12 @@ const PricingCard = observer(
               transition={{ duration: 0.7 }}
             />
             <span className="relative flex items-center justify-center gap-2 text-white">
-              {plan.cta}
-              <ArrowRight className="w-4 h-4 transform group-hover/btn:translate-x-1 transition-transform" />
+              {/* {plan.cta} */}
+
+              {isCurrentPlan ? "Current Plan" : plan.cta}
+              {!isCurrentPlan && (
+                <ArrowRight className="w-4 h-4 transform group-hover/btn:translate-x-1 transition-transform" />
+              )}
             </span>
           </motion.button>
         </div>

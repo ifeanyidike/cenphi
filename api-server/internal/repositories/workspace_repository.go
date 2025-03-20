@@ -1,8 +1,13 @@
 package repositories
 
+//go:generate mockery --name=WorkspaceRepository --output=./mocks --case=underscore
+
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
+	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/ifeanyidike/cenphi/internal/models"
@@ -12,6 +17,7 @@ import (
 type WorkspaceRepository interface {
 	Repository[models.Workspace]
 	FindByCustomDomain(ctx context.Context, customDomain string, db DB) (*models.Workspace, error)
+	UpdateAny(ctx context.Context, updates map[string]any, id uuid.UUID, db DB) error
 }
 
 type workspaceRepository struct {
@@ -77,6 +83,7 @@ func (r *workspaceRepository) Create(ctx context.Context, workspace *models.Work
 			(id, name, website_url, industry, plan) 
 		VALUES ($1, $2, $3, $4, $5)
 	`
+	fmt.Println("Before create exec")
 	_, err := db.ExecContext(ctx, query,
 		workspace.ID,
 		workspace.Name,
@@ -84,32 +91,13 @@ func (r *workspaceRepository) Create(ctx context.Context, workspace *models.Work
 		workspace.Industry,
 		workspace.Plan,
 	)
+	fmt.Println("Create Exec error", err)
 
 	return err
 }
 
 func (r *workspaceRepository) Update(ctx context.Context, workspace *models.Workspace, id uuid.UUID, db DB) error {
-	// settingsJSON, err := json.Marshal(workspace.Settings)
-	// if err != nil {
-	// 	return err
-	// }
 
-	// brandingSettingsJSON, err := json.Marshal(workspace.BrandingSettings)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// analyticsSettingsJSON, err := json.Marshal(workspace.AnalyticsSettings)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// integrationSettingsJSON, err := json.Marshal(workspace.IntegrationSettings)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// The actual SQL query for updating the workspace
 	query := `
         UPDATE workspaces 
         SET name = $2, website_url = $3, plan = $4, custom_domain = $5, industry = $6, updated_at = NOW()
@@ -124,11 +112,61 @@ func (r *workspaceRepository) Update(ctx context.Context, workspace *models.Work
 		workspace.Plan,
 		workspace.CustomDomain,
 		workspace.Industry,
-		// settingsJSON,            // Pass marshaled JSON for settings
-		// brandingSettingsJSON,    // Pass marshaled JSON for branding settings
-		// analyticsSettingsJSON,   // Pass marshaled JSON for analytics settings
-		// integrationSettingsJSON, // Pass marshaled JSON for integration settings
 	)
 
+	return err
+}
+
+func (r *workspaceRepository) UpdateAny(ctx context.Context, updates map[string]any, id uuid.UUID, db DB) error {
+	var setStatements []string
+	var args []interface{}
+
+	// First argument is always the ID
+	args = append(args, id)
+	argCount := 1
+
+	// Build set statement dynamically based on provided fields
+	for field, value := range updates {
+		// Map field names to db column names
+		var dbField string
+		switch field {
+		case "name", "website_url", "plan", "custom_domain", "industry":
+			dbField = field
+		case "settings", "branding_settings", "analytics_settings", "integration_settings":
+			// JSON fields
+			dbField = field
+			// if it's a map or struct, convert to JSON
+			if field == "branding_settings" || field == "integration_settings" {
+				jsonValue, err := json.Marshal(value)
+				if err != nil {
+					return fmt.Errorf("failed to marshal JSON for %s: %w", field, err)
+				}
+				value = jsonValue
+			}
+		default:
+			continue
+		}
+
+		argCount++
+		setStatements = append(setStatements, fmt.Sprintf("%s = $%d", dbField, argCount))
+		args = append(args, value)
+	}
+
+	// Add updated_at
+	setStatements = append(setStatements, "updated_at = NOW()")
+
+	if len(setStatements) == 0 {
+		return nil // Nothing to update
+	}
+
+	// Build the final query
+	query := fmt.Sprintf("UPDATE workspaces SET %s WHERE id = $1", strings.Join(setStatements, ", "))
+
+	// Debug
+	fmt.Println("Query:", query)
+	fmt.Println("Args:", args)
+
+	// Execute the query with args expanded correctly
+	_, err := db.ExecContext(ctx, query, args...)
 	return err
 }

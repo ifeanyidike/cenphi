@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 
+	"github.com/google/uuid"
 	"github.com/ifeanyidike/cenphi/internal/models"
 	"github.com/ifeanyidike/cenphi/internal/repositories"
 )
@@ -11,6 +12,7 @@ import (
 type TestimonialService interface {
 	ProcessTestimonials(ctx context.Context, testimonials []models.Testimonial) error
 	ValidateTestimonial(t models.Testimonial) error
+	FetchByWorkspaceID(ctx context.Context, workspaceID uuid.UUID, filter models.TestimonialFilter) ([]models.Testimonial, error)
 }
 
 type testimonialService struct {
@@ -33,4 +35,8 @@ func (s *testimonialService) ProcessTestimonials(ctx context.Context, testimonia
 
 func (s *testimonialService) ValidateTestimonial(t models.Testimonial) error {
 	return nil
+}
+
+func (s *testimonialService) FetchByWorkspaceID(ctx context.Context, workspaceID uuid.UUID, filter models.TestimonialFilter) ([]models.Testimonial, error) {
+	return s.repo.FetchByWorkspaceID(ctx, workspaceID, filter, s.db)
 }

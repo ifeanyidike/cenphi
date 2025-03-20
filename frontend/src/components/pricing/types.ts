@@ -29,6 +29,7 @@ export type PricingCardProps = {
   activePlan: string;
   setActivePlan: (id: string) => void;
   annual: boolean;
+  currentPlan: string | undefined;
 };
 
 export type PriceDisplayProps = {

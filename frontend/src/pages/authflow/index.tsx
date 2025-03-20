@@ -1,7 +1,8 @@
 import { useSearchParams } from "react-router-dom";
 import EmailVerificationPage from "./EmailVerification";
+import { observer } from "mobx-react-lite";
 
-const AuthFlow = () => {
+const AuthFlow = observer(() => {
   const [searchParams] = useSearchParams();
   const mode = searchParams.get("mode");
   const oobCode = searchParams.get("oobCode");
@@ -18,6 +19,6 @@ const AuthFlow = () => {
     default:
       return <></>;
   }
-};
+});
 
 export default AuthFlow;

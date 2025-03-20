@@ -66,7 +66,7 @@ const EmptyDashboard = () => {
                   Your Customers
                 </CardTitle>
                 <div className="flex space-x-2">
-                  <Button variant="outline" size="sm">
+                  <Button className="outline text-sm py-1 px-2">
                     <Plus className="h-4 w-4 mr-2" />
                     Add First Customer
                   </Button>
@@ -86,11 +86,11 @@ const EmptyDashboard = () => {
                   and improve your services.
                 </p>
                 <div className="flex flex-wrap gap-4 justify-center">
-                  <Button variant="default">
+                  <Button>
                     <Plus className="h-4 w-4 mr-2" />
                     Add Customer
                   </Button>
-                  <Button variant="outline">Import Reviews</Button>
+                  <Button className="outline">Import Reviews</Button>
                 </div>
               </div>
             </CardContent>

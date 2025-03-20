@@ -15,11 +15,12 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Address       string
-	MaxUploadSize int64
-	CertFile      string
-	KeyFile       string
-	Environment   string
+	Address           string
+	MaxUploadSize     int64
+	CertFile          string
+	KeyFile           string
+	Environment       string
+	FirebaseProjectID string
 }
 
 type DatabaseConfig struct {
@@ -47,8 +48,10 @@ func NewConfig() *Config {
 	once.Do(func() {
 		Cfg = &Config{
 			Server: ServerConfig{
-				Address:       os.Getenv("SERVER_ADDRESS"),
-				MaxUploadSize: 10 * 1024 * 1024, // 10MB
+				Address:           os.Getenv("SERVER_ADDRESS"),
+				MaxUploadSize:     10 * 1024 * 1024, // 10MB
+				Environment:       os.Getenv("GO_ENV"),
+				FirebaseProjectID: os.Getenv("FIREBASE_PROJECT_ID"),
 			},
 			Database: DatabaseConfig{
 				DSN: fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",

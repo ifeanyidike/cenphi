@@ -21,6 +21,7 @@ export default {
         playball: ["Playball", "cursive"],
       },
       borderRadius: {
+        xl: "var(--radius-xl)",
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
@@ -72,15 +73,93 @@ export default {
           4: "hsl(var(--chart-4))",
           5: "hsl(var(--chart-5))",
         },
+        // sidebar: {
+        //   DEFAULT: "hsl(var(--sidebar-background))",
+        //   foreground: "hsl(var(--sidebar-foreground))",
+        //   primary: "hsl(var(--sidebar-primary))",
+        //   "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
+        //   accent: "hsl(var(--sidebar-accent))",
+        //   "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
+        //   border: "hsl(var(--sidebar-border))",
+        //   ring: "hsl(var(--sidebar-ring))",
+        // },
         sidebar: {
-          DEFAULT: "hsl(var(--sidebar-background))",
-          foreground: "hsl(var(--sidebar-foreground))",
-          primary: "hsl(var(--sidebar-primary))",
-          "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
-          accent: "hsl(var(--sidebar-accent))",
-          "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
+          bg: "hsl(var(--sidebar-bg))",
           border: "hsl(var(--sidebar-border))",
-          ring: "hsl(var(--sidebar-ring))",
+          rail: "hsl(var(--sidebar-rail))",
+          foreground: "hsl(var(--sidebar-foreground))",
+          muted: "hsl(var(--sidebar-muted))",
+          accent: "hsl(var(--sidebar-accent))",
+          primary: "hsl(var(--sidebar-primary))",
+          secondary: "hsl(var(--sidebar-secondary))",
+          icon: "hsl(var(--sidebar-icon))",
+
+          // Item states
+          item: {
+            active: "hsl(var(--sidebar-item-active))",
+            "active-foreground": "hsl(var(--sidebar-item-active-foreground))",
+            "active-icon": "hsl(var(--sidebar-item-active-icon))",
+            hover: "hsl(var(--sidebar-item-hover))",
+            icon: "hsl(var(--sidebar-item-icon))",
+          },
+
+          // Subitem states
+          subitem: {
+            hover: "hsl(var(--sidebar-subitem-hover))",
+            foreground: "hsl(var(--sidebar-subitem-foreground))",
+            icon: "hsl(var(--sidebar-subitem-icon))",
+          },
+
+          // Action states
+          action: {
+            hover: "hsl(var(--sidebar-action-hover))",
+            icon: "hsl(var(--sidebar-action-icon))",
+            "icon-hover": "hsl(var(--sidebar-action-icon-hover))",
+          },
+
+          // Project states
+          project: {
+            icon: "hsl(var(--sidebar-project-icon))",
+            accent: "hsl(var(--sidebar-project-accent))",
+          },
+
+          // User states
+          user: {
+            hover: "hsl(var(--sidebar-user-hover))",
+            active: "hsl(var(--sidebar-user-active))",
+            border: "hsl(var(--sidebar-user-border))",
+            "fallback-from": "hsl(var(--sidebar-user-fallback-from))",
+            "fallback-to": "hsl(var(--sidebar-user-fallback-to))",
+            "fallback-text": "hsl(var(--sidebar-user-fallback-text))",
+          },
+        },
+
+        // Dropdown menu colors
+        dropdown: {
+          bg: "hsl(var(--dropdown-bg))",
+          border: "hsl(var(--dropdown-border))",
+          foreground: "hsl(var(--dropdown-foreground))",
+          muted: "hsl(var(--dropdown-muted))",
+          "muted-foreground": "hsl(var(--dropdown-muted-foreground))",
+          hover: "hsl(var(--dropdown-hover))",
+          accent: "hsl(var(--dropdown-accent))",
+          primary: "hsl(var(--dropdown-primary))",
+          secondary: "hsl(var(--dropdown-secondary))",
+          icon: "hsl(var(--dropdown-icon))",
+          "icon-hover": "hsl(var(--dropdown-icon-hover))",
+          selected: "hsl(var(--dropdown-selected))",
+          "selected-foreground": "hsl(var(--dropdown-selected-foreground))",
+          danger: "hsl(var(--dropdown-danger))",
+          badge: "hsl(var(--dropdown-badge))",
+          "badge-foreground": "hsl(var(--dropdown-badge-foreground))",
+
+          // User states
+          user: {
+            border: "hsl(var(--dropdown-user-border))",
+            "fallback-from": "hsl(var(--dropdown-user-fallback-from))",
+            "fallback-to": "hsl(var(--dropdown-user-fallback-to))",
+            "fallback-text": "hsl(var(--dropdown-user-fallback-text))",
+          },
         },
       },
       keyframes: {
@@ -89,8 +168,17 @@ export default {
           "100%": { transform: "translateX(-50%)" },
         },
       },
+      // animation: {
+      //   scroll: "scroll 20s linear infinite",
+      // },
       animation: {
-        scroll: "scroll 20s linear infinite",
+        in: "in 0.2s ease-out",
+      },
+      keyframes: {
+        in: {
+          "0%": { opacity: "0", transform: "translateY(5px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
       },
     },
   },

@@ -10,13 +10,13 @@ import FilterMenu from "@/components/custom/dashboard/FilterMenu";
 import { useNavigate } from "react-router-dom"; 
 
 
-interface ExtendedReview extends Omit<Review, 'thumbnailUrl' | 'duration'> {
+interface ExtendedReview extends Omit<Review, 'thumbnailUrl' | 'duration' | 'videoUrl'> {
   mediaType: "text" | "audio" | "video" | "image";
   mediaUrl?: string;
   thumbnailUrl?: string | undefined; 
   duration?: string; 
   audioUrl?: string;
-  videoUrl?: string;
+  videoUrl?: string | undefined;
   imageUrl?: string;
 }
 
@@ -216,8 +216,7 @@ export const ReviewsSection2 = () => {
             {activeFilters.map(filter => (
               <Badge 
                 key={filter} 
-                variant="outline" 
-                className="px-3 py-1 bg-purple-50 text-purple-600"
+                className="px-3 py-1 bg-purple-50 text-purple-600 border border-purple-200 rounded"
               >
                 {filter}
                 <button 

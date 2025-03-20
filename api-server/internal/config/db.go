@@ -38,7 +38,7 @@ func retryConnection(dsn string, maxRetries int, delay time.Duration) (*sql.DB, 
 			}
 
 		}
-
+log.Printf("Postgres DSN: %v.", dsn)
 		log.Printf("Database connection failed: %v. Retrying in %v...", err, delay)
 		time.Sleep(delay)
 	}

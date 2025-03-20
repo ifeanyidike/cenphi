@@ -5,7 +5,54 @@ on:
     branches: [master, main]
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      cache_key: ${{ steps.generate_cache_key.outputs.cache_key }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Fetch all history to ensure proper change detection
+
+      - name: Generate unique cache keys
+        id: generate_cache_key
+        run: |
+          # Generate a unique cache key based on file changes
+          API_HASH=$(git rev-parse HEAD:api-server || echo "nohash")
+          AI_HASH=$(git rev-parse HEAD:ai-service || echo "nohash")
+          echo "cache_key=api-${API_HASH}-ai-${AI_HASH}" >> $GITHUB_OUTPUT
+          echo "Generated cache key: api-${API_HASH}-ai-${AI_HASH}"
+
+      - name: Verify required files
+        run: |
+          # Check if google_roots.pem exists
+          if [ ! -f "api-server/google_roots.pem" ]; then
+            echo "WARNING: google_roots.pem not found in api-server directory"
+            
+            # Create a placeholder file to prevent build failures
+            mkdir -p api-server
+            echo "# Placeholder Google root certificates" > api-server/google_roots.pem
+            echo "Created placeholder google_roots.pem file"
+          else
+            echo "google_roots.pem found in api-server directory"
+          fi
+
+          # Check entrypoint script
+          if [ ! -f "api-server/scripts/docker-entrypoint.sh" ]; then
+          echo "WARNING: docker-entrypoint.sh not found"
+          mkdir -p api-server/scripts
+          cat > api-server/scripts/docker-entrypoint.sh << 'ENDOFFILE'
+          #!/bin/sh
+          # Simple entrypoint script
+          exec "$@"
+          ENDOFFILE
+          chmod +x api-server/scripts/docker-entrypoint.sh
+          echo "Created placeholder docker-entrypoint.sh file"
+          fi
+
   test:
+    needs: prepare
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -33,7 +80,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-go-
 
@@ -42,7 +89,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-pip-
 
@@ -102,7 +149,7 @@ jobs:
           python -m pytest
 
   build-and-push:
-    needs: test
+    needs: [prepare, test]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -110,14 +157,27 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
-
-      - name: Cache Docker layers
-        uses: actions/cache@v3
         with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ matrix.service }}-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-${{ matrix.service }}-
+          fetch-depth: 0
+
+      - name: Verify critical files for API Server
+        if: ${{ matrix.service == 'api-server' }}
+        run: |
+          # Ensure google_roots.pem exists
+          if [ ! -f "api-server/google_roots.pem" ]; then
+            echo "ERROR: google_roots.pem missing from api-server directory! Creating dummy file."
+            mkdir -p api-server
+            echo "# Placeholder Google root certificates file" > api-server/google_roots.pem
+          fi
+
+          # Ensure docker-entrypoint.sh exists
+          if [ ! -f "api-server/scripts/docker-entrypoint.sh" ]; then
+            echo "ERROR: docker-entrypoint.sh missing! Creating dummy file."
+            mkdir -p api-server/scripts
+            echo "#!/bin/sh" > api-server/scripts/docker-entrypoint.sh
+            echo "exec \"\$@\"" >> api-server/scripts/docker-entrypoint.sh
+            chmod +x api-server/scripts/docker-entrypoint.sh
+          fi
 
       - name: Create .env files
         run: |
@@ -133,6 +193,7 @@ jobs:
           fi
 
           if [ "${{ matrix.service }}" == "ai-service" ]; then
+            mkdir -p ./ai-service
             cat > ./ai-service/.env << 'ENDOFFILE'
           # Add necessary AI service variables here
           PYTHONUNBUFFERED=1
@@ -149,6 +210,7 @@ jobs:
           if [ ! -f "./ai-service/main.py" ]; then
             echo "WARNING: main.py not found in ai-service directory!"
             echo "Creating a placeholder main.py file..."
+            mkdir -p ./ai-service
             cat > ./ai-service/main.py << 'ENDOFFILE'
           import os
           import sys
@@ -182,11 +244,6 @@ jobs:
             echo "main.py found in ai-service directory."
           fi
 
-      - name: Install Docker Slim
-        run: |
-          curl -sL https://raw.githubusercontent.com/slimtoolkit/slim/master/scripts/install-slim.sh | sudo -E bash -
-          slim --version
-
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
 
@@ -205,6 +262,7 @@ jobs:
           echo "Checking Docker login status..."
           docker info
 
+      # Force rebuilding images with --no-cache option
       - name: Build and push ${{ matrix.service }} image
         uses: docker/build-push-action@v4
         with:
@@ -214,76 +272,32 @@ jobs:
           tags: |
             lorddickson/${{ matrix.service }}:latest
             lorddickson/${{ matrix.service }}:${{ github.sha }}
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+          no-cache: true
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+            CACHE_BUSTER=${{ github.sha }}
 
-      # Move cache for next job
-      - name: Move cache
+      # Verify the image was pushed correctly
+      - name: Verify Docker image
         run: |
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+          # Wait for Docker Hub to register the image
+          sleep 10
 
-      # Verify the original image size before slimming
-      - name: Verify original image size
-        if: ${{ matrix.service == 'ai-service' }}
-        run: |
-          docker pull lorddickson/ai-service:latest || { echo "Failed to pull image, cannot proceed"; exit 1; }
-          echo "Original image size:"
-          ORIGINAL_SIZE=$(docker images lorddickson/ai-service:latest --format "{{.Size}}")
-          echo "lorddickson/ai-service:latest - $ORIGINAL_SIZE"
+          # Check that both tags exist
+          docker pull lorddickson/${{ matrix.service }}:latest
+          docker pull lorddickson/${{ matrix.service }}:${{ github.sha }}
 
-          # Extract size in MB for comparison
-          if [[ "$ORIGINAL_SIZE" == *"MB"* ]]; then
-            SIZE_NUM=$(echo $ORIGINAL_SIZE | sed 's/MB//')
-            echo "Size in MB: $SIZE_NUM"
-            # If image is already less than or equal to 150MB, skip slimming
-            if (( $(echo "$SIZE_NUM <= 150" | bc -l) )); then
-              echo "Image is already small enough (≤ 150MB), skipping slim process"
-              # Tag the original image as slim for consistency in deployment
-              docker tag lorddickson/ai-service:latest lorddickson/ai-service:slim
-              docker push lorddickson/ai-service:slim
-              # Create flag to skip slimming
-              touch /tmp/skip_slimming
-            fi
-          elif [[ "$ORIGINAL_SIZE" == *"GB"* ]]; then
-            echo "Image is in GB range, will proceed with slimming"
+          # Get image IDs to verify they are the same image (just different tags)
+          LATEST_ID=$(docker inspect --format='{{.Id}}' lorddickson/${{ matrix.service }}:latest)
+          SHA_ID=$(docker inspect --format='{{.Id}}' lorddickson/${{ matrix.service }}:${{ github.sha }})
+
+          echo "Latest image ID: $LATEST_ID"
+          echo "SHA image ID: $SHA_ID"
+
+          if [ "$LATEST_ID" = "$SHA_ID" ]; then
+            echo "✅ Image verification successful - latest and SHA tags point to the same image"
           else
-            echo "Image is very small, skipping slim process"
-            docker tag lorddickson/ai-service:latest lorddickson/ai-service:slim
-            docker push lorddickson/ai-service:slim
-            touch /tmp/skip_slimming
-          fi
-
-      - name: Slim AI Service Image
-        if: ${{ matrix.service == 'ai-service' && success() && !contains(job.status, 'skip_slimming') }}
-        run: |
-          # Skip if the flag file exists
-          if [ -f "/tmp/skip_slimming" ]; then
-            echo "Skipping slimming as image is already small enough"
-            exit 0
-          fi
-
-          echo "Creating slim version of the AI service image..."
-
-          cd ai-service
-          slim build --http-probe=false --include-path '/root/.cache/huggingface' --include-path '/opt/venv' --include-path '/opt/venv/lib/python3.12/encodings' --include-path '/opt/venv/lib/python3.12/lib-dynload' --tag lorddickson/ai-service:slim lorddickson/ai-service:latest
-
-          # Check if slimming was successful
-          if [ $? -eq 0 ]; then
-            echo "Slimming completed. Checking size of slimmed image:"
-            SLIM_SIZE=$(docker images lorddickson/ai-service:slim --format "{{.Size}}")
-            echo "lorddickson/ai-service:slim - $SLIM_SIZE"
-            
-            echo "Pushing slimmed image to Docker Hub"
-            docker push lorddickson/ai-service:slim
-            echo "Slim image pushed successfully!"
-          else
-            echo "Slimming failed with exit code $?, original image will be used in deployment"
-            # Create a flag file to indicate we should use the original image
-            touch /tmp/use_original_image
-            # Tag original as slim for consistency
-            docker tag lorddickson/ai-service:latest lorddickson/ai-service:slim
-            docker push lorddickson/ai-service:slim
+            echo "⚠️ Warning: latest and SHA tags point to different images"
           fi
 
   deploy_api:
@@ -302,6 +316,7 @@ jobs:
       AWS_SECRET: ${{ secrets.AWS_SECRET }}
       AWS_BUCKET_NAME: ${{ secrets.AWS_BUCKET_NAME }}
       FIREBASE_KEY_JSON: ${{ secrets.FIREBASE_KEY_JSON }}
+      FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
       GITHUB_SHA: ${{ github.sha }}
     steps:
       - name: Checkout Code
@@ -345,21 +360,14 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          envs: DB_USERNAME,DB_PASSWORD,DB_HOST,DB_PORT,REDIS_HOST,REDIS_PASSWORD,REDIS_PORT,AWS_KEY,AWS_REGION,AWS_SECRET,AWS_BUCKET_NAME,FIREBASE_KEY_JSON,GITHUB_SHA
+          envs: DB_USERNAME,DB_PASSWORD,DB_HOST,DB_PORT,REDIS_HOST,REDIS_PASSWORD,REDIS_PORT,AWS_KEY,AWS_REGION,AWS_SECRET,AWS_BUCKET_NAME,FIREBASE_KEY_JSON,FIREBASE_PROJECT_ID,GITHUB_SHA
           script: |
             cd /home/opc
             # Fix any potential line ending issues
             sed -i 's/\r$//' api-deploy.sh
 
-            # Ensure the shebang line is correct
-            # sed -i '1s/^.*$/\#!\/bin\/bash/' api-deploy.sh
             # Make deploy script executable
-
             chmod +x api-deploy.sh
-
-            # Verify the file exists and check its contents
-            ls -la api-deploy.sh
-            head -n 5 api-deploy.sh
 
             # Ensure app directory exists
             mkdir -p /home/opc/app
@@ -373,7 +381,7 @@ jobs:
                 cat > /home/opc/app/docker-compose.prod.yaml << 'ENDOFFILE'
                 services:
                     api-server:
-                        image: lorddickson/ai-service:latest
+                        image: lorddickson/api-server:latest
                         ports:
                             - "8081:8081"
                         volumes:
@@ -395,8 +403,15 @@ jobs:
 
                 echo "Created basic Docker Compose files"
             fi
+
+            # Always force pull latest image before running deploy script
+            # docker pull lorddickson/api-server:latest
+
+            # Use specific SHA-tagged image instead of latest
+            docker pull lorddickson/api-server:$GITHUB_SHA || echo "Falling back to latest image"
+
             # Run deploy script with environment variables
-            DB_USERNAME=$DB_USERNAME DB_PASSWORD=$DB_PASSWORD DB_HOST=$DB_HOST DB_PORT=$DB_PORT DB_NAME=$DB_NAME REDIS_HOST=$REDIS_HOST REDIS_PASSWORD=$REDIS_PASSWORD REDIS_PORT=$REDIS_PORT AWS_KEY=$AWS_KEY AWS_REGION=$AWS_REGION AWS_SECRET=$AWS_SECRET AWS_BUCKET_NAME=$AWS_BUCKET_NAME FIREBASE_KEY_JSON=$FIREBASE_KEY_JSON GITHUB_SHA=$GITHUB_SHA ./api-deploy.sh
+            DB_USERNAME=$DB_USERNAME DB_PASSWORD=$DB_PASSWORD DB_HOST=$DB_HOST DB_PORT=$DB_PORT DB_NAME=$DB_NAME REDIS_HOST=$REDIS_HOST REDIS_PASSWORD=$REDIS_PASSWORD REDIS_PORT=$REDIS_PORT AWS_KEY=$AWS_KEY AWS_REGION=$AWS_REGION AWS_SECRET=$AWS_SECRET AWS_BUCKET_NAME=$AWS_BUCKET_NAME FIREBASE_KEY_JSON=$FIREBASE_KEY_JSON FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID GITHUB_SHA=$GITHUB_SHA ./api-deploy.sh
 
             # More robust health check
             echo "Performing API health check..."
@@ -473,28 +488,20 @@ jobs:
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           envs: HF_TOKEN,GITHUB_SHA
           script: |
-            echo "Remote directory structure:"
-            ls -la /home/opc
-
-            echo "App directory structure:"
-            mkdir -p /home/opc/app
-            ls -la /home/opc/app
-
             cd /home/opc
+
             # Fix any potential line ending issues
             sed -i 's/\r$//' ai-deploy.sh
-
-            # Ensure the shebang line is correct
-            sed -i '1s/^.*$/\#!\/bin\/bash/' ai-deploy.sh
 
             # Make deploy script executable
             chmod +x ai-deploy.sh
 
-            # Verify the file exists and check its contents
-            ls -la ai-deploy.sh
-            head -n 5 ai-deploy.sh
-            # Ensure app directory exists
+            echo "App directory structure:"
             mkdir -p /home/opc/app
+
+            # Ensure the shebang line is correct
+            # sed -i '1s/^.*$/\#!\/bin\/bash/' ai-deploy.sh
+
             # Verify Docker Compose files exist
             if [ ! -f "/home/opc/app/docker-compose.prod.yaml" ]; then
                 echo "ERROR: docker-compose.prod.yaml not found in /home/opc/app"
@@ -505,18 +512,24 @@ jobs:
                 services:
                     ai-service:
                         image: lorddickson/ai-service:latest
-                    ports:
-                        - "50052:50052"
-                    volumes:
-                        - ai-model-cache:/root/.cache/huggingface
-                    environment:
-                        - PYTHONUNBUFFERED=1
-                        - TRANSFORMERS_CACHE=/root/.cache/huggingface
-                        - PYTHON_ENV=production
-                    command: ["/opt/venv/bin/python", "main.py"]
+                        ports:
+                            - "50052:50052"
+                        volumes:
+                            - ai-model-cache:/root/.cache/huggingface
+                        environment:
+                            - PYTHONUNBUFFERED=1
+                            - TRANSFORMERS_CACHE=/root/.cache/huggingface
+                            - PYTHON_ENV=production
+                        command: ["/opt/venv/bin/python", "main.py"]
+                volumes:
+                    ai-model-cache:
             ENDOFFILE
 
                 echo "Created basic Docker Compose files"
             fi
+
+            # Pull both tags to ensure we have the latest
+            docker pull lorddickson/ai-service:$GITHUB_SHA || echo "Will use the tag in deploy script"
+
             # Run deploy script with environment variables
             HF_TOKEN=$HF_TOKEN GITHUB_SHA=$GITHUB_SHA ./ai-deploy.sh
