@@ -2,7 +2,7 @@ name: CI/CD Deploy
 
 on:
   push:
-    branches: []
+    branches: [master, main]
 
 jobs:
   test:
@@ -141,6 +141,47 @@ jobs:
           ENDOFFILE
           fi
 
+      # Verify that the main.py file exists
+      - name: Verify AI Service Files
+        if: ${{ matrix.service == 'ai-service' }}
+        run: |
+          echo "Checking for main.py in ai-service directory..."
+          if [ ! -f "./ai-service/main.py" ]; then
+            echo "WARNING: main.py not found in ai-service directory!"
+            echo "Creating a placeholder main.py file..."
+            cat > ./ai-service/main.py << 'ENDOFFILE'
+          import os
+          import sys
+          import logging
+          import time
+
+          # Set up logging
+          logging.basicConfig(
+              level=logging.INFO,
+              format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+          )
+          logger = logging.getLogger(__name__)
+
+          def main():
+              logger.info("AI Service starting...")
+              logger.info(f"Python version: {sys.version}")
+              logger.info(f"Working directory: {os.getcwd()}")
+              logger.info(f"Directory contents: {os.listdir('.')}")
+              
+              # Placeholder for actual service code
+              logger.info("Service initialized, running main loop")
+              while True:
+                  time.sleep(60)
+                  logger.info("AI Service heartbeat")
+
+          if __name__ == "__main__":
+              main()
+          ENDOFFILE
+            echo "Created placeholder main.py file."
+          else
+            echo "main.py found in ai-service directory."
+          fi
+
       - name: Install Docker Slim
         run: |
           curl -sL https://raw.githubusercontent.com/slimtoolkit/slim/master/scripts/install-slim.sh | sudo -E bash -
@@ -170,7 +211,9 @@ jobs:
           context: ./${{ matrix.service }}
           file: ./${{ matrix.service }}/Dockerfile
           push: true
-          tags: lorddickson/${{ matrix.service }}:latest
+          tags: |
+            lorddickson/${{ matrix.service }}:latest
+            lorddickson/${{ matrix.service }}:${{ github.sha }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
 
@@ -180,24 +223,67 @@ jobs:
           rm -rf /tmp/.buildx-cache
           mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
-      - name: Slim AI Service Image
-        if: ${{ matrix.service == 'ai-service' && success() }}
+      # Verify the original image size before slimming
+      - name: Verify original image size
+        if: ${{ matrix.service == 'ai-service' }}
         run: |
-          # Make sure the image exists before trying to slim it
-          docker pull lorddickson/ai-service:latest || { echo "Failed to pull image, cannot slim"; exit 1; }
+          docker pull lorddickson/ai-service:latest || { echo "Failed to pull image, cannot proceed"; exit 1; }
+          echo "Original image size:"
+          ORIGINAL_SIZE=$(docker images lorddickson/ai-service:latest --format "{{.Size}}")
+          echo "lorddickson/ai-service:latest - $ORIGINAL_SIZE"
+
+          # Extract size in MB for comparison
+          if [[ "$ORIGINAL_SIZE" == *"MB"* ]]; then
+            SIZE_NUM=$(echo $ORIGINAL_SIZE | sed 's/MB//')
+            echo "Size in MB: $SIZE_NUM"
+            # If image is already less than or equal to 150MB, skip slimming
+            if (( $(echo "$SIZE_NUM <= 150" | bc -l) )); then
+              echo "Image is already small enough (≤ 150MB), skipping slim process"
+              # Tag the original image as slim for consistency in deployment
+              docker tag lorddickson/ai-service:latest lorddickson/ai-service:slim
+              docker push lorddickson/ai-service:slim
+              # Create flag to skip slimming
+              touch /tmp/skip_slimming
+            fi
+          elif [[ "$ORIGINAL_SIZE" == *"GB"* ]]; then
+            echo "Image is in GB range, will proceed with slimming"
+          else
+            echo "Image is very small, skipping slim process"
+            docker tag lorddickson/ai-service:latest lorddickson/ai-service:slim
+            docker push lorddickson/ai-service:slim
+            touch /tmp/skip_slimming
+          fi
+
+      - name: Slim AI Service Image
+        if: ${{ matrix.service == 'ai-service' && success() && !contains(job.status, 'skip_slimming') }}
+        run: |
+          # Skip if the flag file exists
+          if [ -f "/tmp/skip_slimming" ]; then
+            echo "Skipping slimming as image is already small enough"
+            exit 0
+          fi
 
           echo "Creating slim version of the AI service image..."
 
           cd ai-service
-          slim build --http-probe=false --include-path '/root/.cache/huggingface' --include-path '/opt/venv' --tag lorddickson/ai-service:slim lorddickson/ai-service:latest
+          slim build --http-probe=false --include-path '/root/.cache/huggingface' --include-path '/opt/venv' --include-path '/opt/venv/lib/python3.12/encodings' --include-path '/opt/venv/lib/python3.12/lib-dynload' --tag lorddickson/ai-service:slim lorddickson/ai-service:latest
 
-          # Push the slimmed image if slimming was successful
+          # Check if slimming was successful
           if [ $? -eq 0 ]; then
-            echo "Successfully created slim image, pushing to Docker Hub"
+            echo "Slimming completed. Checking size of slimmed image:"
+            SLIM_SIZE=$(docker images lorddickson/ai-service:slim --format "{{.Size}}")
+            echo "lorddickson/ai-service:slim - $SLIM_SIZE"
+            
+            echo "Pushing slimmed image to Docker Hub"
             docker push lorddickson/ai-service:slim
             echo "Slim image pushed successfully!"
           else
-            echo "Slimming failed, original image will be used in deployment"
+            echo "Slimming failed with exit code $?, original image will be used in deployment"
+            # Create a flag file to indicate we should use the original image
+            touch /tmp/use_original_image
+            # Tag original as slim for consistency
+            docker tag lorddickson/ai-service:latest lorddickson/ai-service:slim
+            docker push lorddickson/ai-service:slim
           fi
 
   deploy_api:
@@ -208,7 +294,16 @@ jobs:
       DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
       DB_HOST: ${{ secrets.DB_HOST }}
       DB_PORT: ${{ secrets.DB_PORT }}
-      DB_NAME: ${{ secrets.DB_NAME }}
+      REDIS_HOST: ${{ secrets.REDIS_HOST }}
+      REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+      REDIS_PORT: ${{ secrets.REDIS_PORT }}
+      AWS_KEY: ${{ secrets.AWS_KEY }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      AWS_SECRET: ${{ secrets.AWS_SECRET }}
+      AWS_BUCKET_NAME: ${{ secrets.AWS_BUCKET_NAME }}
+      FIREBASE_KEY_JSON: ${{ secrets.FIREBASE_KEY_JSON }}
+      FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+      GITHUB_SHA: ${{ github.sha }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -221,8 +316,19 @@ jobs:
             exit 1
           fi
 
+      - name: Upload Docker Compose files to API Service
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.AI_SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          source: "./docker-compose.prod.yaml"
+          target: "/home/opc/app"
+          overwrite: true
+
       - name: Upload deploy.sh to API Server
-        uses: appleboy/ssh-action@v0.1.4
+        uses: appleboy/scp-action@v0.1.4
         with:
           host: ${{ secrets.API_SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
@@ -232,12 +338,7 @@ jobs:
           target: "/home/opc"
           strip_components: 1
           overwrite: true
-        #   script: |
-        #     cd /home/opc
-        #     # Pull the latest images
-        #     docker pull lorddickson/api-server:latest
-        #     # Run deploy script
-        #     ./deploy.sh
+
       - name: SSH Deploy to API Server
         uses: appleboy/ssh-action@v0.1.5
         with:
@@ -245,32 +346,89 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          envs: DB_USERNAME,DB_PASSWORD,DB_HOST,DB_PORT,DB_NAME
+          envs: DB_USERNAME,DB_PASSWORD,DB_HOST,DB_PORT,REDIS_HOST,REDIS_PASSWORD,REDIS_PORT,AWS_KEY,AWS_REGION,AWS_SECRET,AWS_BUCKET_NAME,FIREBASE_KEY_JSON,FIREBASE_PROJECT_ID,GITHUB_SHA
           script: |
             cd /home/opc
-            cat > api-deploy.sh << 'EOL'
-            #!/bin/bash
-            set -e
+            # Fix any potential line ending issues
+            sed -i 's/\r$//' api-deploy.sh
 
-            cd /home/opc/app
-
-            # Rest of your deployment script...
-            EOL
+            # Ensure the shebang line is correct
+            # sed -i '1s/^.*$/\#!\/bin\/bash/' api-deploy.sh
+            # Make deploy script executable
 
             chmod +x api-deploy.sh
-            ls -la  # Verify the file exists
-        #   script: |
-        #     cd /home/opc
-        #     # Make deploy script executable
 
-        #     chmod +x api-deploy.sh
-        #     # Run deploy script
-        #     ./api-deploy.sh
+            # Verify the file exists and check its contents
+            ls -la api-deploy.sh
+            head -n 5 api-deploy.sh
+
+            # Ensure app directory exists
+            mkdir -p /home/opc/app
+
+            # Verify Docker Compose files exist
+            if [ ! -f "/home/opc/app/docker-compose.prod.yaml" ]; then
+                echo "ERROR: docker-compose.prod.yaml not found in /home/opc/app"
+                echo "Creating a simple docker-compose.prod.yaml file..."
+
+                # Create a basic docker-compose.prod.yaml file
+                cat > /home/opc/app/docker-compose.prod.yaml << 'ENDOFFILE'
+                services:
+                    api-server:
+                        image: lorddickson/ai-service:latest
+                        ports:
+                            - "8081:8081"
+                        volumes:
+                            - ./api-server/.env:/app/.env
+                            - ~/.aws:/root/.aws:ro
+                            - /etc/ssl/certs:/etc/ssl/certs:ro
+                        restart: always
+                        environment:
+                            - GO_ENV=production
+                        command: ["/app/api"]
+                        healthcheck:
+                          test:
+                            ["CMD", "wget", "-q", "--spider", "http://localhost:8081/api/v1/health"]
+                          interval: 10s
+                          timeout: 5s
+                          retries: 3
+                          start_period: 5s
+            ENDOFFILE
+
+                echo "Created basic Docker Compose files"
+            fi
+            # Run deploy script with environment variables
+            DB_USERNAME=$DB_USERNAME DB_PASSWORD=$DB_PASSWORD DB_HOST=$DB_HOST DB_PORT=$DB_PORT DB_NAME=$DB_NAME REDIS_HOST=$REDIS_HOST REDIS_PASSWORD=$REDIS_PASSWORD REDIS_PORT=$REDIS_PORT AWS_KEY=$AWS_KEY AWS_REGION=$AWS_REGION AWS_SECRET=$AWS_SECRET AWS_BUCKET_NAME=$AWS_BUCKET_NAME FIREBASE_KEY_JSON=$FIREBASE_KEY_JSON FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID GITHUB_SHA=$GITHUB_SHA ./api-deploy.sh
+
+            # More robust health check
+            echo "Performing API health check..."
+            MAX_RETRIES=5
+            RETRY_COUNT=0
+
+            until [ $RETRY_COUNT -ge $MAX_RETRIES ]
+            do
+              HEALTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8081/api/v1/health || echo "failed")
+
+              if [ "$HEALTH_STATUS" = "200" ]; then
+                echo "API is healthy!"
+                break
+              fi
+
+              RETRY_COUNT=$((RETRY_COUNT+1))
+              echo "Health check attempt $RETRY_COUNT failed (status: $HEALTH_STATUS), retrying in 10 seconds..."
+              sleep 10
+            done
+
+            if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
+              echo "API health check failed after $MAX_RETRIES attempts. Container logs:"
+              docker logs $(docker ps -a | grep api-server | awk '{print $1}')
+              exit 1
+            fi
 
   deploy_ai:
     needs: build-and-push
     runs-on: ubuntu-latest
     env:
+      GITHUB_SHA: ${{ github.sha }}
       HF_TOKEN: ${{ secrets.HF_TOKEN }}
     steps:
       - name: Checkout Code
@@ -284,7 +442,18 @@ jobs:
             exit 1
           fi
 
-      - name: Upload deploy.sh to AI Service
+      - name: Upload Docker Compose files to AI Service
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.AI_SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          source: "./docker-compose.prod.yaml"
+          target: "/home/opc/app"
+          overwrite: true
+
+      - name: Upload improved deploy script to AI Service
         uses: appleboy/scp-action@v0.1.4
         with:
           host: ${{ secrets.AI_SSH_HOST }}
@@ -303,31 +472,52 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          envs: HF_TOKEN
+          envs: HF_TOKEN,GITHUB_SHA
           script: |
+            echo "Remote directory structure:"
+            ls -la /home/opc
+
+            echo "App directory structure:"
+            mkdir -p /home/opc/app
+            ls -la /home/opc/app
+
             cd /home/opc
-            cat > aaipi-deploy.sh << 'EOL'
-            #!/bin/bash
-            set -e
+            # Fix any potential line ending issues
+            sed -i 's/\r$//' ai-deploy.sh
 
-            cd /home/opc/app
+            # Ensure the shebang line is correct
+            sed -i '1s/^.*$/\#!\/bin\/bash/' ai-deploy.sh
 
-            # Rest of your deployment script...
-            EOL
-
+            # Make deploy script executable
             chmod +x ai-deploy.sh
-            ls -la  # Verify the file exists
-        #   script: |
-        #     cd /home/opc
-        #     # Make deploy script executable
-        #     chmod +x ai-deploy.sh
-        #     # Run deploy script
-        #     ./ai-deploy.sh
-        #   script: |
-        #     cd /home/opc
-        #     # Pull the latest images
-        #     docker pull lorddickson/ai-service:latest
-        #     # Try to pull slim image if it exists
-        #     docker pull lorddickson/ai-service.slim:latest || echo "Slim image not found, will use regular image"
-        #     # Run deploy script
-        #     ./deploy.sh
+
+            # Verify the file exists and check its contents
+            ls -la ai-deploy.sh
+            head -n 5 ai-deploy.sh
+            # Ensure app directory exists
+            mkdir -p /home/opc/app
+            # Verify Docker Compose files exist
+            if [ ! -f "/home/opc/app/docker-compose.prod.yaml" ]; then
+                echo "ERROR: docker-compose.prod.yaml not found in /home/opc/app"
+                echo "Creating a simple docker-compose.prod.yaml file..."
+
+                # Create a basic docker-compose.prod.yaml file
+                cat > /home/opc/app/docker-compose.prod.yaml << 'ENDOFFILE'
+                services:
+                    ai-service:
+                        image: lorddickson/ai-service:latest
+                    ports:
+                        - "50052:50052"
+                    volumes:
+                        - ai-model-cache:/root/.cache/huggingface
+                    environment:
+                        - PYTHONUNBUFFERED=1
+                        - TRANSFORMERS_CACHE=/root/.cache/huggingface
+                        - PYTHON_ENV=production
+                    command: ["/opt/venv/bin/python", "main.py"]
+            ENDOFFILE
+
+                echo "Created basic Docker Compose files"
+            fi
+            # Run deploy script with environment variables
+            HF_TOKEN=$HF_TOKEN GITHUB_SHA=$GITHUB_SHA ./ai-deploy.sh

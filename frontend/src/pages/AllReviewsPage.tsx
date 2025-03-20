@@ -5,7 +5,7 @@ const AllReviewsPage = () => {
     <div>
         <Reviews /> 
     </div>
-  )
-}
+  );
+};
 
-export default AllReviewsPage
+export default AllReviewsPage;

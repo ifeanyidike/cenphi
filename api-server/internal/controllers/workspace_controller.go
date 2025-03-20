@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -18,18 +19,20 @@ import (
 
 type WorkspaceController interface {
 	GetWorkspace(w http.ResponseWriter, r *http.Request)
+	GetTestimonialsByWorkspaceID(w http.ResponseWriter, r *http.Request)
 	CreateWorkspace(w http.ResponseWriter, r *http.Request)
 	UpdateWorkspace(w http.ResponseWriter, r *http.Request)
 	DeleteWorkspace(w http.ResponseWriter, r *http.Request)
 }
 
 type workspaceController struct {
-	logger  *zap.Logger
-	service services.WorkspaceService
+	logger         *zap.Logger
+	service        services.WorkspaceService
+	testimonialSvc services.TestimonialService
 }
 
-func NewWorkspaceController(service services.WorkspaceService, logger *zap.Logger) WorkspaceController {
-	return &workspaceController{logger: logger, service: service}
+func NewWorkspaceController(service services.WorkspaceService, testimonialSvc services.TestimonialService, logger *zap.Logger) WorkspaceController {
+	return &workspaceController{logger: logger, service: service, testimonialSvc: testimonialSvc}
 }
 
 // GetWorkspace retrieves a workspace by ID.
@@ -85,15 +88,10 @@ func (c *workspaceController) CreateWorkspace(w http.ResponseWriter, r *http.Req
 		utils.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
-	if workspace.Name == "" {
-		utils.RespondWithError(w, http.StatusBadRequest, "The workspace data is malformed: Invalid workspace")
-		return
-	}
-
-	if err := models.ValidateWorkspace(&workspace); err != nil {
-		utils.RespondWithError(w, http.StatusBadRequest, err.Error())
-		return
-	}
+	// if workspace.Name == "" {
+	// 	utils.RespondWithError(w, http.StatusBadRequest, "The workspace data is malformed: Invalid workspace")
+	// 	return
+	// }
 
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
@@ -128,7 +126,8 @@ func (c *workspaceController) UpdateWorkspace(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	var workspace *models.Workspace
+	// var workspace *models.Workspace
+	var workspace map[string]any
 	if id == uuid.Nil {
 		utils.RespondWithError(w, http.StatusBadRequest, apperrors.ErrInvalidWorkspaceID.Error())
 		return
@@ -140,8 +139,13 @@ func (c *workspaceController) UpdateWorkspace(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	if websiteURL, ok := workspace["website_url"].(string); ok {
+		workspace["website_url"] = models.PrepareURL(websiteURL)
+	}
+
 	if err := models.ValidateWorkspace(workspace); err != nil {
-		utils.RespondWithError(w, http.StatusBadRequest, err.Error())
+		c.logger.Error("validation failed", zap.Error(err))
+		utils.RespondWithError(w, http.StatusBadRequest, fmt.Sprintf("Validation failed: %v", err))
 		return
 	}
 
@@ -190,4 +194,26 @@ func (c *workspaceController) DeleteWorkspace(w http.ResponseWriter, r *http.Req
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (c *workspaceController) GetTestimonialsByWorkspaceID(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idStr)
+	if err != nil || id == uuid.Nil {
+		c.logger.Error("invalid workspace ID", zap.String("workspace ID", idStr), zap.Error(err))
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid or missing ID")
+		return
+	}
+
+	queryParams := r.URL.Query()
+	filters := models.GetFilterFromParam(queryParams)
+
+	testimonials, err := c.testimonialSvc.FetchByWorkspaceID(r.Context(), id, filters)
+	if err != nil {
+		c.logger.Error("failed to get testimonial", zap.String("testimonial ID", id.String()), zap.Error(err))
+		utils.RespondWithError(w, http.StatusNotFound, err.Error())
+		return
+	}
+
+	utils.RespondWithJSON(w, http.StatusOK, testimonials)
 }

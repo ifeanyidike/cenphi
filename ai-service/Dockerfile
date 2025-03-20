@@ -191,6 +191,9 @@ RUN pip install --no-cache-dir --upgrade pip wheel setuptools
 # Copy requirements and install dependencies in layers for better caching
 COPY requirements.txt .
 
+ARG CACHE_BUSTER=unknown
+RUN echo "Cache buster: ${CACHE_BUSTER}"
+
 # Install PyTorch and core dependencies first
 RUN pip install --no-cache-dir \
     torch==2.2.1+cpu --extra-index-url https://download.pytorch.org/whl/cpu \

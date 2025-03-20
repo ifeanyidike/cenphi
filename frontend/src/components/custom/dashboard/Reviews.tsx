@@ -1,5 +1,5 @@
 
-import { AppSidebar } from "@/components/custom/app-sidebar";
+import { AppSidebar } from "@/components/dashboard-main/AppSidebar";
 
 import {
   Breadcrumb,

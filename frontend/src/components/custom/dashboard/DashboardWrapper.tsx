@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AppSidebar } from "@/components/custom/app-sidebar";
+import { AppSidebar } from "@/components/dashboard-main/AppSidebar"
 
 import {
   Breadcrumb,
@@ -15,7 +15,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 // import SidebarContent from "./sidebar-content";
-import SideBarContent2 from "@/components/custom/SideBarContent2"
+import SideBarContent2 from "@/components/dashboard-main/SidebarContent"
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import EmptyDashboard from "@/components/custom/dashboard/EmptyDashboard";
@@ -115,7 +115,7 @@ export default function DashboardWrapper() {
                 {hasUser ? "" : "No Reviews"}
               </h2>
             </div>
-            <Button variant="outline" onClick={toggleDashboard}>
+            <Button onClick={toggleDashboard}>
               {hasUser ? "Reviews" : "Dashboard"}
             </Button>
           </div>

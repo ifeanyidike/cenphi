@@ -11,7 +11,7 @@ export interface Review {
   status: string;
   thumbnailUrl: string;
   duration: string;
-  audioUrl: string;
+  audioUrl?: string; 
   videoUrl: string;
   imageUrl: string;
   mediaUrl: string;
@@ -27,9 +27,13 @@ export interface StatItem {
 }
 
 export interface ActionItem {
+  id?: string;
   label: string;
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   color: string;
+  bgColor?: string;
+  borderColor?: string;
+  hoverColor?: string;
   description: string;
 }
 
@@ -40,7 +44,7 @@ export interface MetricItem {
   trend: "up" | "down";
 }
 
-export interface ExtendedReview extends Omit<Review, 'id'> {
+export interface ExtendedReview extends Omit<Review, "id"> {
   id: number;
   duration: string;
   name: string;

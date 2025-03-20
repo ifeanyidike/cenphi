@@ -31,40 +31,44 @@ services:
     command: ["air", "-c", ".air.toml"]
     # command: ["/app/api"]
 
-  ai-service:
-    # image: cenphi-ai-service.slim # the slim image is for production
-    build:
-      context: ./ai-service
-      dockerfile: Dockerfile.dev
-    ports:
-      - "50052:50052"
-    env_file:
-      - ./ai-service/.env
-    volumes:
-      - ./ai-service:/app
-      - /app/venv
-      - ai-model-cache:/root/.cache/huggingface
-    environment:
-      # Add any required environment variables
-      - PYTHONUNBUFFERED=1
-      - TRANSFORMERS_CACHE=/root/.cache/huggingface
-    depends_on:
-      - api-server
-    # command: ["/opt/venv/bin/python", "main.py"]
-    command: ["python", "main.py"]
+  # ai-service:
+  #   # image: cenphi-ai-service.slim # the slim image is for production
+  #   build:
+  #     context: ./ai-service
+  #     dockerfile: Dockerfile.dev
+  #   ports:
+  #     - "50052:50052"
+  #   env_file:
+  #     - ./ai-service/.env
+  #   volumes:
+  #     - ./ai-service:/app
+  #     - /app/venv
+  #     - ai-model-cache:/root/.cache/huggingface
+  #   environment:
+  #     # Add any required environment variables
+  #     - PYTHONUNBUFFERED=1
+  #     - TRANSFORMERS_CACHE=/root/.cache/huggingface
+  #   depends_on:
+  #     - api-server
+  #   # command: ["/opt/venv/bin/python", "main.py"]
+  #   command: ["python", "main.py"]
+
+  # cenphidb:
+  #   image: postgres:latest
+  #   container_name: cenphi_postgres
+  #   ports:
+  #     - "5434:5432"
+  #   environment:
+  #     POSTGRES_USER: "${DB_USERNAME}"
+  #     POSTGRES_PASSWORD: "${DB_PASSWORD}"
+  #     POSTGRES_DB: "cenphidb"
+  #   volumes:
+  #     - dbdata:/var/lib/postgresql/data
+  #     - ./init_test_db.sql:/docker-entrypoint-initdb.d/init_test_db.sql
 
   cenphidb:
-    image: postgres:latest
-    container_name: cenphi_postgres
-    ports:
-      - "5434:5432"
-    environment:
-      POSTGRES_USER: "${DB_USERNAME}"
-      POSTGRES_PASSWORD: "${DB_PASSWORD}"
-      POSTGRES_DB: "cenphidb"
-    volumes:
-      - dbdata:/var/lib/postgresql/data
-      - ./init_test_db.sql:/docker-entrypoint-initdb.d/init_test_db.sql
+    image: busybox
+    command: ["tail", "-f", "/dev/null"]
 
 volumes:
   dbdata:

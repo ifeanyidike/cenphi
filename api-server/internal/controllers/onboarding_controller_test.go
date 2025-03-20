@@ -31,6 +31,7 @@ func TestOnboardOwnerSuccess(t *testing.T) {
 	}
 
 	userID := uuid.New()
+	Uid := "firebase_uid"
 	workspaceID := uuid.New()
 
 	req := OnboardRequest{
@@ -40,7 +41,7 @@ func TestOnboardOwnerSuccess(t *testing.T) {
 			WorkspaceID: workspaceID,
 			Role:        models.Admin,
 		},
-		UserId: userID,
+		Uid: Uid,
 	}
 
 	reqBody, _ := json.Marshal(req)
