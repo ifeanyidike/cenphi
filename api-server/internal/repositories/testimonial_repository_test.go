@@ -563,14 +563,14 @@ func TestFetchByWorkspaceID(t *testing.T) {
 	customFieldsJSON, _ := json.Marshal(testimonial.CustomFields)
 	engagementMetricsJSON, _ := json.Marshal(testimonial.EngagementMetrics)
 
-	// Expected query now selects explicit columns in the new order.
-	expectedQuery := `SELECT id, workspace_id, customer_profile_id, testimonial_type, format, status, language, title, summary, content, transcript, media_urls, rating, media_url, media_duration, thumbnail_url, additional_media, product_context, purchase_context, experience_context, collection_method, verification_method, verification_data, verified_at, authenticity_score, source_data, published, published_at, scheduled_publish_at, tags, categories, custom_fields, view_count, share_count, conversion_count, engagement_metrics, created_at, updated_at FROM testimonials WHERE workspace_id = \$1 AND testimonial_type = ANY\(\$2::text\[\]\) AND status = ANY\(\$3::text\[\]\) AND \(\$4::int IS NULL OR rating >= \$4\) AND \(\$5::int IS NULL OR rating <= \$5\) AND tags @> \$6::text\[\] AND categories @> \$7::text\[\] AND created_at >= \$8 AND created_at <= \$9 AND content ILIKE '%' \|\| \$10 \|\| '%' ORDER BY created_at DESC`
+	// Expected query now selects explicit columns in the new order. []byte("{}")
+	expectedQuery := `SELECT id, workspace_id, customer_profile_id, testimonial_type, format, status, language, title, summary, content, transcript, media_urls, rating, media_url, media_duration, thumbnail_url, additional_media, product_context, experience_context, collection_method, verification_method, verification_data, verification_status, verified_at, authenticity_score, source_data, published, published_at, scheduled_publish_at, tags, categories, custom_fields, view_count, share_count, conversion_count, engagement_metrics, created_at, updated_at FROM testimonials WHERE workspace_id = \$1 AND testimonial_type = ANY\(\$2::text\[\]\) AND status = ANY\(\$3::text\[\]\) AND \(\$4::int IS NULL OR rating >= \$4\) AND \(\$5::int IS NULL OR rating <= \$5\) AND tags @> \$6::text\[\] AND categories @> \$7::text\[\] AND created_at >= \$8 AND created_at <= \$9 AND content ILIKE '%' \|\| \$10 \|\| '%' ORDER BY created_at DESC`
 
 	rows := sqlmock.NewRows([]string{
 		"id", "workspace_id", "customer_profile_id", "testimonial_type", "format", "status", "language",
 		"title", "summary", "content", "transcript", "media_urls", "rating", "media_url", "media_duration",
-		"thumbnail_url", "additional_media", "product_context", "purchase_context", "experience_context",
-		"collection_method", "verification_method", "verification_data", "verified_at", "authenticity_score",
+		"thumbnail_url", "additional_media", "product_context", "experience_context", "collection_method",
+		"verification_method", "verification_data", "verification_status", "verified_at", "authenticity_score",
 		"source_data", "published", "published_at", "scheduled_publish_at", "tags", "categories",
 		"custom_fields", "view_count", "share_count", "conversion_count", "engagement_metrics", "created_at", "updated_at",
 	}).AddRow(
@@ -578,10 +578,10 @@ func TestFetchByWorkspaceID(t *testing.T) {
 		testimonial.TestimonialType, testimonial.Format, testimonial.Status, testimonial.Language,
 		testimonial.Title, testimonial.Summary, testimonial.Content, testimonial.Transcript, string(mediaURLsJSON),
 		testimonial.Rating, testimonial.MediaURL, testimonial.MediaDuration, testimonial.ThumbnailURL,
-		"[]",             // additional_media already set as JSON (empty array example)
-		"{}", "{}", "{}", // product_context, purchase_context, experience_context
-		testimonial.CollectionMethod, testimonial.VerificationMethod, string(verificationDataJSON), testimonial.VerifiedAt,
-		nil, string(sourceDataJSON),
+		[]byte("[]"), // additional_media already set as JSON (empty array example)
+		"{}", "{}",   // product_context, purchase_context, experience_context
+		testimonial.CollectionMethod, testimonial.VerificationMethod, string(verificationDataJSON),
+		testimonial.VerificationStatus, testimonial.VerifiedAt, nil, string(sourceDataJSON),
 		testimonial.Published, testimonial.PublishedAt, testimonial.ScheduledPublishAt,
 		string(tagsJSON), string(categoriesJSON), string(customFieldsJSON),
 		testimonial.ViewCount, testimonial.ShareCount, testimonial.ConversionCount,
@@ -973,7 +973,7 @@ func TestFetchByIDWithAllRelatedData(t *testing.T) {
 		"id", "workspace_id", "customer_profile_id", "testimonial_type", "format", "status", "language",
 		"title", "summary", "content", "transcript", "media_urls", "rating", "media_url", "media_duration",
 		"thumbnail_url", "additional_media", "product_context", "purchase_context", "experience_context",
-		"collection_method", "verification_method", "verification_data", "verified_at", "authenticity_score",
+		"collection_method", "verification_method", "verification_data", "verification_status", "verified_at", "authenticity_score",
 		"source_data", "published", "published_at", "scheduled_publish_at", "tags", "categories",
 		"custom_fields", "view_count", "share_count", "conversion_count", "engagement_metrics", "created_at", "updated_at",
 	}).
@@ -988,32 +988,33 @@ func TestFetchByIDWithAllRelatedData(t *testing.T) {
 			expectedTestimonial.Title,
 			"", // summary
 			expectedTestimonial.Content,
-			"",    // transcript
-			"[]",  // media_urls
-			nil,   // rating
-			"",    // media_url
-			0,     // media_duration
-			"",    // thumbnail_url
-			"[]",  // additional_media
-			"{}",  // product_context
-			"{}",  // purchase_context
-			"{}",  // experience_context
-			"",    // collection_method
-			"",    // verification_method
-			"{}",  // verification_data
-			nil,   // verified_at
-			nil,   // authenticity_score
-			"{}",  // source_data
-			false, // published
-			nil,   // published_at
-			nil,   // scheduled_publish_at
-			"[]",  // tags
-			"[]",  // categories
-			"{}",  // custom_fields
-			0,     // view_count
-			0,     // share_count
-			0,     // conversion_count
-			"{}",  // engagement_metrics
+			"",           // transcript
+			"[]",         // media_urls
+			nil,          // rating
+			"",           // media_url
+			0,            // media_duration
+			"",           // thumbnail_url
+			[]byte("[]"), // additional_media
+			"{}",         // product_context
+			"{}",         // purchase_context
+			"{}",         // experience_context
+			"",           // collection_method
+			"",           // verification_method
+			"{}",         // verification_data
+			"",           // verification_status
+			nil,          // verified_at
+			nil,          // authenticity_score
+			"{}",         // source_data
+			false,        // published
+			nil,          // published_at
+			nil,          // scheduled_publish_at
+			"[]",         // tags
+			"[]",         // categories
+			"{}",         // custom_fields
+			0,            // view_count
+			0,            // share_count
+			0,            // conversion_count
+			"{}",         // engagement_metrics
 			expectedTestimonial.CreatedAt,
 			expectedTestimonial.UpdatedAt,
 		)
