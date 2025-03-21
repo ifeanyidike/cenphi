@@ -1,23 +1,5 @@
 // types.ts
 
-export interface Review {
-  mediaType: string;
-  id: number;
-  name: string;
-  initials: string;
-  rating: number;
-  timeAgo: string;
-  content: string;
-  status: string;
-  thumbnailUrl: string;
-  duration: string;
-  audioUrl?: string; 
-  videoUrl: string;
-  imageUrl: string;
-  mediaUrl: string;
-  _animate?: boolean;
-}
-
 export interface StatItem {
   title: string;
   value: string | number;
@@ -44,21 +26,28 @@ export interface MetricItem {
   trend: "up" | "down";
 }
 
-export interface ExtendedReview extends Omit<Review, "id"> {
+export interface Review {
+  mediaType: string;
   id: number;
-  duration: string;
   name: string;
   initials: string;
   rating: number;
   timeAgo: string;
   content: string;
   status: string;
-  mediaType: string;
-  _animate?: boolean; 
-  mediaUrl: string;
-  thumbnailUrl: string;
-  audioUrl: string;
+
+  duration: string;
+
+}
+
+
+
+export interface ExtendedReview extends Review {
+  audioUrl?: string; 
   videoUrl: string;
   imageUrl: string;
+  mediaUrl: string;
+  _animate?: boolean;
+  thumbnailUrl: string
 }
 
