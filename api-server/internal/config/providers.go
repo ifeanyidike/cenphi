@@ -61,6 +61,8 @@ type CapterraConfig struct {
 }
 
 type FacebookConfig struct {
+	ClientID          string `env:"FACEBOOK_CLIENT_ID,required"`
+	ClientSecret      string `env:"FACEBOOK_CLIENT_SECRET,required"`
 	AccessToken       string `env:"FACEBOOK_ACCESS_TOKEN,required"`
 	PageID            string `env:"FACEBOOK_PAGE_ID,required"`
 	RequestsPerMinute int    `env:"FACEBOOK_RPM" envDefault:"60"`

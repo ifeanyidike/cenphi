@@ -16,6 +16,7 @@ type TestimonialController interface {
 	HandleAPISubmission(w http.ResponseWriter, r *http.Request)
 	TriggerSync(w http.ResponseWriter, r *http.Request)
 	GetByWorkspaceID(w http.ResponseWriter, r *http.Request)
+	FetchFromProvider(w http.ResponseWriter, r *http.Request)
 }
 
 type testimonialController struct {
@@ -76,6 +77,44 @@ func (c *testimonialController) GetByWorkspaceID(w http.ResponseWriter, r *http.
 	if err != nil {
 		c.logger.Error("failed to get testimonial", zap.String("testimonial ID", id.String()), zap.Error(err))
 		utils.RespondWithError(w, http.StatusNotFound, err.Error())
+		return
+	}
+
+	utils.RespondWithJSON(w, http.StatusOK, testimonials)
+}
+
+func (c *testimonialController) FetchFromProvider(w http.ResponseWriter, r *http.Request) {
+	providerName := chi.URLParam(r, "provider")
+	workspaceIDStr := chi.URLParam(r, "workspaceID")
+	userId := chi.URLParam(r, "user_id")
+
+	workspaceID, err := uuid.Parse(workspaceIDStr)
+	if err != nil || workspaceID == uuid.Nil {
+		c.logger.Error("invalid workspace ID", zap.String("workspace ID", workspaceIDStr), zap.Error(err))
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid or missing workspace ID")
+		return
+	}
+
+	// Get credentials from the request body
+	var credentials map[string]string
+	if err := json.NewDecoder(r.Body).Decode(&credentials); err != nil {
+		c.logger.Error("invalid request payload", zap.Error(err))
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid credentials format")
+		return
+	}
+
+	// Call a new service method to fetch with custom credentials
+	testimonials, err := c.providerSvc.FetchWithCredentials(r.Context(), providerName, userId, workspaceID, credentials)
+	if err != nil {
+		c.logger.Error("failed to fetch testimonials", zap.Error(err))
+		utils.RespondWithError(w, http.StatusInternalServerError, "Failed to fetch testimonials")
+		return
+	}
+
+	// Store the fetched testimonials
+	if err := c.svc.ProcessTestimonials(r.Context(), testimonials); err != nil {
+		c.logger.Error("failed to process testimonials", zap.Error(err))
+		utils.RespondWithError(w, http.StatusInternalServerError, "Failed to store testimonials")
 		return
 	}
 

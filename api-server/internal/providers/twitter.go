@@ -79,19 +79,19 @@ func (t *TwitterProvider) Fetch(ctx context.Context) ([]models.Testimonial, erro
 	}
 
 	var testimonials []models.Testimonial
-	for _, tweet := range result.Data {
-		testimonials = append(testimonials, models.Testimonial{
-			Content:   tweet.Text,
-			CreatedAt: tweet.CreatedAt,
-			Type:      models.TestimonialTypeText,
-			SourceData: map[string]interface{}{
-				"tweet_id":  tweet.ID,
-				"author_id": tweet.AuthorID,
-				"source":    t.Name(),
-			},
-			CollectionMethod: models.CollectionAPI,
-		})
-	}
+	// for _, tweet := range result.Data {
+	// 	testimonials = append(testimonials, models.Testimonial{
+	// 		Content:   tweet.Text,
+	// 		CreatedAt: tweet.CreatedAt,
+	// 		Type:      models.TestimonialTypeText,
+	// 		SourceData: map[string]interface{}{
+	// 			"tweet_id":  tweet.ID,
+	// 			"author_id": tweet.AuthorID,
+	// 			"source":    t.Name(),
+	// 		},
+	// 		CollectionMethod: models.CollectionAPI,
+	// 	})
+	// }
 
 	return testimonials, nil
 }
