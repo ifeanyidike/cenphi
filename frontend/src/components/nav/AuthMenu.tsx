@@ -16,6 +16,7 @@ import { Avatar, AvatarImage } from "../ui/avatar";
 import { AvatarFallback } from "@radix-ui/react-avatar";
 import { generateColorFromText } from "@/util/general";
 import { User as AuthUser } from "firebase/auth";
+import { auth } from "@/config/firebase";
 
 type Props = {
   setIsUserMenuOpen: (isOpen: boolean) => void;
@@ -127,6 +128,7 @@ const AuthMenu = observer(
                         onClick={() => {
                           /* Handle logout */
                           authStore.logout();
+                          auth.currentUser?.reload();
                         }}
                         className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
                       >
