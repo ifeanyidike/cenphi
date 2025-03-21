@@ -1,15 +1,27 @@
 // repositories/WorkspaceRepository.ts
+
 import { auth } from "@/config/firebase";
 import { Workspace } from "@/types/workspace";
 import { makeAutoObservable, observable } from "mobx";
 import { MemberManager } from "./managers/member";
 import { TestimonialManager } from "./managers/testimonial";
 
+/**
+ * The WorkspaceOrchestrator class handles the orchestration of workspace-related
+ * operations such as retrieving authentication tokens and updating workspace details.
+ * It integrates with member and testimonial managers to manage associated data.
+ */
 export class WorkspaceOrchestrator {
   public server = import.meta.env.VITE_API_URL + "/workspaces";
+
   public memberManager: MemberManager;
+
   public testimonialManager: TestimonialManager;
 
+  /**
+   * Constructs a new WorkspaceOrchestrator instance.
+   * Initializes member and testimonial managers and makes the instance observable.
+   */
   constructor() {
     this.memberManager = new MemberManager(this);
     this.testimonialManager = new TestimonialManager(this);
@@ -20,6 +32,12 @@ export class WorkspaceOrchestrator {
     });
   }
 
+  /**
+   * Retrieves the current authenticated user's token and details.
+   *
+   * @returns A promise that resolves to an object containing the token and the current user.
+   * @throws Error if the user is not authenticated or token is not available.
+   */
   public async getToken() {
     const currentUser = auth.currentUser;
     const token = await currentUser?.getIdToken();
@@ -28,6 +46,13 @@ export class WorkspaceOrchestrator {
     return { token, currentUser };
   }
 
+  /**
+   * Updates workspace details using the provided partial workspace data.
+   *
+   * @param updates - Partial workspace data to update the existing workspace.
+   * @returns A promise that resolves to a boolean indicating whether the update was successful.
+   * @throws Error if the user is not authorized, the workspace does not exist, or the request fails.
+   */
   async update(updates: Partial<Workspace>) {
     const { token, currentUser } = await this.getToken();
 
