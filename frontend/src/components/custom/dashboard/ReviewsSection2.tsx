@@ -10,15 +10,7 @@ import FilterMenu from "@/components/custom/dashboard/FilterMenu";
 import { useNavigate } from "react-router-dom"; 
 
 
-interface ExtendedReview extends Omit<Review, 'thumbnailUrl' | 'duration' | 'videoUrl'> {
-  mediaType: "text" | "audio" | "video" | "image";
-  mediaUrl?: string;
-  thumbnailUrl?: string | undefined; 
-  duration?: string; 
-  audioUrl?: string;
-  videoUrl?: string | undefined;
-  imageUrl?: string;
-}
+
 
 export const ReviewsSection2 = () => {
   const navigate = useNavigate();
@@ -69,7 +61,7 @@ export const ReviewsSection2 = () => {
   ];
   
   // Enhanced reviews with different media types - now showing five reviews
-  const recentReviews: ExtendedReview[] = [
+  const recentReviews: Review[] = [
     {
       id: 1,
       name: "John Doe",
@@ -78,7 +70,10 @@ export const ReviewsSection2 = () => {
       timeAgo: "2 days ago",
       content: "The product exceeded all my expectations. The team was incredibly responsive and helpful throughout the entire process.",
       status: "New",
-      mediaType: "text"
+      mediaType: "text",
+      mediaUrl: "",
+      videoUrl: "",
+      imageUrl: ""
     },
     {
       id: 2,
@@ -89,8 +84,11 @@ export const ReviewsSection2 = () => {
       content: "Simply amazing! I've tried many similar products but this one stands head and shoulders above the rest.",
       status: "Replied",
       mediaType: "audio",
-      mediaUrl: "/audio/review-sarah.mp3",
-      duration: "1:45"
+      audioUrl: "/audio/review-sarah.mp3",
+      duration: "1:45",
+      mediaUrl: "",
+      videoUrl: "",
+      imageUrl: ""
     },
     {
       id: 3,
@@ -101,9 +99,10 @@ export const ReviewsSection2 = () => {
       content: "Great product with intuitive design. Would recommend to colleagues looking for similar solutions.",
       status: "Verified",
       mediaType: "image",
-        mediaUrl: "/media/img/iStock-1354196176.webp",
+      mediaUrl: "",
+      videoUrl: "",
+      imageUrl: "/media/img/iStock-1354196176.webp",
     },
-    
     {
       id: 4,
       name: "David Chen",
@@ -113,20 +112,27 @@ export const ReviewsSection2 = () => {
       content: "Love the product quality. Highly recommended!",
       status: "New",
       mediaType: "audio",
-      mediaUrl: "/audio/review-david.mp3",
-      duration: "0:58"
+      mediaUrl: "",
+      videoUrl: "",
+      audioUrl: "/audio/review-david.mp3",
+      duration: "0:58",
+      imageUrl: "",
     },
     {
       id: 5,
-      name: "Emily Rodriguez",
-      initials: "ER",
-      rating: 4,
+      name: "Anonymous",
+      initials: "A",
+      rating: 3,
       timeAgo: "5 days ago",
       content: "The customer service team went above and beyond. I'm really impressed with how they handled my questions.",
       status: "Featured",
-      mediaType: "text"
+      mediaType: "text",
+      mediaUrl: "",
+      videoUrl: "",
+      imageUrl: "",
     }
   ];
+
 
   // Filter reviews based on activeFilters
   const filteredReviews = recentReviews.filter(review => {
