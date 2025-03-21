@@ -58,7 +58,7 @@ func (r *testimonialRepository) buildFilterQuery(query string, workspaceID uuid.
 		typesStr := "{" + strings.Join(mapSlice(filter.Types, func(t models.TestimonialType) string {
 			return string(t)
 		}), ",") + "}"
-		query += fmt.Sprintf(" AND type = ANY($%d::text[])", argNum)
+		query += fmt.Sprintf(" AND testimonial_type = ANY($%d::text[])", argNum)
 		args = append(args, typesStr)
 		argNum++
 	} else {
@@ -148,13 +148,13 @@ func (r *testimonialRepository) FetchByWorkspaceID(ctx context.Context, workspac
 		SELECT 
 		  id, workspace_id, customer_profile_id, testimonial_type, format, status, language,
 		  title, summary, content, transcript, media_urls, rating, media_url, media_duration,
-		  thumbnail_url, additional_media, product_context, purchase_context, experience_context,
+		  thumbnail_url, additional_media, product_context, experience_context,
 		  collection_method, verification_method, verification_data, verification_status,
-	  verified_at, authenticity_score, source_data, published, published_at, scheduled_publish_at,
-	  tags, categories, custom_fields, view_count, share_count, conversion_count, engagement_metrics,
-	  created_at, updated_at
-	FROM testimonials
-	WHERE workspace_id = $1
+	  	  verified_at, authenticity_score, source_data, published, published_at, scheduled_publish_at,
+	  	  tags, categories, custom_fields, view_count, share_count, conversion_count, engagement_metrics,
+	  	  created_at, updated_at
+		FROM testimonials
+		WHERE workspace_id = $1
 `
 	query, args := r.buildFilterQuery(query, workspaceID, filter)
 	query += " ORDER BY created_at DESC"
@@ -189,7 +189,6 @@ func (r *testimonialRepository) FetchByWorkspaceID(ctx context.Context, workspac
 			&t.ThumbnailURL,
 			&t.AdditionalMedia,
 			&t.ProductContext,
-			&t.PurchaseContext,
 			&t.ExperienceContext,
 			&t.CollectionMethod,
 			&t.VerificationMethod,
