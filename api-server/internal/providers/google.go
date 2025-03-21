@@ -127,19 +127,19 @@ func (g *GoogleMyBusiness) fetchReviews(ctx context.Context, locationID string) 
 
 	// Convert to testimonial models
 	var testimonials []models.Testimonial
-	for _, r := range result.Reviews {
-		testimonials = append(testimonials, models.Testimonial{
-			CustomerName: r.Reviewer.DisplayName,
-			Content:      r.Comment,
-			Rating:       &r.StarRating,
-			SourceData: map[string]interface{}{
-				"source":               g.Name(),
-				"location":             locationID,
-				"trustpilot_review_id": r.ReviewID,
-			},
-			CreatedAt: r.CreateTime,
-		})
-	}
+	// for _, r := range result.Reviews {
+	// 	testimonials = append(testimonials, models.Testimonial{
+	// 		CustomerName: r.Reviewer.DisplayName,
+	// 		Content:      r.Comment,
+	// 		Rating:       &r.StarRating,
+	// 		SourceData: map[string]interface{}{
+	// 			"source":               g.Name(),
+	// 			"location":             locationID,
+	// 			"trustpilot_review_id": r.ReviewID,
+	// 		},
+	// 		CreatedAt: r.CreateTime,
+	// 	})
+	// }
 	return testimonials, nil
 }
 
