@@ -207,7 +207,6 @@ class AuthStore {
       const response = await fetch(`${this.server}/users/register`, {
         method: "POST",
         body: JSON.stringify({
-          id: crypto.randomUUID(),
           name,
           email,
           email_verified: cred.user.emailVerified,
