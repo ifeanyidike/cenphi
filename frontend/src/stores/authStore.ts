@@ -30,10 +30,14 @@ import {
 
 export type SocialProvider = "google" | "apple" | "facebook";
 
+/**
+ * AuthStore handles all authentication-related operations including user sign-up,
+ * login, logout, social login via popup or redirect, password reset, and email verification.
+ * It maintains the current user's state along with loading and error statuses.
+ */
 class AuthStore {
   public user: User | null = null;
   public loading: boolean = true;
-  // public error: AuthError | undefined = undefined;
   public errors: AuthErrors = {} as AuthErrors;
   private server = import.meta.env.VITE_API_URL;
 
@@ -85,28 +89,18 @@ class AuthStore {
   public clearError(key: string) {
     delete this.errors[key as AuthErrorField];
   }
+
   public clearAllErrors() {
     this.errors = {} as AuthErrors;
   }
 
-  // private async handleCredential(credential: UserCredential) {
-  //   runInAction(() => {
-  //     this.user = credential.user;
-  //   });
-
-  //   // Handle Apple specific data if available
-  //   // if (credential.providerId === "apple.com") {
-  //   //   const displayName = credential.user.displayName;
-  //   //   if (displayName) {
-  //   //     console.log("displayName: ", displayName);
-  //   //     // Store the display name as Apple doesn't send it in subsequent logins
-  //   //     // You might want to store this in your database
-  //   //   }
-  //   // }
-
-  //   return credential;
-  // }
-
+  /**
+   * Processes the redirect result after a social login.
+   * If a valid result is found, updates the user state and registers the user.
+   *
+   * @returns {Promise<void>}
+   * @throws An error if processing the redirect result fails.
+   */
   private async handleRedirectResult() {
     try {
       const result = await getRedirectResult(auth);
@@ -117,7 +111,6 @@ class AuthStore {
           this.user.displayName || "",
           this.user.email!
         );
-        // await this.handleCredential(result);
       }
     } catch (error: any) {
       this.setError(FirebaseErrorHandler.checkFirebaseErrorsAndThrow(error));
@@ -125,6 +118,14 @@ class AuthStore {
     }
   }
 
+  /**
+   * Initiates a social login using a popup window.
+   * Configures provider-specific parameters, attempts sign-in, and registers the user.
+   *
+   * @param provider - The social provider to use (e.g., "google", "apple", or "facebook").
+   * @returns A promise that resolves to the user credentials on successful login.
+   * @throws An error if the login fails, with a fallback to redirect if the popup is blocked.
+   */
   async socialLoginPopup(provider: SocialProvider) {
     try {
       this.setLoading(true);
@@ -135,7 +136,6 @@ class AuthStore {
       if (provider === "apple") {
         // Apple specific configuration
         (authProvider as OAuthProvider).setCustomParameters({
-          // Request user name and email on first sign-in
           locale: navigator.language || "en",
           state: Math.random().toString(36).substring(2, 15),
         });
@@ -169,6 +169,14 @@ class AuthStore {
     }
   }
 
+  /**
+   * Initiates a social login via redirect.
+   * Configures provider-specific parameters and starts the redirect-based sign-in process.
+   *
+   * @param provider - The social provider to use.
+   * @returns A promise that resolves when the redirect process is initiated.
+   * @throws An error if the login redirect fails.
+   */
   async socialLoginRedirect(provider: SocialProvider) {
     try {
       this.setLoading(true);
@@ -198,6 +206,14 @@ class AuthStore {
     }
   }
 
+  /**
+   * Registers a user with the backend using credentials from a social login or sign-up.
+   *
+   * @param cred - The user credentials returned from Firebase authentication.
+   * @param name - The user's display name.
+   * @param email - The user's email address.
+   * @returns A promise that resolves to the backend registration result.
+   */
   private async registerUser(
     cred: UserCredential,
     name: string,
@@ -231,6 +247,17 @@ class AuthStore {
     }
   }
 
+  /**
+   * Signs up a new user using email and password.
+   * Validates inputs, creates the user in Firebase, sends an email verification,
+   * and registers the user with the backend.
+   *
+   * @param name - The new user's display name.
+   * @param email - The new user's email address.
+   * @param password - The new user's password.
+   * @returns A promise that resolves to the user credentials.
+   * @throws An error if the sign-up process fails.
+   */
   public async signup(name: string, email: string, password: string) {
     try {
       this.setLoading(true);
@@ -262,19 +289,25 @@ class AuthStore {
       await this.registerUser(cred, name, email);
       return cred;
     } catch (error: any) {
-      // Handle Firebase auth errors
       this.setError(FirebaseErrorHandler.checkFirebaseErrorsAndThrow(error));
     } finally {
       this.setLoading(false);
     }
   }
 
+  /**
+   * Logs in a user with email and password.
+   * Validates the email format and attempts sign-in with Firebase.
+   *
+   * @param email - The user's email address.
+   * @param password - The user's password.
+   * @returns A promise that resolves to the user credentials.
+   * @throws An error if the login process fails.
+   */
   public async login(email: string, password: string) {
     try {
       this.setLoading(true);
       this.setError();
-      // Invalid email format. Please enter a valid email address.
-      // this.validateEmailAndThrow(email);
       const isValid = FirebaseErrorHandler.validateEmail(email);
       if (!isValid) {
         this.setError({
@@ -295,6 +328,12 @@ class AuthStore {
     }
   }
 
+  /**
+   * Logs out the current user.
+   *
+   * @returns A promise that resolves when the user is successfully signed out.
+   * @throws An error if the logout process fails.
+   */
   public async logout() {
     try {
       this.setLoading(true);
@@ -307,6 +346,13 @@ class AuthStore {
     }
   }
 
+  /**
+   * Sends a password reset email to the specified email address.
+   *
+   * @param email - The email address to send the password reset link to.
+   * @returns A promise that resolves with a success message.
+   * @throws An error if the request fails or the email format is invalid.
+   */
   public async requestPasswordReset(email: string) {
     try {
       this.setLoading(true);
@@ -330,6 +376,13 @@ class AuthStore {
     }
   }
 
+  /**
+   * Verifies a password reset code and retrieves the associated email.
+   *
+   * @param actionCode - The password reset action code.
+   * @returns A promise that resolves to the email associated with the reset code.
+   * @throws An error if the code is invalid or expired.
+   */
   async verifyResetCode(actionCode: string) {
     try {
       this.setLoading(true);
@@ -346,6 +399,14 @@ class AuthStore {
     }
   }
 
+  /**
+   * Completes the password reset process by setting a new password.
+   *
+   * @param actionCode - The password reset action code.
+   * @param newPassword - The new password to set.
+   * @returns A promise that resolves when the password has been successfully updated.
+   * @throws An error if the password reset process fails.
+   */
   async completePasswordReset(actionCode: string, newPassword: string) {
     try {
       this.setLoading(true);
@@ -361,6 +422,13 @@ class AuthStore {
     }
   }
 
+  /**
+   * Updates the current user's email address.
+   *
+   * @param newEmail - The new email address to update to.
+   * @returns A promise that resolves when the email has been successfully updated.
+   * @throws An error if the update process fails or if no user is logged in.
+   */
   public async updateUserEmail(newEmail: string) {
     try {
       if (!auth.currentUser) throw new Error("You must be logged in to update");
@@ -375,6 +443,13 @@ class AuthStore {
     }
   }
 
+  /**
+   * Updates the current user's password.
+   *
+   * @param newPassword - The new password to set.
+   * @returns A promise that resolves when the password has been successfully updated.
+   * @throws An error if the update process fails or if no user is logged in.
+   */
   public async updateUserPassword(newPassword: string) {
     try {
       if (!auth.currentUser) throw new Error("You must be logged in to update");
@@ -389,10 +464,20 @@ class AuthStore {
     }
   }
 
+  /**
+   * Indicates whether a user is currently authenticated.
+   *
+   * @returns True if the user is authenticated, false otherwise.
+   */
   get isAuthenticated() {
     return !!this.user;
   }
 
+  /**
+   * Provides a fallback name based on the user's display name or email.
+   *
+   * @returns A two-character string derived from the user's name or email, or an empty string if unavailable.
+   */
   get fallbackName() {
     if (!this.user) return "";
     const displayname = this.user?.displayName;
@@ -404,10 +489,20 @@ class AuthStore {
     }
   }
 
+  /**
+   * Retrieves the current authenticated user from the store or Firebase.
+   *
+   * @returns The current user if available, otherwise the Firebase current user.
+   */
   get currentUser() {
     return this.user || auth.currentUser;
   }
 
+  /**
+   * Verifies the current user's email by updating the backend.
+   *
+   * @returns A promise that resolves to an object indicating success or containing an error message.
+   */
   async verifyEmail() {
     if (!this.user?.uid) return { error: "Invalid user" };
 
