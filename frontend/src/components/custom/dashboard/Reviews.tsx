@@ -24,7 +24,7 @@ import { ReviewCardView } from "@/components/custom/dashboard/ReviewCardView";
 import { ReviewListView } from "@/components/custom/dashboard/ReviewListView";
 import FilterMenu from "@/components/custom/dashboard/FilterMenu";
 import { useNavigate } from "react-router";
-import { ExtendedReview } from "@/types/types";
+import { Review } from "@/types/types";
 import { TransitionGroup, CSSTransition } from 'react-transition-group';
 import VideoReview1 from "@/assets/aboutbannervideo.mp4";
 import VideoThumbNail2 from "@/assets/myheroimage.png"
@@ -35,7 +35,7 @@ const Reviews = () => {
     const [viewMode, setViewMode] = useState("card");
     const [filterMenuOpen, setFilterMenuOpen] = useState(false);
     const [activeFilters, setActiveFilters] = useState<string[]>([]);
-    const [visibleReviews, setVisibleReviews] = useState<ExtendedReview[]>([]);
+    const [visibleReviews, setVisibleReviews] = useState<Review[]>([]);
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
     const loaderRef = useRef<HTMLDivElement>(null);
@@ -84,7 +84,7 @@ const Reviews = () => {
             ];
    
     // Complete list of reviews
-    const allReviews: ExtendedReview[] = useMemo(() => {
+    const allReviews: Review[] = useMemo(() => {
       return    [
       {
         id: 1,
@@ -213,7 +213,7 @@ const Reviews = () => {
         content: "Excellent product! The features are intuitive and it solved my problem perfectly.",
         status: "Featured",
         mediaType: "image",
-        mediaUrl: "/media/img/iStock-1354196176.webp",
+        imageUrl: "/media/img/iStock-1354196176.webp",
       },
       {
       id: 13,
@@ -236,7 +236,7 @@ const Reviews = () => {
         content: "The product works well for my basic needs, but I found some features difficult to navigate. Customer service was helpful though.",
         status: "Featured",
         mediaType: "video",
-        mediaUrl: VideoReview1,
+        videoUrl: VideoReview1,
         thumbnailUrl: "/media/img/iStock-1354196176.webp", 
         duration: "2:35"
       },
@@ -353,7 +353,7 @@ const Reviews = () => {
 
 
 useEffect(() => {
-console.log("THIS IS HAS MORE STATE", hasMore)
+
 },[hasMore])
   
   useEffect(() => {

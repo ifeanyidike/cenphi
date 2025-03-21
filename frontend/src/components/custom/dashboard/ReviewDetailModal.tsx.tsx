@@ -2,6 +2,8 @@ import { useState } from "react";
 import { X, Volume2, Film, ImageIcon, MessageSquare, Badge, Star, ChevronRight } from "lucide-react";
 import { Dialog } from "@headlessui/react";
 import { Review } from "@/types/types";
+import { ExtendedReview } from "@/components/custom/dashboard/AudioPlayer";
+import { ExtendedReview2 } from "@/components/custom/dashboard/VideoPlayer";
 import { AudioPlayer } from "@/components/custom/dashboard/AudioPlayer";
 import { VideoPlayer } from "@/components/custom/dashboard/VideoPlayer";
 
@@ -39,19 +41,19 @@ export const ReviewDetailModal = ({ review }: { review: Review }) => {
               <div className="relative rounded-xl overflow-hidden bg-gray-100">
                 {review.mediaType === 'video' && (
                   <div className="aspect-video">
-                    <VideoPlayer review={review} />
+                    <VideoPlayer review={review as ExtendedReview2} />
                   </div>
                 )}
                 
                 {review.mediaType === 'audio' && (
                   <div className="p-6">
-                    <AudioPlayer review={review} />
+                    <AudioPlayer review={review as ExtendedReview} />
                   </div>
                 )}
                 
                 {review.mediaType === 'image' && (
                   <img 
-                    src={review.mediaUrl || ''}
+                    src={review.imageUrl || ''}
                     alt={review.content}
                     className="w-full h-full object-contain max-h-[70vh]"
                   />
