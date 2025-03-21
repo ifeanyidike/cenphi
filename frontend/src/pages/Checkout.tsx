@@ -18,6 +18,7 @@ import { observer } from "mobx-react-lite";
 import { authStore } from "@/stores/authStore";
 import { appService } from "@/services/appService";
 import { Plan } from "@/types/workspace";
+import { notification } from "antd";
 
 // Stripe promise initialization
 const stripePromise = loadStripe("your_publishable_key");
@@ -41,6 +42,17 @@ const Checkout = observer(() => {
 
   async function onComplete() {
     const user = authStore.currentUser;
+
+    if (!user?.emailVerified) {
+      notification.error({
+        message: "Email verification error",
+        description:
+          "Your email is not verified. Plesae verify your email or contact the admin to get started.",
+      });
+
+      return;
+    }
+
     await appService.onboard_partial(user?.uid || "", planId as Plan);
     setCurrentStep(2);
   }

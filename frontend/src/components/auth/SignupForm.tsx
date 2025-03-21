@@ -20,6 +20,8 @@ import { observer } from "mobx-react-lite";
 import { runInAction } from "mobx";
 import { AuthErrorField } from "@/services/error";
 import { useNavigate } from "react-router-dom";
+import { notification } from "antd";
+import { auth } from "@/config/firebase";
 
 export const SignUpForm: React.FC<AuthFormProps & { onBack?: () => void }> =
   observer(
@@ -38,6 +40,10 @@ export const SignUpForm: React.FC<AuthFormProps & { onBack?: () => void }> =
         password: "",
         confirmPassword: "",
       });
+
+      useEffect(() => {
+        auth.currentUser?.reload();
+      }, []);
       const [step, setStep] = useState(0);
       const [showPassword, setShowPassword] = useState(false);
       const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -934,6 +940,12 @@ export const SignUpForm: React.FC<AuthFormProps & { onBack?: () => void }> =
                             onClick={() => {
                               if (authStore.user?.emailVerified) {
                                 navigate(`/pricing?workflow=onboarding`);
+                              } else {
+                                notification.error({
+                                  message: "Subscription error",
+                                  description:
+                                    "An error occurred during the subscription process. Please try again.",
+                                });
                               }
                             }}
                           >
