@@ -68,6 +68,8 @@ func TestOnboardingService_OnboardOwner(t *testing.T) {
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 	}, nil)
+	mockTeamMemberRepo.On("GetDataByUserID", mock.Anything, userID, mock.AnythingOfType("*sql.Tx")).Return(nil, sql.ErrNoRows)
+
 	mockWorkspaceRepo.On("Create", mock.Anything, workspace, mock.AnythingOfType("*sql.Tx")).Return(nil)
 	mockTeamMemberRepo.On("Create", mock.Anything, teamMember, mock.AnythingOfType("*sql.Tx")).Return(nil)
 
