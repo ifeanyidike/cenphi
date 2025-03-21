@@ -64,18 +64,18 @@ func (p *TrustpilotProvider) Fetch(ctx context.Context) ([]models.Testimonial, e
 	}
 
 	var testimonials []models.Testimonial
-	for _, review := range result.Reviews {
-		testimonials = append(testimonials, models.Testimonial{
-			CustomerName: review.Consumer.DisplayName,
-			Content:      review.Text,
-			Rating:       &review.Rating,
-			SourceData: map[string]interface{}{
-				"source":               p.Name(),
-				"trustpilot_review_id": review.ID,
-			},
-			CreatedAt: review.CreatedAt,
-		})
-	}
+	// for _, review := range result.Reviews {
+	// 	testimonials = append(testimonials, models.Testimonial{
+	// 		CustomerName: review.Consumer.DisplayName,
+	// 		Content:      review.Text,
+	// 		Rating:       &review.Rating,
+	// 		SourceData: map[string]interface{}{
+	// 			"source":               p.Name(),
+	// 			"trustpilot_review_id": review.ID,
+	// 		},
+	// 		CreatedAt: review.CreatedAt,
+	// 	})
+	// }
 
 	return testimonials, nil
 }
