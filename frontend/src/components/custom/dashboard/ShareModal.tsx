@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { X, Facebook, Twitter, Linkedin, Mail, Link as LinkIcon, CheckCircle, Instagram, Copy } from 'lucide-react';
+import { X, Facebook, Twitter, Linkedin, Mail, CheckCircle, Instagram, Copy } from 'lucide-react';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Review } from "@/types/types";
 import { Button } from "@/components/ui/button";
