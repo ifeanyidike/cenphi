@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
@@ -120,7 +119,6 @@ func (r *userRepository) UpdateAny(ctx context.Context, updates map[string]any, 
 }
 
 func (r *userRepository) GetByID(ctx context.Context, id uuid.UUID, db DB) (*models.User, error) {
-	log.Println("In get by id call")
 	query :=
 		`
 		SELECT 

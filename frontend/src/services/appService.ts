@@ -2,6 +2,10 @@ import { auth } from "@/config/firebase";
 import { Plan } from "@/types/workspace";
 import { flow, makeAutoObservable, reaction, runInAction } from "mobx";
 
+/**
+ * AppService handles application-wide operations such as server health checks and user onboarding.
+ * It maintains the health status of the backend service and provides utility methods to start/stop health monitoring.
+ */
 class AppService {
   private server = import.meta.env.VITE_API_URL;
   healthy = true;
@@ -10,15 +14,21 @@ class AppService {
   constructor() {
     makeAutoObservable(this);
 
+    // React to changes in health status
     reaction(
       () => this.healthy,
       (healthy: boolean) => {
-      console.log("Health changed:", healthy);
-      // You could trigger notifications, update other state, etc.
+        console.log("Health changed:", healthy);
       }
     );
   }
 
+  /**
+   * Checks the health of the backend server.
+   * This method uses a MobX flow to perform asynchronous operations.
+   *
+   * @returns A generator that yields the fetch promise and updates the healthy status.
+   */
   checkHealth = flow(function* (this: AppService) {
     try {
       const response: Response = yield fetch(`${this.server}/health`);
@@ -32,6 +42,11 @@ class AppService {
     }
   });
 
+  /**
+   * Starts the periodic health check for the backend server.
+   *
+   * @param interval - The time interval in milliseconds between health checks (default is 60000ms).
+   */
   startHealthCheck(interval = 60000): void {
     if (!this.isHealthRunning) {
       this.checkHealth();
@@ -43,6 +58,9 @@ class AppService {
     }
   }
 
+  /**
+   * Stops the periodic health check if it is running.
+   */
   stopHealthCheck(): void {
     if (this.healthInterval) {
       clearInterval(this.healthInterval);
@@ -50,37 +68,32 @@ class AppService {
     }
   }
 
+  /**
+   * Returns the current health status as a string.
+   *
+   * @returns "Healthy" if the backend is healthy, otherwise "Unhealthy".
+   */
   get healthStatus(): string {
     return this.healthy ? "Healthy" : "Unhealthy";
   }
 
+  /**
+   * Indicates whether the health check is currently running.
+   *
+   * @returns True if a health check interval is active, false otherwise.
+   */
   get isHealthRunning(): boolean {
     return this.healthInterval !== null;
   }
 
-  // async onboard(
-  //   user_id: string,
-  //   name: string,
-  //   website_url: string,
-  //   industry: string
-  // ) {
-  //   await fetch(`${this.server}/onboard/full`, {
-  //     method: "POST",
-  //     body: JSON.stringify({
-  //       user_id,
-  //       workspace: {
-  //         name,
-  //         website_url,
-  //         industry,
-  //         plan: "essentials",
-  //       },
-  //       team_member: {
-  //         role: "owner",
-  //       },
-  //     }),
-  //   });
-  // }
-
+  /**
+   * Onboards a user partially by creating a new workspace and team member.
+   *
+   * @param user_id - The Firebase user ID.
+   * @param plan - The selected plan for the workspace.
+   * @returns A promise that resolves to a boolean indicating whether the onboard operation succeeded.
+   * @throws An error if the authentication token is missing or the request fails.
+   */
   async onboard_partial(user_id: string, plan: Plan) {
     const token = await auth.currentUser?.getIdToken();
     if (!token) throw new Error("Token not found, Unauthorized!");
@@ -113,4 +126,5 @@ class AppService {
     }
   }
 }
+
 export const appService = new AppService();

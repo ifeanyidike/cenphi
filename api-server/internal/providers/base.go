@@ -5,6 +5,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/ifeanyidike/cenphi/internal/models"
 )
 
@@ -14,7 +15,7 @@ type Provider interface {
 	Name() string
 
 	// Core functionality to fetch testimonials
-	Fetch(ctx context.Context) ([]models.Testimonial, error)
+	Fetch(ctx context.Context, userID string, workspaceID uuid.UUID) ([]models.Testimonial, error)
 
 	// Rate limiting configuration
 	RateLimit() int            // Number of requests allowed
