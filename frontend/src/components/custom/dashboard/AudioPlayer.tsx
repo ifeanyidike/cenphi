@@ -7,9 +7,7 @@ import { Review } from "@/types/types";
 
 export type ExtendedReview = Review & {
   id: string;
-  duration: string;
-  audioUrl: string;
-  thumbnailUrl: string;
+
 }
 
 export const AudioPlayer = ({ review }: { review: ExtendedReview }) => {

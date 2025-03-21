@@ -27,7 +27,6 @@ export interface MetricItem {
 }
 
 export interface Review {
-  mediaType: string;
   id: number;
   name: string;
   initials: string;
@@ -35,19 +34,17 @@ export interface Review {
   timeAgo: string;
   content: string;
   status: string;
-
-  duration: string;
-
-}
-
-
-
-export interface ExtendedReview extends Review {
-  audioUrl?: string; 
+  mediaType: "text" | "image" | "video" | "audio" | string;
+  // Optional fields for all media types
+  mediaUrl: string;
+  thumbnailUrl?: string;
+  duration?: string;
   videoUrl: string;
   imageUrl: string;
-  mediaUrl: string;
-  _animate?: boolean;
-  thumbnailUrl: string
+  audioUrl?: string;
 }
+
+
+
+
 

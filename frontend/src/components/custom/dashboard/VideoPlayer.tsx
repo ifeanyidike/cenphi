@@ -1,16 +1,14 @@
 
 import { useState } from "react";
 import { Play, Pause } from "lucide-react"; // or the appropriate library/file
+import { Review } from "@/types/types";
 
 // Define the ExtendedReview type
-interface ExtendedReview {
+export type ExtendedReview2 = Review & {
   id: string;
-  name: string;
-  thumbnailUrl: string;
-  duration: string;
 }
 // Video player component
-export const VideoPlayer = ({ review }: { review: ExtendedReview }) => {
+export const VideoPlayer = ({ review }: { review: ExtendedReview2 }) => {
     const [isPlaying, setIsPlaying] = useState(false);
   
     const togglePlay = () => {
