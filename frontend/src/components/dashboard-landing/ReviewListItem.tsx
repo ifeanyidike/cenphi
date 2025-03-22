@@ -10,12 +10,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Testimonial } from "@/types/testimonial";
-
-const getInitials = (review: Testimonial) =>
-  review.customer_name
-    ?.split(" ")
-    .map((n) => n[0].toUpperCase())
-    .join("");
+import { getInitials } from "@/util/testimonial";
 
 export const ReviewListItem = ({ review }: { review: Testimonial }) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -41,10 +36,10 @@ export const ReviewListItem = ({ review }: { review: Testimonial }) => {
       {/* Header Section with Avatar & Info */}
       <div className="flex items-start gap-4">
         <div className="relative">
-          {review.customer_avatar_url ? (
+          {review.customer_profile?.avatar_url ? (
             <img
-              src={review.customer_avatar_url}
-              alt={review.customer_name}
+              src={review.customer_profile?.avatar_url}
+              alt={review.customer_profile?.name}
               className="h-14 w-14 rounded-xl object-cover ring-2 ring-white shadow-sm"
             />
           ) : (
@@ -78,7 +73,7 @@ export const ReviewListItem = ({ review }: { review: Testimonial }) => {
           <div className="flex items-center justify-between">
             <div className="flex flex-wrap items-center gap-2">
               <h4 className="font-semibold text-gray-900 truncate">
-                {review.customer_name}
+                {review.customer_profile?.name}
               </h4>
               <Badge
                 className={`text-xs px-2 py-0.5 ${getBadgeColor(
@@ -132,9 +127,9 @@ export const ReviewListItem = ({ review }: { review: Testimonial }) => {
       )}
 
       {/* Media Preview */}
-      {review.type !== "text" && (
+      {review.format !== "text" && (
         <div className="mt-4 relative rounded-xl overflow-hidden bg-gray-100">
-          {review.type === "video" && (
+          {review.format === "video" && (
             <div className="group relative aspect-video bg-gray-900 rounded-xl overflow-hidden">
               <img
                 src={
@@ -155,7 +150,7 @@ export const ReviewListItem = ({ review }: { review: Testimonial }) => {
             </div>
           )}
 
-          {review.type === "audio" && (
+          {review.format === "audio" && (
             <div className="px-4 py-3 rounded-xl bg-gradient-to-r from-gray-100 to-gray-200 flex items-center gap-3">
               <div className="bg-indigo-600 rounded-full p-2 text-white">
                 <Volume2 className="h-4 w-4" />
@@ -174,7 +169,7 @@ export const ReviewListItem = ({ review }: { review: Testimonial }) => {
             </div>
           )}
 
-          {review.type === "image" && (
+          {review.format === "image" && (
             <div className="grid grid-cols-3 gap-2">
               {review.media_urls?.slice(0, 3).map((img, idx) => (
                 <div
