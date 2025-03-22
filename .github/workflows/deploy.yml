@@ -3,17 +3,39 @@ name: CI/CD Deploy
 on:
   push:
     branches: [master, main]
+    paths:
+      - "api-server/**"
+      - "ai-service/**"
+      - ".github/workflows/**"
+      - "scripts/**"
+      - "docker-compose.prod.yaml"
+      - "protobuf/**"
 
 jobs:
   prepare:
     runs-on: ubuntu-latest
     outputs:
       cache_key: ${{ steps.generate_cache_key.outputs.cache_key }}
+      api_changed: ${{ steps.check_changes.outputs.api_changed }}
+      ai_changed: ${{ steps.check_changes.outputs.ai_changed }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
         with:
           fetch-depth: 0 # Fetch all history to ensure proper change detection
+
+      - name: Check which services changed
+        id: check_changes
+        run: |
+          # Check if API server files changed
+          git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q "^api-server/" && echo "api_changed=true" >> $GITHUB_OUTPUT || echo "api_changed=false" >> $GITHUB_OUTPUT
+
+          # Check if AI service files changed
+          git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q "^ai-service/" && echo "ai_changed=true" >> $GITHUB_OUTPUT || echo "ai_changed=false" >> $GITHUB_OUTPUT
+
+          # Print the changes for debugging
+          echo "Changes detected:"
+          git diff --name-only ${{ github.event.before }} ${{ github.sha }}
 
       - name: Generate unique cache keys
         id: generate_cache_key
@@ -53,6 +75,7 @@ jobs:
 
   test:
     needs: prepare
+    if: ${{ needs.prepare.outputs.api_changed == 'true' || needs.prepare.outputs.ai_changed == 'true' }}
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -154,6 +177,12 @@ jobs:
     strategy:
       matrix:
         service: [api-server, ai-service]
+        exclude:
+          - service: api-server
+            if: ${{ needs.prepare.outputs.api_changed == 'false' }}
+          - service: ai-service
+            if: ${{ needs.prepare.outputs.ai_changed == 'false' }}
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -302,6 +331,7 @@ jobs:
 
   deploy_api:
     needs: build-and-push
+    if: ${{ needs.prepare.outputs.api_changed == 'true' }}
     runs-on: ubuntu-latest
     env:
       DB_USERNAME: ${{ secrets.DB_USERNAME }}
@@ -440,6 +470,7 @@ jobs:
 
   deploy_ai:
     needs: build-and-push
+    if: ${{ needs.prepare.outputs.ai_changed == 'true' }}
     runs-on: ubuntu-latest
     env:
       GITHUB_SHA: ${{ github.sha }}

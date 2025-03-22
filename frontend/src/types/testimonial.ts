@@ -1,11 +1,30 @@
-// Enum-like union types for various testimonial properties
-export type TestimonialType = "text" | "image" | "audio" | "video";
+// Enum-like type aliases for string unions
+
+export type TestimonialType =
+  | "customer"
+  | "employee"
+  | "partner"
+  | "influencer"
+  | "expert"
+  | "case_study";
+
+export type ContentFormat =
+  | "text"
+  | "video"
+  | "audio"
+  | "image"
+  | "social_post"
+  | "survey"
+  | "interview";
+
 export type ContentStatus =
   | "pending_review"
   | "approved"
   | "rejected"
   | "archived"
-  | "featured";
+  | "featured"
+  | "scheduled";
+
 export type CollectionMethod =
   | "direct_link"
   | "embed_form"
@@ -13,7 +32,12 @@ export type CollectionMethod =
   | "email_request"
   | "sms_request"
   | "api"
-  | "social_import";
+  | "social_import"
+  | "interview"
+  | "survey"
+  | "screen_recording"
+  | "event_capture";
+
 export type VerificationType =
   | "email"
   | "phone"
@@ -22,56 +46,91 @@ export type VerificationType =
   | "employee_verification"
   | "domain_verification";
 
-// Optional date range interface for additional filters (if needed)
-export interface DateRange {
-  start: Date | string;
-  end: Date | string;
+// Helper types
+
+export type StringArray = string[];
+
+// Placeholder for CustomerProfile type (if available)
+export type JSONMap = { [key: string]: any };
+
+export interface CustomerProfile {
+  id: string; // uuid.UUID represented as a string
+  workspace_id: string;
+  external_id?: string;
+  email?: string;
+  name?: string;
+  title?: string;
+  company?: string;
+  industry?: string;
+  location?: string;
+  avatar_url?: string;
+  social_profiles?: JSONMap;
+  custom_fields?: JSONMap;
+  created_at: Date;
+  updated_at: Date;
 }
 
-// Main Testimonial interface
+// The Testimonial model
 export interface Testimonial {
-  // Primary identifiers
-  id: string;
+  // Identifiers
+  id: string; // uuid.UUID represented as string
   workspace_id: string;
 
-  // Core status fields
-  type: TestimonialType;
-  status: ContentStatus;
+  // Optional relation to the customer profile
+  customer_profile_id?: string;
+  customer_profile?: CustomerProfile;
 
-  // Content details
-  content?: string;
-  media_urls?: string[];
-  rating?: number | null;
+  // Categorization & Status
+  testimonial_type: TestimonialType;
+  format: ContentFormat;
+  status: ContentStatus;
   language?: string;
 
-  // Customer information
-  customer_name?: string;
-  customer_email?: string | null;
-  customer_title?: string;
-  customer_company?: string;
-  customer_location?: string;
-  customer_avatar_url?: string;
-  customer_metadata?: Record<string, any>;
+  // Content
+  title?: string;
+  summary?: string;
+  content?: string;
+  transcript?: string;
+  media_urls?: StringArray;
+  rating?: number; // float32 represented as number
 
-  // Collection & verification
+  // Media Metadata
+  media_url?: string;
+  media_duration?: number;
+  thumbnail_url?: string;
+  additional_media?: any; // using 'any' to represent flexible JSON content
+
+  // Contexts
+  product_context?: JSONMap;
+  purchase_context?: JSONMap;
+  experience_context?: JSONMap;
+
+  // Collection & Verification
   collection_method: CollectionMethod;
   verification_method?: VerificationType;
-  verification_data?: Record<string, any>;
-  verified_at?: Date | string | null;
-  source_data?: Record<string, any>;
+  verification_data?: JSONMap;
+  verification_status: string;
+  verified_at?: Date;
+  authenticity_score?: number;
+  source_data?: JSONMap;
 
-  // Organizational categorization
-  tags?: string[];
-  categories?: string[];
-  custom_fields?: Record<string, any>;
+  // Publishing
+  published: boolean;
+  published_at?: Date;
+  scheduled_publish_at?: Date;
 
-  // Usage metrics
+  // Organization
+  tags?: StringArray;
+  categories?: StringArray;
+  custom_fields?: JSONMap;
+
+  // Usage Metrics
   view_count: number;
   share_count: number;
   conversion_count: number;
-  engagement_metrics?: Record<string, any>;
+  engagement_metrics: JSONMap;
 
   // Timestamps
-  created_at: Date | string;
-  updated_at: Date | string;
+  created_at: Date;
+  updated_at: Date;
 }

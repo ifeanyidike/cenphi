@@ -39,37 +39,6 @@ export const ReviewsSection = observer(
     const recentTestimonials =
       workspaceHub.testimonialManager.testimonials?.slice(0, 6) || [];
 
-    // Sample Data
-    // const recentTestimonials = [
-    //   {
-    //     id: "123",
-    //     collection_method: "direct_link" as CollectionMethod,
-    //     conversion_count: 100,
-    //     created_at: new Date(),
-    //     share_count: 10,
-    //     status: "approved" as "approved" | "pending_review" | "featured",
-    //     type: "text" as "text",
-    //     updated_at: new Date(),
-    //     view_count: 12,
-    //     workspace_id: "123",
-    //     categories: [],
-    //     content: "I love this",
-    //     custom_fields: {},
-    //     customer_avatar_url: "",
-    //     customer_company: "Cenphi",
-    //     customer_email: "ifeanyi@gmail.com",
-    //     customer_location: "PHI",
-    //     customer_metadata: {},
-    //     customer_name: "ifeanyi",
-    //     customer_title: "Tech Support",
-    //     engagement_metrics: {},
-    //     language: "EN",
-    //     media_urls: [],
-    //     rating: 4,
-    //     verified_at: new Date(),
-    //   },
-    // ];
-
     const filterOptions = [
       {
         title: "Status",
@@ -134,7 +103,7 @@ export const ReviewsSection = observer(
             if (!review.verified_at) return false;
             break;
           case "media":
-            if (review.type === "text") return false;
+            if (review.format === "text") return false;
             break;
         }
       }
@@ -146,7 +115,9 @@ export const ReviewsSection = observer(
       if (searchQuery) {
         const searchLower = searchQuery.toLowerCase();
         if (
-          !review.customer_name?.toLowerCase()?.includes(searchLower) &&
+          !review.customer_profile?.name
+            ?.toLowerCase()
+            ?.includes(searchLower) &&
           !review.content?.toLowerCase()?.includes(searchLower)
         ) {
           return false;
@@ -159,7 +130,9 @@ export const ReviewsSection = observer(
       const ratingMatch = activeFilters.some(
         (filter) => filter === review.rating?.toString()
       );
-      const mediaMatch = activeFilters.some((filter) => filter === review.type);
+      const mediaMatch = activeFilters.some(
+        (filter) => filter === review.format
+      );
       const platformMatch = activeFilters.some(
         (filter) => filter === review.collection_method
       );
