@@ -1,33 +1,33 @@
-
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Grid, List, Download, ChevronRight, X, SearchX, RefreshCw } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "../../ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Review } from "@/types/types";
+import { 
+  Testimonial,
+} from "@/types/testimonial";
 import { ReviewCardView } from "@/components/custom/dashboard/ReviewCardView";
 import { ReviewListView } from "@/components/custom/dashboard/ReviewListView";
 import FilterMenu from "@/components/custom/dashboard/FilterMenu";  
 import { useNavigate } from "react-router-dom"; 
-
-
-
+import { testimonials as allTestimonials } from "@/data/dataset";
 
 export const ReviewsSection2 = () => {
   const navigate = useNavigate();
-  const [viewMode, setViewMode] = useState("card"); 
+  const [viewMode, setViewMode] = useState<"card" | "list">("card"); 
   const [filterMenuOpen, setFilterMenuOpen] = useState(false);
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
-  // const [playingMedia, setPlayingMedia] = useState<number | null>(null);
   
+  // Define filter options based on the Testimonial types
   const filterOptions = [
     {
       title: "Status",
       options: [
-        { id: "status-new", value: "New", label: "New" },
-        { id: "status-replied", value: "Replied", label: "Replied" },
-        { id: "status-verified", value: "Verified", label: "Verified" },
-        { id: "status-featured", value: "Featured", label: "Featured" },
+        { id: "status-pending", value: "pending_review", label: "Pending Review" },
+        { id: "status-approved", value: "approved", label: "Approved" },
+        { id: "status-rejected", value: "rejected", label: "Rejected" },
+        { id: "status-archived", value: "archived", label: "Archived" },
+        { id: "status-featured", value: "featured", label: "Featured" },
       ],
     },
     {
@@ -43,132 +43,96 @@ export const ReviewsSection2 = () => {
     {
       title: "Time",
       options: [
-        { id: "time-today", value: "Today", label: "Today" },
-        { id: "time-week", value: "Week", label: "This Week" },
-        { id: "time-month", value: "Month", label: "This Month" },
-        { id: "time-year", value: "Year", label: "This Year" },
+        { id: "time-today", value: "today", label: "Today" },
+        { id: "time-week", value: "week", label: "This Week" },
+        { id: "time-month", value: "month", label: "This Month" },
+        { id: "time-year", value: "year", label: "This Year" },
       ],
     },
     {
       title: "Media Type",
       options: [
-        { id: "media-text", value: "Text", label: "Text Only" },
-        { id: "media-image", value: "Image", label: "With Images" },
-        { id: "media-video", value: "Video", label: "With Videos" },
-        { id: "media-audio", value: "Audio", label: "With Audio" },
+        { id: "media-text", value: "text", label: "Text Only" },
+        { id: "media-image", value: "image", label: "With Images" },
+        { id: "media-video", value: "video", label: "With Videos" },
+        { id: "media-audio", value: "audio", label: "With Audio" },
       ],
     },
   ];
   
-  // Enhanced reviews with different media types - now showing five reviews
-  const recentReviews: Review[] = [
-    {
-      id: 1,
-      name: "John Doe",
-      initials: "JD",
-      rating: 5,
-      timeAgo: "2 days ago",
-      content: "The product exceeded all my expectations. The team was incredibly responsive and helpful throughout the entire process.",
-      status: "New",
-      mediaType: "text",
-      mediaUrl: "",
-      videoUrl: "",
-      imageUrl: ""
-    },
-    {
-      id: 2,
-      name: "Sarah Johnson",
-      initials: "SJ",
-      rating: 5,
-      timeAgo: "3 days ago",
-      content: "Simply amazing! I've tried many similar products but this one stands head and shoulders above the rest.",
-      status: "Replied",
-      mediaType: "audio",
-      audioUrl: "/audio/review-sarah.mp3",
-      duration: "1:45",
-      mediaUrl: "",
-      videoUrl: "",
-      imageUrl: ""
-    },
-    {
-      id: 3,
-      name: "Michael Wong",
-      initials: "MW",
-      rating: 4,
-      timeAgo: "1 week ago",
-      content: "Great product with intuitive design. Would recommend to colleagues looking for similar solutions.",
-      status: "Verified",
-      mediaType: "image",
-      mediaUrl: "",
-      videoUrl: "",
-      imageUrl: "/media/img/iStock-1354196176.webp",
-    },
-    {
-      id: 4,
-      name: "David Chen",
-      initials: "DC",
-      rating: 5,
-      timeAgo: "1 day ago",
-      content: "Love the product quality. Highly recommended!",
-      status: "New",
-      mediaType: "audio",
-      mediaUrl: "",
-      videoUrl: "",
-      audioUrl: "/audio/review-david.mp3",
-      duration: "0:58",
-      imageUrl: "",
-    },
-    {
-      id: 5,
-      name: "Anonymous",
-      initials: "A",
-      rating: 3,
-      timeAgo: "5 days ago",
-      content: "The customer service team went above and beyond. I'm really impressed with how they handled my questions.",
-      status: "Featured",
-      mediaType: "text",
-      mediaUrl: "",
-      videoUrl: "",
-      imageUrl: "",
+  // Fixed variable name from Testimonials to allTestimonials
+  const testimonials: Testimonial[] = allTestimonials as Testimonial[];
+ 
+  // Filter reviews based on activeFilters and searchQuery
+  const filteredTestimonials = testimonials.filter(testimonial => {
+    // Search filter
+    if (searchQuery && !testimonial.type == "text"?.toLowerCase().includes(searchQuery.toLowerCase()) && 
+        !testimonial.customer_title?.toLowerCase().includes(searchQuery.toLowerCase())) {
+      return false;
     }
-  ];
-
-
-  // Filter reviews based on activeFilters
-  const filteredReviews = recentReviews.filter(review => {
-    // Filter logic remains the same...
+    
     if (activeFilters.length === 0) return true;
     
-    const statusMatch = activeFilters.some(filter => filter === review.status);
-    const ratingMatch = activeFilters.some(filter => filter === `${review.rating}-star`);
-    const mediaMatch = activeFilters.some(filter => filter === review.mediaType);
+    const statusMatch = activeFilters.some(filter => filter === testimonial.status);
+    const ratingMatch = activeFilters.some(filter => testimonial.rating && filter === testimonial.rating.toString());
+    const typeMatch = activeFilters.some(filter => filter === testimonial.type);
     
+    // Time-based filtering using created_at date
     const timeMatch = activeFilters.some(filter => {
-      if (filter === "today" && review.timeAgo.includes("day")) return true;
-      if (filter === "week" && review.timeAgo.includes("week")) return true;
-      if (filter === "month" && review.timeAgo.includes("month")) return true;
-      if (filter === "older" && !review.timeAgo.includes("day") && !review.timeAgo.includes("week")) return true;
+      if (!testimonial.created_at) return false;
+      
+      const createdDate = new Date(testimonial.created_at);
+      const today = new Date();
+      const dayDiff = Math.floor((today.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      if (filter === "today" && dayDiff < 1) return true;
+      if (filter === "week" && dayDiff < 7) return true;
+      if (filter === "month" && dayDiff < 30) return true;
+      if (filter === "year" && dayDiff < 365) return true;
+      
       return false;
     });
     
-    return statusMatch || ratingMatch || timeMatch || mediaMatch;
+    return statusMatch || ratingMatch || timeMatch || typeMatch;
   });
 
+  // Handle review actions (approve, reject, feature, archive)
+  const handleReviewAction = useCallback((id: string, action: 'approve' | 'reject' | 'feature' | 'archive') => {
+    // In a real app, this would call an API endpoint to update the status
+    console.log(`Review ${id} action: ${action}`);
+   
+  }, []);
+
   // Function to clear all filters
-  const clearAllFilters = () => {
+  const clearAllFilters = useCallback(() => {
     setActiveFilters([]);
+    setSearchQuery("");
+  }, []);
+
+  // Function to remove a single filter
+  const removeFilter = useCallback((filter: string) => {
+    setActiveFilters(prev => prev.filter(f => f !== filter));
+  }, []);
+
+  // Get a label for a filter value
+  const getFilterLabel = (value: string) => {
+    for (const category of filterOptions) {
+      const option = category.options.find(opt => opt.value === value);
+      if (option) return option.label;
+    }
+    return value;
   };
 
   return (
     <Card className="hover:shadow-lg transition-shadow">
       <CardHeader className="p-6">
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center flex-wrap gap-4">
           <div className="flex items-center space-x-4">
             <CardTitle className="text-xl font-semibold">
               Recent Reviews
             </CardTitle>
             <button 
-             onClick={() => navigate("/reviews")} 
+              onClick={() => navigate("/reviews")} 
               className="text-purple-600 flex items-center font-medium text-sm hover:underline"
             >
               All Reviews <ChevronRight className="h-4 w-4 ml-1" />
@@ -184,6 +148,7 @@ export const ReviewsSection2 = () => {
                     ? "bg-white text-purple-600 shadow-sm" 
                     : "text-gray-500 hover:bg-gray-200"
                 }`}
+                aria-label="Card view"
               >
                 <Grid className="h-5 w-5" />
               </button>
@@ -194,6 +159,7 @@ export const ReviewsSection2 = () => {
                     ? "bg-white text-purple-600 shadow-sm" 
                     : "text-gray-500 hover:bg-gray-200"
                 }`}
+                aria-label="List view"
               >
                 <List className="h-5 w-5" />
               </button>
@@ -210,38 +176,73 @@ export const ReviewsSection2 = () => {
               setSearchQuery={setSearchQuery}
             />
             
-            <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+            <button 
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              aria-label="Download reviews"
+              title="Export reviews"
+            >
               <Download className="h-5 w-5 text-gray-500" />
             </button>
           </div>
         </div>
         
         {/* Show active filters if any */}
-        {activeFilters.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-4">
+        {(activeFilters.length > 0 || searchQuery) && (
+          <div className="flex flex-wrap gap-2 mt-4 items-center">
+            {searchQuery && (
+              <Badge 
+                className="px-3 py-1 bg-purple-50 text-purple-600 border border-purple-200 rounded"
+              >
+                Search: {searchQuery}
+                <button 
+                  className="ml-2 text-purple-400 hover:text-purple-700"
+                  onClick={() => setSearchQuery("")}
+                  aria-label="Clear search"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            )}
+            
             {activeFilters.map(filter => (
               <Badge 
                 key={filter} 
                 className="px-3 py-1 bg-purple-50 text-purple-600 border border-purple-200 rounded"
               >
-                {filter}
+                {getFilterLabel(filter)}
                 <button 
                   className="ml-2 text-purple-400 hover:text-purple-700"
-                  onClick={() => setActiveFilters(activeFilters.filter(f => f !== filter))}
+                  onClick={() => removeFilter(filter)}
+                  aria-label={`Remove ${filter} filter`}
                 >
                   <X className="h-3 w-3" />
                 </button>
               </Badge>
             ))}
+            
+            {(activeFilters.length > 0 || searchQuery) && (
+              <button 
+                onClick={clearAllFilters}
+                className="text-sm text-purple-600 hover:text-purple-800 font-medium ml-2"
+              >
+                Clear all
+              </button>
+            )}
           </div>
         )}
       </CardHeader>
       <CardContent className="p-6">
-        {filteredReviews.length > 0 ? (
+        {filteredTestimonials.length > 0 ? (
           viewMode === "card" ? (
-            <ReviewCardView reviews={filteredReviews} />
+            <ReviewCardView 
+              testimonials={filteredTestimonials} 
+              onReviewAction={handleReviewAction}
+            />
           ) : (
-            <ReviewListView reviews={filteredReviews} />
+            <ReviewListView 
+              testimonials={filteredTestimonials} 
+              onReviewAction={handleReviewAction}
+            />
           )
         ) : (
           <div className="flex flex-col items-center justify-center py-16 px-4">
@@ -257,7 +258,7 @@ export const ReviewsSection2 = () => {
               We couldn't find any reviews that match your current filter criteria. Try adjusting your filters to see more results.
             </p>
             
-            <div className="mt-8 flex space-x-4">
+            <div className="mt-8 flex flex-wrap gap-4 justify-center">
               <button 
                 onClick={clearAllFilters}
                 className="px-6 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-300 flex items-center"

@@ -1,13 +1,11 @@
 import { useState } from "react";
 import { X, Volume2, Film, ImageIcon, MessageSquare, Badge, Star, ChevronRight } from "lucide-react";
 import { Dialog } from "@headlessui/react";
-import { Review } from "@/types/types";
-import { ExtendedReview } from "@/components/custom/dashboard/AudioPlayer";
-import { ExtendedReview2 } from "@/components/custom/dashboard/VideoPlayer";
+import { Testimonial } from "@/types/testimonial";
 import { AudioPlayer } from "@/components/custom/dashboard/AudioPlayer";
 import { VideoPlayer } from "@/components/custom/dashboard/VideoPlayer";
 
-export const ReviewDetailModal = ({ review }: { review: Review }) => {
+export const ReviewDetailModal = ({ testimonial }: { testimonial: Testimonial }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -39,27 +37,27 @@ export const ReviewDetailModal = ({ review }: { review: Review }) => {
             <div className="space-y-6">
               {/* Media Display */}
               <div className="relative rounded-xl overflow-hidden bg-gray-100">
-                {review.mediaType === 'video' && (
+                {testimonial.type === 'video' && (
                   <div className="aspect-video">
-                    <VideoPlayer review={review as ExtendedReview2} />
+                    <VideoPlayer testimonial={testimonial} />
                   </div>
                 )}
                 
-                {review.mediaType === 'audio' && (
+                {testimonial.type === 'audio' && (
                   <div className="p-6">
-                    <AudioPlayer review={review as ExtendedReview} />
+                    <AudioPlayer testimonial={testimonial} />
                   </div>
                 )}
                 
-                {review.mediaType === 'image' && (
-                  <img 
-                    src={review.imageUrl || ''}
-                    alt={review.content}
-                    className="w-full h-full object-contain max-h-[70vh]"
-                  />
+                {testimonial.type === 'image' && (
+             <img 
+             src={(Array.isArray(testimonial.media_urls) ? testimonial.media_urls[0] : testimonial.media_urls) || ''} 
+             alt={testimonial.content || "Testimonial image"} 
+             className="w-full h-full object-contain max-h-[70vh]" 
+           />
                 )}
                 
-                {review.mediaType === 'text' && (
+                {testimonial.type === 'text' && (
                   <div className="p-6 flex items-center justify-center text-gray-500">
                     <MessageSquare className="h-12 w-12" />
                   </div>
@@ -71,11 +69,11 @@ export const ReviewDetailModal = ({ review }: { review: Review }) => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className="h-10 w-10 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-medium">
-                      {review.initials}
+                      {testimonial.customer_title}
                     </div>
                     <div>
-                      <h3 className="font-semibold text-lg">{review.name}</h3>
-                      <p className="text-sm text-gray-500">{review.timeAgo}</p>
+                      <h3 className="font-semibold text-lg">{testimonial.customer_name}</h3>
+                      <p className="text-sm text-gray-500">{testimonial.customer_title}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-1">
@@ -83,7 +81,7 @@ export const ReviewDetailModal = ({ review }: { review: Review }) => {
                       <Star
                         key={i}
                         className={`h-5 w-5 ${
-                          i < review.rating 
+                          i < (testimonial.rating ?? 0)
                             ? "text-yellow-400 fill-yellow-400" 
                             : "text-gray-200"
                         }`}
@@ -92,25 +90,27 @@ export const ReviewDetailModal = ({ review }: { review: Review }) => {
                   </div>
                 </div>
 
-                <p className="text-gray-700 leading-relaxed">{review.content}</p>
+                <p className="text-gray-700 leading-relaxed">{testimonial.content}</p>
                 
                 <div className="flex items-center space-x-2 text-sm text-gray-500">
                   <Badge
                     className={`px-2 py-1 rounded-full ${
-                      review.status === "New" ? "bg-green-50 text-green-600" :
-                      review.status === "Replied" ? "bg-blue-50 text-blue-600" :
-                      review.status === "Verified" ? "bg-yellow-50 text-yellow-600" :
+                      testimonial.status === "approved" ? "bg-green-50 text-green-600" :
+                      testimonial.status === "featured" ? "bg-blue-50 text-blue-600" :
+                      testimonial.status === "archived" ? "bg-blue-50 text-brown-600" :
+                      testimonial.status === "rejected" ? "bg-red-50 text-red-600" :
+                      testimonial.status === "pending_review" ? "bg-yellow-50 text-yellow-600" :
                       "bg-purple-50 text-purple-600"
                     }`}
                   >
-                    {review.status}
+                    {testimonial.status}
                   </Badge>
                   <span className="mx-1">•</span>
                   <div className="flex items-center space-x-1">
-                    {review.mediaType === 'video' && <Film className="h-4 w-4" />}
-                    {review.mediaType === 'audio' && <Volume2 className="h-4 w-4" />}
-                    {review.mediaType === 'image' && <ImageIcon className="h-4 w-4" />}
-                    <span className="capitalize">{review.mediaType}</span>
+                    {testimonial.type === 'video' && <Film className="h-4 w-4" />}
+                    {testimonial.type === 'audio' && <Volume2 className="h-4 w-4" />}
+                    {testimonial.type === 'image' && <ImageIcon className="h-4 w-4" />}
+                    <span className="capitalize">{testimonial.type}</span>
                   </div>
                 </div>
               </div>
