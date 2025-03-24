@@ -2,32 +2,32 @@
 import { useState, useEffect } from 'react';
 import { X, Facebook, Twitter, Linkedin, Mail, CheckCircle, Instagram, Copy } from 'lucide-react';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Review } from "@/types/types";
+import { Testimonial } from "@/types/testimonial"
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface ShareModalProps {
-  review: Review;
+  testimonial: Testimonial;
   isOpen: boolean;
   onClose: () => void;
 }
 
-export const ShareModal = ({ review, isOpen, onClose }: ShareModalProps) => {
+export const ShareModal = ({ testimonial, isOpen, onClose }: ShareModalProps) => {
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<'social' | 'link'>('social');
   const [animateIn, setAnimateIn] = useState(false);
   
   // Base URL for the review
   const baseUrl = 'https://cenphi.io/reviews';
-  const reviewUrl = `${baseUrl}/${review.id}`;
+  const reviewUrl = `${baseUrl}/${testimonial.id}`;
   
   // Share URLs
   const shareUrls = {
     facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(reviewUrl)}`,
-    twitter: `https://twitter.com/intent/tweet?url=${encodeURIComponent(reviewUrl)}&text=${encodeURIComponent(`Check out this ${review.rating}-star review from ${review.name}!`)}`,
+    twitter: `https://twitter.com/intent/tweet?url=${encodeURIComponent(reviewUrl)}&text=${encodeURIComponent(`Check out this ${testimonial.rating}-star review from ${testimonial.customer_name}!`)}`,
     linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(reviewUrl)}`,
     instagram: `https://instagram.com`, // Instagram doesn't have a direct sharing API, would need custom handling
-    email: `mailto:?subject=${encodeURIComponent(`${review.rating}-Star Review from ${review.name}`)}&body=${encodeURIComponent(`Check out this review: ${reviewUrl}`)}`
+    email: `mailto:?subject=${encodeURIComponent(`${testimonial.rating}-Star Review from ${testimonial.customer_name}`)}&body=${encodeURIComponent(`Check out this review: ${reviewUrl}`)}`
   };
   
   // Animation effect on mount
@@ -112,19 +112,19 @@ export const ShareModal = ({ review, isOpen, onClose }: ShareModalProps) => {
                   className="absolute left-1/2 transform -translate-x-1/2 top-1 flex items-center bg-white/10 backdrop-blur-md rounded-full pl-2 pr-4 py-1.5 shadow-lg border border-white/30"
                 >
                   <div className="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-600 to-purple-700 flex items-center justify-center text-white font-semibold mr-2 shadow-sm">
-                    {review.initials}
+                  {testimonial.customer_name ? testimonial.customer_name.substring(0, 1).toUpperCase() : "?"}
                   </div>
                   <div className="text-white">
-                    <span className="font-medium">{review.name}'s</span>
+                    <span className="font-medium">{testimonial.customer_name}'s</span>
                     <div className="flex items-center">
                       <div className="flex">
                         {Array.from({ length: 5 }, (_, i) => (
-                          <svg key={i} className={`h-3 w-3 ${i < review.rating ? "text-yellow-300 fill-yellow-300" : "text-gray-300"}`} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                          <svg key={i} className={`h-3 w-3 ${i < (testimonial.rating ?? 0) ? "text-yellow-300 fill-yellow-300" : "text-gray-300"}`} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                             <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
                           </svg>
                         ))}
                       </div>
-                      <span className="ml-1 text-xs font-medium text-white/90">Review</span>
+                      <span className="ml-1 text-xs font-medium text-white/90">Testimonial</span>
                     </div>
                   </div>
                 </motion.div>

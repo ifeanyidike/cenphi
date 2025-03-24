@@ -1,21 +1,21 @@
 
 import { useState } from "react";
 import { Play, Pause } from "lucide-react"; // or the appropriate library/file
-import { Review } from "@/types/types";
+import { Testimonial } from "@//types/testimonial";
 
 // Define the ExtendedReview type
-export type ExtendedReview2 = Review & {
+export type ExtendedTestimonial2 = Testimonial & {
   id: string;
 }
 // Video player component
-export const VideoPlayer = ({ review }: { review: ExtendedReview2 }) => {
+export const VideoPlayer = ({ testimonial }: { testimonial: ExtendedTestimonial2 }) => {
     const [isPlaying, setIsPlaying] = useState(false);
   
     const togglePlay = () => {
       if (isPlaying) {
         setPlayingMedia(null);
       } else {
-        setPlayingMedia(review.id);
+        setPlayingMedia(testimonial.id);
       }
       setIsPlaying(!isPlaying);
     };
@@ -25,11 +25,14 @@ export const VideoPlayer = ({ review }: { review: ExtendedReview2 }) => {
         <div className="relative">
           {/* Video thumbnail */}
           <div className="aspect-video bg-gray-100 relative">
-            <img 
-              src={review.thumbnailUrl || "/api/placeholder/320/180"} 
-              alt={`${review.name}'s video review`}
-              className="w-full h-full object-cover"
-            />
+          <video 
+  src={(Array.isArray(testimonial.media_urls) ? testimonial.media_urls[0] : testimonial.media_urls) || "/api/placeholder/video.mp4"} 
+  controls 
+  className="w-full h-full object-cover"
+>
+  Your browser does not support the video tag.
+</video>
+
             {!isPlaying && (
               <button 
                 onClick={togglePlay}
@@ -54,7 +57,7 @@ export const VideoPlayer = ({ review }: { review: ExtendedReview2 }) => {
           {/* Video controls */}
           <div className="bg-gray-800 text-white px-3 py-2 flex justify-between items-center">
             <span className="text-xs">{isPlaying ? "Playing..." : "Video review"}</span>
-            <span className="text-xs">{review.duration}</span>
+            <span className="text-xs">{testimonial.view_count}</span>
           </div>
         </div>
       </div>
