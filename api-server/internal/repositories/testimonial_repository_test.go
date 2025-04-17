@@ -257,6 +257,7 @@ func TestCreate(t *testing.T) {
 			testimonial.MediaDuration,
 			testimonial.ThumbnailURL,
 			testimonial.AdditionalMedia,
+			testimonial.CustomFormatting,
 			testimonial.ProductContext,
 			testimonial.PurchaseContext,
 			testimonial.ExperienceContext,
@@ -841,14 +842,14 @@ func TestFetchByIDWithPopulatedRelatedData(t *testing.T) {
 
 	// Check related data is populated
 	assert.Len(t, testimonial.Analyses, 1)
-	assert.Equal(t, "sentiment", testimonial.Analyses[0].AnalysisType)
+	assert.Equal(t, models.AnalysisTypeSentiment, testimonial.Analyses[0].AnalysisType)
 	assert.Equal(t, float32(0.8), *testimonial.Analyses[0].SentimentScore)
 
 	assert.Len(t, testimonial.CompetitorMentions, 1)
 	assert.Equal(t, "Competitor Inc", testimonial.CompetitorMentions[0].CompetitorName)
 
 	assert.Len(t, testimonial.AIJobs, 1)
-	assert.Equal(t, "analysis", testimonial.AIJobs[0].JobType)
+	assert.Equal(t, models.AIServiceCategoryAnalysis, testimonial.AIJobs[0].JobType)
 	assert.Equal(t, "completed", testimonial.AIJobs[0].Status)
 
 	mock.ExpectationsWereMet()

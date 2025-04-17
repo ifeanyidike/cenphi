@@ -83,7 +83,6 @@ func (r *workspaceRepository) Create(ctx context.Context, workspace *models.Work
 			(id, name, website_url, industry, plan) 
 		VALUES ($1, $2, $3, $4, $5)
 	`
-	fmt.Println("Before create exec")
 	_, err := db.ExecContext(ctx, query,
 		workspace.ID,
 		workspace.Name,
@@ -91,7 +90,6 @@ func (r *workspaceRepository) Create(ctx context.Context, workspace *models.Work
 		workspace.Industry,
 		workspace.Plan,
 	)
-	fmt.Println("Create Exec error", err)
 
 	return err
 }

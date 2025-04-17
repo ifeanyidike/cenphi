@@ -555,7 +555,7 @@ func (r *testimonialRepository) FetchByID(ctx context.Context, id uuid.UUID, db 
 		&testimonial.TestimonialType, &testimonial.Format, &testimonial.Status, &testimonial.Language,
 		&testimonial.Title, &testimonial.Summary, &testimonial.Content, &testimonial.Transcript, &testimonial.MediaURLs,
 		&testimonial.Rating, &testimonial.MediaURL, &testimonial.MediaDuration, &testimonial.ThumbnailURL,
-		&testimonial.AdditionalMedia, &testimonial.ProductContext, &testimonial.PurchaseContext, &testimonial.ExperienceContext,
+		&testimonial.AdditionalMedia, &testimonial.CustomFormatting, &testimonial.ProductContext, &testimonial.PurchaseContext, &testimonial.ExperienceContext,
 		&testimonial.CollectionMethod, &testimonial.TriggerSource, &testimonial.TriggerData, // New fields
 		&testimonial.VerificationMethod, &testimonial.VerificationData, &testimonial.VerificationStatus,
 		&testimonial.VerifiedAt, &testimonial.AuthenticityScore, &testimonial.SourceData,
