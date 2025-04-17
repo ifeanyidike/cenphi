@@ -26,6 +26,8 @@ type CustomerProfile struct {
 	CustomFields   JSONMap   `json:"custom_fields,omitempty" db:"custom_fields"`
 	CreatedAt      time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at" db:"updated_at"`
+
+	Testimonials []Testimonial `json:"testimonials,omitempty" db:"-"`
 }
 
 // Validate ensures the CustomerProfile contains required fields.

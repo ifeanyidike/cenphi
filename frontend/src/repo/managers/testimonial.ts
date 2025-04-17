@@ -4,6 +4,7 @@ import { Testimonial } from "@/types/testimonial";
 import { makeAutoObservable, runInAction } from "mobx";
 import { WorkspaceOrchestrator } from "../workspace_hub";
 import { MemberManager } from "./member";
+import { mockTestimonials } from "@/utils/mock";
 
 /**
  * Manages testimonial-related operations within a workspace.
@@ -11,6 +12,9 @@ import { MemberManager } from "./member";
  */
 export class TestimonialManager {
   testimonials: Testimonial[] | null = null;
+  testimonial: Testimonial | null = null;
+  isLoading: boolean = false;
+  error: string | null = null;
 
   loading_testimonials = true;
 
@@ -71,5 +75,43 @@ export class TestimonialManager {
         this.loading_testimonials = false;
       });
     }
+  }
+
+  setTestimonial(testimonial: Testimonial) {
+    this.testimonial = testimonial;
+  }
+
+  async fetchTestimonial(id: string) {
+    this.isLoading = true;
+    this.error = null;
+
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      const mockTestimonial = this.getMockTestimonial(id);
+
+      runInAction(() => {
+        this.testimonial = mockTestimonial!;
+        this.isLoading = false;
+      });
+    } catch (error) {
+      runInAction(() => {
+        this.error =
+          error instanceof Error ? error.message : "Unknown error occurred";
+        this.isLoading = false;
+      });
+    }
+  }
+
+  getMockTestimonial(id: string) {
+    // Mock data generation based on ID
+    // In a real app, this would come from your API
+    const type = id.includes("video")
+      ? "video"
+      : id.includes("audio")
+        ? "audio"
+        : id.includes("image")
+          ? "image"
+          : "text";
+    return mockTestimonials.find((m) => m.format === type);
   }
 }
