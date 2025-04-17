@@ -1,18 +1,8 @@
 {
-  "builds": [{ "src": "package.json", "use": "@vercel/node" }],
   "rewrites": [
-    {
-      "source": "/testimonial-widget.umd.js",
-      "destination": "/dist/testimonial-widget.umd.js"
-    },
-    {
-      "source": "/testimonial-widget.css",
-      "destination": "/dist/testimonial-widget.css"
-    },
     {
       "source": "/(.*)",
       "destination": "/index.html"
     }
-  ],
-  "outputDirectory": "dist"
+  ]
 }
