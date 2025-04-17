@@ -15,9 +15,9 @@ import (
 	"github.com/ifeanyidike/cenphi/internal/apperrors"
 )
 
-// --------------------------
+// ---------------------------
 // ENUM TYPES & CONSTANTS
-// --------------------------
+// ---------------------------
 
 type TestimonialType string
 
@@ -186,9 +186,9 @@ type Testimonial struct {
 	AIJobs             []AIJob               `json:"ai_jobs,omitempty" db:"-"`
 }
 
-// --------------------------
+// ---------------------------
 // VALIDATION METHODS
-// --------------------------
+// ---------------------------
 
 func (t *Testimonial) Validate() error {
 	if t.WorkspaceID == uuid.Nil {
