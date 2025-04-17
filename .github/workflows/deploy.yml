@@ -18,6 +18,7 @@ jobs:
       cache_key: ${{ steps.generate_cache_key.outputs.cache_key }}
       api_changed: ${{ steps.check_changes.outputs.api_changed }}
       ai_changed: ${{ steps.check_changes.outputs.ai_changed }}
+      services_matrix: ${{ steps.set_matrix.outputs.matrix }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -36,6 +37,19 @@ jobs:
           # Print the changes for debugging
           echo "Changes detected:"
           git diff --name-only ${{ github.event.before }} ${{ github.sha }}
+
+      - name: Set services matrix
+        id: set_matrix
+        run: |
+          SERVICES="[]"
+          if [[ "${{ steps.check_changes.outputs.api_changed }}" == "true" ]]; then
+            SERVICES=$(echo $SERVICES | jq '. + ["api-server"]')
+          fi
+          if [[ "${{ steps.check_changes.outputs.ai_changed }}" == "true" ]]; then
+            SERVICES=$(echo $SERVICES | jq '. + ["ai-service"]')
+          fi
+          echo "matrix=$SERVICES" >> $GITHUB_OUTPUT
+          echo "Services matrix: $SERVICES"
 
       - name: Generate unique cache keys
         id: generate_cache_key
@@ -73,9 +87,9 @@ jobs:
           echo "Created placeholder docker-entrypoint.sh file"
           fi
 
-  test:
+  test_api:
     needs: prepare
-    if: ${{ needs.prepare.outputs.api_changed == 'true' || needs.prepare.outputs.ai_changed == 'true' }}
+    if: ${{ needs.prepare.outputs.api_changed == 'true' }}
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -91,15 +105,11 @@ jobs:
           --health-interval 10s 
           --health-timeout 5s 
           --health-retries 5
-    strategy:
-      matrix:
-        service: [api-server, ai-service]
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
 
       - name: Cache Go modules
-        if: ${{ matrix.service == 'api-server' }}
         uses: actions/cache@v3
         with:
           path: ~/go/pkg/mod
@@ -107,8 +117,62 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
+      - name: Create .env.test file
+        run: |
+          cat > .env.test << 'ENDOFFILE'
+          DB_USERNAME=ifeanyidike
+          DB_PASSWORD=test_password
+          DB_HOST=127.0.0.1
+          DB_PORT=5434
+          DB_NAME=cenphidb_test
+          ENDOFFILE
+
+      - name: Wait for PostgreSQL to be ready
+        run: |
+          for i in {1..30}; do
+            if nc -z localhost 5434; then
+              echo "Postgres is up!"
+              exit 0
+            fi
+            echo "Waiting for Postgres..."
+            sleep 2
+          done
+          echo "Postgres did not start in time."
+          exit 1
+
+      - name: Set up Go for API Server
+        uses: actions/setup-go@v2
+        with:
+          go-version: "1.23.1"
+
+      - name: Test API Server
+        run: |
+          cd api-server
+          go test ./...
+
+  test_ai:
+    needs: prepare
+    if: ${{ needs.prepare.outputs.ai_changed == 'true' }}
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:13
+        ports:
+          - 5434:5432
+        env:
+          POSTGRES_USER: ifeanyidike
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: cenphidb_test
+        options: >-
+          --health-cmd "pg_isready -U ifeanyidike" 
+          --health-interval 10s 
+          --health-timeout 5s 
+          --health-retries 5
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
       - name: Cache Python packages
-        if: ${{ matrix.service == 'ai-service' }}
         uses: actions/cache@v3
         with:
           path: ~/.cache/pip
@@ -139,26 +203,12 @@ jobs:
           echo "Postgres did not start in time."
           exit 1
 
-      - name: Set up Go for API Server
-        if: ${{ matrix.service == 'api-server' }}
-        uses: actions/setup-go@v2
-        with:
-          go-version: "1.23.1"
-
-      - name: Test API Server
-        if: ${{ matrix.service == 'api-server' }}
-        run: |
-          cd api-server
-          go test ./...
-
       - name: Set up Python for AI Service
-        if: ${{ matrix.service == 'ai-service' }}
         uses: actions/setup-python@v4
         with:
           python-version: "3.12"
 
       - name: Install dependencies for AI Service
-        if: ${{ matrix.service == 'ai-service' }}
         run: |
           cd ai-service
           pip install --upgrade pip
@@ -166,23 +216,17 @@ jobs:
           pip install pytest
 
       - name: Test AI Service
-        if: ${{ matrix.service == 'ai-service' }}
         run: |
           cd ai-service
           python -m pytest
 
   build-and-push:
-    needs: [prepare, test]
+    needs: [prepare, test_api, test_ai]
+    if: ${{ always() && needs.prepare.outputs.services_matrix != '[]' && (needs.test_api.result == 'success' || needs.test_api.result == 'skipped') && (needs.test_ai.result == 'success' || needs.test_ai.result == 'skipped') }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [api-server, ai-service]
-        exclude:
-          - service: api-server
-            if: ${{ needs.prepare.outputs.api_changed == 'false' }}
-          - service: ai-service
-            if: ${{ needs.prepare.outputs.ai_changed == 'false' }}
-
+        service: ${{ fromJSON(needs.prepare.outputs.services_matrix) }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
