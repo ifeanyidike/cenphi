@@ -101,7 +101,7 @@ export const mockTestimonials: Testimonial[] = [
     // thumbnail_url: "https://sample-videos.com/img/Sample-jpg-image-300kb.jpg",
     thumbnail_url: "",
     media_urls: ["/media/vids/test_video.mp4"],
-    media_duration: 5, // in seconds
+    media_duration: 5,
     rating: 5,
     tags: ["ai", "video-editing", "productivity"],
     categories: ["case_study"],
