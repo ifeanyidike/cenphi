@@ -1,781 +1,1994 @@
-import React, {
-  useRef,
-  useEffect,
-  useState,
-  useCallback,
-  Dispatch,
-  SetStateAction,
-  FC,
-} from "react";
+import React, { useState, useRef, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  Play,
-  Pause,
-  Square,
-  RotateCcw,
+  PlayCircle,
+  Mic,
+  MicOff,
+  Camera,
+  CameraOff,
+  Settings,
+  RefreshCw,
+  CheckCircle,
+  ChevronRight,
+  Loader2,
   Volume2,
   VolumeX,
-  Timer,
-  RefreshCcw,
+  ChevronDown,
   Download,
-  Maximize2,
-  Keyboard,
-  Settings,
-  CheckCircle2,
-  AlertCircle,
+  Scissors,
+  Maximize,
+  ChevronLeft,
+  AlertOctagon,
+  Sun,
+  SunMoon,
+  Moon,
+  ImagePlus,
+  PauseCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import { useToast } from "@/hooks/use-toast";
+
+import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { observer } from "mobx-react-lite";
-// Assume ProgressIndicator is a separate responsive component
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
-export interface VideoRecorderProps {
-  onRecordingComplete: (blob: Blob) => void;
-  maxDuration?: number;
-  showGuideLines?: boolean;
-  allowFilters?: boolean;
-  quality?: "standard" | "high" | "ultra";
-}
+// Helper function to adjust color brightness
+const adjustColor = (color: string, amount: number): string => {
+  // Remove the # if it exists
+  color = color.replace("#", "");
 
-interface ShortcutActionParams {
-  isRecording: boolean;
-  preview: string | null;
-  startRecording: () => void;
-  stopRecording: () => void;
-  togglePause: () => void;
-  retakeRecording: () => void;
-  toggleFullscreen: () => void;
-  setIsMuted: Dispatch<SetStateAction<boolean>>;
-}
+  // Parse the color to RGB
+  const r = parseInt(color.substring(0, 2), 16);
+  const g = parseInt(color.substring(2, 4), 16);
+  const b = parseInt(color.substring(4, 6), 16);
 
-interface KeyboardShortcut {
-  key: string;
-  label: string;
-  description: string;
-  action: (params: ShortcutActionParams) => void;
-  requiresRecording?: boolean;
-  requiresPreview?: boolean;
-}
+  // Adjust the color
+  const newR = Math.max(0, Math.min(255, r + amount));
+  const newG = Math.max(0, Math.min(255, g + amount));
+  const newB = Math.max(0, Math.min(255, b + amount));
 
-const KEYBOARD_SHORTCUTS: { [name: string]: KeyboardShortcut } = {
-  SPACE: {
-    key: " ",
-    label: "Space",
-    description: "Start/Stop Recording",
-    action: ({ isRecording, preview, startRecording, stopRecording }) => {
-      if (!isRecording && !preview) startRecording();
-      else if (isRecording) stopRecording();
-    },
-    requiresRecording: false,
-  },
-  PAUSE: {
-    key: "p",
-    label: "P",
-    description: "Pause/Resume",
-    action: ({ isRecording, togglePause }) => {
-      if (isRecording) togglePause();
-    },
-    requiresRecording: true,
-  },
-  RETAKE: {
-    key: "r",
-    label: "R",
-    description: "Retake",
-    action: ({ preview, retakeRecording }) => {
-      if (preview) retakeRecording();
-    },
-    requiresPreview: true,
-  },
-  FULLSCREEN: {
-    key: "f",
-    label: "F",
-    description: "Toggle Fullscreen",
-    action: ({ toggleFullscreen }) => toggleFullscreen(),
-    requiresRecording: false,
-  },
-  MUTE: {
-    key: "m",
-    label: "M",
-    description: "Toggle Mute",
-    action: ({ setIsMuted }) => setIsMuted((prev) => !prev),
-    requiresRecording: false,
-  },
+  // Convert back to hex
+  return `#${newR.toString(16).padStart(2, "0")}${newG
+    .toString(16)
+    .padStart(2, "0")}${newB.toString(16).padStart(2, "0")}`;
 };
 
-export const VideoRecorder: React.FC<VideoRecorderProps> = observer(
-  ({
-    onRecordingComplete,
-    maxDuration = 300, // default to 5 minutes
-    showGuideLines = true,
-    quality = "high",
-  }) => {
-    // Refs for DOM and MediaRecorder
-    const videoRef = useRef<HTMLVideoElement>(null);
-    const previewVideoRef = useRef<HTMLVideoElement>(null);
-    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-    const chunksRef = useRef<Blob[]>([]);
-    const streamRef = useRef<MediaStream | null>(null);
-    const timerRef = useRef<number | null>(null);
-    const audioAnalyserRef = useRef<AnalyserNode | null>(null);
-    const audioContextRef = useRef<AudioContext | null>(null);
+interface EnhancedVideoRecorderProps {
+  onRecordingComplete: (blob: Blob) => void;
+  maxDuration?: number;
+  currentQuestion?: string;
+  currentQuestionIndex?: number;
+  totalQuestions?: number;
+  companyLogo?: string;
+  companyName?: string;
+  primaryColor?: string;
+  showAIHelp?: boolean;
+  forceMobileView?: boolean;
+}
 
-    // Component states
-    const [isRecording, setIsRecording] = useState(false);
-    const [isPaused, setIsPaused] = useState(false);
-    const [duration, setDuration] = useState(0);
-    const [preview, setPreview] = useState<string | null>(null);
-    const [error, setError] = useState<string | null>(null);
-    const [audioLevel, setAudioLevel] = useState(0);
-    const [isMuted, setIsMuted] = useState(false);
-    const [countdown, setCountdown] = useState<number | null>(null);
-    const [showSettings, setShowSettings] = useState(false);
-    const [recordingQuality, setRecordingQuality] = useState<
-      "standard" | "high" | "ultra"
-    >(quality);
-    const [brightness, setBrightness] = useState(1);
-    const [contrast, setContrast] = useState(1);
-    const [isNightMode, setIsNightMode] = useState(false);
-    const [showGuidelines, setShowGuidelines] = useState(showGuideLines);
-    const [cameraFacing, setCameraFacing] = useState<"user" | "environment">(
-      "user"
-    );
-    const [showShortcutsDialog, setShowShortcutsDialog] = useState(false);
-    const [lastUsedShortcut, setLastUsedShortcut] = useState<string | null>(
-      null
-    );
-    const [isCameraActive, setIsCameraActive] = useState(false);
+type RecordingState =
+  | "idle"
+  | "countdown"
+  | "recording"
+  | "paused"
+  | "reviewing"
+  | "processing"
+  | "complete";
+type VideoQuality = "standard" | "high" | "hd" | "4k";
+type LightingMode = "auto" | "light" | "dark";
 
-    const stopMediaTracks = useCallback(() => {
+export const EnhancedVideoRecorder: React.FC<EnhancedVideoRecorderProps> = ({
+  onRecordingComplete,
+  maxDuration = 60,
+  currentQuestion = "What problem were you trying to solve?",
+  currentQuestionIndex = 0,
+  totalQuestions = 4,
+  companyLogo = "",
+  companyName = "Your Company",
+  primaryColor = "#6366F1",
+  forceMobileView = false,
+}) => {
+  const { toast } = useToast();
+  const [recordingState, setRecordingState] = useState<RecordingState>("idle");
+  const [countdown, setCountdown] = useState(3);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [playbackTime, setPlaybackTime] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [volume, setVolume] = useState(0.8);
+  const [videoQuality, setVideoQuality] = useState<VideoQuality>("high");
+  const [cameraEnabled, setCameraEnabled] = useState(true);
+  const [micEnabled, setMicEnabled] = useState(true);
+  const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>(
+    []
+  );
+  const [availableMics, setAvailableMics] = useState<MediaDeviceInfo[]>([]);
+  const [selectedCamera, setSelectedCamera] = useState<string>("");
+  const [selectedMic, setSelectedMic] = useState<string>("");
+  const [showSettings, setShowSettings] = useState(false);
+  const [lightingMode, setLightingMode] = useState<LightingMode>("auto");
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isBackgroundBlurred] = useState(false);
+  // New state variables for quality improvement
+  const [actualResolution, setActualResolution] =
+    useState<string>("Detecting...");
+  const [testVideoURL, setTestVideoURL] = useState<string | null>(null);
+  const [showTestVideo, setShowTestVideo] = useState(false);
+  const [lastResolutionError, setLastResolutionError] = useState<string | null>(
+    null
+  );
+  // New state for responsive layout
+  const [isMobileView, setIsMobileView] = useState(false);
+
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const recordedChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<number | null>(null);
+  const countdownTimerRef = useRef<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Simulated recording blob for demonstration
+  const recordedVideoURL = useRef<string | null>(null);
+
+  // Check for mobile view or use forced mobile view
+  useEffect(() => {
+    if (forceMobileView) {
+      setIsMobileView(true);
+      return;
+    }
+
+    const checkIfMobile = () => {
+      setIsMobileView(window.innerWidth < 768);
+    };
+
+    checkIfMobile();
+    window.addEventListener("resize", checkIfMobile);
+
+    return () => {
+      window.removeEventListener("resize", checkIfMobile);
+    };
+  }, [forceMobileView]);
+
+  // Initialize media devices
+  useEffect(() => {
+    const initDevices = async () => {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+
+        const cameras = devices.filter(
+          (device) => device.kind === "videoinput"
+        );
+        const mics = devices.filter((device) => device.kind === "audioinput");
+
+        setAvailableCameras(cameras);
+        setAvailableMics(mics);
+
+        if (cameras.length > 0) {
+          setSelectedCamera(cameras[0].deviceId || `camera-0`);
+        } else {
+          setSelectedCamera("default-camera");
+        }
+
+        if (mics.length > 0) {
+          setSelectedMic(mics[0].deviceId || `mic-0`);
+        } else {
+          setSelectedMic("default-mic");
+        }
+
+        await initializeStream();
+      } catch (err) {
+        console.error("Error accessing media devices:", err);
+        toast({
+          title: "Device Access Error",
+          description:
+            "Unable to access camera or microphone. Please check your permissions.",
+          variant: "destructive",
+        });
+
+        // Set fallback values
+        setSelectedCamera("default-camera");
+        setSelectedMic("default-mic");
+      }
+    };
+
+    initDevices();
+
+    return () => {
+      // Clean up stream when component unmounts
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
-        streamRef.current = null;
-        setIsCameraActive(false);
       }
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
-        audioContextRef.current = null;
+
+      // Clean up test video URLs
+      if (testVideoURL) {
+        URL.revokeObjectURL(testVideoURL);
       }
-    }, []);
 
-    const stopRecording = useCallback(() => {
-      if (mediaRecorderRef.current && isRecording) {
-        mediaRecorderRef.current.stop();
-        setIsRecording(false);
-        setIsPaused(false);
-        if (timerRef.current) {
-          clearInterval(timerRef.current);
-        }
+      // Clean up recorded video URL
+      if (recordedVideoURL.current) {
+        URL.revokeObjectURL(recordedVideoURL.current);
       }
-    }, [isRecording]);
+    };
+  }, []);
 
-    const togglePause = useCallback(() => {
-      if (mediaRecorderRef.current && isRecording) {
-        if (isPaused) {
-          mediaRecorderRef.current.resume();
-        } else {
-          mediaRecorderRef.current.pause();
-        }
-        setIsPaused((prev) => !prev);
-      }
-    }, [isRecording, isPaused]);
+  // Update stream when camera or mic selection changes or when view mode changes
+  useEffect(() => {
+    if (selectedCamera || selectedMic) {
+      initializeStream();
+    }
+  }, [
+    selectedCamera,
+    selectedMic,
+    videoQuality,
+    isBackgroundBlurred,
+    isMobileView,
+  ]);
 
-    const retakeRecording = useCallback(() => {
-      if (preview) {
-        URL.revokeObjectURL(preview);
-      }
-      setPreview(null);
-      setDuration(0);
-      chunksRef.current = [];
-      if (!isRecording) {
-        reinitializeStream();
-      }
-    }, [preview, isRecording]);
-
-    useEffect(() => {
-      if (isRecording && !isPaused && audioAnalyserRef.current) {
-        const dataArray = new Uint8Array(128);
-        const updateAudioLevel = () => {
-          audioAnalyserRef.current?.getByteFrequencyData(dataArray);
-          const average =
-            dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-          setAudioLevel(average);
-          if (isRecording) {
-            requestAnimationFrame(updateAudioLevel);
-          }
-        };
-        updateAudioLevel();
-      }
-    }, [isRecording, isPaused]);
-
-    const setupAudioAnalysis = useCallback((stream: MediaStream) => {
-      const audioCtx = new AudioContext();
-      audioContextRef.current = audioCtx;
-      const analyser = audioCtx.createAnalyser();
-      const source = audioCtx.createMediaStreamSource(stream);
-      source.connect(analyser);
-      analyser.fftSize = 256;
-      audioAnalyserRef.current = analyser;
-    }, []);
-
-    const getVideoConstraints = useCallback((): MediaTrackConstraints => {
-      const qualitySettings = {
-        standard: { width: 1280, height: 720 },
-        high: { width: 1920, height: 1080 },
-        ultra: { width: 3840, height: 2160 },
-      };
-      return {
-        ...qualitySettings[recordingQuality],
-        facingMode: cameraFacing,
-        frameRate: recordingQuality === "ultra" ? 30 : 60,
-      };
-    }, [recordingQuality, cameraFacing]);
-
-    const startRecording = useCallback(async () => {
-      try {
-        if (countdown !== null) {
-          for (let i = countdown; i > 0; i--) {
-            setCountdown(i);
-            await new Promise((resolve) => setTimeout(resolve, 1000));
-          }
-          setCountdown(null);
-        }
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: getVideoConstraints(),
-          audio: true,
-        });
-        streamRef.current = stream;
-        setIsCameraActive(true);
-        setupAudioAnalysis(stream);
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-        const options: MediaRecorderOptions = {
-          mimeType: "video/webm;codecs=vp9,opus",
-          videoBitsPerSecond: recordingQuality === "ultra" ? 8000000 : 4000000,
-        };
-        const mediaRecorder = new MediaRecorder(stream, options);
-        mediaRecorderRef.current = mediaRecorder;
-        chunksRef.current = [];
-        mediaRecorder.ondataavailable = (event: BlobEvent) => {
-          if (event.data.size > 0) {
-            chunksRef.current.push(event.data);
-          }
-        };
-        mediaRecorder.onstop = () => {
-          const blob = new Blob(chunksRef.current, { type: "video/webm" });
-          const url = URL.createObjectURL(blob);
-          setPreview(url);
-          onRecordingComplete(blob);
-          stopMediaTracks();
-        };
-        mediaRecorder.start(1000);
-        setIsRecording(true);
-      } catch (err) {
-        console.error("Error starting recording:", err);
-        setError("Could not access camera or microphone");
-      }
-    }, [
-      maxDuration,
-      onRecordingComplete,
-      countdown,
-      getVideoConstraints,
-      setupAudioAnalysis,
-      stopMediaTracks,
-      recordingQuality,
-    ]);
-
-    useEffect(() => {
-      if (isRecording && !isPaused) {
-        timerRef.current = setInterval(() => {
-          setDuration((prev) => {
-            if (prev >= maxDuration) {
-              stopRecording();
-              return prev;
-            }
-            return prev + 1;
-          });
+  // Handle countdown timer
+  useEffect(() => {
+    if (recordingState === "countdown") {
+      if (countdown > 0) {
+        countdownTimerRef.current = setTimeout(() => {
+          setCountdown(countdown - 1);
         }, 1000);
-      } else if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-      return () => {
-        if (timerRef.current) {
-          clearInterval(timerRef.current);
-          timerRef.current = null;
-        }
-      };
-    }, [isRecording, isPaused, maxDuration, stopRecording]);
-
-    const toggleFullscreen = useCallback(() => {
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(console.error);
       } else {
-        document.exitFullscreen().catch(console.error);
+        startRecording();
       }
-    }, []);
+    }
 
-    useEffect(() => {
-      if (videoRef.current) {
-        videoRef.current.style.filter = `brightness(${brightness}) contrast(${contrast}) ${
-          isNightMode ? "hue-rotate(180deg)" : ""
-        }`;
+    return () => {
+      if (countdownTimerRef.current) {
+        clearTimeout(countdownTimerRef.current);
       }
-    }, [brightness, contrast, isNightMode]);
+    };
+  }, [recordingState, countdown]);
+  // Set video constraints based on quality setting with stronger requirements
+  const videoConstraints: MediaTrackConstraints = {
+    deviceId: selectedCamera ? { exact: selectedCamera } : undefined,
+  };
+  const constraints: MediaStreamConstraints = {
+    video: cameraEnabled ? videoConstraints : false,
+    audio: micEnabled
+      ? {
+          deviceId: selectedMic ? { exact: selectedMic } : undefined,
+          echoCancellation: true,
+          noiseSuppression: true,
+        }
+      : false,
+  };
 
-    const reinitializeStream = useCallback(async () => {
-      if (!isRecording) {
-        stopMediaTracks();
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: getVideoConstraints(),
-            audio: true,
-          });
-          streamRef.current = stream;
-          setIsCameraActive(true);
-          if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-          }
-          setupAudioAnalysis(stream);
-        } catch (err) {
-          console.error("Error reinitializing stream:", err);
-          setError("Could not access camera or microphone");
+  // Initialize media stream with improved resolution handling
+  const initializeStream = async () => {
+    try {
+      // Stop any existing stream
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+
+      // Reset resolution error state
+      setLastResolutionError(null);
+
+      // Define quality presets with both ideal and min values for better enforcement
+      if (isMobileView) {
+        // For mobile, we want portrait-oriented video (taller than wide)
+        switch (videoQuality) {
+          case "standard":
+            videoConstraints.width = { min: 480, ideal: 480 };
+            videoConstraints.height = { min: 640, ideal: 640 };
+            break;
+          case "high":
+            videoConstraints.width = { min: 720, ideal: 720 };
+            videoConstraints.height = { min: 1280, ideal: 1280 };
+            break;
+          case "hd":
+            videoConstraints.width = { min: 1080, ideal: 1080 };
+            videoConstraints.height = { min: 1920, ideal: 1920 };
+            break;
+          case "4k":
+            videoConstraints.width = { min: 2160, ideal: 2160 };
+            videoConstraints.height = { min: 3840, ideal: 3840 };
+            break;
+        }
+      } else {
+        // For desktop, maintain landscape orientation (wider than tall)
+        switch (videoQuality) {
+          case "standard":
+            videoConstraints.width = { min: 640, ideal: 640 };
+            videoConstraints.height = { min: 480, ideal: 480 };
+            break;
+          case "high":
+            videoConstraints.width = { min: 1280, ideal: 1280 };
+            videoConstraints.height = { min: 720, ideal: 720 };
+            break;
+          case "hd":
+            videoConstraints.width = { min: 1920, ideal: 1920 };
+            videoConstraints.height = { min: 1080, ideal: 1080 };
+            break;
+          case "4k":
+            videoConstraints.width = { min: 3840, ideal: 3840 };
+            videoConstraints.height = { min: 2160, ideal: 2160 };
+            break;
         }
       }
-    }, [isRecording, getVideoConstraints, stopMediaTracks, setupAudioAnalysis]);
 
-    useEffect(() => {
-      reinitializeStream();
-    }, [cameraFacing, recordingQuality, reinitializeStream]);
+      // Add frameRate constraint for smoother video at higher resolutions
+      videoConstraints.frameRate = { min: 24, ideal: 30 };
 
-    useEffect(() => {
-      if (preview && previewVideoRef.current) {
-        previewVideoRef.current.load();
+      // Add facingMode constraint for mobile - use front camera by default
+      if (isMobileView) {
+        videoConstraints.facingMode = "user";
       }
-    }, [preview]);
 
-    useEffect(() => {
-      const handleKeyPress = (e: globalThis.KeyboardEvent) => {
-        if (
-          e.target instanceof HTMLInputElement ||
-          e.target instanceof HTMLTextAreaElement
-        )
-          return;
-        const shortcut = Object.values(KEYBOARD_SHORTCUTS).find(
-          (s) => s.key === e.key.toLowerCase()
-        );
-        if (shortcut) {
-          e.preventDefault();
-          if (shortcut.requiresRecording && !isRecording) return;
-          if (shortcut.requiresPreview && !preview) return;
-          shortcut.action({
-            isRecording,
-            preview,
-            startRecording,
-            stopRecording,
-            togglePause,
-            retakeRecording,
-            toggleFullscreen,
-            setIsMuted,
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      streamRef.current = stream;
+
+      // Get the actual video track settings to show real resolution
+      const videoTrack = stream.getVideoTracks()[0];
+      if (videoTrack) {
+        const settings = videoTrack.getSettings();
+        setActualResolution(`${settings.width}×${settings.height}`);
+
+        // Log detailed info about the video track capabilities
+        console.log("Video track settings:", settings);
+        console.log("Video track constraints:", videoTrack.getConstraints());
+
+        // Check if we got the expected resolution based on quality setting
+        let expectedWidth = 0;
+        switch (videoQuality) {
+          case "standard":
+            expectedWidth = 640;
+            break;
+          case "high":
+            expectedWidth = 1280;
+            break;
+          case "hd":
+            expectedWidth = 1920;
+            break;
+          case "4k":
+            expectedWidth = 3840;
+            break;
+        }
+
+        if (settings.width && settings.width < expectedWidth * 0.9) {
+          toast({
+            title: "Resolution Limited",
+            description: `Your camera provided ${settings.width}×${settings.height} instead of the requested quality. This is the best your camera can do.`,
+            variant: "destructive",
           });
-          setLastUsedShortcut(shortcut.label);
-          setTimeout(() => setLastUsedShortcut(null), 1000);
+          setLastResolutionError(
+            "Camera cannot provide the requested resolution"
+          );
+        }
+      } else {
+        setActualResolution("No video");
+      }
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+
+        // Ensure the video element itself doesn't constrain the actual resolution
+        videoRef.current.onloadedmetadata = () => {
+          if (videoRef.current) {
+            // Set video element to preserve aspect ratio
+            if (videoTrack) {
+              const settings = videoTrack.getSettings();
+              console.log(
+                "Video dimensions on load:",
+                settings.width,
+                settings.height
+              );
+            }
+          }
+        };
+      }
+    } catch (err: any) {
+      console.error("Error initializing stream:", err);
+      setActualResolution("Failed to set resolution");
+
+      // Handle OverconstrainedError specifically
+      if (err.name === "OverconstrainedError") {
+        setLastResolutionError("Your camera doesn't support this resolution");
+        toast({
+          title: "Resolution Not Supported",
+          description:
+            "Your camera doesn't support the selected resolution. Trying with best available quality.",
+          variant: "destructive",
+        });
+
+        // Try again with more relaxed constraints - only use ideal values
+        const fallbackConstraints = { ...videoConstraints };
+        // Remove min constraints but keep ideal values
+        if (
+          fallbackConstraints.width &&
+          typeof fallbackConstraints.width === "object"
+        ) {
+          const idealWidth = fallbackConstraints.width.ideal;
+          fallbackConstraints.width = { ideal: idealWidth };
+        }
+        if (
+          fallbackConstraints.height &&
+          typeof fallbackConstraints.height === "object"
+        ) {
+          const idealHeight = fallbackConstraints.height.ideal;
+          fallbackConstraints.height = { ideal: idealHeight };
+        }
+
+        try {
+          const fallbackStream = await navigator.mediaDevices.getUserMedia({
+            video: cameraEnabled ? fallbackConstraints : false,
+            audio: constraints.audio,
+          });
+
+          streamRef.current = fallbackStream;
+
+          // Get the actual fallback resolution
+          const videoTrack = fallbackStream.getVideoTracks()[0];
+          if (videoTrack) {
+            const settings = videoTrack.getSettings();
+            setActualResolution(
+              `${settings.width}×${settings.height} (best available)`
+            );
+          }
+
+          if (videoRef.current) {
+            videoRef.current.srcObject = fallbackStream;
+          }
+        } catch (fallbackErr) {
+          console.error("Fallback stream error:", fallbackErr);
+          toast({
+            title: "Camera Error",
+            description:
+              "Unable to access camera with any resolution. Please check your device.",
+            variant: "destructive",
+          });
+        }
+      } else {
+        toast({
+          title: "Camera Error",
+          description:
+            "Unable to access camera or microphone. Please check your permissions.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  // Start recording countdown
+  const handleStartCountdown = () => {
+    setCountdown(3);
+    setRecordingState("countdown");
+  };
+
+  // Start recording with improved quality settings
+  const startRecording = () => {
+    if (!streamRef.current) return;
+
+    recordedChunksRef.current = [];
+
+    // Set appropriate bitrate based on selected quality
+    let videoBitsPerSecond = 2500000; // Default to 2.5 Mbps
+
+    switch (videoQuality) {
+      case "standard":
+        videoBitsPerSecond = 1000000; // 1 Mbps for 480p
+        break;
+      case "high":
+        videoBitsPerSecond = 2500000; // 2.5 Mbps for 720p
+        break;
+      case "hd":
+        videoBitsPerSecond = 5000000; // 5 Mbps for 1080p
+        break;
+      case "4k":
+        videoBitsPerSecond = 20000000; // 20 Mbps for 4K
+        break;
+    }
+
+    let options: MediaRecorderOptions = {
+      mimeType: "video/webm;codecs=vp9,opus",
+      videoBitsPerSecond: videoBitsPerSecond,
+    };
+
+    // Fallback codecs if vp9 is not supported
+    if (!MediaRecorder.isTypeSupported(options.mimeType as string)) {
+      options.mimeType = "video/webm;codecs=vp8,opus";
+
+      if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+        options.mimeType = "video/webm";
+
+        if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+          options = {}; // Use browser defaults if no supported type is found
+        }
+      }
+    }
+
+    try {
+      const mediaRecorder = new MediaRecorder(streamRef.current, options);
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          recordedChunksRef.current.push(event.data);
         }
       };
-      window.addEventListener("keydown", handleKeyPress);
-      return () => window.removeEventListener("keydown", handleKeyPress);
-    }, [
-      isRecording,
-      preview,
-      startRecording,
-      stopRecording,
-      togglePause,
-      retakeRecording,
-      toggleFullscreen,
-    ]);
 
-    return (
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunksRef.current, {
+          type: options.mimeType || "video/webm",
+        });
+        recordedVideoURL.current = URL.createObjectURL(blob);
+
+        if (videoRef.current && recordingState !== "reviewing") {
+          videoRef.current.srcObject = null;
+          videoRef.current.src = recordedVideoURL.current;
+          videoRef.current.play();
+        }
+      };
+
+      console.log("MediaRecorder started with options:", options);
+      mediaRecorder.start(1000); // Collect data every second
+      mediaRecorderRef.current = mediaRecorder;
+
+      setRecordingState("recording");
+      setRecordingTime(0);
+
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingTime((prev) => {
+          if (prev >= maxDuration) {
+            stopRecording();
+            return prev;
+          }
+          return prev + 1;
+        });
+      }, 1000);
+    } catch (err) {
+      console.error("Error starting recording:", err);
+      toast({
+        title: "Recording Error",
+        description:
+          "Unable to start recording. Please try again or select a lower quality setting.",
+        variant: "destructive",
+      });
+      setRecordingState("idle");
+    }
+  };
+
+  // Create a test recording to check quality
+  const createTestRecording = async () => {
+    if (!streamRef.current) {
+      toast({
+        title: "Test Failed",
+        description:
+          "No camera stream available. Please check your camera settings.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Testing Quality",
+      description: "Recording 2 seconds of video to verify quality settings...",
+    });
+
+    // Set appropriate bitrate based on selected quality
+    let videoBitsPerSecond = 2500000; // Default to 2.5 Mbps
+
+    switch (videoQuality) {
+      case "standard":
+        videoBitsPerSecond = 1000000;
+        break; // 1 Mbps for 480p
+      case "high":
+        videoBitsPerSecond = 2500000;
+        break; // 2.5 Mbps for 720p
+      case "hd":
+        videoBitsPerSecond = 5000000;
+        break; // 5 Mbps for 1080p
+      case "4k":
+        videoBitsPerSecond = 20000000;
+        break; // 20 Mbps for 4K
+    }
+
+    let options: MediaRecorderOptions = {
+      mimeType: "video/webm;codecs=vp9,opus",
+      videoBitsPerSecond: videoBitsPerSecond,
+    };
+
+    // Fallback codecs if vp9 is not supported
+    if (!MediaRecorder.isTypeSupported(options.mimeType as string)) {
+      options.mimeType = "video/webm;codecs=vp8,opus";
+
+      if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+        options.mimeType = "video/webm";
+
+        if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+          options = {}; // Use browser defaults if no supported type is found
+        }
+      }
+    }
+
+    try {
+      const testRecorder = new MediaRecorder(streamRef.current, options);
+      const testChunks: Blob[] = [];
+
+      testRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) testChunks.push(e.data);
+      };
+
+      testRecorder.onstop = () => {
+        const testBlob = new Blob(testChunks, {
+          type: options.mimeType || "video/webm",
+        });
+
+        // Clean up previous test URL if it exists
+        if (testVideoURL) {
+          URL.revokeObjectURL(testVideoURL);
+        }
+
+        const newTestURL = URL.createObjectURL(testBlob);
+        setTestVideoURL(newTestURL);
+        setShowTestVideo(true);
+      };
+
+      testRecorder.start();
+      setTimeout(() => testRecorder.stop(), 2000);
+    } catch (err) {
+      console.error("Test recording error:", err);
+      toast({
+        title: "Test Failed",
+        description: "Could not create a test recording with current settings.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Pause recording
+  const pauseRecording = () => {
+    if (mediaRecorderRef.current && recordingState === "recording") {
+      mediaRecorderRef.current.pause();
+
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+      }
+
+      setRecordingState("paused");
+    }
+  };
+
+  // Resume recording
+  const resumeRecording = () => {
+    if (mediaRecorderRef.current && recordingState === "paused") {
+      mediaRecorderRef.current.resume();
+
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingTime((prev) => {
+          if (prev >= maxDuration) {
+            stopRecording();
+            return prev;
+          }
+          return prev + 1;
+        });
+      }, 1000);
+
+      setRecordingState("recording");
+    }
+  };
+
+  // Stop recording
+  const stopRecording = () => {
+    if (
+      mediaRecorderRef.current &&
+      (recordingState === "recording" || recordingState === "paused")
+    ) {
+      mediaRecorderRef.current.stop();
+
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+      }
+
+      setRecordingState("reviewing");
+    }
+  };
+
+  // Reset recording
+  const resetRecording = () => {
+    setRecordingState("idle");
+    setRecordingTime(0);
+
+    if (recordedVideoURL.current) {
+      URL.revokeObjectURL(recordedVideoURL.current);
+      recordedVideoURL.current = null;
+    }
+
+    initializeStream();
+  };
+
+  // Complete recording
+  const completeRecording = () => {
+    setRecordingState("processing");
+
+    setTimeout(() => {
+      const blob = new Blob(recordedChunksRef.current, { type: "video/webm" });
+      onRecordingComplete(blob);
+      setRecordingState("complete");
+    }, 2000);
+  };
+
+  // Format time for display (MM:SS)
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, "0")}:${secs
+      .toString()
+      .padStart(2, "0")}`;
+  };
+
+  // Toggle fullscreen
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      containerRef.current?.requestFullscreen();
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+  };
+
+  // Handle playback
+  const handlePlaybackChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (videoRef.current) {
+      const time = parseInt(e.target.value);
+      videoRef.current.currentTime = time;
+      setPlaybackTime(time);
+    }
+  };
+
+  // Toggle playback
+  const togglePlayback = () => {
+    if (videoRef.current) {
+      if (isPlaying) {
+        videoRef.current.pause();
+      } else {
+        videoRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
+    }
+  };
+
+  // Toggle mute
+  const toggleMute = () => {
+    if (videoRef.current) {
+      videoRef.current.muted = !isMuted;
+      setIsMuted(!isMuted);
+    }
+  };
+
+  // Handle volume change
+  const handleVolumeChange = (values: number[]) => {
+    const newVolume = values[0];
+    setVolume(newVolume);
+
+    if (videoRef.current) {
+      videoRef.current.volume = newVolume;
+    }
+
+    if (newVolume === 0) {
+      setIsMuted(true);
+    } else if (isMuted) {
+      setIsMuted(false);
+    }
+  };
+
+  // Handle lighting mode change
+  const handleLightingChange = (mode: LightingMode) => {
+    setLightingMode(mode);
+
+    // Apply CSS filter to video element based on lighting mode
+    if (videoRef.current) {
+      switch (mode) {
+        case "light":
+          videoRef.current.style.filter = "brightness(1.2) contrast(1.1)";
+          break;
+        case "dark":
+          videoRef.current.style.filter = "brightness(1.4) contrast(1.2)";
+          break;
+        default:
+          videoRef.current.style.filter = "none";
+      }
+    }
+  };
+
+  // Toggle camera
+  const toggleCamera = () => {
+    setCameraEnabled(!cameraEnabled);
+  };
+
+  // Toggle microphone
+  const toggleMicrophone = () => {
+    setMicEnabled(!micEnabled);
+  };
+
+  // Check if recording is short
+  const isRecordingTooShort = recordingTime < 5;
+
+  // Set aspect ratio class based on screen size
+  const aspectRatioClass = isMobileView ? "aspect-[9/16]" : "aspect-video";
+
+  return (
+    <div
+      ref={containerRef}
+      className={cn(
+        "w-full rounded-xl overflow-hidden bg-black shadow-2xl transition-all border border-gray-800",
+        "backdrop-blur-sm bg-opacity-95",
+        isFullscreen ? "fixed inset-0 z-50" : "relative"
+      )}
+      style={{
+        boxShadow:
+          "0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.2)",
+      }}
+    >
       <div
-        className={`flex flex-col items-center space-y-4 ${
-          isNightMode ? "bg-gray-900" : "bg-white"
-        } p-4 sm:p-8`}
-      >
-        <div className="relative w-full sm:max-w-4xl aspect-video rounded-lg overflow-hidden shadow-lg">
-          {showGuidelines && !preview && (
-            <div className="absolute inset-0 pointer-events-none">
-              <div className="w-full h-full border-4 border-white/30 rounded-lg" />
-              <div className="absolute inset-0 grid grid-cols-3 grid-rows-3">
-                {[...Array(9)].map((_, i) => (
-                  <div key={i} className="border border-white/20" />
-                ))}
-              </div>
-            </div>
-          )}
-          {preview ? (
-            <video
-              ref={previewVideoRef}
-              src={preview}
-              autoPlay
-              muted
-              playsInline
-              controls
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <>
-              <video
-                ref={videoRef}
-                autoPlay
-                muted={isMuted}
-                playsInline
-                className="w-full h-full object-cover"
-              />
-              {!isCameraActive && (
-                <div className="absolute inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50">
-                  <p className="text-white text-lg">
-                    Click "Start Recording" to begin
-                  </p>
-                </div>
-              )}
-            </>
-          )}
-          {!preview && (
-            <div className="absolute bottom-0 left-0 right-0 p-2 sm:p-4 bg-gradient-to-t from-black/80 to-transparent">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Timer className="!w-3 md:w-4 !h-3 md:h-4 text-white" />
-                  <span className="text-white font-medium text-sm md:text-base">
-                    {Math.floor(duration / 60)}:
-                    {(duration % 60).toString().padStart(2, "0")}
-                  </span>
-                </div>
-                <div className="flex space-x-1 md:space-x-2">
-                  {!isRecording ? (
-                    <Button
-                      onClick={startRecording}
-                      variant="default"
-                      size="sm"
-                      disabled={duration >= maxDuration}
-                      className="bg-red-500 hover:bg-red-600"
-                    >
-                      <Play className=" w-4 h-4 md:mr-2" />
-                      <span className="hidden md:block">Start Recording</span>
-                      <span className="block md:hidden"> Start</span>
-                    </Button>
-                  ) : (
-                    <>
-                      <Button
-                        onClick={togglePause}
-                        variant="secondary"
-                        size="sm"
-                      >
-                        {isPaused ? (
-                          <Play className="!w-3 md:!w-4 !h-3 md:!h-4" />
-                        ) : (
-                          <Pause className="!w-3 md:!w-4 !h-3 md:!h-4" />
-                        )}
-                      </Button>
-                      <Button
-                        onClick={stopRecording}
-                        variant="destructive"
-                        size="sm"
-                      >
-                        <Square className="!w-3 md:!w-4 !h-3 md:!h-4" />
-                      </Button>
-                    </>
-                  )}
-                </div>
-                <div className="flex items-center space-x-0 md:space-x-2">
-                  <Button
-                    onClick={() => setIsMuted((prev) => !prev)}
-                    variant="ghost"
-                    size="sm"
-                    className="text-white"
-                  >
-                    {isMuted ? (
-                      <VolumeX className="!w-3 md:!w-4 !h-3 md:!h-4" />
-                    ) : (
-                      <Volume2 className="!w-3 md:!w-4 !h-3 md:!h-4" />
-                    )}
-                  </Button>
-                  <Button
-                    onClick={toggleFullscreen}
-                    variant="ghost"
-                    size="sm"
-                    className="text-white"
-                  >
-                    <Maximize2 className="!w-3 md:!w-4 !h-3 md:!h-4" />
-                  </Button>
-                  <Dialog open={showSettings} onOpenChange={setShowSettings}>
-                    <DialogTrigger asChild>
-                      <Button variant="ghost" size="sm" className="text-white">
-                        <Settings className="!w-3 md:!w-4 !h-3 md:!h-4" />
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Recording Settings</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4 p-4">
-                        <div className="flex items-center justify-between">
-                          <span>Quality</span>
-                          <select
-                            value={recordingQuality}
-                            onChange={(e) =>
-                              setRecordingQuality(
-                                e.target.value as "standard" | "high" | "ultra"
-                              )
-                            }
-                            className="p-2 rounded"
-                          >
-                            <option value="standard">Standard (720p)</option>
-                            <option value="high">High (1080p)</option>
-                            <option value="ultra">Ultra (4K)</option>
-                          </select>
-                        </div>
-                        <div className="space-y-2">
-                          <label>Brightness</label>
-                          <Slider
-                            value={[brightness]}
-                            min={0.5}
-                            max={1.5}
-                            step={0.1}
-                            onValueChange={([value]) => setBrightness(value)}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <label>Contrast</label>
-                          <Slider
-                            value={[contrast]}
-                            min={0.5}
-                            max={1.5}
-                            step={0.1}
-                            onValueChange={([value]) => setContrast(value)}
-                          />
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span>Night Mode</span>
-                          <Switch
-                            checked={isNightMode}
-                            onCheckedChange={setIsNightMode}
-                          />
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span>Guidelines</span>
-                          <Switch
-                            checked={showGuidelines}
-                            onCheckedChange={setShowGuidelines}
-                          />
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span>Camera</span>
-                          <Button
-                            onClick={() =>
-                              setCameraFacing((prev) =>
-                                prev === "user" ? "environment" : "user"
-                              )
-                            }
-                            variant="outline"
-                            size="sm"
-                          >
-                            <RefreshCcw className="w-4 h-4 mr-2" />
-                            Switch Camera
-                          </Button>
-                        </div>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {countdown !== null && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-              <span className="text-6xl text-white font-bold">{countdown}</span>
-            </div>
-          )}
-        </div>
-
-        <div className="w-full relative">
-          {preview ? (
-            <div className="flex justify-center gap-4">
-              <Button onClick={retakeRecording} variant="secondary" size="sm">
-                <RotateCcw className="w-4 h-4 mr-2" />
-                Retake
-              </Button>
-              <Button
-                onClick={() => {
-                  const a = document.createElement("a");
-                  a.href = preview;
-                  a.download = "testimonial.webm";
-                  a.click();
-                }}
-                variant="default"
-                size="sm"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Download
-              </Button>
-              <Button
-                onClick={toggleFullscreen}
-                variant="ghost"
-                size="sm"
-                className="text-gray-700 bg-gray-100"
-              >
-                <Maximize2 className="w-4 h-4" />
-              </Button>
-            </div>
-          ) : (
-            <div className="flex items-center space-x-2">
-              <span className="text-xs font-semibold text-gray-700">
-                {Math.floor(duration / 60)
-                  .toString()
-                  .padStart(2, "0")}
-                :{(duration % 60).toString().padStart(2, "0")}
-              </span>
-              <div className="relative flex-1">
-                <div className="bg-gray-300 rounded-full h-2 shadow-inner overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-500 ease-out"
-                    style={{
-                      width: `${(duration / maxDuration) * 100}%`,
-                      background: "linear-gradient(to right, #f87171, #fbbf24)",
-                    }}
-                  />
-                  {isRecording && (
-                    <div className="absolute -top-2 right-0 w-3 h-3 rounded-full bg-red-600 animate-pulse border-2 border-white" />
-                  )}
-                </div>
-              </div>
-              <span className="text-xs font-semibold text-gray-700">
-                {Math.floor(maxDuration / 60)
-                  .toString()
-                  .padStart(2, "0")}
-                :{(maxDuration % 60).toString().padStart(2, "0")}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {isRecording && !isPaused && (
-          <div className="w-full flex justify-center">
-            <div className="flex flex-col items-center w-full md:w-1/2">
-              <span className="text-xs font-semibold text-gray-700 mb-1">
-                Audio Level
-              </span>
-              <div className="w-full bg-gray-300 rounded-full h-2 overflow-hidden">
-                <div
-                  className="h-full bg-green-500 transition-all duration-100"
-                  style={{ width: `${(audioLevel / 255) * 100}%` }}
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {error && (
-          <Alert variant="destructive" className="mt-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        {isRecording && !isPaused && (
-          <Alert className="mt-4 bg-green-50 border-green-200">
-            <CheckCircle2 className="h-4 w-4 text-green-500" />
-            <AlertDescription className="text-green-700">
-              Recording in progress - {recordingQuality} quality
-            </AlertDescription>
-          </Alert>
-        )}
-        {isPaused && (
-          <Alert className="mt-4 bg-yellow-50 border-yellow-200">
-            <AlertCircle className="h-4 w-4 text-yellow-500" />
-            <AlertDescription className="text-yellow-700">
-              Recording paused
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {!isRecording && !preview && (
-          <div className="text-sm text-gray-500 mt-4 space-y-2">
-            <p>• Ensure good lighting and minimal background noise</p>
-            <p>• Look directly at the camera for better engagement</p>
-            <p>• Keep your device steady during recording</p>
-            <p>
-              • Maximum recording time: {Math.floor(maxDuration / 60)} minutes
-            </p>
-          </div>
-        )}
-        <div className="text-xs text-gray-400 mt-4">
-          Keyboard shortcuts: Space (Start/Stop) • P (Pause) • R (Retake) • F
-          (Fullscreen)
-        </div>
-        <div className="mt-4">
-          <ShortcutsHelp
-            lastUsedShortcut={lastUsedShortcut}
-            showShortcutsDialog={showShortcutsDialog}
-            setShowShortcutsDialog={setShowShortcutsDialog}
-          />
-        </div>
-      </div>
-    );
-  }
-);
-
-export default VideoRecorder;
-
-const ShortcutsHelp: FC<{
-  showShortcutsDialog: boolean;
-  setShowShortcutsDialog: (value: boolean) => void;
-  lastUsedShortcut: string | null;
-}> = React.memo(
-  ({ showShortcutsDialog, setShowShortcutsDialog, lastUsedShortcut }) => (
-    <>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="text-gray-400 hover:text-gray-600"
-        onClick={() => {
-          setShowShortcutsDialog(true);
+        className={cn("relative bg-black overflow-hidden", aspectRatioClass)}
+        style={{
+          maxHeight: isFullscreen ? "calc(100vh - 10rem)" : undefined,
+          background:
+            "linear-gradient(145deg, rgba(20, 20, 20, 1) 0%, rgba(10, 10, 10, 1) 100%)",
         }}
       >
-        <Keyboard className="w-4 h-4 mr-2" />
-        Keyboard Shortcuts
-      </Button>
-      <Dialog open={showShortcutsDialog} onOpenChange={setShowShortcutsDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Keyboard Shortcuts</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            {Object.values(KEYBOARD_SHORTCUTS).map((shortcut) => (
-              <div
-                key={shortcut.key}
-                className="flex justify-between items-center"
+        {/* Video preview/playback */}
+        <video
+          ref={videoRef}
+          className={cn(
+            "w-full h-full transition-all duration-500",
+            isMobileView ? "object-cover" : "object-contain",
+            "filter saturate-105",
+            isBackgroundBlurred &&
+              recordingState === "idle" &&
+              "backdrop-blur-sm"
+          )}
+          autoPlay
+          playsInline
+          muted={recordingState !== "reviewing" || isMuted}
+          onTimeUpdate={() => {
+            if (videoRef.current && recordingState === "reviewing") {
+              setPlaybackTime(Math.floor(videoRef.current.currentTime));
+            }
+          }}
+          onEnded={() => {
+            if (recordingState === "reviewing") {
+              setIsPlaying(false);
+            }
+          }}
+          onLoadedMetadata={() => {
+            if (videoRef.current) {
+              console.log(
+                "Video dimensions on load:",
+                videoRef.current.videoWidth,
+                videoRef.current.videoHeight
+              );
+            }
+          }}
+        />
+
+        {/* Company branding */}
+        <div className="absolute top-4 left-4 flex items-center gap-2 z-10">
+          {companyLogo ? (
+            <img
+              src={companyLogo}
+              alt={companyName}
+              className="h-6 w-6 sm:h-8 sm:w-8 rounded-md object-contain bg-white/90 p-1 shadow-lg"
+            />
+          ) : (
+            <div
+              className="h-6 w-6 sm:h-8 sm:w-8 rounded-md flex items-center justify-center text-white font-bold text-xs shadow-lg"
+              style={{
+                backgroundColor: primaryColor,
+                background: `linear-gradient(135deg, ${primaryColor} 0%, ${adjustColor(
+                  primaryColor,
+                  -20
+                )} 100%)`,
+              }}
+            >
+              {companyName.slice(0, 2).toUpperCase()}
+            </div>
+          )}
+          {!isFullscreen && !isMobileView && (
+            <span className="text-white text-sm font-medium drop-shadow-lg hidden md:inline-block backdrop-blur-sm bg-black/30 px-2 py-0.5 rounded">
+              {companyName}
+            </span>
+          )}
+        </div>
+
+        {/* Countdown overlay */}
+        <AnimatePresence>
+          {recordingState === "countdown" && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.5 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.5 }}
+              className="absolute inset-0 flex items-center justify-center bg-black/50 z-20"
+            >
+              <motion.div
+                key={countdown}
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 1.5 }}
+                transition={{ duration: 0.5 }}
+                className="text-5xl sm:text-7xl font-bold text-white"
               >
-                <span className="text-gray-600">{shortcut.description}</span>
-                <kbd className="px-2 py-1 bg-gray-100 rounded border border-gray-300 font-mono text-sm">
-                  {shortcut.label}
-                </kbd>
-              </div>
-            ))}
+                {countdown}
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Recording indicator */}
+        {recordingState === "recording" && (
+          <div className="absolute top-4 right-4 flex items-center gap-2 backdrop-blur-sm bg-black/40 text-white px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm z-10 shadow-lg border border-red-500/30">
+            <div className="h-2 w-2 sm:h-3 sm:w-3 rounded-full bg-red-500 animate-pulse shadow-inner"></div>
+            <span className="font-medium">REC</span>
+            <span>{formatTime(recordingTime)}</span>
           </div>
+        )}
+
+        {/* Question display - Simplified for mobile */}
+        {(recordingState === "idle" ||
+          recordingState === "recording" ||
+          recordingState === "paused") && (
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent px-4 py-4 sm:p-6 z-10">
+            <h3 className="text-base sm:text-xl font-medium text-white mb-1 sm:mb-2 text-shadow">
+              {currentQuestion}
+            </h3>
+            {!isMobileView && (
+              <p className="text-white/90 text-xs sm:text-sm backdrop-blur-sm bg-black/20 inline-block px-2 py-1 rounded">
+                Answer naturally in 30-60 seconds. You can re-record if needed.
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Processing overlay */}
+        <AnimatePresence>
+          {recordingState === "processing" && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm z-20"
+            >
+              <div className="relative">
+                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 opacity-20 blur-xl animate-pulse"></div>
+                <Loader2 className="h-12 w-12 sm:h-16 sm:w-16 text-white animate-spin relative z-10" />
+              </div>
+              <h3 className="text-lg sm:text-xl font-medium text-white mt-4 sm:mt-6 tracking-wide">
+                Processing your video...
+              </h3>
+              <p className="text-white/70 text-xs sm:text-sm mt-2 max-w-md text-center px-4">
+                We're applying enhancements and preparing your testimonial. This
+                will only take a moment.
+              </p>
+              <div className="w-36 sm:w-48 h-1.5 bg-gray-700 rounded-full mt-4 sm:mt-6 overflow-hidden">
+                <motion.div
+                  className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: "100%" }}
+                  transition={{ duration: 2, ease: "easeInOut" }}
+                ></motion.div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Complete overlay */}
+        <AnimatePresence>
+          {recordingState === "complete" && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm z-20"
+            >
+              <motion.div
+                className="relative"
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: "spring", stiffness: 200, damping: 15 }}
+              >
+                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 opacity-20 blur-xl animate-pulse"></div>
+                <div className="rounded-full p-3 sm:p-4 mb-3 sm:mb-4 relative z-10 bg-gradient-to-br from-green-500 to-emerald-600 shadow-lg">
+                  <CheckCircle className="h-10 w-10 sm:h-16 sm:w-16 text-white" />
+                </div>
+              </motion.div>
+
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className="px-4 text-center"
+              >
+                <h3 className="text-xl sm:text-2xl font-medium text-white">
+                  Great job!
+                </h3>
+                <p className="text-white/90 text-sm sm:text-base mt-2 sm:mt-3 text-center max-w-md leading-relaxed">
+                  Your testimonial has been successfully recorded and enhanced.
+                  {currentQuestionIndex < totalQuestions - 1
+                    ? " Let's continue to the next question."
+                    : " Thank you for sharing your experience!"}
+                </p>
+
+                {currentQuestionIndex < totalQuestions - 1 && (
+                  <motion.div
+                    className="mt-4 sm:mt-6 flex justify-center"
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.4 }}
+                  >
+                    <Button className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-full px-4 sm:px-6 text-white gap-2 border-none shadow-lg hover:shadow-xl">
+                      Continue
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </motion.div>
+                )}
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Control bar */}
+      <div className="bg-gradient-to-b from-gray-900 to-black text-white border-t border-gray-800">
+        {/* Progress/timeline */}
+        <div className="h-1.5 w-full bg-gray-800 relative">
+          {recordingState === "reviewing" ? (
+            <input
+              type="range"
+              min="0"
+              max={recordingTime}
+              value={playbackTime}
+              onChange={handlePlaybackChange}
+              className="absolute h-1.5 w-full opacity-0 cursor-pointer z-10"
+            />
+          ) : null}
+
+          <div
+            className="h-full transition-all duration-200"
+            style={{
+              width:
+                recordingState === "reviewing"
+                  ? `${(playbackTime / recordingTime) * 100}%`
+                  : `${(recordingTime / maxDuration) * 100}%`,
+              backgroundColor: primaryColor,
+              boxShadow: `0 0 8px ${primaryColor}40`,
+            }}
+          ></div>
+        </div>
+
+        {/* Main controls - Responsive design */}
+        <div className="p-2 sm:p-4 flex items-center justify-between">
+          {/* Left side controls */}
+          <div className="flex items-center gap-1 sm:gap-3">
+            {recordingState === "idle" && (
+              <>
+                {/* Desktop controls */}
+                {!isMobileView && (
+                  <>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="!text-white hover:!bg-white/10"
+                            onClick={toggleCamera}
+                          >
+                            {cameraEnabled ? (
+                              <Camera className="h-5 w-5" />
+                            ) : (
+                              <CameraOff className="h-5 w-5 text-red-400" />
+                            )}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{cameraEnabled ? "Disable" : "Enable"} Camera</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="!text-white hover:!bg-white/10"
+                            onClick={toggleMicrophone}
+                          >
+                            {micEnabled ? (
+                              <Mic className="h-5 w-5" />
+                            ) : (
+                              <MicOff className="h-5 w-5 text-red-400" />
+                            )}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{micEnabled ? "Disable" : "Enable"} Microphone</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="!text-white hover:!bg-white/10"
+                            onClick={() => setShowSettings(!showSettings)}
+                          >
+                            <Settings className="h-5 w-5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Settings</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+
+                    <div className="flex items-center gap-2">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="!text-white hover:!bg-white/10 h-8"
+                          >
+                            <Sun className="h-4 w-4 mr-1" />
+                            <span className="text-xs">Lighting</span>
+                            <ChevronDown className="h-3 w-3 ml-1 opacity-70" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-32">
+                          <DropdownMenuItem
+                            className={cn(
+                              lightingMode === "auto" && "bg-accent"
+                            )}
+                            onClick={() => handleLightingChange("auto")}
+                          >
+                            <SunMoon className="h-4 w-4 mr-2" />
+                            <span>Auto</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className={cn(
+                              lightingMode === "light" && "bg-accent"
+                            )}
+                            onClick={() => handleLightingChange("light")}
+                          >
+                            <Sun className="h-4 w-4 mr-2" />
+                            <span>Brighten</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className={cn(
+                              lightingMode === "dark" && "bg-accent"
+                            )}
+                            onClick={() => handleLightingChange("dark")}
+                          >
+                            <Moon className="h-4 w-4 mr-2" />
+                            <span>Low Light</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </>
+                )}
+
+                {/* Mobile controls */}
+                {isMobileView && (
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-white text-xs gap-1"
+                      >
+                        <Settings className="h-4 w-4" />
+                        <span className="hidden xs:inline">Settings</span>
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="bg-gray-900 text-white border-gray-700 sm:max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Camera Settings</DialogTitle>
+                      </DialogHeader>
+                      <div className="grid gap-4 py-2">
+                        {/* Camera toggle */}
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            <Camera className="h-5 w-5" />
+                            <span>Camera</span>
+                          </div>
+                          <Switch
+                            checked={cameraEnabled}
+                            onCheckedChange={toggleCamera}
+                          />
+                        </div>
+
+                        {/* Camera selection */}
+                        {availableCameras.length > 1 && (
+                          <div className="space-y-2">
+                            <Label
+                              htmlFor="mobile-camera-select"
+                              className="text-white"
+                            >
+                              Select Camera
+                            </Label>
+                            <Select
+                              value={selectedCamera}
+                              onValueChange={setSelectedCamera}
+                            >
+                              <SelectTrigger
+                                id="mobile-camera-select"
+                                className="bg-gray-800 border-gray-700 text-white"
+                              >
+                                <SelectValue placeholder="Select camera" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                                {availableCameras.map((camera) => (
+                                  <SelectItem
+                                    key={camera.deviceId}
+                                    value={
+                                      camera.deviceId ||
+                                      `camera-${availableCameras.indexOf(camera)}`
+                                    }
+                                  >
+                                    {camera.label ||
+                                      `Camera ${availableCameras.indexOf(camera) + 1}`}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+
+                        {/* Microphone toggle */}
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            <Mic className="h-5 w-5" />
+                            <span>Microphone</span>
+                          </div>
+                          <Switch
+                            checked={micEnabled}
+                            onCheckedChange={toggleMicrophone}
+                          />
+                        </div>
+
+                        {/* Microphone selection */}
+                        {availableMics.length > 1 && (
+                          <div className="space-y-2">
+                            <Label
+                              htmlFor="mobile-mic-select"
+                              className="text-white"
+                            >
+                              Select Microphone
+                            </Label>
+                            <Select
+                              value={selectedMic}
+                              onValueChange={setSelectedMic}
+                            >
+                              <SelectTrigger
+                                id="mobile-mic-select"
+                                className="bg-gray-800 border-gray-700 text-white"
+                              >
+                                <SelectValue placeholder="Select microphone" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                                {availableMics.map((mic) => (
+                                  <SelectItem
+                                    key={mic.deviceId}
+                                    value={
+                                      mic.deviceId ||
+                                      `mic-${availableMics.indexOf(mic)}`
+                                    }
+                                  >
+                                    {mic.label ||
+                                      `Microphone ${availableMics.indexOf(mic) + 1}`}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+
+                        {/* Lighting setting */}
+                        <div className="space-y-2">
+                          <Label className="flex items-center gap-2">
+                            <Sun className="h-5 w-5" />
+                            <span>Lighting</span>
+                          </Label>
+                          <Select
+                            value={lightingMode}
+                            onValueChange={(value) =>
+                              handleLightingChange(value as LightingMode)
+                            }
+                          >
+                            <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                              <SelectItem value="auto">Auto</SelectItem>
+                              <SelectItem value="light">Bright</SelectItem>
+                              <SelectItem value="dark">Low Light</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {/* Video quality setting */}
+                        <div className="space-y-2">
+                          <Label
+                            htmlFor="mobile-quality-select"
+                            className="text-white"
+                          >
+                            Video Quality
+                          </Label>
+                          <Select
+                            value={videoQuality}
+                            onValueChange={(value: VideoQuality) =>
+                              setVideoQuality(value)
+                            }
+                          >
+                            <SelectTrigger
+                              id="mobile-quality-select"
+                              className="bg-gray-800 border-gray-700 text-white"
+                            >
+                              <SelectValue placeholder="Select quality" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                              <SelectItem value="standard">
+                                Standard (480p)
+                              </SelectItem>
+                              <SelectItem value="high">High (720p)</SelectItem>
+                              <SelectItem value="hd">HD (1080p)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button
+                          className="w-full bg-gray-800 text-white hover:bg-gray-700"
+                          onClick={() => initializeStream()}
+                        >
+                          Apply Settings
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                )}
+              </>
+            )}
+
+            {recordingState === "reviewing" && (
+              <>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-white hover:bg-white/10"
+                        onClick={togglePlayback}
+                      >
+                        {isPlaying ? (
+                          <PauseCircle className="h-5 w-5" />
+                        ) : (
+                          <PlayCircle className="h-5 w-5" />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{isPlaying ? "Pause" : "Play"}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
+                {!isMobileView && (
+                  <div className="flex items-center gap-2">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-white hover:bg-white/10"
+                            onClick={toggleMute}
+                          >
+                            {isMuted ? (
+                              <VolumeX className="h-5 w-5" />
+                            ) : (
+                              <Volume2 className="h-5 w-5" />
+                            )}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{isMuted ? "Unmute" : "Mute"}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+
+                    <div className="w-24 hidden md:block">
+                      <Slider
+                        defaultValue={[0.8]}
+                        max={1}
+                        step={0.1}
+                        value={[volume]}
+                        onValueChange={handleVolumeChange}
+                        className="cursor-pointer"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <span className="text-xs sm:text-sm text-white/70 font-mono ml-1 sm:ml-2">
+                  {formatTime(playbackTime)} / {formatTime(recordingTime)}
+                </span>
+              </>
+            )}
+          </div>
+
+          {/* Right side controls */}
+          <div className="flex items-center gap-1 sm:gap-3">
+            {recordingState === "idle" && (
+              <>
+                <Button
+                  className="rounded-full px-3 sm:px-6 py-1 text-xs sm:text-sm text-white gap-1 sm:gap-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-300 border-none"
+                  style={{
+                    background: `linear-gradient(135deg, ${primaryColor} 0%, ${adjustColor(
+                      primaryColor,
+                      -20
+                    )} 100%)`,
+                  }}
+                  onClick={handleStartCountdown}
+                >
+                  <span>Start Recording</span>
+                </Button>
+              </>
+            )}
+
+            {recordingState === "recording" && (
+              <>
+                {isMobileView ? (
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-white hover:bg-white/10 h-8 px-2"
+                      onClick={pauseRecording}
+                    >
+                      <PauseCircle className="h-4 w-4" />
+                    </Button>
+
+                    <Button
+                      className="rounded-full h-8 px-3 gap-1 text-xs text-white bg-red-600 hover:bg-red-700 shadow-lg hover:shadow-xl transition-all"
+                      onClick={stopRecording}
+                    >
+                      <span>Finish</span>
+                      <CheckCircle className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-white hover:bg-white/10"
+                      onClick={pauseRecording}
+                    >
+                      <PauseCircle className="h-4 w-4 mr-1" />
+                      <span className="text-xs">Pause</span>
+                    </Button>
+
+                    <Button
+                      className="rounded-full px-6 gap-2 text-white bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 shadow-lg hover:shadow-xl transition-all duration-300 border-none relative group overflow-hidden"
+                      onClick={stopRecording}
+                    >
+                      <span className="relative z-10 flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4" />
+                        Finish Recording
+                      </span>
+                      <span className="absolute inset-0 bg-gradient-to-r from-red-600 to-red-800 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
+                    </Button>
+                  </>
+                )}
+              </>
+            )}
+
+            {recordingState === "paused" && (
+              <>
+                {isMobileView ? (
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-white hover:bg-white/10 h-8 px-2"
+                      onClick={resumeRecording}
+                    >
+                      <PlayCircle className="h-4 w-4" />
+                    </Button>
+
+                    <Button
+                      variant="destructive"
+                      className="rounded-full h-8 px-3 text-xs"
+                      onClick={stopRecording}
+                    >
+                      Finish
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-white hover:bg-white/10"
+                      onClick={resumeRecording}
+                    >
+                      <PlayCircle className="h-4 w-4 mr-1" />
+                      <span className="text-xs">Resume</span>
+                    </Button>
+
+                    <Button
+                      variant="destructive"
+                      className="rounded-full px-6"
+                      onClick={stopRecording}
+                    >
+                      Finish Recording
+                    </Button>
+                  </>
+                )}
+              </>
+            )}
+
+            {recordingState === "reviewing" && (
+              <>
+                {isMobileView ? (
+                  <div className="flex gap-1 items-center">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-white hover:bg-white/10 h-8 px-2"
+                      onClick={resetRecording}
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
+
+                    <Button
+                      className="rounded-full h-8 px-3 gap-1 text-xs text-white shadow-lg border-none"
+                      style={{
+                        background: `linear-gradient(135deg, ${primaryColor} 0%, ${adjustColor(
+                          primaryColor,
+                          -20
+                        )} 100%)`,
+                      }}
+                      onClick={completeRecording}
+                      disabled={isRecordingTooShort}
+                    >
+                      {isRecordingTooShort ? (
+                        <AlertOctagon className="h-3 w-3" />
+                      ) : (
+                        <CheckCircle className="h-3 w-3" />
+                      )}
+                      <span>{isRecordingTooShort ? "Too short" : "Use"}</span>
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-white hover:bg-white/10"
+                      onClick={resetRecording}
+                    >
+                      <RefreshCw className="h-4 w-4 mr-1" />
+                      <span className="text-xs">Re-record</span>
+                    </Button>
+
+                    <Button
+                      className="rounded-full px-6 gap-2 text-white relative group overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 border-none"
+                      style={{
+                        background: `linear-gradient(135deg, ${primaryColor} 0%, ${adjustColor(
+                          primaryColor,
+                          -20
+                        )} 100%)`,
+                      }}
+                      onClick={completeRecording}
+                      disabled={isRecordingTooShort}
+                    >
+                      <span className="relative z-10 flex items-center gap-2">
+                        {isRecordingTooShort ? (
+                          <>
+                            <AlertOctagon className="h-4 w-4" />
+                            <span>Video too short</span>
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="h-4 w-4" />
+                            <span>Use This Recording</span>
+                          </>
+                        )}
+                      </span>
+                      <span
+                        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                        style={{
+                          background: `linear-gradient(135deg, ${adjustColor(
+                            primaryColor,
+                            10
+                          )} 0%, ${adjustColor(primaryColor, -10)} 100%)`,
+                        }}
+                      ></span>
+                    </Button>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Settings panel with resolution feedback - Desktop only */}
+      <AnimatePresence>
+        {showSettings && recordingState === "idle" && !isMobileView && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden bg-gradient-to-b from-gray-800 to-gray-900 border-t border-gray-700"
+          >
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium text-white">
+                    Camera Settings
+                  </h3>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="camera-select" className="text-white">
+                      Camera
+                    </Label>
+                    <Select
+                      value={selectedCamera}
+                      onValueChange={setSelectedCamera}
+                    >
+                      <SelectTrigger
+                        id="camera-select"
+                        className="bg-gray-700 border-gray-600 text-white"
+                      >
+                        <SelectValue placeholder="Select camera" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-gray-700 border-gray-600 text-white">
+                        {availableCameras.map((camera) => (
+                          <SelectItem
+                            key={camera.deviceId}
+                            value={
+                              camera.deviceId ||
+                              `camera-${availableCameras.indexOf(camera)}`
+                            }
+                          >
+                            {camera.label ||
+                              `Camera ${availableCameras.indexOf(camera) + 1}`}
+                          </SelectItem>
+                        ))}
+                        {availableCameras.length === 0 && (
+                          <SelectItem value="default-camera">
+                            Default Camera
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <Label htmlFor="quality-select" className="text-white">
+                        Video Quality
+                      </Label>
+                      <Badge
+                        variant="outline"
+                        className="bg-gray-800 border-gray-600 text-white/70"
+                      >
+                        Current: {actualResolution}
+                      </Badge>
+                    </div>
+                    <Select
+                      value={videoQuality}
+                      onValueChange={(value: VideoQuality) =>
+                        setVideoQuality(value)
+                      }
+                    >
+                      <SelectTrigger
+                        id="quality-select"
+                        className="bg-gray-700 border-gray-600 text-white"
+                      >
+                        <SelectValue placeholder="Select quality" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-gray-700 border-gray-600 text-white">
+                        <SelectItem value="standard">
+                          Standard (480p)
+                        </SelectItem>
+                        <SelectItem value="high">High (720p)</SelectItem>
+                        <SelectItem value="hd">HD (1080p)</SelectItem>
+                        <SelectItem value="4k">4K (2160p)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-white/50 mt-1">
+                      Higher resolutions require more bandwidth and processing
+                      power.
+                      {videoQuality === "4k" &&
+                        " Not all cameras support 4K resolution."}
+                    </p>
+                    {lastResolutionError && (
+                      <p className="text-xs text-amber-400 mt-1">
+                        Note: {lastResolutionError}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="mt-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="!text-white !bg-inherit !border-white/20 hover:!bg-white/10 w-full"
+                      onClick={createTestRecording}
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Test Current Quality
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium text-white">
+                    Audio Settings
+                  </h3>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="mic-select" className="text-white">
+                      Microphone
+                    </Label>
+                    <Select value={selectedMic} onValueChange={setSelectedMic}>
+                      <SelectTrigger
+                        id="mic-select"
+                        className="bg-gray-700 border-gray-600 text-white"
+                      >
+                        <SelectValue placeholder="Select microphone" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-gray-700 border-gray-600 text-white">
+                        {availableMics.map((mic) => (
+                          <SelectItem
+                            key={mic.deviceId}
+                            value={
+                              mic.deviceId ||
+                              `mic-${availableMics.indexOf(mic)}`
+                            }
+                          >
+                            {mic.label ||
+                              `Microphone ${availableMics.indexOf(mic) + 1}`}
+                          </SelectItem>
+                        ))}
+                        {availableMics.length === 0 && (
+                          <SelectItem value="default-mic">
+                            Default Microphone
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <Label className="text-white">Microphone Volume</Label>
+                      <span className="text-sm text-white/70">80%</span>
+                    </div>
+                    <Slider
+                      defaultValue={[0.8]}
+                      max={1}
+                      step={0.1}
+                      className="cursor-pointer"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between mt-6">
+                    <Button
+                      variant="ghost"
+                      className="!text-white !bg-inherit hover:!bg-white/10"
+                      onClick={() => initializeStream()}
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Test Audio & Video
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      className="!text-white bg-inherit !border-white/20 hover:!bg-white/10"
+                      onClick={() => setShowSettings(false)}
+                    >
+                      Done
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Test Video Dialog */}
+      <Dialog open={showTestVideo} onOpenChange={setShowTestVideo}>
+        <DialogContent className="bg-gray-900 border-gray-700 text-white">
+          <DialogHeader>
+            <DialogTitle>Test Recording</DialogTitle>
+            <DialogDescription className="text-white/70">
+              This is a test recording using your current quality settings (
+              {videoQuality}).
+              <br />
+              Actual resolution: {actualResolution}
+            </DialogDescription>
+          </DialogHeader>
+          {testVideoURL && (
+            <div className="relative aspect-video bg-black overflow-hidden rounded-md">
+              <video
+                src={testVideoURL}
+                className="w-full h-full object-contain"
+                controls
+                autoPlay
+              />
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              className="bg-gray-700 hover:bg-gray-600 text-white"
+              onClick={() => {
+                if (testVideoURL) {
+                  URL.revokeObjectURL(testVideoURL);
+                  setTestVideoURL(null);
+                }
+                setShowTestVideo(false);
+              }}
+            >
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
-      {lastUsedShortcut && (
-        <div className="fixed bottom-4 right-4 bg-black/80 text-white px-4 py-2 rounded-lg shadow-lg animate-fade-out">
-          Shortcut: {lastUsedShortcut}
+
+      {/* Question progress - Simplified for mobile */}
+      <div className="bg-gradient-to-r from-gray-800 to-gray-900 border-t border-gray-700 py-2 sm:py-3 px-3 sm:px-6 flex items-center justify-between">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <span className="text-white/70 text-xs sm:text-sm">
+            Q{currentQuestionIndex + 1}/{totalQuestions}
+          </span>
+          <div className="w-20 sm:w-32 h-1.5 sm:h-2 bg-gray-700 rounded-full overflow-hidden">
+            <div
+              className="h-full transition-all duration-700 ease-out rounded-full"
+              style={{
+                width: `${
+                  (currentQuestionIndex / (totalQuestions - 1)) * 100
+                }%`,
+                background: `linear-gradient(90deg, ${primaryColor}80 0%, ${primaryColor} 100%)`,
+                boxShadow: `0 0 8px ${primaryColor}40`,
+              }}
+            ></div>
+          </div>
         </div>
-      )}
-    </>
-  )
-);
+
+        <div className="flex items-center gap-1 sm:gap-3">
+          {!isMobileView && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="!text-white hover:!bg-white/10 !h-8"
+                    onClick={toggleFullscreen}
+                  >
+                    <Maximize className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Open fullscreen mode</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+
+          {recordingState === "reviewing" && !isMobileView && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-white hover:bg-white/10 h-8"
+                >
+                  <Scissors className="h-4 w-4 mr-1" />
+                  <span className="text-xs">Edit</span>
+                  <ChevronDown className="h-3 w-3 ml-1 opacity-70" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem>
+                  <Scissors className="h-4 w-4 mr-2" />
+                  <span>Trim Video</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <Download className="h-4 w-4 mr-2" />
+                  <span>Download Copy</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>
+                  <ImagePlus className="h-4 w-4 mr-2" />
+                  <span>Add Background</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
+          {currentQuestionIndex > 0 && recordingState === "idle" && (
+            <Button
+              variant="outline"
+              size="sm"
+              className={cn(
+                "!text-white !border-white/20 hover:!bg-white/10",
+                isMobileView ? "h-7 px-2" : "h-8"
+              )}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              {!isMobileView && <span>Previous</span>}
+            </Button>
+          )}
+
+          {currentQuestionIndex < totalQuestions - 1 &&
+            recordingState === "idle" && (
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(
+                  "!text-white bg-inherit !border-white/20 hover:!bg-white/10",
+                  isMobileView ? "h-7 px-2" : "h-8"
+                )}
+              >
+                {!isMobileView && <span>Skip</span>}
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default EnhancedVideoRecorder;

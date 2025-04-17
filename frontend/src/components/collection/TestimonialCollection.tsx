@@ -1,7 +1,7 @@
 import { motion, AnimatePresence, useMotionValue } from "framer-motion";
 import TestimonialTypeSelection from "./TestimonialTypeSelection";
-import { VideoRecorder } from "./VideoRecorder";
-import { AudioRecorder } from "./AudioRecorder";
+import VideoRecorder from "./VideoRecorder";
+import AudioRecorder from "./AudioRecorder";
 import { AIFeedback } from "./AIFeedback";
 import MediaSelectionModal from "./MediaSelectionModal";
 import FileUpload from "./FileUpload";
