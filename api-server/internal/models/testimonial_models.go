@@ -107,13 +107,13 @@ const (
 	AIServiceCategoryRecommendation AIServiceCategory = "recommendation"
 )
 
-// --------------------------
+// -------------------------
 // ASSOCIATED DATA MODELS
-// --------------------------
+// -------------------------
 
-// --------------------------
+// -------------------------
 // THE TESTIMONIAL MODEL
-// --------------------------
+// -------------------------
 
 type Testimonial struct {
 	ID          uuid.UUID `json:"id" db:"id"`

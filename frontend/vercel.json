@@ -1,5 +1,7 @@
 {
   "builds": [{ "src": "package.json", "use": "@vercel/node" }],
+  "cleanUrls": true,
+  "trailingSlash": false,
   "rewrites": [
     {
       "source": "/testimonial-widget.umd.js",
@@ -8,10 +10,15 @@
     {
       "source": "/testimonial-widget.css",
       "destination": "/dist/testimonial-widget.css"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
     }
-  ]
+  ],
+  "framework": null,
+  "public": true,
+  "installCommand": "npm install",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "fallback": {
+    "source": "/(.*)",
+    "destination": "/index.html"
+  }
 }

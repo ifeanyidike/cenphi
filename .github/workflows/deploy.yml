@@ -18,7 +18,6 @@ jobs:
       cache_key: ${{ steps.generate_cache_key.outputs.cache_key }}
       api_changed: ${{ steps.check_changes.outputs.api_changed }}
       ai_changed: ${{ steps.check_changes.outputs.ai_changed }}
-      services_matrix: ${{ steps.set_matrix.outputs.matrix }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -37,19 +36,6 @@ jobs:
           # Print the changes for debugging
           echo "Changes detected:"
           git diff --name-only ${{ github.event.before }} ${{ github.sha }}
-
-      - name: Set services matrix
-        id: set_matrix
-        run: |
-          SERVICES="[]"
-          if [[ "${{ steps.check_changes.outputs.api_changed }}" == "true" ]]; then
-            SERVICES=$(echo $SERVICES | jq '. + ["api-server"]')
-          fi
-          if [[ "${{ steps.check_changes.outputs.ai_changed }}" == "true" ]]; then
-            SERVICES=$(echo $SERVICES | jq '. + ["ai-service"]')
-          fi
-          echo "matrix=$SERVICES" >> $GITHUB_OUTPUT
-          echo "Services matrix: $SERVICES"
 
       - name: Generate unique cache keys
         id: generate_cache_key
@@ -220,13 +206,10 @@ jobs:
           cd ai-service
           python -m pytest
 
-  build-and-push:
-    needs: [prepare, test_api, test_ai]
-    if: ${{ always() && needs.prepare.outputs.services_matrix != '[]' && (needs.test_api.result == 'success' || needs.test_api.result == 'skipped') && (needs.test_ai.result == 'success' || needs.test_ai.result == 'skipped') }}
+  build_api:
+    needs: [prepare, test_api]
+    if: ${{ needs.prepare.outputs.api_changed == 'true' && (needs.test_api.result == 'success' || needs.test_api.result == 'skipped') }}
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        service: ${{ fromJSON(needs.prepare.outputs.services_matrix) }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -234,7 +217,6 @@ jobs:
           fetch-depth: 0
 
       - name: Verify critical files for API Server
-        if: ${{ matrix.service == 'api-server' }}
         run: |
           # Ensure google_roots.pem exists
           if [ ! -f "api-server/google_roots.pem" ]; then
@@ -254,8 +236,7 @@ jobs:
 
       - name: Create .env files
         run: |
-          if [ "${{ matrix.service }}" == "api-server" ]; then
-            cat > ./api-server/.env << 'ENDOFFILE'
+          cat > ./api-server/.env << 'ENDOFFILE'
           DB_USERNAME=ifeanyidike
           DB_PASSWORD=test_password
           DB_HOST=cenphidb
@@ -263,21 +244,82 @@ jobs:
           DB_NAME=cenphidb
           # Add other necessary API server variables
           ENDOFFILE
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          logout: false
+
+      - name: Verify Docker login
+        run: |
+          echo "Checking Docker login status..."
+          docker info
+
+      - name: Build and push API image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./api-server
+          file: ./api-server/Dockerfile
+          push: true
+          tags: |
+            lorddickson/api-server:latest
+            lorddickson/api-server:${{ github.sha }}
+          no-cache: true
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+            CACHE_BUSTER=${{ github.sha }}
+
+      - name: Verify Docker image
+        run: |
+          # Wait for Docker Hub to register the image
+          sleep 10
+
+          # Check that both tags exist
+          docker pull lorddickson/api-server:latest
+          docker pull lorddickson/api-server:${{ github.sha }}
+
+          # Get image IDs to verify they are the same image (just different tags)
+          LATEST_ID=$(docker inspect --format='{{.Id}}' lorddickson/api-server:latest)
+          SHA_ID=$(docker inspect --format='{{.Id}}' lorddickson/api-server:${{ github.sha }})
+
+          echo "Latest image ID: $LATEST_ID"
+          echo "SHA image ID: $SHA_ID"
+
+          if [ "$LATEST_ID" = "$SHA_ID" ]; then
+            echo "✅ Image verification successful - latest and SHA tags point to the same image"
+          else
+            echo "⚠️ Warning: latest and SHA tags point to different images"
           fi
 
-          if [ "${{ matrix.service }}" == "ai-service" ]; then
-            mkdir -p ./ai-service
-            cat > ./ai-service/.env << 'ENDOFFILE'
+  build_ai:
+    needs: [prepare, test_ai]
+    if: ${{ needs.prepare.outputs.ai_changed == 'true' && (needs.test_ai.result == 'success' || needs.test_ai.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Create .env files
+        run: |
+          mkdir -p ./ai-service
+          cat > ./ai-service/.env << 'ENDOFFILE'
           # Add necessary AI service variables here
           PYTHONUNBUFFERED=1
           TRANSFORMERS_CACHE=/root/.cache/huggingface
           # Add other necessary AI service variables
           ENDOFFILE
-          fi
 
-      # Verify that the main.py file exists
       - name: Verify AI Service Files
-        if: ${{ matrix.service == 'ai-service' }}
         run: |
           echo "Checking for main.py in ai-service directory..."
           if [ ! -f "./ai-service/main.py" ]; then
@@ -335,34 +377,32 @@ jobs:
           echo "Checking Docker login status..."
           docker info
 
-      # Force rebuilding images with --no-cache option
-      - name: Build and push ${{ matrix.service }} image
+      - name: Build and push AI image
         uses: docker/build-push-action@v4
         with:
-          context: ./${{ matrix.service }}
-          file: ./${{ matrix.service }}/Dockerfile
+          context: ./ai-service
+          file: ./ai-service/Dockerfile
           push: true
           tags: |
-            lorddickson/${{ matrix.service }}:latest
-            lorddickson/${{ matrix.service }}:${{ github.sha }}
+            lorddickson/ai-service:latest
+            lorddickson/ai-service:${{ github.sha }}
           no-cache: true
           build-args: |
             BUILDKIT_INLINE_CACHE=1
             CACHE_BUSTER=${{ github.sha }}
 
-      # Verify the image was pushed correctly
       - name: Verify Docker image
         run: |
           # Wait for Docker Hub to register the image
           sleep 10
 
           # Check that both tags exist
-          docker pull lorddickson/${{ matrix.service }}:latest
-          docker pull lorddickson/${{ matrix.service }}:${{ github.sha }}
+          docker pull lorddickson/ai-service:latest
+          docker pull lorddickson/ai-service:${{ github.sha }}
 
           # Get image IDs to verify they are the same image (just different tags)
-          LATEST_ID=$(docker inspect --format='{{.Id}}' lorddickson/${{ matrix.service }}:latest)
-          SHA_ID=$(docker inspect --format='{{.Id}}' lorddickson/${{ matrix.service }}:${{ github.sha }})
+          LATEST_ID=$(docker inspect --format='{{.Id}}' lorddickson/ai-service:latest)
+          SHA_ID=$(docker inspect --format='{{.Id}}' lorddickson/ai-service:${{ github.sha }})
 
           echo "Latest image ID: $LATEST_ID"
           echo "SHA image ID: $SHA_ID"
@@ -374,7 +414,7 @@ jobs:
           fi
 
   deploy_api:
-    needs: build-and-push
+    needs: [prepare, build_api]
     if: ${{ needs.prepare.outputs.api_changed == 'true' }}
     runs-on: ubuntu-latest
     env:
@@ -478,9 +518,6 @@ jobs:
                 echo "Created basic Docker Compose files"
             fi
 
-            # Always force pull latest image before running deploy script
-            # docker pull lorddickson/api-server:latest
-
             # Use specific SHA-tagged image instead of latest
             docker pull lorddickson/api-server:$GITHUB_SHA || echo "Falling back to latest image"
 
@@ -513,7 +550,7 @@ jobs:
             fi
 
   deploy_ai:
-    needs: build-and-push
+    needs: [prepare, build_ai]
     if: ${{ needs.prepare.outputs.ai_changed == 'true' }}
     runs-on: ubuntu-latest
     env:
@@ -573,9 +610,6 @@ jobs:
 
             echo "App directory structure:"
             mkdir -p /home/opc/app
-
-            # Ensure the shebang line is correct
-            # sed -i '1s/^.*$/\#!\/bin\/bash/' ai-deploy.sh
 
             # Verify Docker Compose files exist
             if [ ! -f "/home/opc/app/docker-compose.prod.yaml" ]; then
