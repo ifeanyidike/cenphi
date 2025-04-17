@@ -1,7 +1,7 @@
 import { MessageSquare, Share2, ChevronRight, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Review } from "@/types/types";
-import { getBadgeColor } from "@/util/utils";
+import { getBadgeColor } from "@/utils/utils";
 
 export const ReviewListItem = ({ review }: { review: Review }) => (
   <div className="p-4 border-b last:border-b-0 hover:bg-gray-50 transition-colors flex items-center justify-between">

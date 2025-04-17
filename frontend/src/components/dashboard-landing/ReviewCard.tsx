@@ -13,8 +13,8 @@ import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Testimonial } from "@/types/testimonial";
-import { formatMessageDateIntlShort } from "@/util/general";
-import { getInitials } from "@/util/testimonial";
+import { formatMessageDateIntlShort } from "@/utils/general";
+import { getInitials } from "@/utils/testimonial";
 
 export const ReviewCard = ({ review }: { review: Testimonial }) => {
   const [isExpanded, setIsExpanded] = useState(false);

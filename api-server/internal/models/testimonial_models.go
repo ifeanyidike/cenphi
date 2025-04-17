@@ -56,6 +56,11 @@ const (
 type CollectionMethod string
 
 const (
+	CollectionMethodWebsite         CollectionMethod = "website"
+	CollectionMethodEmail           CollectionMethod = "email"
+	CollectionMethodChat            CollectionMethod = "chat"
+	CollectionMethodSocial          CollectionMethod = "social"
+	CollectionMethodCustom          CollectionMethod = "custom"
 	CollectionMethodDirectLink      CollectionMethod = "direct_link"
 	CollectionMethodEmbedForm       CollectionMethod = "embed_form"
 	CollectionMethodQRCode          CollectionMethod = "qr_code"
@@ -80,12 +85,31 @@ const (
 	VerificationTypeDomainVerification   VerificationType = "domain_verification"
 )
 
-// --------------------------
-// HELPER TYPES
-// --------------------------
+type Sentiment string
 
-type StringArray []string
-type JSONMap map[string]interface{}
+const (
+	SentimentVeryNegative Sentiment = "very_negative"
+	SentimentNegative     Sentiment = "negative"
+	SentimentNeutral      Sentiment = "neutral"
+	SentimentPositive     Sentiment = "positive"
+	SentimentVeryPositive Sentiment = "very_positive"
+)
+
+type AIServiceCategory string
+
+const (
+	AIServiceCategoryAnalysis       AIServiceCategory = "analysis"
+	AIServiceCategoryEnhancement    AIServiceCategory = "enhancement"
+	AIServiceCategoryGeneration     AIServiceCategory = "generation"
+	AIServiceCategoryOptimization   AIServiceCategory = "optimization"
+	AIServiceCategoryVerification   AIServiceCategory = "verification"
+	AIServiceCategorySegmentation   AIServiceCategory = "segmentation"
+	AIServiceCategoryRecommendation AIServiceCategory = "recommendation"
+)
+
+// --------------------------
+// ASSOCIATED DATA MODELS
+// --------------------------
 
 // --------------------------
 // THE TESTIMONIAL MODEL
@@ -94,10 +118,10 @@ type JSONMap map[string]interface{}
 type Testimonial struct {
 	ID          uuid.UUID `json:"id" db:"id"`
 	WorkspaceID uuid.UUID `json:"workspace_id" db:"workspace_id"`
-	// New relation to the customer profile (if available)
-	CustomerProfileID *uuid.UUID `json:"customer_profile_id,omitempty" db:"customer_profile_id"`
-	// Eager-loaded customer profile (optional, not stored directly in DB).
-	CustomerProfile *CustomerProfile `json:"customer_profile,omitempty" db:"-"`
+
+	// Customer relationship
+	CustomerProfileID *uuid.UUID       `json:"customer_profile_id,omitempty" db:"customer_profile_id"`
+	CustomerProfile   *CustomerProfile `json:"customer_profile,omitempty" db:"-"`
 
 	// Categorization & Status
 	TestimonialType TestimonialType `json:"testimonial_type" db:"testimonial_type"`
@@ -114,11 +138,11 @@ type Testimonial struct {
 	Rating     *float32    `json:"rating,omitempty" db:"rating"`
 
 	// Media Metadata
-	MediaURL      string `json:"media_url,omitempty" db:"media_url"`
-	MediaDuration int    `json:"media_duration,omitempty" db:"media_duration"`
-	ThumbnailURL  string `json:"thumbnail_url,omitempty" db:"thumbnail_url"`
-	// AdditionalMedia is stored as JSON array; using json.RawMessage allows flexible unmarshaling.
-	AdditionalMedia json.RawMessage `json:"additional_media,omitempty" db:"additional_media"`
+	MediaURL         string          `json:"media_url,omitempty" db:"media_url"`
+	MediaDuration    int             `json:"media_duration,omitempty" db:"media_duration"`
+	ThumbnailURL     string          `json:"thumbnail_url,omitempty" db:"thumbnail_url"`
+	AdditionalMedia  json.RawMessage `json:"additional_media,omitempty" db:"additional_media"`
+	CustomFormatting JSONMap         `json:"custom_formatting" db:"custom_formatting"`
 
 	// Context
 	ProductContext    JSONMap `json:"product_context,omitempty" db:"product_context"`
@@ -127,6 +151,8 @@ type Testimonial struct {
 
 	// Collection & Verification
 	CollectionMethod   CollectionMethod `json:"collection_method" db:"collection_method"`
+	TriggerSource      string           `json:"trigger_source,omitempty" db:"trigger_source"`
+	TriggerData        JSONMap          `json:"trigger_data,omitempty" db:"trigger_data"`
 	VerificationMethod VerificationType `json:"verification_method,omitempty" db:"verification_method"`
 	VerificationData   JSONMap          `json:"verification_data,omitempty" db:"verification_data"`
 	VerificationStatus string           `json:"verification_status" db:"verification_status"`
@@ -153,90 +179,11 @@ type Testimonial struct {
 	// Timestamps
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
-}
 
-// --------------------------
-// SCANNER & VALUER METHODS
-// --------------------------
-
-func (a *StringArray) Scan(value any) error {
-	if value == nil {
-		*a = StringArray{}
-		return nil
-	}
-	switch v := value.(type) {
-	case []byte:
-		return json.Unmarshal(v, a)
-	case string:
-		return json.Unmarshal([]byte(v), a)
-	default:
-		return fmt.Errorf("cannot scan type %T into StringArray", value)
-	}
-}
-
-func (a StringArray) Value() (driver.Value, error) {
-	if a == nil {
-		return nil, nil
-	}
-	return json.Marshal(a)
-}
-
-func (m *JSONMap) Scan(value interface{}) error {
-	if value == nil {
-		*m = JSONMap{}
-		return nil
-	}
-	switch v := value.(type) {
-	case []byte:
-		return json.Unmarshal(v, m)
-	case string:
-		return json.Unmarshal([]byte(v), m)
-	default:
-		return fmt.Errorf("cannot scan type %T into JSONMap", value)
-	}
-}
-
-func (m JSONMap) Value() (driver.Value, error) {
-	if m == nil {
-		return nil, nil
-	}
-	return json.Marshal(m)
-}
-
-func (t *TestimonialType) Scan(value any) error {
-	if value == nil {
-		*t = ""
-		return nil
-	}
-	switch v := value.(type) {
-	case []byte:
-		*t = TestimonialType(string(v))
-	case string:
-		*t = TestimonialType(v)
-	default:
-		return fmt.Errorf("cannot scan type %T into TestimonialType", value)
-	}
-	return nil
-}
-
-func (t TestimonialType) Value() (driver.Value, error) {
-	return string(t), nil
-}
-
-func (s ContentStatus) Value() (driver.Value, error) {
-	return string(s), nil
-}
-
-func (f ContentFormat) Value() (driver.Value, error) {
-	return string(f), nil
-}
-
-func (c CollectionMethod) Value() (driver.Value, error) {
-	return string(c), nil
-}
-
-func (v VerificationType) Value() (driver.Value, error) {
-	return string(v), nil
+	// Associated Data (populated in FetchByID but not stored directly in the DB)
+	Analyses           []TestimonialAnalysis `json:"analyses,omitempty" db:"-"`
+	CompetitorMentions []CompetitorMention   `json:"competitor_mentions,omitempty" db:"-"`
+	AIJobs             []AIJob               `json:"ai_jobs,omitempty" db:"-"`
 }
 
 // --------------------------
@@ -259,10 +206,6 @@ func (t *Testimonial) Validate() error {
 	if t.Published && t.PublishedAt == nil {
 		return errors.New("published testimonial must have a published_at timestamp")
 	}
-	// If customer email were to be validated, it should now be part of the related customer profile.
-	// if t.CustomerEmail != nil && *t.CustomerEmail != "" && !isValidEmail(*t.CustomerEmail) {
-	// 	return errors.New("invalid customer email format")
-	// }
 	return nil
 }
 
@@ -271,14 +214,15 @@ func (t *Testimonial) Validate() error {
 // --------------------------
 
 type TestimonialFilter struct {
-	Types       []TestimonialType
-	Statuses    []ContentStatus
-	MinRating   int
-	MaxRating   int
-	Tags        []string
-	Categories  []string
-	DateRange   DateRange
-	SearchQuery string
+	Types             []TestimonialType
+	Statuses          []ContentStatus
+	MinRating         int
+	MaxRating         int
+	Tags              []string
+	Categories        []string
+	DateRange         DateRange
+	SearchQuery       string
+	CollectionMethods []CollectionMethod // Added field
 }
 
 type DateRange struct {
@@ -326,5 +270,49 @@ func GetFilterFromParam(queryParams url.Values) TestimonialFilter {
 	}
 	filter.SearchQuery = queryParams.Get("searchQuery")
 
+	// Added collection methods filtering
+	if methodsStr := queryParams.Get("collectionMethods"); methodsStr != "" {
+		methods := strings.Split(methodsStr, ",")
+		for _, m := range methods {
+			filter.CollectionMethods = append(filter.CollectionMethods, CollectionMethod(m))
+		}
+	}
+
 	return filter
+}
+
+func (t *TestimonialType) Scan(value any) error {
+	if value == nil {
+		*t = ""
+		return nil
+	}
+	switch v := value.(type) {
+	case []byte:
+		*t = TestimonialType(string(v))
+	case string:
+		*t = TestimonialType(v)
+	default:
+		return fmt.Errorf("cannot scan type %T into TestimonialType", value)
+	}
+	return nil
+}
+
+func (t TestimonialType) Value() (driver.Value, error) {
+	return string(t), nil
+}
+
+func (s ContentStatus) Value() (driver.Value, error) {
+	return string(s), nil
+}
+
+func (f ContentFormat) Value() (driver.Value, error) {
+	return string(f), nil
+}
+
+func (c CollectionMethod) Value() (driver.Value, error) {
+	return string(c), nil
+}
+
+func (v VerificationType) Value() (driver.Value, error) {
+	return string(v), nil
 }
