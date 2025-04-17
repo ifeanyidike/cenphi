@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Testimonial } from "@/types/testimonial";
-import { getInitials } from "@/util/testimonial";
+import { getInitials } from "@/utils/testimonial";
 
 export const ReviewListItem = ({ review }: { review: Testimonial }) => {
   const [isExpanded, setIsExpanded] = useState(false);

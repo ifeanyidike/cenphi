@@ -14,7 +14,7 @@ DEST_DIR ?= ./internal/services/mocks
 SERVICE  ?= onboarding_service
 
 # Targets
-.PHONY: all up down create init-db swagger mock
+.PHONY: all up down create init-db swagger mock migrate-to
 
 all: up
 
@@ -25,14 +25,25 @@ up:
 	@echo "Command: $(MIGRATE_CMD) -path=/migrations -database=$(DB_URL) -verbose up"
 	$(MIGRATE_CMD) -path=/migrations -database=$(DB_URL) -verbose up
 
+migrate-to:
+	@echo "Detected network: ${NETWORK}"
+	@echo "Migrating to version: $(version)"
+	$(MIGRATE_CMD) -path=/migrations -database=$(DB_URL) -verbose goto $(version)
+
 # Run migrations down
 down:
 	@echo "Detected network: ${NETWORK}"
 	$(MIGRATE_CMD) -path=/migrations -database=$(DB_URL) -verbose down -all
 
+down-to:
+	@echo "Detected network: ${NETWORK}"
+	@echo "Rolling back to version: $(version)"
+	$(MIGRATE_CMD) -path=/migrations -database=$(DB_URL) -verbose goto $(version)
+
 clean:
 	@echo "Detected network: ${NETWORK}"
 	$(MIGRATE_CMD) -path=/migrations -database=$(DB_URL) force 1
+	
 
 # Create a new migration file
 # Usage: make create name=your_migration_name

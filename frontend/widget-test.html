@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Widget Local Test</title>
+
+    <!-- Include React (necessary since we marked it as external) -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+    <!-- Include your widget styles -->
+    <link rel="stylesheet" href="./dist/testimonial-widget.css" />
+
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      button {
+        background: #4f46e5;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>TestimonialWidget Local Test</h1>
+    <p>Click the button below to initialize the widget:</p>
+
+    <button id="initialize-widget">Show Widget</button>
+
+    <script>
+      // Configure the widget
+
+      const config = {
+        customization: {
+          primaryColor: "#4F46E5",
+          companyName: "Test Company",
+          position: "bottom-right",
+          widgetTitle: "Share Your Feedback",
+          widgetDescription: "We'd love to hear what you think!",
+        },
+        formats: [
+          { type: "text", enabled: true },
+          { type: "video", enabled: true },
+          { type: "audio", enabled: true },
+          { type: "image", enabled: true },
+        ],
+        incentives: {
+          enabled: true,
+          value: "10% off your next purchase",
+          type: "discount",
+          code: "THANKS10",
+          expiryDays: 30,
+        },
+        displayRules: {
+          mobileEnabled: true,
+          tabletEnabled: true,
+        },
+        triggers: [
+          {
+            enabled: false, // We'll control it with our button
+          },
+        ],
+        defaultOpen: false,
+      };
+
+      // Add click handler for the button
+      document
+        .getElementById("initialize-widget")
+        .addEventListener("click", function () {
+          if (window.initTestimonialWidget) {
+            window.initTestimonialWidget(config);
+            console.log("Widget initialized!");
+          } else {
+            console.error("Widget initialization function not found!");
+            alert(
+              "Widget initialization function not found! Check console for errors."
+            );
+          }
+        });
+    </script>
+
+    <!-- Include your widget script -->
+    <script src="./dist/testimonial-widget.umd.js"></script>
+  </body>
+</html>

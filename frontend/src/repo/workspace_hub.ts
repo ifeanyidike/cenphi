@@ -1,3 +1,36 @@
+// // stores/rootStore.ts
+
+// import { TestimonialStore } from "./managers/testimonial";
+// import { AnalysisStore } from "./managers/AnalysisStore";
+// import { UIStore } from "./managers/UIStore";
+// import { WidgetStore } from "./managers/WidgetStore";
+// import { VideoEditorStore } from "./managers/videoEditorStore";
+// import { AudioEditorStore } from "./managers/audioEditorStore";
+// import { TextEditorStore } from "./managers/textEditorStore";
+
+// export class RootStore {
+//   testimonialStore: TestimonialStore;
+//   analysisStore: AnalysisStore;
+//   uiStore: UIStore;
+//   widgetStore: WidgetStore;
+//   videoEditorStore: VideoEditorStore;
+//   audioEditorStore: AudioEditorStore;
+//   textEditorStore: TextEditorStore;
+
+//   constructor() {
+//     this.testimonialStore = new TestimonialStore();
+//     this.analysisStore = new AnalysisStore();
+//     this.uiStore = new UIStore();
+//     this.widgetStore = new WidgetStore();
+//     this.videoEditorStore = new VideoEditorStore();
+//     this.audioEditorStore = new AudioEditorStore();
+//     this.textEditorStore = new TextEditorStore();
+//   }
+// }
+
+// // Create a single instance of the root store
+// export const rootStore = new RootStore();
+
 // repositories/WorkspaceRepository.ts
 
 import { auth } from "@/config/firebase";
@@ -5,6 +38,13 @@ import { Workspace } from "@/types/workspace";
 import { makeAutoObservable, observable } from "mobx";
 import { MemberManager } from "./managers/member";
 import { TestimonialManager } from "./managers/testimonial";
+import { AnalysisManager } from "./managers/analysis";
+import { UIManager } from "./managers/ui_manager";
+import { WidgetManager } from "./managers/widget";
+import { VideoEditorManager } from "./managers/video_editor";
+import { AudioEditorManager } from "./managers/audio_editor";
+import { TextEditorManager } from "./managers/text_editor";
+import { ImageEditorManager } from "./managers/image_editor";
 
 /**
  * The WorkspaceOrchestrator class handles the orchestration of workspace-related
@@ -17,6 +57,13 @@ export class WorkspaceOrchestrator {
   public memberManager: MemberManager;
 
   public testimonialManager: TestimonialManager;
+  analysisManager: AnalysisManager;
+  uiManager: UIManager;
+  widgetManager: WidgetManager;
+  videoEditorManager: VideoEditorManager;
+  audioEditorManager: AudioEditorManager;
+  textEditorManager: TextEditorManager;
+  imageEditorManager: ImageEditorManager;
 
   /**
    * Constructs a new WorkspaceOrchestrator instance.
@@ -25,10 +72,24 @@ export class WorkspaceOrchestrator {
   constructor() {
     this.memberManager = new MemberManager(this);
     this.testimonialManager = new TestimonialManager(this);
+    this.analysisManager = new AnalysisManager();
+    this.uiManager = new UIManager();
+    this.widgetManager = new WidgetManager();
+    this.videoEditorManager = new VideoEditorManager();
+    this.audioEditorManager = new AudioEditorManager();
+    this.textEditorManager = new TextEditorManager();
+    this.imageEditorManager = new ImageEditorManager();
 
     makeAutoObservable(this, {
       memberManager: observable.ref,
       testimonialManager: observable.ref,
+      analysisManager: observable.ref,
+      uiManager: observable.ref,
+      widgetManager: observable.ref,
+      videoEditorManager: observable.ref,
+      audioEditorManager: observable.ref,
+      textEditorManager: observable.ref,
+      imageEditorManager: observable.ref,
     });
   }
 
