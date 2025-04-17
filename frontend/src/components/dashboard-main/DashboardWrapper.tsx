@@ -1,5 +1,5 @@
 import { AppSidebar } from "@/components/dashboard-main/AppSidebar";
-
+import { motion } from "framer-motion";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -14,10 +14,12 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 // import SidebarContent from "./sidebar-content";
-import DashboardView from "@/components/dashboard-landing/DashboardView";
-import { observer } from "mobx-react-lite";
 
-export const DashboardWrapper = observer(() => {
+import { observer } from "mobx-react-lite";
+import { PropsWithChildren } from "react";
+import { containerVariants } from "../dashboard-landing/constants";
+
+export const DashboardWrapper = observer(({ children }: PropsWithChildren) => {
   return (
     <SidebarProvider className="flex w-screen">
       <AppSidebar />
@@ -42,12 +44,16 @@ export const DashboardWrapper = observer(() => {
             </div>
           </div>
         </header>
-        {/* <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-          <SidebarContent />
-        </div>
-        */}
-        <div>
-          <DashboardView />
+
+        <div className="p-6 lg:p-8 bg-white/50 bg-grid-pattern min-h-screen">
+          <motion.div
+            initial="hidden"
+            animate="show"
+            variants={containerVariants}
+            className="max-w-screen-xl mx-auto"
+          >
+            {children}
+          </motion.div>
         </div>
       </SidebarInset>
     </SidebarProvider>

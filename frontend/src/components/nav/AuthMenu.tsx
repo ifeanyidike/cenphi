@@ -14,7 +14,7 @@ import { observer } from "mobx-react-lite";
 import { authStore } from "@/stores/authStore";
 import { Avatar, AvatarImage } from "../ui/avatar";
 import { AvatarFallback } from "@radix-ui/react-avatar";
-import { generateColorFromText } from "@/util/general";
+import { generateColorFromText } from "@/utils/general";
 import { User as AuthUser } from "firebase/auth";
 import { auth } from "@/config/firebase";
 
