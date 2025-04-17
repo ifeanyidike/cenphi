@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Ensure widget styles don't conflict with parent site */
+#testimonial-widget-container {
+  all: initial; /* Reset all properties */
+  font-family:
+    system-ui,
+    "Urbanist",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+}
+
+/* Add any widget-specific styles */
