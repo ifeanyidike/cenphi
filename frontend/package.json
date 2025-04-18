@@ -5,13 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build && yarn build:widget && yarn copy-widget-files",
+    "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "build:widget": "vite build --config vite.widget.config.ts",
-    "build:widget:dev": "vite build --config vite.widget.config.ts --mode development",
-    "copy-widget-files": "mkdir -p public && cp dist/testimonial-widget.umd.js public/ && cp dist/testimonial-widget.css public/",
-    "preview:widget": "vite preview --outDir . --open widget-test.html"
+    "preview": "vite preview"
   },
   "overrides": {
     "vite": {

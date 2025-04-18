@@ -41,13 +41,6 @@ export default defineConfig(({ mode }) => {
         "@": path.resolve(__dirname, "./src"),
       },
     },
-    build: {
-      // Remove outDir setting to use default
-      sourcemap: true,
-      rollupOptions: {
-        external: ["react", "react-dom"],
-      },
-    },
     server: {
       host: true,
       port: 3000, // This is the port which we will use in Docker
