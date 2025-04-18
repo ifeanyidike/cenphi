@@ -19,10 +19,32 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "18"
-          # Removed cache option since yarn.lock is not found
 
       - name: Install dependencies
-        run: npm install
+        run: |
+          cd frontend
+          npm install
+
+      - name: Build widget
+        run: |
+          cd frontend
+          npm run build:widget
+
+      - name: Upload widget artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: widget-build
+          path: |
+            frontend/public/widget/testimonial-widget.umd.js
+            frontend/public/widget/testimonial-widget.css
+
+      # Deploy to your preferred hosting (GitHub Pages example)
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./frontend/public/widget
+          destination_dir: widget
 
       - name: Build widget
         run: yarn build:widget
