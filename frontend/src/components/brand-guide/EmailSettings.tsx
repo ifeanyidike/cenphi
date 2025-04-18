@@ -86,13 +86,13 @@ const EmailSettings = () => {
     const newSignature = signatureTemplates[template]
       .replace(
         /{{senderName}}/g,
-        brandData.voice.channels.email?.sender.name || "Your Name"
+        brandData.voice.channels.email?.sender?.name || "Your Name"
       )
       .replace(/{{position}}/g, "Position Title")
       .replace(/{{companyName}}/g, brandData.name || "Company Name")
       .replace(
         /{{contactEmail}}/g,
-        brandData.voice.channels.email?.sender.email || "email@example.com"
+        brandData.voice.channels.email?.sender?.email || "email@example.com"
       )
       .replace(/{{contactPhone}}/g, "555-123-4567")
       .replace(/{{websiteUrl}}/g, "www.yourwebsite.com")
