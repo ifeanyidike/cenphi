@@ -29,7 +29,7 @@ export interface FontOption {
   description?: string;
 }
 
-// export interface BrandData {
+// export interface BrandGuide {
 //   id: string;
 //   name: string;
 //   tagline: string;
@@ -131,7 +131,27 @@ export interface BrandGuide {
   id: string;
   workspace_id: string;
   name: string;
-
+  tagline?: string;
+  description?: string;
+  logo: {
+    main: string | null;
+    alt: string | null;
+    favicon: string | null;
+    darkMode: string | null;
+  };
+  testimonials?: {
+    style?: TestimonialStyle;
+    shape?: TestimonialShape;
+    layout?: TestimonialLayout;
+    showRating?: boolean;
+    showAvatar?: boolean;
+    showDate?: boolean;
+    showCompany?: boolean;
+    animation?: boolean;
+    shadow?: "none" | "sm" | "md" | "lg";
+    border?: boolean;
+    ratingStyle?: "stars" | "number" | "text";
+  };
   // Brand identity
   colors: {
     primary: string;
@@ -160,21 +180,21 @@ export interface BrandGuide {
   };
 
   // Testimonial display settings
-  testimonial_style: TestimonialStyle;
-  testimonial_shape: TestimonialShape;
-  testimonial_layout: TestimonialLayout;
+  testimonial_style?: TestimonialStyle;
+  testimonial_shape?: TestimonialShape;
+  testimonial_layout?: TestimonialLayout;
 
   // Display options
-  show_rating: boolean;
-  show_avatar: boolean;
-  show_date: boolean;
-  show_company: boolean;
+  show_rating?: boolean;
+  show_avatar?: boolean;
+  show_date?: boolean;
+  show_company?: boolean;
 
   // Animation and styling
-  animation: boolean;
-  shadow: "none" | "sm" | "md" | "lg";
-  border: boolean;
-  rating_style: "stars" | "number" | "text";
+  animation?: boolean;
+  shadow?: "none" | "sm" | "md" | "lg";
+  border?: boolean;
+  rating_style?: "stars" | "number" | "text";
 
   // Brand voice
   voice: {
@@ -183,7 +203,7 @@ export interface BrandGuide {
     ctas: string[];
     examples: string[];
     channels: {
-      social: {
+      social?: {
         platforms: Record<
           SocialPlatformName,
           {
@@ -193,19 +213,19 @@ export interface BrandGuide {
           }
         >;
       };
-      custom: Record<string, string>;
-      website: Record<"requestTemplate" | "thankYouTemplate", string>;
-      chat: Record<"requestTemplate" | "followupTemplate", string>;
-      email: {
+      custom?: Record<string, string>;
+      website?: Record<"requestTemplate" | "thankYouTemplate", string>;
+      chat?: Record<"requestTemplate" | "followupTemplate", string>;
+      email?: {
         requestTemplate: string;
         thankYouTemplate: string;
-        signature: {
+        signature?: {
           templateId: string;
           text: string;
           includeSocialLinks?: boolean;
           includeCompanyLogo?: boolean;
         };
-        sender: {
+        sender?: {
           email: string;
           name: string;
         };
@@ -214,14 +234,21 @@ export interface BrandGuide {
   };
 
   // UI settings
-  ui_settings: {
+  ui_settings?: {
     radius: number;
     animation: boolean;
     density: "compact" | "default" | "relaxed";
     darkMode: boolean;
   };
 
-  is_default: boolean;
+  ui?: {
+    radius: number;
+    animation: boolean;
+    density: "compact" | "default" | "relaxed";
+    darkMode: boolean;
+  };
+
+  is_default?: boolean;
   created_at: Date;
   updated_at: Date;
 }

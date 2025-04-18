@@ -37,7 +37,7 @@ import {
   DisplayRules,
   EnhancedTriggerOption,
   BusinessEventType,
-  BrandData,
+  BrandGuide,
 } from "@/types/setup";
 
 import { observer } from "mobx-react-lite";
@@ -87,7 +87,7 @@ interface TestimonialWidgetProps {
   previewMode?: boolean;
   onClose?: () => void;
   customerData?: Record<string, string>;
-  brandData: BrandData;
+  brandData: BrandGuide;
 }
 
 const TestimonialWidget: React.FC<TestimonialWidgetProps> = observer(

@@ -51,10 +51,6 @@ const TestimonialWebsiteSettings: React.FC<TestimonialWebsiteSettings> =
     const [isSaving, setIsSaving] = useState(false);
     const [hasChanges, setHasChanges] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
-    const [previewMode, setPreviewMode] = useState<
-      "desktop" | "mobile" | "tablet"
-    >("desktop");
-    const [previewTab, setPreviewTab] = useState<"widget" | "form">("widget");
 
     const { toast } = useToast();
 
@@ -85,13 +81,14 @@ const TestimonialWebsiteSettings: React.FC<TestimonialWebsiteSettings> =
 
         // Reset success indicator after 2 seconds
         setTimeout(() => setSaveSuccess(false), 2000);
-      } catch (error) {
+      } catch (error: any) {
         toast({
           title: "Error saving settings",
           description:
             "There was a problem saving your configuration. Please try again.",
           variant: "destructive",
         });
+        console.log("error", error.message);
       } finally {
         setIsSaving(false);
       }

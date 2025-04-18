@@ -80,12 +80,12 @@ const Testimonials: FC<TestimonialProps> = ({ setColorMode, colorMode }) => {
                       key={style.id}
                       className={cn(
                         "border rounded-lg p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors",
-                        brandData.testimonials.style === style.id &&
+                        brandData.testimonials?.style === style.id &&
                           "border-primary bg-primary/5"
                       )}
                       onClick={() =>
                         store.updateBrandData(
-                          ["testimonials", "style"],
+                          ["?", "style"],
                           style.id as TestimonialStyle
                         )
                       }
@@ -124,7 +124,7 @@ const Testimonials: FC<TestimonialProps> = ({ setColorMode, colorMode }) => {
                       key={shape}
                       className={cn(
                         "border rounded-lg p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors flex-1 text-center",
-                        brandData.testimonials.shape === shape &&
+                        brandData.testimonials?.shape === shape &&
                           "border-primary bg-primary/5"
                       )}
                       onClick={() =>
@@ -157,7 +157,7 @@ const Testimonials: FC<TestimonialProps> = ({ setColorMode, colorMode }) => {
                       key={layout}
                       className={cn(
                         "border rounded-lg p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors text-center",
-                        brandData.testimonials.layout === layout &&
+                        brandData.testimonials?.layout === layout &&
                           "border-primary bg-primary/5"
                       )}
                       onClick={() =>
@@ -197,7 +197,7 @@ const Testimonials: FC<TestimonialProps> = ({ setColorMode, colorMode }) => {
                     </div>
                     <Switch
                       id="show-rating"
-                      checked={brandData.testimonials.showRating}
+                      checked={brandData.testimonials?.showRating}
                       onCheckedChange={(checked) =>
                         store.updateBrandData(
                           ["testimonials", "showRating"],
@@ -219,7 +219,7 @@ const Testimonials: FC<TestimonialProps> = ({ setColorMode, colorMode }) => {
                     </div>
                     <Switch
                       id="show-avatar"
-                      checked={brandData.testimonials.showAvatar}
+                      checked={brandData.testimonials?.showAvatar}
                       onCheckedChange={(checked) =>
                         store.updateBrandData(
                           ["testimonials", "showAvatar"],
@@ -241,7 +241,7 @@ const Testimonials: FC<TestimonialProps> = ({ setColorMode, colorMode }) => {
                     </div>
                     <Switch
                       id="show-company"
-                      checked={brandData.testimonials.showCompany}
+                      checked={brandData.testimonials?.showCompany}
                       onCheckedChange={(checked) =>
                         store.updateBrandData(
                           ["testimonials", "showCompany"],
@@ -263,7 +263,7 @@ const Testimonials: FC<TestimonialProps> = ({ setColorMode, colorMode }) => {
                     </div>
                     <Switch
                       id="show-date"
-                      checked={brandData.testimonials.showDate}
+                      checked={brandData.testimonials?.showDate}
                       onCheckedChange={(checked) =>
                         store.updateBrandData(
                           ["testimonials", "showDate"],
@@ -285,7 +285,7 @@ const Testimonials: FC<TestimonialProps> = ({ setColorMode, colorMode }) => {
                         Shadow Style
                       </Label>
                       <Select
-                        value={brandData.testimonials.shadow}
+                        value={brandData.testimonials?.shadow}
                         onValueChange={(value) =>
                           store.updateBrandData(
                             ["testimonials", "shadow"],
@@ -310,7 +310,7 @@ const Testimonials: FC<TestimonialProps> = ({ setColorMode, colorMode }) => {
                         Rating Style
                       </Label>
                       <Select
-                        value={brandData.testimonials.ratingStyle}
+                        value={brandData.testimonials?.ratingStyle}
                         onValueChange={(value) =>
                           store.updateBrandData(
                             ["testimonials", "ratingStyle"],
@@ -342,7 +342,7 @@ const Testimonials: FC<TestimonialProps> = ({ setColorMode, colorMode }) => {
                     </div>
                     <Switch
                       id="show-border"
-                      checked={brandData.testimonials.border}
+                      checked={brandData.testimonials?.border}
                       onCheckedChange={(checked) =>
                         store.updateBrandData(
                           ["testimonials", "border"],
@@ -364,7 +364,7 @@ const Testimonials: FC<TestimonialProps> = ({ setColorMode, colorMode }) => {
                     </div>
                     <Switch
                       id="show-animation"
-                      checked={brandData.testimonials.animation}
+                      checked={brandData.testimonials?.animation}
                       onCheckedChange={(checked) =>
                         store.updateBrandData(
                           ["testimonials", "animation"],
@@ -411,32 +411,33 @@ const Testimonials: FC<TestimonialProps> = ({ setColorMode, colorMode }) => {
                 <div
                   className={cn(
                     "overflow-hidden transition-all",
-                    brandData.testimonials.shape === "rounded" && "rounded-lg",
-                    brandData.testimonials.shape === "square" && "rounded-none",
-                    brandData.testimonials.shape === "circle" && "rounded-3xl",
-                    brandData.testimonials.border &&
+                    brandData.testimonials?.shape === "rounded" && "rounded-lg",
+                    brandData.testimonials?.shape === "square" &&
+                      "rounded-none",
+                    brandData.testimonials?.shape === "circle" && "rounded-3xl",
+                    brandData.testimonials?.border &&
                       "border border-gray-200 dark:border-gray-800",
-                    brandData.testimonials.shadow === "sm" && "shadow-sm",
-                    brandData.testimonials.shadow === "md" && "shadow-md",
-                    brandData.testimonials.shadow === "lg" && "shadow-lg",
-                    brandData.testimonials.style === "bubble" &&
+                    brandData.testimonials?.shadow === "sm" && "shadow-sm",
+                    brandData.testimonials?.shadow === "md" && "shadow-md",
+                    brandData.testimonials?.shadow === "lg" && "shadow-lg",
+                    brandData.testimonials?.style === "bubble" &&
                       "relative after:content-[''] after:absolute after:bottom-[-12px] after:left-6 after:w-0 after:h-0 after:border-l-[12px] after:border-l-transparent after:border-t-[12px] after:border-t-white dark:after:border-t-gray-800 after:border-r-[12px] after:border-r-transparent",
-                    brandData.testimonials.style === "highlight" &&
+                    brandData.testimonials?.style === "highlight" &&
                       "border-l-4",
-                    brandData.testimonials.style === "highlight" &&
+                    brandData.testimonials?.style === "highlight" &&
                       `border-l-${brandData.colors.primary}`
                   )}
                   style={{
                     backgroundColor:
                       colorMode === "light"
-                        ? brandData.testimonials.style === "minimal"
+                        ? brandData.testimonials?.style === "minimal"
                           ? "transparent"
                           : "white"
-                        : brandData.testimonials.style === "minimal"
+                        : brandData.testimonials?.style === "minimal"
                           ? "transparent"
                           : "#111827",
                     borderLeftColor:
-                      brandData.testimonials.style === "highlight"
+                      brandData.testimonials?.style === "highlight"
                         ? brandData.colors.primary
                         : undefined,
                     fontFamily: getFontFamily(brandData.typography.bodyFont),
@@ -445,15 +446,15 @@ const Testimonials: FC<TestimonialProps> = ({ setColorMode, colorMode }) => {
                   <div
                     className={cn(
                       "p-6",
-                      brandData.testimonials.style === "minimal" && "p-0",
-                      brandData.testimonials.style === "modern" &&
+                      brandData.testimonials?.style === "minimal" && "p-0",
+                      brandData.testimonials?.style === "modern" &&
                         "bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 p-6"
                     )}
                   >
                     {/* Rating */}
-                    {brandData.testimonials.showRating && (
+                    {brandData.testimonials?.showRating && (
                       <div className="mb-3 flex">
-                        {brandData.testimonials.ratingStyle === "stars" && (
+                        {brandData.testimonials?.ratingStyle === "stars" && (
                           <>
                             {Array(5)
                               .fill(0)
@@ -472,7 +473,7 @@ const Testimonials: FC<TestimonialProps> = ({ setColorMode, colorMode }) => {
                           </>
                         )}
 
-                        {brandData.testimonials.ratingStyle === "number" && (
+                        {brandData.testimonials?.ratingStyle === "number" && (
                           <span
                             className="text-sm font-medium"
                             style={{
@@ -483,7 +484,7 @@ const Testimonials: FC<TestimonialProps> = ({ setColorMode, colorMode }) => {
                           </span>
                         )}
 
-                        {brandData.testimonials.ratingStyle === "text" && (
+                        {brandData.testimonials?.ratingStyle === "text" && (
                           <span
                             className="text-sm font-medium"
                             style={{
@@ -498,7 +499,7 @@ const Testimonials: FC<TestimonialProps> = ({ setColorMode, colorMode }) => {
 
                     {/* Content */}
                     <div className="mb-4">
-                      {brandData.testimonials.style === "quote" && (
+                      {brandData.testimonials?.style === "quote" && (
                         <div className="text-4xl font-serif text-gray-200 dark:text-gray-700 leading-none mb-2">
                           "
                         </div>
@@ -506,16 +507,16 @@ const Testimonials: FC<TestimonialProps> = ({ setColorMode, colorMode }) => {
                       <p
                         className={cn(
                           "text-gray-800 dark:text-gray-200",
-                          brandData.testimonials.style === "quote" && "italic",
-                          brandData.testimonials.style === "minimal" &&
+                          brandData.testimonials?.style === "quote" && "italic",
+                          brandData.testimonials?.style === "minimal" &&
                             "text-base",
-                          brandData.testimonials.style === "card" &&
+                          brandData.testimonials?.style === "card" &&
                             "text-base",
-                          brandData.testimonials.style === "bubble" &&
+                          brandData.testimonials?.style === "bubble" &&
                             "text-sm",
-                          brandData.testimonials.style === "highlight" &&
+                          brandData.testimonials?.style === "highlight" &&
                             "text-base relative pl-4",
-                          brandData.testimonials.style === "modern" &&
+                          brandData.testimonials?.style === "modern" &&
                             "text-base font-medium"
                         )}
                         style={{
@@ -530,7 +531,7 @@ const Testimonials: FC<TestimonialProps> = ({ setColorMode, colorMode }) => {
                         about delivering results. I couldn't be happier with my
                         experience!
                       </p>
-                      {brandData.testimonials.style === "quote" && (
+                      {brandData.testimonials?.style === "quote" && (
                         <div className="text-4xl font-serif text-gray-200 dark:text-gray-700 leading-none mt-1 text-right">
                           "
                         </div>
@@ -539,15 +540,15 @@ const Testimonials: FC<TestimonialProps> = ({ setColorMode, colorMode }) => {
 
                     {/* Author */}
                     <div className="flex items-center mt-4">
-                      {brandData.testimonials.showAvatar && (
+                      {brandData.testimonials?.showAvatar && (
                         <div
                           className={cn(
                             "mr-3 flex-shrink-0",
-                            brandData.testimonials.shape === "rounded" &&
+                            brandData.testimonials?.shape === "rounded" &&
                               "rounded-lg overflow-hidden",
-                            brandData.testimonials.shape === "square" &&
+                            brandData.testimonials?.shape === "square" &&
                               "rounded-none overflow-hidden",
-                            brandData.testimonials.shape === "circle" &&
+                            brandData.testimonials?.shape === "circle" &&
                               "rounded-full overflow-hidden"
                           )}
                           style={{
@@ -574,16 +575,16 @@ const Testimonials: FC<TestimonialProps> = ({ setColorMode, colorMode }) => {
                         </p>
 
                         <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                          {brandData.testimonials.showCompany && (
+                          {brandData.testimonials?.showCompany && (
                             <span>Marketing Director, TechCorp</span>
                           )}
 
-                          {brandData.testimonials.showDate &&
-                            brandData.testimonials.showCompany && (
+                          {brandData.testimonials?.showDate &&
+                            brandData.testimonials?.showCompany && (
                               <span>•</span>
                             )}
 
-                          {brandData.testimonials.showDate && (
+                          {brandData.testimonials?.showDate && (
                             <span>Jan 15, 2023</span>
                           )}
                         </div>

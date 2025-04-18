@@ -1,4 +1,3 @@
-//@ts-nocheck
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -20,10 +19,7 @@ import {
   Copy,
   Check,
   Share2,
-  FileText,
   Video,
-  Mic,
-  Camera,
   MessageSquare,
   Star,
   ChevronRight,

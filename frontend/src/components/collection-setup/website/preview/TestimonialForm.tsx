@@ -33,7 +33,7 @@ import {
   TestimonialFormField,
   TestimonialSubmission,
   FormatOption,
-  BrandData,
+  BrandGuide,
 } from "@/types/setup";
 import EnhancedVideoRecorder from "@/components/collection/VideoRecorder";
 import EnhancedAudioRecorder from "@/components/collection/AudioRecorder";
@@ -44,7 +44,7 @@ import { observer } from "mobx-react-lite";
 
 interface TestimonialFormProps {
   customization: WidgetCustomization | undefined;
-  brandData: BrandData;
+  brandData: BrandGuide;
   formats: FormatOption[];
   incentives: IncentiveConfig | undefined;
   formFields?: TestimonialFormField[];

@@ -66,12 +66,13 @@ export const useDiscoveryModeProcessing = (
         // Auto mode – approve positive testimonials with high sentiment
         if (
           testimonial.source_data?.sentiment === "positive" &&
-          (testimonial.source_data?.score || 0) * 100 >= sentimentThreshold
+          ((testimonial.source_data?.score as number) || 0) * 100 >=
+            sentimentThreshold
         ) {
           return {
             matches: true,
             reason: `Auto-approved with ${Math.round(
-              (testimonial.source_data?.score || 0) * 100
+              ((testimonial.source_data?.score as number) || 0) * 100
             )}% positive sentiment`,
           };
         }
@@ -90,22 +91,26 @@ export const useDiscoveryModeProcessing = (
         }
       } else if (discoveryMode === "sentiment") {
         // Sentiment mode – approve based purely on sentiment score
-        if ((testimonial.source_data?.score || 0) * 100 >= sentimentThreshold) {
+        if (
+          ((testimonial.source_data?.score as number) || 0) * 100 >=
+          sentimentThreshold
+        ) {
           return {
             matches: true,
             reason: `High sentiment score: ${Math.round(
-              (testimonial.source_data?.score || 0) * 100
+              ((testimonial.source_data?.score as number) || 0) * 100
             )}%`,
           };
         }
       } else if (discoveryMode === "ai") {
         // AI mode – simulate analysis based on engagement and sentiment
         const engagementScore =
-          (testimonial.engagement_metrics?.likes || 0) / 10 +
-          (testimonial.engagement_metrics?.comments || 0) * 2 +
-          (testimonial.engagement_metrics?.shares || 0) * 3;
+          ((testimonial.engagement_metrics?.likes as number) || 0) / 10 +
+          ((testimonial.engagement_metrics?.comments as number) || 0) * 2 +
+          ((testimonial.engagement_metrics?.shares as number) || 0) * 3;
 
-        const sentimentScore = (testimonial.source_data?.score || 0) * 100;
+        const sentimentScore =
+          ((testimonial.source_data?.score as number) || 0) * 100;
         const aiScore = engagementScore * 0.4 + sentimentScore * 0.6;
 
         if (aiScore > 70) {

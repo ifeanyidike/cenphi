@@ -15,7 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import confetti from "canvas-confetti";
-import { BrandData, WidgetCustomization } from "@/types/setup";
+import { BrandGuide, WidgetCustomization } from "@/types/setup";
 import { testimonialSettingsStore } from "@/stores/testimonialSettingsStore";
 import { brandGuideStore } from "@/stores/brandGuideStore";
 
@@ -26,7 +26,7 @@ interface SuccessMessageProps {
 // Helper function to determine the background style based on stylePreset
 const getBackgroundStyle = (
   customization: WidgetCustomization | undefined,
-  brandData: BrandData
+  brandData: BrandGuide
 ) => {
   const stylePreset = customization?.stylePreset || "minimal";
   const theme = customization?.theme || "light";
@@ -42,7 +42,7 @@ const getBackgroundStyle = (
   const textBase = isDarkMode ? "text-white" : "text-gray-900";
 
   switch (stylePreset) {
-    case "gradient":
+    case "gradient": {
       // Create a gradient from the primary color
       const lighterColor = adjustColorBrightness(primaryColor, 40);
       const darkerColor = adjustColorBrightness(primaryColor, -20);
@@ -52,6 +52,7 @@ const getBackgroundStyle = (
         border: "border-none",
         shadow: "shadow-xl",
       };
+    }
 
     case "glassmorphism":
       return {
@@ -153,7 +154,7 @@ const SuccessMessage: React.FC<SuccessMessageProps> = ({ onClose }) => {
   const style = getBackgroundStyle(customization, brandData);
   // const { primaryColor, thankYouMessage, companyName, logo } = customization;
   const primaryColor = brandData.colors.primary;
-  const thankYouMessage = brandData.voice.channels.website.thankYouTemplate;
+  const thankYouMessage = brandData.voice.channels.website?.thankYouTemplate;
   const companyName = brandData.name;
   const logo = brandData.logo.main;
 

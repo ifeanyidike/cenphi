@@ -137,13 +137,13 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
     }
 
     try {
-      // @ts-ignore - EyeDropper API is not yet in TypeScript DOM definitions
+      // @ts-expect-error - EyeDropper API is not yet in TypeScript DOM definitions
       const eyeDropper = new window.EyeDropper();
       const result = await eyeDropper.open();
       handleColorChange(result.sRGBHex);
-    } catch (error) {
+    } catch (error: any) {
       // User canceled the eye dropper
-      console.log("EyeDropper was canceled");
+      console.log("EyeDropper was canceled", error.message);
     }
   };
 

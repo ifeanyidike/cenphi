@@ -32,6 +32,7 @@ import {
 import { cn } from "@/lib/utils";
 
 // Import component for drag-and-drop functionality
+//@ts-expect-error dnd has been defined
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import { CollectionSettings, CustomSettings } from "@/types/setup";
 import {
@@ -74,7 +75,7 @@ const FormCustomFields: FC<FormCustomFieldsProps> = ({
   setShowFieldTemplates,
   handleRemoveField,
 }) => {
-  const [_, setIsFieldBeingDragged] = useState<boolean>(false);
+  const [, setIsFieldBeingDragged] = useState<boolean>(false);
   const [showAiSuggestions, setShowAiSuggestions] = useState<boolean>(false);
 
   // Simulate AI suggestions
