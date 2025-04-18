@@ -68,9 +68,8 @@ jobs:
           EOF
 
       - name: Build widget
-        run: |
-          cd frontend
-          yarn build:widget
+        working-directory: ./frontend
+        run: yarn build:widget
 
       - name: Upload widget artifacts
         uses: actions/upload-artifact@v4
