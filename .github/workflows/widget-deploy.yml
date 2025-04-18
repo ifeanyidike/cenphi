@@ -8,6 +8,10 @@ on:
       - "src/embed/**" # Only run when widget source files change
       - "vite.widget.config.ts"
 
+# Add permissions at the workflow level
+permissions:
+  contents: write
+
 jobs:
   build-widget:
     runs-on: ubuntu-latest
