@@ -1,4 +1,3 @@
-//@ts-nocheck
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import {
@@ -15,24 +14,17 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   BarChart3,
   BarChart4,
-  LineChart,
-  PieChart,
   ChartBar,
-  Link,
   ExternalLink,
   Info,
   CheckCircle,
   AlertCircle,
-  Settings,
-  Code,
   Share2,
   Activity,
   Webhook,
-  Globe,
   Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -198,7 +190,6 @@ const trackableEvents = [
 
 const PageAnalyticsSettings: React.FC<PageAnalyticsSettingsProps> = ({
   settings,
-  onSettingsChange,
   onNestedSettingsChange,
 }) => {
   const [isTestingWebhook, setIsTestingWebhook] = useState(false);
@@ -222,7 +213,7 @@ const PageAnalyticsSettings: React.FC<PageAnalyticsSettingsProps> = ({
     let updated;
 
     if (current.includes(integrationId)) {
-      updated = current.filter((id) => id !== integrationId);
+      updated = current.filter((id: any) => id !== integrationId);
     } else {
       updated = [...current, integrationId];
     }
@@ -236,7 +227,7 @@ const PageAnalyticsSettings: React.FC<PageAnalyticsSettingsProps> = ({
     let updated;
 
     if (current.includes(eventId)) {
-      updated = current.filter((id) => id !== eventId);
+      updated = current.filter((id: any) => id !== eventId);
     } else {
       updated = [...current, eventId];
     }
@@ -348,7 +339,7 @@ const PageAnalyticsSettings: React.FC<PageAnalyticsSettingsProps> = ({
                 Integration Configuration
               </h3>
 
-              {getActiveIntegrations().map((integrationId) => {
+              {getActiveIntegrations().map((integrationId: any) => {
                 const integration = analyticsIntegrations.find(
                   (i) => i.id === integrationId
                 );

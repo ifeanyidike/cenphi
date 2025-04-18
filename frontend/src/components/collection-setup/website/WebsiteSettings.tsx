@@ -64,21 +64,7 @@ interface WebsiteSettingsProps {
   }) => void;
 }
 
-const WebsiteSettings: React.FC<WebsiteSettingsProps> = (
-  {
-    //   settings,
-    //   onFormatToggle,
-    //   onTriggerToggle,
-    //   onRemoveTrigger,
-    //   onAddFormatClick,
-    //   onAddTriggerClick,
-    //   onSettingsChange,
-    //   onNestedSettingsChange,
-    //   copiedElement,
-    //   onCopyElement,
-    //   showToast,
-  }
-) => {
+const WebsiteSettings: React.FC<WebsiteSettingsProps> = () => {
   return (
     <motion.div
       className="space-y-8"

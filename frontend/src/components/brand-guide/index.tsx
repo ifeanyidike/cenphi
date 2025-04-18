@@ -32,7 +32,7 @@ import {
   Type,
 } from "lucide-react";
 import Essentials from "./Essentials";
-import { BrandData, ColorMode } from "@/types/setup";
+import { BrandGuide as BrandGuideType, ColorMode } from "@/types/setup";
 import { containerVariants, itemVariants } from "./constants";
 import Colors from "./Colors";
 import Typography from "./Typography";
@@ -43,7 +43,7 @@ import DeveloperCode from "./DeveloperCode";
 import TabListElement from "./TabList";
 
 interface BrandGuideProps {
-  onSave?: (data: BrandData) => void;
+  onSave?: (data: BrandGuideType) => void;
   onExport?: () => void;
   className?: string;
 }
@@ -97,31 +97,38 @@ const BrandGuide: React.FC<BrandGuideProps> = observer(
       total += 2;
 
       // Check testimonial styles
-      if (brandData.testimonials.style) completed++;
+      if (brandData.testimonials?.style) completed++;
       total += 1;
 
       // Check voice & tone
       if (brandData.voice.values.length > 0) completed++;
       if (brandData.voice.ctas.length > 0) completed++;
-      if (brandData.voice.channels.email.requestTemplate.length > 20)
+      if ((brandData.voice.channels?.email?.requestTemplate?.length || 0) > 20)
         completed++;
-      if (brandData.voice.channels.email.thankYouTemplate.length > 20)
+      if ((brandData.voice.channels.email?.thankYouTemplate.length || 0) > 20)
         completed++;
-      if (brandData.voice.channels.social.requestTemplate.length > 20)
-        completed++;
+      // if (
+      //   (brandData.voice.channels.social?.platforms.facebook.requestTemplate
+      //     ?.length || 0) > 20
+      // )
+      //   completed++;
 
-      if (brandData.voice.channels.social.thankYouTemplate.length > 20)
+      // if (brandData.voice.channels.social.thankYouTemplate.length > 20)
+      //   completed++;
+      if ((brandData.voice.channels.website?.requestTemplate?.length || 0) > 20)
         completed++;
-      if (brandData.voice.channels.website.requestTemplate.length > 20)
-        completed++;
-      if (brandData.voice.channels.website.thankYouTemplate.length > 20)
+      if (
+        (brandData.voice.channels.website?.thankYouTemplate?.length || 0) > 20
+      )
         completed++;
       total += 8;
 
-      if (brandData.voice.channels.email.signature.text.length > 10)
+      if ((brandData.voice.channels.email?.signature.text?.length || 0) > 10)
         completed++;
-      if (brandData.voice.channels.email.sender.name.length > 10) completed++;
-      if (brandData.voice.channels.email.sender.email.length > 10) completed++;
+      if ((brandData.voice.channels.email?.sender?.name?.length || 0) > 10)
+        completed++;
+      if ((brandData.voice.channels.email?.sender?.email?.length || 0) > 10)
+        completed++;
       total += 3;
 
       setCompletionPercent(Math.round((completed / total) * 100));

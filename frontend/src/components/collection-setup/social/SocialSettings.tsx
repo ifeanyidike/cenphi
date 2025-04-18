@@ -255,7 +255,6 @@ const SocialSettings: React.FC<SocialSettingsProps> = ({
                 onSettingsChange={onSettingsChange}
                 showToast={showToast}
               />
-              {/* <SocialContentModeration showToast={() => {}} /> */}
             </TabsContent>
 
             {/* <TabsContent value="monitoring" className="mt-0">

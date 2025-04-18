@@ -188,14 +188,13 @@ Recommendation: Continue focusing on Instagram and consider expanding the "Summe
 const SocialAnalytics: React.FC<SocialAnalyticsProps> = ({ showToast }) => {
   const [activeTab, setActiveTab] = useState<string>("overview");
   const [timeRange, setTimeRange] = useState<string>("30d");
-  const [exportLoading, setExportLoading] = useState<boolean>(false);
 
   const handleExportData = () => {
-    setExportLoading(true);
+    // setExportLoading(true);
 
     // Simulate export process
     setTimeout(() => {
-      setExportLoading(false);
+      // setExportLoading(false);
       showToast({
         title: "Export successful",
         description: "Analytics data has been exported to CSV.",

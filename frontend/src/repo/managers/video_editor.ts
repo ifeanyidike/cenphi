@@ -1616,7 +1616,7 @@ export class VideoEditorManager {
       case "filters":
         return await videoProcessor.applyFilters(sourceUrl, this.videoFilters);
 
-      case "trim":
+      case "trim": {
         // Special handling for trim to update duration
         //@ts-nocheck
         const result = await videoProcessor.trimVideo(
@@ -1638,6 +1638,7 @@ export class VideoEditorManager {
         this.trim = { startTime: 0, endTime: newDuration };
 
         return result;
+      }
 
       case "aspectRatio":
         return await videoProcessor.cropVideo(

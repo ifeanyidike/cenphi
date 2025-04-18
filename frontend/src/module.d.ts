@@ -1,6 +1,7 @@
 import { CanvasCoordinator } from "./services/CanvasCoordinator";
 
 declare module "react-beautiful-dnd";
+
 declare module "lamejs";
 
 declare global {

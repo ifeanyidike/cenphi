@@ -1,21 +1,24 @@
 import {
   WidgetCustomization,
-  TestimonialFormat,
   IncentiveConfig,
   DisplayRules,
   EnhancedTriggerOption,
-} from "../types/testimonial-types"; // Adjust path to your existing types
+  BusinessEventType,
+  BrandGuide,
+  FormatOption,
+} from "@/types/setup";
 
 export interface TestimonialWidgetConfig {
   customization: WidgetCustomization;
-  formats: TestimonialFormat[];
+  formats: FormatOption[];
   incentives: IncentiveConfig;
   displayRules: DisplayRules;
-  triggers: EnhancedTriggerOption[];
+  triggers: EnhancedTriggerOption<BusinessEventType>[];
   device?: "desktop" | "mobile" | "tablet";
   defaultOpen?: boolean;
   previewMode?: boolean;
   onClose?: () => void;
+  brandData: BrandGuide;
 }
 
 // Global declarations for the widget
