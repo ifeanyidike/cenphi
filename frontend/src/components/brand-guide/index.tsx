@@ -123,7 +123,7 @@ const BrandGuide: React.FC<BrandGuideProps> = observer(
         completed++;
       total += 8;
 
-      if ((brandData.voice.channels.email?.signature.text?.length || 0) > 10)
+      if ((brandData.voice.channels.email?.signature?.text?.length || 0) > 10)
         completed++;
       if ((brandData.voice.channels.email?.sender?.name?.length || 0) > 10)
         completed++;
