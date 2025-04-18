@@ -33,3 +33,4 @@ deployment/
 .qodo/
 slim.report.json
 .qodo
+.vercel
