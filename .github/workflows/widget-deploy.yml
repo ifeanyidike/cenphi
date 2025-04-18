@@ -97,6 +97,29 @@ jobs:
             frontend/public/widget/testimonial-widget.umd.js
             frontend/public/widget/testimonial-widget.css
 
+      - name: Create index.html for widget
+        run: |
+          cd frontend
+          cat > public/widget/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Testimonial Widget</title>
+            <link rel="stylesheet" href="testimonial-widget.css">
+          </head>
+          <body>
+            <div id="testimonial-widget-root"></div>
+            <script src="testimonial-widget.umd.js"></script>
+            <script>
+              // Initialize the widget if needed
+              // This depends on how your widget is designed to be used
+            </script>
+          </body>
+          </html>
+          EOF
+
       # Deploy to your preferred hosting (GitHub Pages example)
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
