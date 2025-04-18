@@ -5,12 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build && yarn build:widget",
+    "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "build:widget": "vite build --config vite.widget.config.ts",
-    "build:widget:dev": "vite build --config vite.widget.config.ts --mode development",
-    "preview:widget": "vite preview --outDir . --open widget-test.html"
+    "preview": "vite preview"
   },
   "overrides": {
     "vite": {
