@@ -22,6 +22,7 @@ export default defineConfig({
       fileName: () => `testimonial-widget.umd.js`,
       formats: ["umd"],
     },
+    outDir: "dist", // Explicitly setting the output directory
     rollupOptions: {
       external: ["react", "react-dom"],
       output: {
