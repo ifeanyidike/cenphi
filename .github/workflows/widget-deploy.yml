@@ -19,10 +19,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "18"
-          cache: "yarn"
+          # Removed cache option since yarn.lock is not found
 
       - name: Install dependencies
-        run: yarn install
+        run: npm install
 
       - name: Build widget
         run: yarn build:widget
