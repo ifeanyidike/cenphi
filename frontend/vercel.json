@@ -1,5 +1,21 @@
 {
+  "version": 2,
+  "builds": [
+    {
+      "src": "frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": { "distDir": "dist" }
+    }
+  ],
   "rewrites": [
+    {
+      "source": "/testimonial-widget.umd.js",
+      "destination": "/testimonial-widget.umd.js"
+    },
+    {
+      "source": "/testimonial-widget.css",
+      "destination": "/testimonial-widget.css"
+    },
     {
       "source": "/(.*)",
       "destination": "/index.html"
