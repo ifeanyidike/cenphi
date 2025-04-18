@@ -24,29 +24,34 @@ export class VideoProcessor {
   /**
    * Loads the FFmpeg core with better error handling and caching
    */
-  public async load(): Promise<void> {
-    if (this.isLoaded) return;
+  public load(): Promise<void> {
+    // If already loaded, immediately resolve
+    if (this.isLoaded) {
+      return Promise.resolve();
+    }
 
-    // Return existing promise if already loading
-    if (this.loadPromise) return this.loadPromise;
+    // If a load is in progress, return its promise
+    if (this.loadPromise) {
+      return this.loadPromise;
+    }
 
-    this.loadPromise = new Promise<void>(async (resolve, reject) => {
+    // Kick off loading via an async IIFE instead of an async executor
+    this.loadPromise = (async () => {
       try {
-        // Set up abort controller for operation timeouts
+        // Prepare for possible timeout
         this.abortController = new AbortController();
 
-        // Add event listeners
+        // Log FFmpeg messages
         app.ffmpeg.on("log", ({ message }) => {
           console.log("FFmpeg:", message);
         });
 
-        // Improved progress reporting
+        // Report progress and status updates
         app.ffmpeg.on("progress", ({ progress, time }) => {
           if (workspaceHub.videoEditorManager) {
             workspaceHub.videoEditorManager.setProcessingProgress(
               progress * 100
             );
-            // Update status with time estimate if available
             if (time && this.currentOperation) {
               workspaceHub.videoEditorManager.setProcessingStatus(
                 `${this.currentOperation} - ${Math.round(progress * 100)}%`
@@ -55,11 +60,12 @@ export class VideoProcessor {
           }
         });
 
-        // Load FFmpeg with timeout to prevent hanging
+        // Reject if loading hangs beyond 30s
         const loadTimeout = setTimeout(() => {
-          reject(new Error("FFmpeg loading timed out"));
-        }, 30000);
+          throw new Error("FFmpeg loading timed out");
+        }, 30_000);
 
+        // Load the FFmpeg core
         await app.ffmpeg.load({
           coreURL: await toBlobURL(
             `${this.ffmpegBaseUrl}/ffmpeg-core.js`,
@@ -72,21 +78,22 @@ export class VideoProcessor {
         });
 
         clearTimeout(loadTimeout);
+
+        // Mark as loaded and process queue
         this.isLoaded = true;
         app.ffmpegLoaded = true;
-
-        // Process any queued operations
         this.processQueue();
-        resolve();
       } catch (error) {
         console.error("Failed to load FFmpeg:", error);
         workspaceHub.videoEditorManager?.setProcessingStatus(
           "Failed to load video processor"
         );
+        // Reset so future calls can retry
         this.loadPromise = null;
-        reject(error);
+        // Re-throw to reject the promise
+        throw error;
       }
-    });
+    })();
 
     return this.loadPromise;
   }

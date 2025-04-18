@@ -87,7 +87,7 @@ const EnhancePanel: React.FC<EnhancePanelProps> = observer(({ onSuccess }) => {
 
   // Determine if using a preset or custom settings
   useEffect(() => {
-    let matchedPreset = presets.find(
+    const matchedPreset = presets.find(
       (preset) =>
         preset.values.voiceClarity === enhancement.voiceClarity &&
         preset.values.bassTone === enhancement.bassTone &&

@@ -94,15 +94,15 @@ const DeveloperCode: FC<DeveloperCodeProps> = ({
     --line-height: ${brandData.typography.lineHeight};
     
     /* UI */
-    --radius: ${brandData.ui.radius}px;
+    --radius: ${brandData.ui?.radius}px;
     
     /* Testimonials */
     --testimonial-shadow: ${
-      brandData.testimonials.shadow === "none"
+      brandData.testimonials?.shadow === "none"
         ? "none"
-        : brandData.testimonials.shadow === "sm"
+        : brandData.testimonials?.shadow === "sm"
           ? "0 1px 2px rgba(0, 0, 0, 0.05)"
-          : brandData.testimonials.shadow === "md"
+          : brandData.testimonials?.shadow === "md"
             ? "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)"
             : "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)"
     };
@@ -120,8 +120,8 @@ const DeveloperCode: FC<DeveloperCodeProps> = ({
   .testimonial {
     font-family: var(--font-body);
     border-radius: var(--radius);
-    ${brandData.testimonials.border ? "border: 1px solid rgba(0, 0, 0, 0.1);" : ""}
-    ${brandData.testimonials.shadow !== "none" ? "box-shadow: var(--testimonial-shadow);" : ""}
+    ${brandData.testimonials?.border ? "border: 1px solid rgba(0, 0, 0, 0.1);" : ""}
+    ${brandData.testimonials?.shadow !== "none" ? "box-shadow: var(--testimonial-shadow);" : ""}
     overflow: hidden;
   }
   
@@ -132,7 +132,7 @@ const DeveloperCode: FC<DeveloperCodeProps> = ({
   
   /* Animation settings */
   ${
-    brandData.ui.animation
+    brandData.ui?.animation
       ? `
   .testimonial-animate {
     transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -239,7 +239,7 @@ const DeveloperCode: FC<DeveloperCodeProps> = ({
 const TestimonialCard = ({ testimonial }) => {
   return (
     <div 
-      className="testimonial${brandData.testimonials.animation ? " testimonial-animate" : ""}"
+      className="testimonial${brandData.testimonials?.animation ? " testimonial-animate" : ""}"
       style={{
         backgroundColor: '${colorMode === "light" ? "#fff" : "#1f2937"}',
       }}
@@ -303,7 +303,7 @@ export default TestimonialCard;`}
 const TestimonialCard = ({ testimonial }) => {
   return (
     <div 
-      className="testimonial${brandData.testimonials.animation ? " testimonial-animate" : ""}"
+      className="testimonial${brandData.testimonials?.animation ? " testimonial-animate" : ""}"
       style={{
         backgroundColor: '${colorMode === "light" ? "#fff" : "#1f2937"}',
       }}
@@ -371,7 +371,7 @@ export default TestimonialCard;`,
                   <TabsContent value="html" className="mt-4">
                     <div className="relative">
                       <pre className="p-4 rounded-lg bg-gray-950 text-gray-200 text-xs font-mono overflow-auto max-h-[400px]">
-                        {`<div class="testimonial${brandData.testimonials.animation ? " testimonial-animate" : ""}">
+                        {`<div class="testimonial${brandData.testimonials?.animation ? " testimonial-animate" : ""}">
   <div class="p-6">
     <!-- Rating (optional) -->
     <div class="flex mb-3">
@@ -422,7 +422,7 @@ export default TestimonialCard;`,
                           className="h-8 w-8 p-0 bg-gray-800 hover:bg-gray-700 text-gray-200"
                           onClick={() =>
                             copyToClipboard(
-                              `<div class="testimonial${brandData.testimonials.animation ? " testimonial-animate" : ""}">
+                              `<div class="testimonial${brandData.testimonials?.animation ? " testimonial-animate" : ""}">
   <div class="p-6">
     <!-- Rating (optional) -->
     <div class="flex mb-3">
@@ -636,26 +636,26 @@ export default TestimonialCard;`,
                     <div
                       className={cn(
                         "overflow-hidden transition-all",
-                        brandData.testimonials.shape === "rounded" &&
+                        brandData.testimonials?.shape === "rounded" &&
                           "rounded-lg",
-                        brandData.testimonials.shape === "square" &&
+                        brandData.testimonials?.shape === "square" &&
                           "rounded-none",
-                        brandData.testimonials.shape === "circle" &&
+                        brandData.testimonials?.shape === "circle" &&
                           "rounded-3xl",
-                        brandData.testimonials.border &&
+                        brandData.testimonials?.border &&
                           "border border-gray-200 dark:border-gray-800",
-                        brandData.testimonials.shadow === "sm" && "shadow-sm",
-                        brandData.testimonials.shadow === "md" && "shadow-md",
-                        brandData.testimonials.shadow === "lg" && "shadow-lg",
+                        brandData.testimonials?.shadow === "sm" && "shadow-sm",
+                        brandData.testimonials?.shadow === "md" && "shadow-md",
+                        brandData.testimonials?.shadow === "lg" && "shadow-lg",
                         "testimonial"
                       )}
                       style={{
                         backgroundColor:
                           colorMode === "light"
-                            ? brandData.testimonials.style === "minimal"
+                            ? brandData.testimonials?.style === "minimal"
                               ? "transparent"
                               : "white"
-                            : brandData.testimonials.style === "minimal"
+                            : brandData.testimonials?.style === "minimal"
                               ? "transparent"
                               : "#111827",
                         fontFamily: getFontFamily(
@@ -686,7 +686,8 @@ export default TestimonialCard;`,
                         <p
                           className={cn(
                             "text-gray-800 dark:text-gray-200 mb-4",
-                            brandData.testimonials.style === "quote" && "italic"
+                            brandData.testimonials?.style === "quote" &&
+                              "italic"
                           )}
                         >
                           The service exceeded all my expectations. Their
@@ -700,11 +701,11 @@ export default TestimonialCard;`,
                           <div
                             className={cn(
                               "mr-3 flex-shrink-0",
-                              brandData.testimonials.shape === "rounded" &&
+                              brandData.testimonials?.shape === "rounded" &&
                                 "rounded-lg overflow-hidden",
-                              brandData.testimonials.shape === "square" &&
+                              brandData.testimonials?.shape === "square" &&
                                 "rounded-none overflow-hidden",
-                              brandData.testimonials.shape === "circle" &&
+                              brandData.testimonials?.shape === "circle" &&
                                 "rounded-full overflow-hidden"
                             )}
                             style={{

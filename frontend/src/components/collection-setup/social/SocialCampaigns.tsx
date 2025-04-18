@@ -334,6 +334,8 @@ const SocialCampaigns: React.FC<SocialCampaignsProps> = ({
   // Handle duplicate campaign
   const handleDuplicateCampaign = (campaign: SocialCampaign) => {
     const { id, collected, ...rest } = campaign;
+    console.log("id", id);
+    console.log("collected", collected);
     const duplicatedCampaign = {
       ...rest,
       name: `${rest.name} (Copy)`,
@@ -1377,17 +1379,19 @@ const SocialCampaigns: React.FC<SocialCampaignsProps> = ({
                               ? e.target.value.replace(/[^a-zA-Z0-9]/g, "")
                               : e.target.value;
 
-                          editingCampaign
-                            ? setEditingCampaign({
-                                ...editingCampaign,
-                                identifier: value,
-                                type: campaignType,
-                              })
-                            : setNewCampaign({
-                                ...newCampaign,
-                                identifier: value,
-                                type: campaignType,
-                              });
+                          if (editingCampaign) {
+                            setEditingCampaign({
+                              ...editingCampaign,
+                              identifier: value,
+                              type: campaignType,
+                            });
+                          } else {
+                            setNewCampaign({
+                              ...newCampaign,
+                              identifier: value,
+                              type: campaignType,
+                            });
+                          }
                         }}
                       />
                     </div>

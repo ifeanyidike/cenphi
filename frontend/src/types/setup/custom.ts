@@ -4,10 +4,12 @@ export type CustomSettings = {
   enabled: boolean;
   formats: FormatOption[];
   customDomain: string;
+  companyName: string;
   subdomain: string;
   useCustomDomain: boolean;
   pageTitle: string;
   pageDescription: string;
+  analytics: any;
   themeSettings: {
     primaryColor: string;
     secondaryColor: string;
@@ -16,6 +18,7 @@ export type CustomSettings = {
     fontFamily: string;
     borderRadius: number;
     showLogo: boolean;
+    logo?: string;
     heroType: "simple" | "gradient" | "image" | "video" | "carousel";
     heroImage: string;
     heroVideo?: string;
@@ -57,6 +60,7 @@ export type CustomSettings = {
       options?: string[];
       validation?: string;
     }>;
+    incentivesEnabled: boolean;
     layout: "vertical" | "horizontal" | "grid";
     submitButtonText: string;
     successMessage: string;

@@ -34,7 +34,7 @@ import {
   DisplayRules,
   EnhancedTriggerOption,
   BusinessEventType,
-  BrandData,
+  BrandGuide,
   TestimonialSubmission,
 } from "@/types/setup";
 
@@ -51,7 +51,7 @@ interface TestimonialPreviewProps {
   incentives?: IncentiveConfig;
   displayRules?: DisplayRules;
   triggers?: EnhancedTriggerOption<BusinessEventType>[];
-  brandData?: BrandData;
+  brandData?: BrandGuide;
   onUpdateSettings?: (key: string, value: any) => void;
 }
 

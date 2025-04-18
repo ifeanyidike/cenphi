@@ -87,7 +87,6 @@ import {
   DiscoveryMode,
   SentimentType,
   SocialPlatformName,
-  SocialSettings,
   TestimonialSource,
 } from "@/types/setup";
 import {
@@ -104,6 +103,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDiscoveryModeProcessing } from "./hooks/useDiscoveryModeProcessing";
 import { formatRelativeTime } from "@/utils/utils";
+import { JSONArray } from "@/types/helper";
 
 interface TestimonialDiscoveryProps {
   settings: CollectionSettings["social"];
@@ -590,7 +590,8 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
                   )}
                 </div>
                 <div className="text-xs text-slate-500">
-                  @{testimonial.customer_profile?.username}
+                  @
+                  {testimonial.customer_profile?.social_profiles?.username?.toString()}
                 </div>
               </div>
             </div>
@@ -632,7 +633,7 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
           <div className="flex items-center gap-1 mb-2 text-xs text-slate-500">
             <SourceIcon className="h-3 w-3" />
             <span className="capitalize">
-              {testimonial.source_data?.source}
+              {testimonial.source_data?.source?.toString()}
             </span>
             <span className="text-slate-300 mx-1">•</span>
             <span>{formatRelativeTime(testimonial.created_at)}</span>
@@ -682,7 +683,7 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
                 ) : (
                   <Info className="h-3 w-3 mr-1" />
                 )}
-                {testimonial.source_data?.sentiment}
+                {testimonial.source_data?.sentiment?.toString()}
               </Badge>
 
               <Badge
@@ -715,11 +716,15 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
               <div className="flex items-center gap-2 text-xs text-slate-500">
                 <div className="flex items-center gap-1">
                   <Heart className="h-3 w-3" />
-                  <span>{testimonial.engagement_metrics.likes}</span>
+                  <span>
+                    {testimonial.engagement_metrics.likes?.toString()}
+                  </span>
                 </div>
                 <div className="flex items-center gap-1">
                   <MessageSquare className="h-3 w-3" />
-                  <span>{testimonial.engagement_metrics.comments}</span>
+                  <span>
+                    {testimonial.engagement_metrics.comments?.toString()}
+                  </span>
                 </div>
               </div>
             )}
@@ -925,7 +930,8 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
                 )}
               </div>
               <div className="text-xs text-slate-500">
-                @{testimonial.customer_profile?.username}
+                @
+                {testimonial.customer_profile?.social_profiles?.username?.toString()}
               </div>
             </div>
           </div>
@@ -943,11 +949,15 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
                 <>
                   <div className="flex items-center gap-1">
                     <Heart className="h-3 w-3" />
-                    <span>{testimonial.engagement_metrics.likes}</span>
+                    <span>
+                      {testimonial.engagement_metrics.likes?.toString()}
+                    </span>
                   </div>
                   <div className="flex items-center gap-1">
                     <MessageSquare className="h-3 w-3" />
-                    <span>{testimonial.engagement_metrics.comments}</span>
+                    <span>
+                      {testimonial.engagement_metrics.comments?.toString()}
+                    </span>
                   </div>
                 </>
               )}
@@ -977,7 +987,7 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
             <div className="flex items-center gap-1 text-xs">
               <SourceIcon className="h-3 w-3 text-slate-500" />
               <span className="capitalize">
-                {testimonial.source_data?.source}
+                {testimonial.source_data?.source?.toString()}
               </span>
             </div>
           </div>
@@ -1002,12 +1012,12 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
             ) : (
               <Info className="h-3 w-3 mr-1" />
             )}
-            {testimonial.source_data?.sentiment}
+            {testimonial.source_data?.sentiment?.toString()}
           </Badge>
 
           <div className="flex items-center gap-1 mt-1">
             <Progress
-              value={testimonial.source_data?.score * 100}
+              value={(testimonial.source_data?.score as number) * 100}
               className="h-1.5 w-20"
               style={
                 {
@@ -1022,7 +1032,10 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
               }
             />
             <span className="text-xs text-slate-500">
-              {Math.round((testimonial.source_data?.score || 0) * 100)}%
+              {Math.round(
+                ((testimonial.source_data?.score as number) || 0) * 100
+              )}
+              %
             </span>
           </div>
         </td>
@@ -2421,7 +2434,8 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
                           )}
                         </div>
                         <div className="text-sm text-slate-500">
-                          @{selectedTestimonial.customer_profile?.username}
+                          @
+                          {selectedTestimonial.customer_profile?.social_profiles?.username?.toString()}
                         </div>
                       </div>
                     </div>
@@ -2469,7 +2483,7 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
                           }
                         )}
                         <span className="text-sm capitalize">
-                          {selectedTestimonial.source_data?.platform}
+                          {selectedTestimonial.source_data?.platform?.toString()}
                         </span>
                       </div>
                     </div>
@@ -2506,7 +2520,7 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
                           { className: "h-4 w-4" }
                         )}
                         <span className="capitalize">
-                          {selectedTestimonial.source_data?.source}
+                          {selectedTestimonial.source_data?.source?.toString()}
                         </span>
                         <span className="text-slate-300 mx-1">•</span>
                         <Calendar className="h-4 w-4" />
@@ -2559,7 +2573,7 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
                           <div className="flex items-center gap-1.5">
                             <Heart className="h-4 w-4 text-pink-500" />
                             <span>
-                              {selectedTestimonial.engagement_metrics.likes}
+                              {selectedTestimonial.engagement_metrics.likes?.toLocaleString()}
                             </span>
                             <span className="text-sm text-slate-500">
                               likes
@@ -2569,7 +2583,7 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
                           <div className="flex items-center gap-1.5">
                             <MessageSquare className="h-4 w-4 text-blue-500" />
                             <span>
-                              {selectedTestimonial.engagement_metrics.comments}
+                              {selectedTestimonial.engagement_metrics.comments?.toLocaleString()}
                             </span>
                             <span className="text-sm text-slate-500">
                               comments
@@ -2581,7 +2595,7 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
                             <div className="flex items-center gap-1.5">
                               <Share2 className="h-4 w-4 text-green-500" />
                               <span>
-                                {selectedTestimonial.engagement_metrics.shares}
+                                {selectedTestimonial.engagement_metrics.shares?.toLocaleString()}
                               </span>
                               <span className="text-sm text-slate-500">
                                 shares
@@ -2625,13 +2639,13 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
                             ) : (
                               <Info className="h-3 w-3 mr-1" />
                             )}
-                            {selectedTestimonial.source_data?.sentiment}
+                            {selectedTestimonial.source_data?.sentiment?.toLocaleString()}
                           </Badge>
 
                           <div className="text-xl font-semibold">
                             {Math.round(
-                              (selectedTestimonial.source_data?.score || 0) *
-                                100
+                              ((selectedTestimonial.source_data
+                                ?.score as number) || 0) * 100
                             )}
                             %
                           </div>
@@ -2642,16 +2656,16 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
                             <span>Confidence Score</span>
                             <span>
                               {Math.round(
-                                (selectedTestimonial.source_data?.score || 0) *
-                                  100
+                                ((selectedTestimonial.source_data
+                                  ?.score as number) || 0) * 100
                               )}
                               %
                             </span>
                           </div>
                           <Progress
                             value={
-                              (selectedTestimonial.source_data?.score || 0) *
-                              100
+                              ((selectedTestimonial.source_data
+                                ?.score as number) || 0) * 100
                             }
                             className="h-2"
                             style={
@@ -2862,7 +2876,7 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
                               Permission Request Message:
                             </h4>
                             <p className="text-xs text-slate-600 whitespace-pre-wrap">
-                              {selectedTestimonial.custom_fields?.response}
+                              {selectedTestimonial.custom_fields?.response.toString()}
                             </p>
                           </div>
                         )}
@@ -2886,7 +2900,7 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
                               Likes
                             </span>
                             <span className="font-medium">
-                              {selectedTestimonial.engagement_metrics?.likes ||
+                              {selectedTestimonial.engagement_metrics?.likes?.toString() ||
                                 0}
                             </span>
                           </div>
@@ -2895,8 +2909,8 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
                               Comments
                             </span>
                             <span className="font-medium">
-                              {selectedTestimonial.engagement_metrics
-                                ?.comments || 0}
+                              {selectedTestimonial.engagement_metrics?.comments?.toString() ||
+                                0}
                             </span>
                           </div>
                           {selectedTestimonial.engagement_metrics?.shares !==
@@ -2906,7 +2920,7 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
                                 Shares
                               </span>
                               <span className="font-medium">
-                                {selectedTestimonial.engagement_metrics?.shares}
+                                {selectedTestimonial.share_count}
                               </span>
                             </div>
                           )}
@@ -2914,16 +2928,7 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
                             <span className="text-sm text-slate-500">
                               Total Engagement
                             </span>
-                            <span className="font-medium">
-                              {(selectedTestimonial.engagement_metrics?.likes ||
-                                0) +
-                                (selectedTestimonial.engagement_metrics
-                                  ?.comments || 0) *
-                                  2 +
-                                (selectedTestimonial.engagement_metrics
-                                  ?.shares || 0) *
-                                  3}
-                            </span>
+                            <span className="font-medium">5</span>
                           </div>
                           <div className="flex items-center justify-between">
                             <span className="text-sm text-slate-500">
@@ -2933,14 +2938,14 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
                               {selectedTestimonial.customer_profile
                                 ?.social_profiles?.followers
                                 ? `${(
-                                    (((selectedTestimonial.engagement_metrics
-                                      ?.likes || 0) +
-                                      (selectedTestimonial.engagement_metrics
-                                        ?.comments || 0) +
-                                      (selectedTestimonial.engagement_metrics
-                                        ?.shares || 0)) /
-                                      selectedTestimonial.customer_profile
-                                        ?.social_profiles?.followers) *
+                                    ((((selectedTestimonial?.custom_fields
+                                      ?.likes as number) || 0) +
+                                      ((selectedTestimonial.custom_fields
+                                        ?.comments as number) || 0) +
+                                      (selectedTestimonial.share_count || 0)) /
+                                      (selectedTestimonial.customer_profile
+                                        ?.social_profiles
+                                        ?.followers as number)) *
                                     100
                                   ).toFixed(2)}%`
                                 : "N/A"}
@@ -2982,16 +2987,17 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
                     <CardContent className="py-3">
                       {selectedTestimonial.custom_fields?.keywords ? (
                         <div className="flex flex-wrap gap-2">
-                          {selectedTestimonial.custom_fields?.keywords.map(
-                            (keyword: any, i: number) => (
-                              <Badge
-                                key={i}
-                                className="bg-purple-100 text-purple-700 border-purple-200"
-                              >
-                                {keyword}
-                              </Badge>
-                            )
-                          )}
+                          {(
+                            selectedTestimonial.custom_fields
+                              ?.keywords as JSONArray
+                          )?.map((keyword: any, i: number) => (
+                            <Badge
+                              key={i}
+                              className="bg-purple-100 text-purple-700 border-purple-200"
+                            >
+                              {keyword}
+                            </Badge>
+                          ))}
                         </div>
                       ) : selectedTestimonial.tags ? (
                         <div className="flex flex-wrap gap-2">
@@ -3048,7 +3054,8 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
                             )}
                           </div>
                           <div className="text-slate-500">
-                            @{selectedTestimonial.customer_profile?.username}
+                            @
+                            {selectedTestimonial.customer_profile?.social_profiles?.username?.toString()}
                           </div>
                           {selectedTestimonial.customer_profile?.social_profiles
                             ?.followers && (
@@ -3065,7 +3072,7 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
                             className="gap-2"
                             onClick={() =>
                               window.open(
-                                `https://${selectedTestimonial.source_data?.platform}.com/${selectedTestimonial.customer_profile?.username}`,
+                                `https://${selectedTestimonial.source_data?.platform}.com/${selectedTestimonial.customer_profile?.social_profiles?.username}`,
                                 "_blank"
                               )
                             }
@@ -3092,7 +3099,7 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
                               }
                             )}
                             <span className="font-medium capitalize">
-                              {selectedTestimonial.source_data?.platform}
+                              {selectedTestimonial.source_data?.platform?.toLocaleString()}
                             </span>
                           </div>
                         </div>
@@ -3117,14 +3124,8 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
                             {selectedTestimonial.customer_profile
                               ?.social_profiles?.followers
                               ? `${(
-                                  (((selectedTestimonial.engagement_metrics
-                                    ?.likes || 0) +
-                                    (selectedTestimonial.engagement_metrics
-                                      ?.comments || 0) +
-                                    (selectedTestimonial.engagement_metrics
-                                      ?.shares || 0)) /
-                                    selectedTestimonial.customer_profile
-                                      ?.social_profiles?.followers) *
+                                  ((selectedTestimonial.view_count || 0) +
+                                    (selectedTestimonial.share_count || 0)) *
                                   100
                                 ).toFixed(2)}%`
                               : "N/A"}
@@ -3235,7 +3236,7 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
                     {selectedTestimonial.customer_profile?.name}
                   </div>
                   <div className="text-xs text-slate-500">
-                    @{selectedTestimonial.customer_profile?.username}
+                    @{selectedTestimonial.customer_profile?.name}
                   </div>
                 </div>
               </div>

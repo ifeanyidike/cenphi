@@ -1,21 +1,21 @@
 // src/stores/brandGuideStore.ts
 import { makeAutoObservable, toJS, runInAction } from "mobx";
 import { cloneDeep, merge, set } from "lodash";
-import { BrandData, BrandPreset } from "@/types/setup";
+import { BrandGuide, BrandPreset } from "@/types/setup";
 import {
   brandPresets,
   defaultBrandData,
 } from "@/components/brand-guide/constants";
 
 class BrandGuideStore {
-  brandData: BrandData = cloneDeep(defaultBrandData);
+  brandData: BrandGuide = cloneDeep(defaultBrandData);
   isSaving: boolean = false;
   isSaved: boolean = true;
   recentColors: string[] = [];
   brandPresets: BrandPreset[] = brandPresets;
   selectedPreset: string | null = null;
   error: string | null = null;
-  history: BrandData[] = [];
+  history: BrandGuide[] = [];
   historyIndex: number = -1;
   isDirty: boolean = false;
   aiGenerating: boolean = false;
@@ -79,7 +79,7 @@ class BrandGuideStore {
     console.log("existing brand data", this, this.brandData, path, value);
     const updatedData = cloneDeep(this.brandData);
     set(updatedData, path, value);
-    updatedData.updatedAt = new Date();
+    updatedData.updated_at = new Date();
     this.brandData = updatedData;
     console.log("updateddata", this.brandData);
     this.isSaved = false;
@@ -148,7 +148,7 @@ class BrandGuideStore {
     }
   };
 
-  addToHistory = (data: BrandData) => {
+  addToHistory = (data: BrandGuide) => {
     // If we're not at the end of the history, remove everything after current index
     if (this.historyIndex < this.history.length - 1) {
       this.history = this.history.slice(0, this.historyIndex + 1);
@@ -304,7 +304,7 @@ class BrandGuideStore {
   /**
    * Get a copy of the brand data (useful for exporting)
    */
-  getBrandDataCopy(): BrandData {
+  getBrandDataCopy(): BrandGuide {
     return cloneDeep(toJS(this.brandData));
   }
 
@@ -321,7 +321,7 @@ class BrandGuideStore {
         this.isDirty = false;
         this.isSaved = true;
         this.isLoading = false;
-        this.brandData.updatedAt = new Date();
+        this.brandData.updated_at = new Date();
       });
 
       return Promise.resolve();
@@ -410,7 +410,7 @@ class BrandGuideStore {
           channels: {
             ...this.brandData.voice.channels,
             email: {
-              ...this.brandData.voice.channels.email,
+              ...(this.brandData?.voice?.channels?.email || {}),
               requestTemplate:
                 "Hi {{name}},\n\nWe hope you're enjoying your experience with {{brand}}! We would love to hear your thoughts. Would you mind taking a moment to share your feedback?\n\nBest,\n{{brand}} Team",
               thankYouTemplate:

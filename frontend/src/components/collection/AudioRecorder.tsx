@@ -1949,7 +1949,7 @@ export const EnhancedAudioRecorder: React.FC<EnhancedAudioRecorderProps> = ({
   const [playbackTime, setPlaybackTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
-  const [volume, setVolume] = useState(0.8);
+  // const [volume, setVolume] = useState(0.8);
   const [audioQuality, setAudioQuality] = useState<AudioQuality>("high");
   const [micEnabled, setMicEnabled] = useState(true);
   const [availableMics, setAvailableMics] = useState<MediaDeviceInfo[]>([]);
@@ -1972,13 +1972,13 @@ export const EnhancedAudioRecorder: React.FC<EnhancedAudioRecorderProps> = ({
   const [isMobileView, setIsMobileView] = useState(false);
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const [autoStopSilence, setAutoStopSilence] = useState(false);
-  const [silenceThreshold, setSilenceThreshold] = useState(0.05);
+  const [silenceThreshold] = useState(0.05);
   const [silenceDuration, setSilenceDuration] = useState(3);
   const [showReminders, setShowReminders] = useState(true);
   const [environmentType, setEnvironmentType] = useState<string>("quiet");
   const [recordingName, setRecordingName] = useState<string>("");
   const [showTrimControls, setShowTrimControls] = useState(false);
-  const [isAudioProcessed, setIsAudioProcessed] = useState(false);
+  const [, setIsAudioProcessed] = useState(false);
 
   // Helper refs for handling the audio
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -1987,7 +1987,7 @@ export const EnhancedAudioRecorder: React.FC<EnhancedAudioRecorderProps> = ({
   const recordedChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<number | null>(null);
   const countdownTimerRef = useRef<number | null>(null);
-  const playbackTimerRef = useRef<number | null>(null);
+  // const playbackTimerRef = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const audioAnalyserRef = useRef<AnalyserNode | null>(null);
   const visualizationTimerRef = useRef<number | null>(null);
@@ -2802,20 +2802,20 @@ export const EnhancedAudioRecorder: React.FC<EnhancedAudioRecorderProps> = ({
   };
 
   // Handle volume change
-  const handleVolumeChange = (values: number[]) => {
-    const newVolume = values[0];
-    setVolume(newVolume);
+  // const handleVolumeChange = (values: number[]) => {
+  //   const newVolume = values[0];
+  //   setVolume(newVolume);
 
-    if (audioRef.current) {
-      audioRef.current.volume = newVolume;
-    }
+  //   if (audioRef.current) {
+  //     audioRef.current.volume = newVolume;
+  //   }
 
-    if (newVolume === 0) {
-      setIsMuted(true);
-    } else if (isMuted) {
-      setIsMuted(false);
-    }
-  };
+  //   if (newVolume === 0) {
+  //     setIsMuted(true);
+  //   } else if (isMuted) {
+  //     setIsMuted(false);
+  //   }
+  // };
 
   // Toggle microphone
   const toggleMicrophone = () => {

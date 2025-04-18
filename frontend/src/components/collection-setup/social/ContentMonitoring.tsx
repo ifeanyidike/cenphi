@@ -1455,7 +1455,6 @@ import {
   BarChart3,
   Bell,
   Bot,
-  Check,
   CheckCircle2,
   Ear,
   Eye,
@@ -1471,7 +1470,6 @@ import {
   Plus,
   RefreshCw,
   Save,
-  Settings,
   Shield,
   Sparkles,
   Star,
@@ -1518,7 +1516,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { CollectionSettings } from "@/types/setup";

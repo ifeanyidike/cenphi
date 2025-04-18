@@ -68,7 +68,7 @@ export class AnalysisManager {
               ];
               break;
 
-            case "transcript":
+            case "transcript": {
               // Pull transcript/text from testimonial based on format
 
               const transcript = this.getTranscript(testimonial);
@@ -86,6 +86,7 @@ export class AnalysisManager {
                 ],
               };
               break;
+            }
 
             case "engagement":
               this.analysisResults[type] = {

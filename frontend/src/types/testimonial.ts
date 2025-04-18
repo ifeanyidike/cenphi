@@ -392,7 +392,8 @@ export type ContentStatus =
   | "archived"
   | "featured"
   | "scheduled"
-  | "all"; // Virtual status for filtering
+  | "requested"
+  | "all";
 
 export type CollectionMethod =
   | "website"

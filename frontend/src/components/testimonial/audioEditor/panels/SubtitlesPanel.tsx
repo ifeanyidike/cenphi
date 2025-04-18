@@ -513,8 +513,7 @@ const SubtitlesPanel: React.FC<SubtitlesPanelProps> = observer(
                                   type="color"
                                   className="w-full h-8 rounded cursor-pointer"
                                   value={selectedSubtitle.style.backgroundColor.replace(
-                                    //@ts-nocheck
-                                    /rgba\((.*),\s*[\d\.]+\)/,
+                                    /rgba\((.*),\s*[\d.]+\)/,
                                     "rgb($1)"
                                   )}
                                   onChange={(e) => {
@@ -560,8 +559,7 @@ const SubtitlesPanel: React.FC<SubtitlesPanelProps> = observer(
                                     const bgColor =
                                       selectedSubtitle.style.backgroundColor;
                                     const newBgColor = bgColor.replace(
-                                      //@ts-nocheck
-                                      /rgba\((.*?),\s*[\d\.]+\)/,
+                                      /rgba\((.*?),\s*[\d.]+\)/,
                                       `rgba($1, ${opacity})`
                                     );
 

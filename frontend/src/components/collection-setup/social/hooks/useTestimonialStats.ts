@@ -56,9 +56,9 @@ export const useTestimonialStats = (testimonials: Testimonial[]) => {
       testimonials.reduce(
         (sum, t) =>
           sum +
-          ((t.engagement_metrics?.likes || 0) +
-            (t.engagement_metrics?.comments || 0) * 2 +
-            (t.engagement_metrics?.shares || 0) * 3),
+          (((t.engagement_metrics?.likes as number) || 0) +
+            ((t.engagement_metrics?.comments as number) || 0) * 2 +
+            ((t.engagement_metrics?.shares as number) || 0) * 3),
         0
       ) / total
     );
@@ -67,7 +67,7 @@ export const useTestimonialStats = (testimonials: Testimonial[]) => {
         testimonials.reduce(
           (acc, t) => {
             const platform = t.source_data?.platform || "unknown";
-            acc[platform] = (acc[platform] || 0) + 1;
+            acc[platform as string] = (acc[platform as string] || 0) + 1;
             return acc;
           },
           {} as Record<string, number>
@@ -95,9 +95,12 @@ export const useTestimonialStats = (testimonials: Testimonial[]) => {
       const platform = t.source_data?.platform || "unknown";
       const source = t.source_data?.source || "unknown";
       const sentiment = t.source_data?.sentiment || "unknown";
-      platformCounts[platform] = (platformCounts[platform] || 0) + 1;
-      sourceCounts[source] = (sourceCounts[source] || 0) + 1;
-      sentimentCounts[sentiment] = (sentimentCounts[sentiment] || 0) + 1;
+      platformCounts[platform as string] =
+        (platformCounts[platform as string] || 0) + 1;
+      sourceCounts[source as string] =
+        (sourceCounts[source as string] || 0) + 1;
+      sentimentCounts[sentiment as number] =
+        (sentimentCounts[sentiment as number] || 0) + 1;
     });
 
     return { platformCounts, sourceCounts, sentimentCounts };

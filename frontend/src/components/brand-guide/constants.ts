@@ -1,4 +1,4 @@
-import { BrandData, BrandPreset } from "@/types/setup";
+import { BrandGuide, BrandPreset } from "@/types/setup";
 
 // Testimonial style presets
 export const testimonialStyles = [
@@ -41,8 +41,10 @@ export const testimonialStyles = [
 ];
 
 // Default brand data
-export const defaultBrandData: BrandData = {
-  id: crypto.randomUUID(),
+export const defaultBrandData: BrandGuide = {
+  id: crypto.randomUUID().toString(),
+  workspace_id: "",
+
   name: "",
   tagline: "",
   description: "",
@@ -110,10 +112,56 @@ export const defaultBrandData: BrandData = {
         },
       },
       social: {
-        requestTemplate:
-          "Hey {{name}}, we value your opinion! Share your experience with us using #{{brandHashtag}} or tag us @{{brandHandle}}.",
-        thankYouTemplate:
-          "Thanks for sharing your experience, @{{name}}! We appreciate your support. #CustomerAppreciation",
+        platforms: {
+          facebook: {
+            requestTemplate:
+              "Hey {{name}}, we value your opinion! Share your experience with us using #{{brandHashtag}} or tag us @{{brandHandle}}.",
+            thankYouTemplate:
+              "Thanks for sharing your experience, @{{name}}! We appreciate your support. #CustomerAppreciation",
+            followupTemplate:
+              "Thanks for sharing your experience, @{{name}}! We appreciate your support. #CustomerAppreciation",
+          },
+          linkedin: {
+            requestTemplate:
+              "Hey {{name}}, we value your opinion! Share your experience with us using #{{brandHashtag}} or tag us @{{brandHandle}}.",
+            thankYouTemplate:
+              "Thanks for sharing your experience, @{{name}}! We appreciate your support. #CustomerAppreciation",
+            followupTemplate:
+              "Thanks for sharing your experience, @{{name}}! We appreciate your support. #CustomerAppreciation",
+          },
+          instagram: {
+            requestTemplate:
+              "Hey {{name}}, we value your opinion! Share your experience with us using #{{brandHashtag}} or tag us @{{brandHandle}}.",
+            thankYouTemplate:
+              "Thanks for sharing your experience, @{{name}}! We appreciate your support. #CustomerAppreciation",
+            followupTemplate:
+              "Thanks for sharing your experience, @{{name}}! We appreciate your support. #CustomerAppreciation",
+          },
+          tiktok: {
+            requestTemplate:
+              "Hey {{name}}, we value your opinion! Share your experience with us using #{{brandHashtag}} or tag us @{{brandHandle}}.",
+            thankYouTemplate:
+              "Thanks for sharing your experience, @{{name}}! We appreciate your support. #CustomerAppreciation",
+            followupTemplate:
+              "Thanks for sharing your experience, @{{name}}! We appreciate your support. #CustomerAppreciation",
+          },
+          twitter: {
+            requestTemplate:
+              "Hey {{name}}, we value your opinion! Share your experience with us using #{{brandHashtag}} or tag us @{{brandHandle}}.",
+            thankYouTemplate:
+              "Thanks for sharing your experience, @{{name}}! We appreciate your support. #CustomerAppreciation",
+            followupTemplate:
+              "Thanks for sharing your experience, @{{name}}! We appreciate your support. #CustomerAppreciation",
+          },
+          youtube: {
+            requestTemplate:
+              "Hey {{name}}, we value your opinion! Share your experience with us using #{{brandHashtag}} or tag us @{{brandHandle}}.",
+            thankYouTemplate:
+              "Thanks for sharing your experience, @{{name}}! We appreciate your support. #CustomerAppreciation",
+            followupTemplate:
+              "Thanks for sharing your experience, @{{name}}! We appreciate your support. #CustomerAppreciation",
+          },
+        },
       },
       website: {
         requestTemplate:
@@ -129,8 +177,8 @@ export const defaultBrandData: BrandData = {
     density: "default",
     darkMode: false,
   },
-  createdAt: new Date(),
-  updatedAt: new Date(),
+  created_at: new Date(),
+  updated_at: new Date(),
 };
 
 export const brandPresets: BrandPreset[] = [

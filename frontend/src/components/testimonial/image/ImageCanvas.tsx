@@ -181,9 +181,8 @@ const ImageCanvas: React.FC<ImageCanvasProps> = observer(
           );
           saveChanges();
           break;
-        case "text":
+        case "text": {
           // First check if we're clicking on or near an existing text overlay
-          //@ts-nocheck
           const existingOverlay = findOverlayAtPosition(x, y);
 
           if (existingOverlay) {
@@ -208,6 +207,7 @@ const ImageCanvas: React.FC<ImageCanvasProps> = observer(
             }, 50);
           }
           break;
+        }
         case "crop":
           setShowCropOverlay(true);
           setCropPosition({
@@ -217,13 +217,13 @@ const ImageCanvas: React.FC<ImageCanvasProps> = observer(
             height: 80,
           });
           break;
-        case "zoom":
+        case "zoom": {
           // Handle zoom on click - increment zoom at click point
-          //@ts-nocheck
           const newZoom = Math.min(300, imageEditorManager.zoom + 20);
           imageEditorManager.applyQuickAdjustment("zoom", newZoom);
           saveChanges();
           break;
+        }
       }
     };
 

@@ -44,6 +44,7 @@ export const useFilteredTestimonials = (
             ?.toLowerCase()
             .includes(searchQuery.toLowerCase()) &&
           !testimonial.customer_profile?.social_profiles?.username
+            ?.toString()
             ?.toLowerCase()
             .includes(searchQuery.toLowerCase())
         ) {
@@ -83,7 +84,7 @@ export const useFilteredTestimonials = (
         if (
           minFollowersFilter > 0 &&
           (!testimonial.customer_profile?.social_profiles?.followers ||
-            testimonial.customer_profile.social_profiles.followers <
+            (testimonial.customer_profile.social_profiles.followers as number) <
               minFollowersFilter)
         ) {
           return false;
@@ -92,9 +93,9 @@ export const useFilteredTestimonials = (
         // Min engagement filter
         if (minEngagementFilter > 0) {
           const engagement =
-            (testimonial.engagement_metrics?.likes || 0) +
-            (testimonial.engagement_metrics?.comments || 0) * 2 +
-            (testimonial.engagement_metrics?.shares || 0) * 3;
+            ((testimonial.engagement_metrics?.likes as number) || 0) +
+            ((testimonial.engagement_metrics?.comments as number) || 0) * 2 +
+            ((testimonial.engagement_metrics?.shares as number) || 0) * 3;
           if (engagement < minEngagementFilter) {
             return false;
           }
@@ -159,17 +160,20 @@ export const useFilteredTestimonials = (
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
           );
         } else if (sortOrder === "score") {
-          return (b.source_data?.score || 0) - (a.source_data?.score || 0);
+          return (
+            ((b.source_data?.score as number) || 0) -
+            ((a.source_data?.score as number) || 0)
+          );
         } else {
           // Engagement sorting
           const engagementA =
-            (a.engagement_metrics?.likes || 0) +
-            (a.engagement_metrics?.comments || 0) * 2 +
-            (a.engagement_metrics?.shares || 0) * 3;
+            ((a.engagement_metrics?.likes as number) || 0) +
+            ((a.engagement_metrics?.comments as number) || 0) * 2 +
+            ((a.engagement_metrics?.shares as number) || 0) * 3;
           const engagementB =
-            (b.engagement_metrics?.likes || 0) +
-            (b.engagement_metrics?.comments || 0) * 2 +
-            (b.engagement_metrics?.shares || 0) * 3;
+            ((b.engagement_metrics?.likes as number) || 0) +
+            ((b.engagement_metrics?.comments as number) || 0) * 2 +
+            ((b.engagement_metrics?.shares as number) || 0) * 3;
           return engagementB - engagementA;
         }
       });

@@ -360,20 +360,17 @@ const ImageUploader: React.FC<ImageUploaderProps> = observer(
           const intensity = filterIntensity / 100;
 
           switch (currentFilter) {
-            case "grayscale":
-              //@ts-nocheck
+            case "grayscale": {
               const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
               data[i] = data[i] * (1 - intensity) + avg * intensity;
               data[i + 1] = data[i + 1] * (1 - intensity) + avg * intensity;
               data[i + 2] = data[i + 2] * (1 - intensity) + avg * intensity;
               break;
+            }
 
-            case "sepia":
-              //@ts-nocheck
+            case "sepia": {
               const r = data[i];
-              //@ts-nocheck
               const g = data[i + 1];
-              //@ts-nocheck
               const b = data[i + 2];
               data[i] = Math.min(
                 255,
@@ -391,6 +388,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = observer(
                   (r * 0.272 + g * 0.534 + b * 0.131) * intensity
               );
               break;
+            }
 
             case "vintage":
               // Red shift and slight desaturation
