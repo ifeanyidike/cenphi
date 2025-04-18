@@ -23,15 +23,24 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          # No cache option since yarn.lock might not be in the expected location
+
+      - name: Verify directory structure
+        run: |
+          ls -la
+          echo "Current directory: $(pwd)"
+          find . -name "package.json" -type f
 
       - name: Install dependencies
         run: |
           cd frontend
+          echo "Installing dependencies in $(pwd)"
           yarn install --ignore-engines
 
       - name: Update build-widget.js to ES modules
         run: |
           cd frontend
+          echo "Updating build-widget.js in $(pwd)"
           cat > build-widget.js << 'EOF'
           // build-widget.js
           import { execSync } from "child_process";
@@ -68,8 +77,17 @@ jobs:
           EOF
 
       - name: Build widget
-        working-directory: ./frontend
-        run: yarn build:widget
+        run: |
+          # Execute in a single shell session to maintain directory context
+          cd frontend
+          echo "Building widget in $(pwd)"
+          yarn build:widget
+
+      - name: Verify widget files
+        run: |
+          cd frontend
+          echo "Checking for widget files in $(pwd)/public/widget"
+          ls -la public/widget || echo "Widget directory not found!"
 
       - name: Upload widget artifacts
         uses: actions/upload-artifact@v4
@@ -85,23 +103,4 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./frontend/public/widget
-          destination_dir: widget
-
-      - name: Build widget
-        run: yarn build:widget
-
-      - name: Upload widget artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: widget-build
-          path: |
-            public/widget/testimonial-widget.umd.js
-            public/widget/testimonial-widget.css
-
-      # Deploy to your preferred hosting (GitHub Pages example)
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./public/widget
           destination_dir: widget
