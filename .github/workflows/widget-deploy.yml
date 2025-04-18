@@ -1,0 +1,44 @@
+name: Widget Build and Deploy
+
+on:
+  workflow_dispatch: # Allow manual triggering
+  push:
+    branches: [master, main]
+    paths:
+      - "src/embed/**" # Only run when widget source files change
+      - "vite.widget.config.ts"
+
+jobs:
+  build-widget:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+          cache: "yarn"
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Build widget
+        run: yarn build:widget
+
+      - name: Upload widget artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: widget-build
+          path: |
+            public/widget/testimonial-widget.umd.js
+            public/widget/testimonial-widget.css
+
+      # Deploy to your preferred hosting (GitHub Pages example)
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public/widget
+          destination_dir: widget
