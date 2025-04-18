@@ -23,7 +23,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd frontend
-          npm install --legacy-peer-deps
+          npm --loglevel verbose install --legacy-peer-deps || yarn install --no-lockfile
 
       - name: Build widget
         run: |
