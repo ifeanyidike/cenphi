@@ -269,6 +269,13 @@ export const defaultSettings: CollectionSettings = {
       heroImage: "",
       layout: {},
     },
+    analytics: {},
+    companyName: "",
+    authentication: {
+      required: false,
+      method: "email",
+      providers: [],
+    },
   },
 };
 
