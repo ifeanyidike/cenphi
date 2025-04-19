@@ -13,6 +13,7 @@ type TestimonialService interface {
 	ProcessTestimonials(ctx context.Context, testimonials []models.Testimonial) error
 	ValidateTestimonial(t models.Testimonial) error
 	FetchByWorkspaceID(ctx context.Context, workspaceID uuid.UUID, filter models.TestimonialFilter) ([]models.Testimonial, error)
+	FetchByID(ctx context.Context, id uuid.UUID) (*models.Testimonial, error)
 }
 
 type testimonialService struct {
@@ -39,4 +40,8 @@ func (s *testimonialService) ValidateTestimonial(t models.Testimonial) error {
 
 func (s *testimonialService) FetchByWorkspaceID(ctx context.Context, workspaceID uuid.UUID, filter models.TestimonialFilter) ([]models.Testimonial, error) {
 	return s.repo.FetchByWorkspaceID(ctx, workspaceID, filter, s.db)
+}
+
+func (s *testimonialService) FetchByID(ctx context.Context, testimonialID uuid.UUID) (*models.Testimonial, error) {
+	return s.repo.FetchByID(ctx, testimonialID, s.db)
 }

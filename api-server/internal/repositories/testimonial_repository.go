@@ -6,8 +6,8 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"log"
 	"log/slog"
 	"strings"
 
@@ -44,27 +44,117 @@ func NewTestimonialRepository(redis *redis.Client) TestimonialRepository {
 	}
 }
 
-func (r *testimonialRepository) buildFilterQuery(query string, workspaceID uuid.UUID, filter models.TestimonialFilter) (string, []any) {
-	// query := `
-	//     SELECT * FROM testimonials
-	//     WHERE workspace_id = $1
-	// `
+// func (r *testimonialRepository) buildFilterQuery(query string, workspaceID uuid.UUID, filter models.TestimonialFilter) (string, []any) {
+// 	// query := `
+// 	//     SELECT * FROM testimonials
+// 	//     WHERE workspace_id = $1
+// 	// `
 
+// 	args := []any{workspaceID}
+// 	argNum := 2
+
+// 	// Add filter conditions only if they're not empty
+// 	if len(filter.Types) > 0 {
+// 		// Convert slice to array parameter format for Postgres
+// 		typesStr := "{" + strings.Join(mapSlice(filter.Types, func(t models.TestimonialType) string {
+// 			return string(t)
+// 		}), ",") + "}"
+// 		query += fmt.Sprintf(" AND testimonial_type = ANY($%d::text[])", argNum)
+// 		args = append(args, typesStr)
+// 		argNum++
+// 	} else {
+// 		query += fmt.Sprintf(" AND ($%d::text[] IS NULL OR 1=1)", argNum)
+// 		args = append(args, nil)
+// 		argNum++
+// 	}
+
+// 	if len(filter.Statuses) > 0 {
+// 		statusesStr := "{" + strings.Join(mapSlice(filter.Statuses, func(s models.ContentStatus) string {
+// 			return string(s)
+// 		}), ",") + "}"
+// 		query += fmt.Sprintf(" AND status = ANY($%d::text[])", argNum)
+// 		args = append(args, statusesStr)
+// 		argNum++
+// 	} else {
+// 		query += fmt.Sprintf(" AND ($%d::text[] IS NULL OR 1=1)", argNum)
+// 		args = append(args, nil)
+// 		argNum++
+// 	}
+
+// 	// Continue with other filters
+// 	query += fmt.Sprintf(" AND ($%d::int IS NULL OR rating >= $%d)", argNum, argNum)
+// 	args = append(args, filter.MinRating)
+// 	argNum++
+
+// 	query += fmt.Sprintf(" AND ($%d::int IS NULL OR rating <= $%d)", argNum, argNum)
+// 	args = append(args, filter.MaxRating)
+// 	argNum++
+
+// 	if len(filter.Tags) > 0 {
+// 		tagsStr := "{" + strings.Join(filter.Tags, ",") + "}"
+// 		query += fmt.Sprintf(" AND tags @> $%d::text[]", argNum)
+// 		args = append(args, tagsStr)
+// 		argNum++
+// 	} else {
+// 		query += fmt.Sprintf(" AND ($%d::text[] IS NULL OR 1=1)", argNum)
+// 		args = append(args, nil)
+// 		argNum++
+// 	}
+
+// 	if len(filter.Categories) > 0 {
+// 		categoriesStr := "{" + strings.Join(filter.Categories, ",") + "}"
+// 		query += fmt.Sprintf(" AND categories @> $%d::text[]", argNum)
+// 		args = append(args, categoriesStr)
+// 		argNum++
+// 	} else {
+// 		query += fmt.Sprintf(" AND ($%d::text[] IS NULL OR 1=1)", argNum)
+// 		args = append(args, nil)
+// 		argNum++
+// 	}
+
+// 	// Date range filters
+// 	if !filter.DateRange.Start.IsZero() {
+// 		query += fmt.Sprintf(" AND created_at >= $%d", argNum)
+// 		args = append(args, filter.DateRange.Start)
+// 		argNum++
+// 	} else {
+// 		query += fmt.Sprintf(" AND ($%d::timestamptz IS NULL OR 1=1)", argNum)
+// 		args = append(args, nil)
+// 		argNum++
+// 	}
+
+// 	if !filter.DateRange.End.IsZero() {
+// 		query += fmt.Sprintf(" AND created_at <= $%d", argNum)
+// 		args = append(args, filter.DateRange.End)
+// 		argNum++
+// 	} else {
+// 		query += fmt.Sprintf(" AND ($%d::timestamptz IS NULL OR 1=1)", argNum)
+// 		args = append(args, nil)
+// 		argNum++
+// 	}
+
+// 	// Search query
+// 	if filter.SearchQuery != "" {
+// 		query += fmt.Sprintf(" AND content ILIKE '%%' || $%d || '%%'", argNum)
+// 		args = append(args, filter.SearchQuery)
+// 	} else {
+// 		query += fmt.Sprintf(" AND ($%d::text IS NULL OR 1=1)", argNum)
+// 		args = append(args, nil)
+// 	}
+// 	return query, args
+// }
+
+func (r *testimonialRepository) buildFilterQuery(query string, workspaceID uuid.UUID, filter models.TestimonialFilter) (string, []any) {
 	args := []any{workspaceID}
 	argNum := 2
 
 	// Add filter conditions only if they're not empty
 	if len(filter.Types) > 0 {
-		// Convert slice to array parameter format for Postgres
 		typesStr := "{" + strings.Join(mapSlice(filter.Types, func(t models.TestimonialType) string {
 			return string(t)
 		}), ",") + "}"
 		query += fmt.Sprintf(" AND testimonial_type = ANY($%d::text[])", argNum)
 		args = append(args, typesStr)
-		argNum++
-	} else {
-		query += fmt.Sprintf(" AND ($%d::text[] IS NULL OR 1=1)", argNum)
-		args = append(args, nil)
 		argNum++
 	}
 
@@ -75,29 +165,25 @@ func (r *testimonialRepository) buildFilterQuery(query string, workspaceID uuid.
 		query += fmt.Sprintf(" AND status = ANY($%d::text[])", argNum)
 		args = append(args, statusesStr)
 		argNum++
-	} else {
-		query += fmt.Sprintf(" AND ($%d::text[] IS NULL OR 1=1)", argNum)
-		args = append(args, nil)
+	}
+
+	// Only add rating filters if they're non-zero
+	if filter.MinRating > 0 {
+		query += fmt.Sprintf(" AND rating >= $%d", argNum)
+		args = append(args, filter.MinRating)
 		argNum++
 	}
 
-	// Continue with other filters
-	query += fmt.Sprintf(" AND ($%d::int IS NULL OR rating >= $%d)", argNum, argNum)
-	args = append(args, filter.MinRating)
-	argNum++
-
-	query += fmt.Sprintf(" AND ($%d::int IS NULL OR rating <= $%d)", argNum, argNum)
-	args = append(args, filter.MaxRating)
-	argNum++
+	if filter.MaxRating > 0 {
+		query += fmt.Sprintf(" AND rating <= $%d", argNum)
+		args = append(args, filter.MaxRating)
+		argNum++
+	}
 
 	if len(filter.Tags) > 0 {
 		tagsStr := "{" + strings.Join(filter.Tags, ",") + "}"
 		query += fmt.Sprintf(" AND tags @> $%d::text[]", argNum)
 		args = append(args, tagsStr)
-		argNum++
-	} else {
-		query += fmt.Sprintf(" AND ($%d::text[] IS NULL OR 1=1)", argNum)
-		args = append(args, nil)
 		argNum++
 	}
 
@@ -106,10 +192,6 @@ func (r *testimonialRepository) buildFilterQuery(query string, workspaceID uuid.
 		query += fmt.Sprintf(" AND categories @> $%d::text[]", argNum)
 		args = append(args, categoriesStr)
 		argNum++
-	} else {
-		query += fmt.Sprintf(" AND ($%d::text[] IS NULL OR 1=1)", argNum)
-		args = append(args, nil)
-		argNum++
 	}
 
 	// Date range filters
@@ -117,19 +199,11 @@ func (r *testimonialRepository) buildFilterQuery(query string, workspaceID uuid.
 		query += fmt.Sprintf(" AND created_at >= $%d", argNum)
 		args = append(args, filter.DateRange.Start)
 		argNum++
-	} else {
-		query += fmt.Sprintf(" AND ($%d::timestamptz IS NULL OR 1=1)", argNum)
-		args = append(args, nil)
-		argNum++
 	}
 
 	if !filter.DateRange.End.IsZero() {
 		query += fmt.Sprintf(" AND created_at <= $%d", argNum)
 		args = append(args, filter.DateRange.End)
-		argNum++
-	} else {
-		query += fmt.Sprintf(" AND ($%d::timestamptz IS NULL OR 1=1)", argNum)
-		args = append(args, nil)
 		argNum++
 	}
 
@@ -137,10 +211,18 @@ func (r *testimonialRepository) buildFilterQuery(query string, workspaceID uuid.
 	if filter.SearchQuery != "" {
 		query += fmt.Sprintf(" AND content ILIKE '%%' || $%d || '%%'", argNum)
 		args = append(args, filter.SearchQuery)
-	} else {
-		query += fmt.Sprintf(" AND ($%d::text IS NULL OR 1=1)", argNum)
-		args = append(args, nil)
+		argNum++
 	}
+
+	// Collection methods filter
+	if len(filter.CollectionMethods) > 0 {
+		methodsStr := "{" + strings.Join(mapSlice(filter.CollectionMethods, func(m models.CollectionMethod) string {
+			return string(m)
+		}), ",") + "}"
+		query += fmt.Sprintf(" AND collection_method = ANY($%d::text[])", argNum)
+		args = append(args, methodsStr)
+	}
+
 	return query, args
 }
 
@@ -160,13 +242,16 @@ func (r *testimonialRepository) FetchByWorkspaceID(ctx context.Context, workspac
 	query, args := r.buildFilterQuery(query, workspaceID, filter)
 	query += " ORDER BY created_at DESC"
 
+	// Debug logging
+	log.Printf("Query: %s", query)
+	log.Printf("Args: %+v", args)
+
 	// Execute the query
 	rows, err := db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("error querying testimonials: %w", err)
 	}
 	defer rows.Close()
-
 	// Rest of the function remains the same...
 	var testimonials []models.Testimonial
 	for rows.Next() {
@@ -216,9 +301,16 @@ func (r *testimonialRepository) FetchByWorkspaceID(ctx context.Context, workspac
 		}
 		testimonials = append(testimonials, t)
 	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating testimonial rows: %w", err)
+	}
+
 	if testimonials == nil {
 		testimonials = []models.Testimonial{}
 	}
+
+	log.Printf("Found %d testimonials", len(testimonials))
 	return testimonials, nil
 }
 
@@ -510,25 +602,151 @@ func (r *testimonialRepository) Upsert(ctx context.Context, testimonial models.T
 // 	return &testimonial, nil
 // }
 
+// func (r *testimonialRepository) FetchByID(ctx context.Context, id uuid.UUID, db DB) (*models.Testimonial, error) {
+// 	query := `
+//         SELECT
+//             t.*,
+//             (
+//                 SELECT json_agg(a.*)
+//                 FROM testimonial_analyses a
+//                 WHERE a.testimonial_id = t.id
+//             ) AS analyses,
+//             (
+//                 SELECT json_agg(cm.*)
+//                 FROM competitor_mentions cm
+//                 WHERE cm.testimonial_id = t.id
+//             ) AS competitor_mentions,
+//             (
+//                 SELECT json_agg(j.*)
+//                 FROM ai_jobs j
+//                 WHERE j.testimonial_id = t.id
+//             ) AS ai_jobs
+//         FROM testimonials t
+//         WHERE t.id = $1;
+//     `
+
+// 	var testimonial models.Testimonial
+// 	rows, err := db.QueryContext(ctx, query, id)
+// 	if err != nil {
+// 		if errors.Is(err, sql.ErrNoRows) {
+// 			return nil, fmt.Errorf("testimonial with ID %s not found", id)
+// 		}
+// 		return nil, fmt.Errorf("error fetching testimonial: %w", err)
+// 	}
+// 	defer rows.Close()
+
+// 	if !rows.Next() {
+// 		return nil, fmt.Errorf("testimonial with ID %s not found", id)
+// 	}
+
+// 	// Scan the testimonial data and related analysis
+// 	var analysesJSON, competitorMentionsJSON, aiJobsJSON sql.NullString
+
+// 	err = rows.Scan(
+// 		&testimonial.ID, &testimonial.WorkspaceID, &testimonial.CustomerProfileID,
+// 		&testimonial.TestimonialType, &testimonial.Format, &testimonial.Status, &testimonial.Language,
+// 		&testimonial.Title, &testimonial.Summary, &testimonial.Content, &testimonial.Transcript, &testimonial.MediaURLs,
+// 		&testimonial.Rating, &testimonial.MediaURL, &testimonial.MediaDuration, &testimonial.ThumbnailURL,
+// 		&testimonial.AdditionalMedia, &testimonial.CustomFormatting, &testimonial.ProductContext, &testimonial.PurchaseContext, &testimonial.ExperienceContext,
+// 		&testimonial.CollectionMethod, // New fields
+// 		&testimonial.VerificationMethod, &testimonial.VerificationData, &testimonial.VerificationStatus,
+// 		&testimonial.VerifiedAt, &testimonial.AuthenticityScore, &testimonial.SourceData,
+// 		&testimonial.Published, &testimonial.PublishedAt, &testimonial.ScheduledPublishAt,
+// 		&testimonial.Tags, &testimonial.Categories, &testimonial.CustomFields,
+// 		&testimonial.ViewCount, &testimonial.ShareCount, &testimonial.ConversionCount,
+// 		&testimonial.EngagementMetrics, &testimonial.CreatedAt, &testimonial.UpdatedAt,
+// 		&analysesJSON, &competitorMentionsJSON, &aiJobsJSON,
+// 	)
+
+// 	if err != nil {
+// 		return nil, fmt.Errorf("error scanning testimonial data: %w", err)
+// 	}
+
+// 	// Parse testimonial analyses
+// 	if analysesJSON.Valid && analysesJSON.String != "" && analysesJSON.String != "null" {
+// 		var analyses []models.TestimonialAnalysis
+// 		if err := json.Unmarshal([]byte(analysesJSON.String), &analyses); err != nil {
+// 			return nil, fmt.Errorf("error unmarshalling analyses data: %w", err)
+// 		}
+// 		testimonial.Analyses = analyses
+// 	}
+
+// 	// Parse competitor mentions
+// 	if competitorMentionsJSON.Valid && competitorMentionsJSON.String != "" && competitorMentionsJSON.String != "null" {
+// 		var mentions []models.CompetitorMention
+// 		if err := json.Unmarshal([]byte(competitorMentionsJSON.String), &mentions); err != nil {
+// 			return nil, fmt.Errorf("error unmarshalling competitor mentions: %w", err)
+// 		}
+// 		testimonial.CompetitorMentions = mentions
+// 	}
+
+// 	// Parse AI jobs
+// 	if aiJobsJSON.Valid && aiJobsJSON.String != "" && aiJobsJSON.String != "null" {
+// 		var jobs []models.AIJob
+// 		if err := json.Unmarshal([]byte(aiJobsJSON.String), &jobs); err != nil {
+// 			return nil, fmt.Errorf("error unmarshalling AI jobs: %w", err)
+// 		}
+// 		testimonial.AIJobs = jobs
+// 	}
+
+// 	// If customer profile ID exists, fetch the customer profile
+// 	if testimonial.CustomerProfileID != nil {
+// 		// This would be an additional query, or ideally part of a repository method
+// 		// customerProfile, err := r.customerProfileRepository.FetchByID(ctx, *testimonial.CustomerProfileID, db)
+// 		// if err == nil {
+// 		//     testimonial.CustomerProfile = customerProfile
+// 		// }
+// 	}
+
+// 	return &testimonial, nil
+// }
+
 func (r *testimonialRepository) FetchByID(ctx context.Context, id uuid.UUID, db DB) (*models.Testimonial, error) {
 	query := `
         SELECT 
-            t.*,
-            (
-                SELECT json_agg(a.*)
-                FROM testimonial_analyses a
-                WHERE a.testimonial_id = t.id
-            ) AS analyses,
-            (
-                SELECT json_agg(cm.*)
-                FROM competitor_mentions cm
-                WHERE cm.testimonial_id = t.id
-            ) AS competitor_mentions,
-            (
-                SELECT json_agg(j.*)
-                FROM ai_jobs j
-                WHERE j.testimonial_id = t.id
-            ) AS ai_jobs
+            t.id,
+            t.workspace_id,
+            t.customer_profile_id,
+            t.testimonial_type,
+            t.format,
+            t.status,
+            t.language,
+            t.title,
+            t.summary,
+            t.content,
+            t.transcript,
+            t.media_urls,
+            t.rating,
+            t.media_url,
+            t.media_duration,
+            t.thumbnail_url,
+            t.additional_media,
+            t.custom_formatting,
+            t.product_context,
+            t.purchase_context,
+            t.experience_context,
+            t.collection_method,
+            t.verification_method,
+            t.verification_data,
+            t.verification_status,
+            t.verified_at,
+            t.authenticity_score,
+            t.source_data,
+            t.published,
+            t.published_at,
+            t.scheduled_publish_at,
+            t.tags,
+            t.categories,
+            t.custom_fields,
+            t.view_count,
+            t.share_count,
+            t.conversion_count,
+            t.engagement_metrics,
+            t.created_at,
+            t.updated_at,
+            (SELECT json_agg(a.*) FROM testimonial_analyses a WHERE a.testimonial_id = t.id) AS analyses,
+            (SELECT json_agg(cm.*) FROM competitor_mentions cm WHERE cm.testimonial_id = t.id) AS competitor_mentions,
+            (SELECT json_agg(j.*) FROM ai_jobs j WHERE j.testimonial_id = t.id) AS ai_jobs
         FROM testimonials t
         WHERE t.id = $1;
     `
@@ -536,9 +754,6 @@ func (r *testimonialRepository) FetchByID(ctx context.Context, id uuid.UUID, db 
 	var testimonial models.Testimonial
 	rows, err := db.QueryContext(ctx, query, id)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("testimonial with ID %s not found", id)
-		}
 		return nil, fmt.Errorf("error fetching testimonial: %w", err)
 	}
 	defer rows.Close()
@@ -547,30 +762,105 @@ func (r *testimonialRepository) FetchByID(ctx context.Context, id uuid.UUID, db 
 		return nil, fmt.Errorf("testimonial with ID %s not found", id)
 	}
 
-	// Scan the testimonial data and related analysis
+	// Let's first verify the column order matches what we expect
+	columns, err := rows.Columns()
+	if err != nil {
+		return nil, fmt.Errorf("error getting columns: %w", err)
+	}
+
+	fmt.Printf("\n=== Columns returned from query ===\n")
+	for i, col := range columns {
+		fmt.Printf("Column %d: %s\n", i, col)
+	}
+	fmt.Printf("Total columns: %d\n\n", len(columns))
+
+	// Now let's scan with the exact order we've specified in the query
 	var analysesJSON, competitorMentionsJSON, aiJobsJSON sql.NullString
 
 	err = rows.Scan(
-		&testimonial.ID, &testimonial.WorkspaceID, &testimonial.CustomerProfileID,
-		&testimonial.TestimonialType, &testimonial.Format, &testimonial.Status, &testimonial.Language,
-		&testimonial.Title, &testimonial.Summary, &testimonial.Content, &testimonial.Transcript, &testimonial.MediaURLs,
-		&testimonial.Rating, &testimonial.MediaURL, &testimonial.MediaDuration, &testimonial.ThumbnailURL,
-		&testimonial.AdditionalMedia, &testimonial.CustomFormatting, &testimonial.ProductContext, &testimonial.PurchaseContext, &testimonial.ExperienceContext,
-		&testimonial.CollectionMethod, &testimonial.TriggerSource, &testimonial.TriggerData, // New fields
-		&testimonial.VerificationMethod, &testimonial.VerificationData, &testimonial.VerificationStatus,
-		&testimonial.VerifiedAt, &testimonial.AuthenticityScore, &testimonial.SourceData,
-		&testimonial.Published, &testimonial.PublishedAt, &testimonial.ScheduledPublishAt,
-		&testimonial.Tags, &testimonial.Categories, &testimonial.CustomFields,
-		&testimonial.ViewCount, &testimonial.ShareCount, &testimonial.ConversionCount,
-		&testimonial.EngagementMetrics, &testimonial.CreatedAt, &testimonial.UpdatedAt,
-		&analysesJSON, &competitorMentionsJSON, &aiJobsJSON,
+		&testimonial.ID,                // 0: id
+		&testimonial.WorkspaceID,       // 1: workspace_id
+		&testimonial.CustomerProfileID, // 2: customer_profile_id
+		&testimonial.TestimonialType,   // 3: testimonial_type
+		&testimonial.Format,            // 4: format
+		&testimonial.Status,            // 5: status
+		&testimonial.Language,          // 6: language
+		&testimonial.Title,             // 7: title
+		&testimonial.Summary,           // 8: summary
+		&testimonial.Content,           // 9: content
+		&testimonial.Transcript,        // 10: transcript
+		&testimonial.MediaURLs,         // 11: media_urls
+		&testimonial.Rating,            // 12: rating
+		&testimonial.MediaURL,          // 13: media_url
+		&testimonial.MediaDuration,     // 14: media_duration
+		&testimonial.ThumbnailURL,      // 15: thumbnail_url
+		&testimonial.AdditionalMedia,   // 16: additional_media
+		&testimonial.CustomFormatting,  // 17: custom_formatting
+		&testimonial.ProductContext,    // 18: product_context
+		&testimonial.PurchaseContext,   // 19: purchase_context
+		&testimonial.ExperienceContext, // 20: experience_context
+		&testimonial.CollectionMethod,  // 21: collection_method
+		// &testimonial.TriggerSource,      // 22: trigger_source
+		// &testimonial.TriggerData,        // 23: trigger_data
+		&testimonial.VerificationMethod, // 24: verification_method
+		&testimonial.VerificationData,   // 25: verification_data
+		&testimonial.VerificationStatus, // 26: verification_status
+		&testimonial.VerifiedAt,         // 27: verified_at
+		&testimonial.AuthenticityScore,  // 28: authenticity_score
+		&testimonial.SourceData,         // 29: source_data
+		&testimonial.Published,          // 30: published
+		&testimonial.PublishedAt,        // 31: published_at
+		&testimonial.ScheduledPublishAt, // 32: scheduled_publish_at
+		&testimonial.Tags,               // 33: tags
+		&testimonial.Categories,         // 34: categories
+		&testimonial.CustomFields,       // 35: custom_fields
+		&testimonial.ViewCount,          // 36: view_count
+		&testimonial.ShareCount,         // 37: share_count
+		&testimonial.ConversionCount,    // 38: conversion_count
+		&testimonial.EngagementMetrics,  // 39: engagement_metrics
+		&testimonial.CreatedAt,          // 40: created_at
+		&testimonial.UpdatedAt,          // 41: updated_at
+		&analysesJSON,                   // 42: analyses (JSON aggregation)
+		&competitorMentionsJSON,         // 43: competitor_mentions (JSON aggregation)
+		&aiJobsJSON,                     // 44: ai_jobs (JSON aggregation)
 	)
 
 	if err != nil {
+		// Let's try to identify which column is causing the issue
+		// Create a slice to scan individual columns for debugging
+		values := make([]interface{}, len(columns))
+		for i := range values {
+			values[i] = new(interface{})
+		}
+
+		// Rerun the query for debugging
+		rows2, err := db.QueryContext(ctx, query, id)
+		if err != nil {
+			return nil, fmt.Errorf("error re-fetching for debug: %w", err)
+		}
+		defer rows2.Close()
+
+		if !rows2.Next() {
+			return nil, fmt.Errorf("testimonial with ID %s not found on debug fetch", id)
+		}
+
+		// Scan all values as generic interfaces
+		err = rows2.Scan(values...)
+		if err != nil {
+			return nil, fmt.Errorf("error scanning generic values: %w", err)
+		}
+
+		// Print out the actual values and their types
+		fmt.Printf("\n=== Column values and types ===\n")
+		for i, col := range columns {
+			value := *(values[i].(*interface{}))
+			fmt.Printf("Column %d: %s = %v (type: %T)\n", i, col, value, value)
+		}
+
 		return nil, fmt.Errorf("error scanning testimonial data: %w", err)
 	}
 
-	// Parse testimonial analyses
+	// Parse JSON fields
 	if analysesJSON.Valid && analysesJSON.String != "" && analysesJSON.String != "null" {
 		var analyses []models.TestimonialAnalysis
 		if err := json.Unmarshal([]byte(analysesJSON.String), &analyses); err != nil {
@@ -579,7 +869,6 @@ func (r *testimonialRepository) FetchByID(ctx context.Context, id uuid.UUID, db 
 		testimonial.Analyses = analyses
 	}
 
-	// Parse competitor mentions
 	if competitorMentionsJSON.Valid && competitorMentionsJSON.String != "" && competitorMentionsJSON.String != "null" {
 		var mentions []models.CompetitorMention
 		if err := json.Unmarshal([]byte(competitorMentionsJSON.String), &mentions); err != nil {
@@ -588,22 +877,12 @@ func (r *testimonialRepository) FetchByID(ctx context.Context, id uuid.UUID, db 
 		testimonial.CompetitorMentions = mentions
 	}
 
-	// Parse AI jobs
 	if aiJobsJSON.Valid && aiJobsJSON.String != "" && aiJobsJSON.String != "null" {
 		var jobs []models.AIJob
 		if err := json.Unmarshal([]byte(aiJobsJSON.String), &jobs); err != nil {
 			return nil, fmt.Errorf("error unmarshalling AI jobs: %w", err)
 		}
 		testimonial.AIJobs = jobs
-	}
-
-	// If customer profile ID exists, fetch the customer profile
-	if testimonial.CustomerProfileID != nil {
-		// This would be an additional query, or ideally part of a repository method
-		// customerProfile, err := r.customerProfileRepository.FetchByID(ctx, *testimonial.CustomerProfileID, db)
-		// if err == nil {
-		//     testimonial.CustomerProfile = customerProfile
-		// }
 	}
 
 	return &testimonial, nil
@@ -646,19 +925,6 @@ func (r *testimonialRepository) FetchByCustomerEmail(ctx context.Context, worksp
 }
 
 func (r *testimonialRepository) CountByWorkspaceID(ctx context.Context, workspaceID uuid.UUID, filter models.TestimonialFilter, db DB) (int, error) {
-	// query := `
-	// 	SELECT COUNT(*) FROM testimonials
-	// 	WHERE workspace_id = $1
-	// 	AND ($2::text[] IS NULL OR type = ANY($2))
-	// 	AND ($3::text[] IS NULL OR status = ANY($3))
-	// 	AND ($4::int IS NULL OR rating >= $4)
-	// 	AND ($5::int IS NULL OR rating <= $5)
-	// 	AND ($6::text[] IS NULL OR tags @> $6)
-	// 	AND ($7::text[] IS NULL OR categories @> $7)
-	// 	AND ($8::timestamptz IS NULL OR created_at >= $8)
-	// 	AND ($9::timestamptz IS NULL OR created_at <= $9)
-	// 	AND ($10::text IS NULL OR content ILIKE '%' || $10 || '%')
-	// `
 
 	query := `
 	    SELECT COUNT(*) FROM testimonials
@@ -667,18 +933,6 @@ func (r *testimonialRepository) CountByWorkspaceID(ctx context.Context, workspac
 	query, args := r.buildFilterQuery(query, workspaceID, filter)
 
 	var count int
-	// err := db.QueryRowContext(ctx, query,
-	// 	workspaceID,
-	// 	filter.Types,
-	// 	filter.Statuses,
-	// 	filter.MinRating,
-	// 	filter.MaxRating,
-	// 	filter.Tags,
-	// 	filter.Categories,
-	// 	filter.DateRange.Start,
-	// 	filter.DateRange.End,
-	// 	filter.SearchQuery,
-	// ).Scan(&count)
 	err := db.QueryRowContext(ctx, query, args...).Scan(&count)
 
 	if err != nil {

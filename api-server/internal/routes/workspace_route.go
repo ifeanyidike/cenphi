@@ -8,13 +8,20 @@ import (
 
 func RegisterWorkspaceRoutes(r chi.Router, controller controllers.WorkspaceController, authMiddleware *middleware.AuthMiddleware) {
 	r.Route("/workspaces", func(r chi.Router) {
-		r.Group(func(r chi.Router) {
-			r.Use(authMiddleware.VerifyToken)
-			r.Get("/", controller.GetWorkspace)
-			r.Get("/{id}/testimonials", controller.GetTestimonialsByWorkspaceID)
-			r.Post("/create", controller.CreateWorkspace)
-			r.Put("/{id}", controller.UpdateWorkspace)
-			r.Delete("/{id}", controller.DeleteWorkspace)
+		// Apply auth middleware to all workspace routes
+		r.Use(authMiddleware.VerifyToken)
+
+		// Workspace CRUD operations
+		r.Post("/", controller.CreateWorkspace)       // Create a new workspace
+		r.Get("/", controller.GetWorkspace)           // Get all workspaces for the user
+		r.Get("/{id}", controller.GetWorkspace)       // Get a specific workspace
+		r.Put("/{id}", controller.UpdateWorkspace)    // Update a workspace
+		r.Delete("/{id}", controller.DeleteWorkspace) // Delete a workspace
+
+		// Testimonial operations for a workspace
+		r.Route("/{workspaceID}/testimonials", func(r chi.Router) {
+			r.Get("/", controller.GetTestimonialsByWorkspaceID)  // Get all testimonials for a workspace
+			r.Get("/{testimonialID}", controller.GetTestimonial) // Get a specific testimonial within a workspace
 		})
 	})
 }
