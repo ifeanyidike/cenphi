@@ -66,6 +66,10 @@ services:
       - dbdata:/var/lib/postgresql/data
       - ./init_test_db.sql:/docker-entrypoint-initdb.d/init_test_db.sql
 
+  # cenphidb:
+  #   image: busybox
+  #   command: ["tail", "-f", "/dev/null"]
+
 volumes:
   dbdata:
     name: cenphi_dbdata

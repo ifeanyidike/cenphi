@@ -9,8 +9,7 @@ import ImageTestimonial from "../image";
 import VideoTestimonialView from "./VideoTestimonialView";
 
 const TestimonialViewer: React.FC = observer(() => {
-  const { uiManager, testimonialManager } = workspaceHub;
-  const { activeTestimonialType } = uiManager;
+  const { testimonialManager } = workspaceHub;
   const { testimonial } = testimonialManager;
 
   // Render the appropriate viewer based on the testimonial type
@@ -22,7 +21,7 @@ const TestimonialViewer: React.FC = observer(() => {
         </div>
       );
 
-    switch (activeTestimonialType) {
+    switch (testimonial.format) {
       case "video":
         // return <VideoTestimonial testimonial={testimonial} />;
         return <VideoTestimonialView testimonial={testimonial} />;
