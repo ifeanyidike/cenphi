@@ -20,6 +20,7 @@ import (
 type WorkspaceController interface {
 	GetWorkspace(w http.ResponseWriter, r *http.Request)
 	GetTestimonialsByWorkspaceID(w http.ResponseWriter, r *http.Request)
+	GetTestimonial(w http.ResponseWriter, r *http.Request)
 	CreateWorkspace(w http.ResponseWriter, r *http.Request)
 	UpdateWorkspace(w http.ResponseWriter, r *http.Request)
 	DeleteWorkspace(w http.ResponseWriter, r *http.Request)
@@ -197,7 +198,7 @@ func (c *workspaceController) DeleteWorkspace(w http.ResponseWriter, r *http.Req
 }
 
 func (c *workspaceController) GetTestimonialsByWorkspaceID(w http.ResponseWriter, r *http.Request) {
-	idStr := chi.URLParam(r, "id")
+	idStr := chi.URLParam(r, "workspaceID")
 	id, err := uuid.Parse(idStr)
 	if err != nil || id == uuid.Nil {
 		c.logger.Error("invalid workspace ID", zap.String("workspace ID", idStr), zap.Error(err))
@@ -209,6 +210,25 @@ func (c *workspaceController) GetTestimonialsByWorkspaceID(w http.ResponseWriter
 	filters := models.GetFilterFromParam(queryParams)
 
 	testimonials, err := c.testimonialSvc.FetchByWorkspaceID(r.Context(), id, filters)
+	if err != nil {
+		c.logger.Error("failed to get testimonial", zap.String("testimonial ID", id.String()), zap.Error(err))
+		utils.RespondWithError(w, http.StatusNotFound, err.Error())
+		return
+	}
+
+	utils.RespondWithJSON(w, http.StatusOK, testimonials)
+}
+
+func (c *workspaceController) GetTestimonial(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "testimonialID")
+	id, err := uuid.Parse(idStr)
+	if err != nil || id == uuid.Nil {
+		c.logger.Error("invalid testimonial ID", zap.String("testimonial ID", idStr), zap.Error(err))
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid or missing ID")
+		return
+	}
+
+	testimonials, err := c.testimonialSvc.FetchByID(r.Context(), id)
 	if err != nil {
 		c.logger.Error("failed to get testimonial", zap.String("testimonial ID", id.String()), zap.Error(err))
 		utils.RespondWithError(w, http.StatusNotFound, err.Error())
