@@ -81,23 +81,59 @@ export class TestimonialManager {
     this.testimonial = testimonial;
   }
 
+  // async fetchTestimonial(id: string) {
+  //   this.isLoading = true;
+  //   this.error = null;
+
+  //   try {
+  //     await new Promise((resolve) => setTimeout(resolve, 800));
+  //     const mockTestimonial = this.getMockTestimonial(id);
+
+  //     runInAction(() => {
+  //       this.testimonial = mockTestimonial!;
+  //       this.isLoading = false;
+  //     });
+  //   } catch (error) {
+  //     runInAction(() => {
+  //       this.error =
+  //         error instanceof Error ? error.message : "Unknown error occurred";
+  //       this.isLoading = false;
+  //     });
+  //   }
+  // }
+
   async fetchTestimonial(id: string) {
     this.isLoading = true;
-    this.error = null;
-
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      const mockTestimonial = this.getMockTestimonial(id);
+      const workspaceID = this.memberManager.member?.workspace_id;
+      if (!id || !workspaceID) return;
 
-      runInAction(() => {
-        this.testimonial = mockTestimonial!;
-        this.isLoading = false;
+      const url = `${this.workspaceOrchestrator.server}/${workspaceID}/testimonials/${id}`;
+      const { token } = await this.workspaceOrchestrator.getToken();
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
       });
-    } catch (error) {
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log("data", data);
+        runInAction(() => {
+          this.testimonial = data;
+          this.isLoading = false;
+        });
+        return data;
+      }
+
+      throw new Error("Could not get testimonials");
+    } catch (error: any) {
       runInAction(() => {
-        this.error =
-          error instanceof Error ? error.message : "Unknown error occurred";
         this.isLoading = false;
+        console.log("error", error.message);
       });
     }
   }

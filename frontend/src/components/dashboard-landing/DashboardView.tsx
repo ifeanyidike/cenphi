@@ -142,7 +142,7 @@ const DashboardView: React.FC = observer(() => {
       </div>
 
       {/* Main Content Area */}
-      {!hasTestimonials ? <ContentView /> : <EmptyStateView />}
+      {hasTestimonials ? <ContentView /> : <EmptyStateView />}
     </>
   );
 });
