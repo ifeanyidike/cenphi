@@ -74,10 +74,7 @@ export const router = createBrowserRouter([
     path: "/collection-settings",
     element: <TestimonialCollectionSettingsPage />,
   },
-  {
-    path: "/review/:id",
-    element: <TestimonialPage />,
-  },
+
   { element: <BrandGuidePage />, path: "/brand-guide" },
   {
     element: <DashboardProtectedRoute />,
@@ -91,6 +88,18 @@ export const router = createBrowserRouter([
             componentName="Dashboard"
           >
             <TestimonialsDashboard />
+          </ErrorBoundary>
+        ),
+      },
+      {
+        path: "/testimonial/detail/:id",
+        element: (
+          <ErrorBoundary
+            ErrorComponent={DashboardErrorComponent}
+            LoadingComponent={LoadingIndicator}
+            componentName="TestimonialPage"
+          >
+            <TestimonialPage />
           </ErrorBoundary>
         ),
       },

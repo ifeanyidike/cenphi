@@ -15,6 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Testimonial } from "@/types/testimonial";
 import { formatMessageDateIntlShort } from "@/utils/general";
 import { getInitials } from "@/utils/testimonial";
+import { Link } from "react-router-dom";
 
 export const ReviewCard = ({ review }: { review: Testimonial }) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -148,12 +149,8 @@ export const ReviewCard = ({ review }: { review: Testimonial }) => {
             >
               {review.format === "video" && (
                 <div className="relative aspect-video bg-black flex items-center justify-center">
-                  <img
-                    src={
-                      (review as any).media_thumbnail ||
-                      "https://placehold.co/400x225"
-                    }
-                    alt="Video thumbnail"
+                  <video
+                    src={review.media_url || "https://placehold.co/400x225"}
                     className="w-full h-full object-cover opacity-80"
                   />
                   <div className="absolute inset-0 flex items-center justify-center">
@@ -169,6 +166,7 @@ export const ReviewCard = ({ review }: { review: Testimonial }) => {
                   <div className="flex items-center">
                     <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center mr-3">
                       <Volume2 className="h-5 w-5 text-white" />
+                      <audio src={review.media_url} />
                     </div>
                     <div className="flex-1">
                       <div className="mb-1.5">
@@ -188,10 +186,7 @@ export const ReviewCard = ({ review }: { review: Testimonial }) => {
               {review.format === "image" && (
                 <div className="aspect-video bg-gray-100">
                   <img
-                    src={
-                      (review as any).media_url ||
-                      "https://placehold.co/600x225"
-                    }
+                    src={review.media_url || "https://placehold.co/600x225"}
                     alt={`Review by ${review.customer_profile?.name}`}
                     className="w-full h-full object-cover"
                   />
@@ -216,10 +211,13 @@ export const ReviewCard = ({ review }: { review: Testimonial }) => {
             </button>
           </div>
 
-          <button className="flex items-center text-purple-600 font-medium text-sm hover:text-purple-800 transition-colors group">
+          <Link
+            to={`/testimonial/detail/${review.id}`}
+            className="flex items-center text-purple-600 font-medium text-sm hover:text-purple-800 transition-colors group"
+          >
             <span>Details</span>
             <ChevronRight className="h-5 w-5 ml-0.5 group-hover:translate-x-0.5 transition-transform" />
-          </button>
+          </Link>
         </div>
       </div>
     </motion.div>

@@ -13,7 +13,7 @@ export class UIManager {
   currentView: "view" | "analyze" | "enhance" | "convert" | "share" = "view";
   activePanels: Set<string> = new Set(["info"]);
   isDarkMode: boolean = false;
-  activeTestimonialType: ContentFormat = "video";
+  activeTestimonialType: ContentFormat = "text";
   isFullscreen: boolean = false;
 
   // Settings for the various tool panels
