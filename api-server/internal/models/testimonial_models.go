@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/ifeanyidike/cenphi/internal/apperrors"
+	"github.com/lib/pq"
 )
 
 // ---------------------------
@@ -133,14 +134,14 @@ type Testimonial struct {
 	Title      string      `json:"title,omitempty" db:"title"`
 	Summary    string      `json:"summary,omitempty" db:"summary"`
 	Content    string      `json:"content,omitempty" db:"content"`
-	Transcript string      `json:"transcript,omitempty" db:"transcript"`
+	Transcript *string     `json:"transcript,omitempty" db:"transcript"`
 	MediaURLs  StringArray `json:"media_urls,omitempty" db:"media_urls"`
 	Rating     *float32    `json:"rating,omitempty" db:"rating"`
 
 	// Media Metadata
-	MediaURL         string          `json:"media_url,omitempty" db:"media_url"`
-	MediaDuration    int             `json:"media_duration,omitempty" db:"media_duration"`
-	ThumbnailURL     string          `json:"thumbnail_url,omitempty" db:"thumbnail_url"`
+	MediaURL         *string         `json:"media_url,omitempty" db:"media_url"`
+	MediaDuration    *int            `json:"media_duration,omitempty" db:"media_duration"`
+	ThumbnailURL     *string         `json:"thumbnail_url,omitempty" db:"thumbnail_url"`
 	AdditionalMedia  json.RawMessage `json:"additional_media,omitempty" db:"additional_media"`
 	CustomFormatting JSONMap         `json:"custom_formatting" db:"custom_formatting"`
 
@@ -166,9 +167,9 @@ type Testimonial struct {
 	ScheduledPublishAt *time.Time `json:"scheduled_publish_at,omitempty" db:"scheduled_publish_at"`
 
 	// Organization
-	Tags         StringArray `json:"tags,omitempty" db:"tags"`
-	Categories   StringArray `json:"categories,omitempty" db:"categories"`
-	CustomFields JSONMap     `json:"custom_fields,omitempty" db:"custom_fields"`
+	Tags         pq.StringArray `json:"tags,omitempty" db:"tags"`
+	Categories   pq.StringArray `json:"categories,omitempty" db:"categories"`
+	CustomFields JSONMap        `json:"custom_fields,omitempty" db:"custom_fields"`
 
 	// Usage Metrics
 	ViewCount         int     `json:"view_count" db:"view_count"`
@@ -255,8 +256,16 @@ func GetFilterFromParam(queryParams url.Values) TestimonialFilter {
 			filter.MaxRating = maxRating
 		}
 	}
-	filter.Tags = queryParams["tags"]
-	filter.Categories = queryParams["categories"]
+	// filter.Tags = queryParams["tags"]
+	// filter.Categories = queryParams["categories"]
+
+	if tagsStr := queryParams.Get("tags"); tagsStr != "" {
+		filter.Tags = strings.Split(tagsStr, ",")
+	}
+
+	if categoriesStr := queryParams.Get("categories"); categoriesStr != "" {
+		filter.Categories = strings.Split(categoriesStr, ",")
+	}
 
 	if startDateStr := queryParams.Get("startDate"); startDateStr != "" {
 		if startDate, err := time.Parse(time.RFC3339, startDateStr); err == nil {
@@ -295,6 +304,90 @@ func (t *TestimonialType) Scan(value any) error {
 		return fmt.Errorf("cannot scan type %T into TestimonialType", value)
 	}
 	return nil
+}
+
+func (c *CollectionMethod) Scan(value interface{}) error {
+	if value == nil {
+		*c = ""
+		return nil
+	}
+	switch v := value.(type) {
+	case []byte:
+		*c = CollectionMethod(string(v))
+	case string:
+		*c = CollectionMethod(v)
+	default:
+		return fmt.Errorf("cannot scan type %T into CollectionMethod", value)
+	}
+	return nil
+}
+
+func (s *ContentStatus) Scan(value interface{}) error {
+	if value == nil {
+		*s = ""
+		return nil
+	}
+	switch v := value.(type) {
+	case []byte:
+		*s = ContentStatus(string(v))
+	case string:
+		*s = ContentStatus(v)
+	default:
+		return fmt.Errorf("cannot scan type %T into ContentStatus", value)
+	}
+	return nil
+}
+
+func (f *ContentFormat) Scan(value interface{}) error {
+	if value == nil {
+		*f = ""
+		return nil
+	}
+	switch v := value.(type) {
+	case []byte:
+		*f = ContentFormat(string(v))
+	case string:
+		*f = ContentFormat(v)
+	default:
+		return fmt.Errorf("cannot scan type %T into ContentFormat", value)
+	}
+	return nil
+}
+
+func (v *VerificationType) Scan(value interface{}) error {
+	if value == nil {
+		*v = ""
+		return nil
+	}
+	switch v2 := value.(type) {
+	case []byte:
+		*v = VerificationType(string(v2))
+	case string:
+		*v = VerificationType(v2)
+	default:
+		return fmt.Errorf("cannot scan type %T into VerificationType", value)
+	}
+	return nil
+}
+
+func (a *AnalysisType) Scan(value interface{}) error {
+	if value == nil {
+		*a = ""
+		return nil
+	}
+	switch v := value.(type) {
+	case []byte:
+		*a = AnalysisType(string(v))
+	case string:
+		*a = AnalysisType(v)
+	default:
+		return fmt.Errorf("cannot scan type %T into AnalysisType", value)
+	}
+	return nil
+}
+
+func (a AnalysisType) Value() (driver.Value, error) {
+	return string(a), nil
 }
 
 func (t TestimonialType) Value() (driver.Value, error) {
