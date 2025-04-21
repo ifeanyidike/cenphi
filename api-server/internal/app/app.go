@@ -18,7 +18,6 @@ import (
 	"github.com/ifeanyidike/cenphi/pb"
 	"github.com/ifeanyidike/cenphi/pkg/ratelimit"
 	"github.com/redis/go-redis/v9"
-	"golang.org/x/oauth2"
 
 	midware "github.com/ifeanyidike/cenphi/internal/middleware"
 	"go.uber.org/zap"
@@ -50,52 +49,123 @@ func NewApplication(cfg *config.Config, db *sql.DB, redisClient *redis.Client, g
 	if err != nil {
 		log.Fatalf("failed to create auth middleware: %v", err)
 	}
+<<<<<<< HEAD
 
 	// Initialize controllers
-	repo := repositories.NewRepositoryManager(redisClient)
+=======
+	// token := &oauth2.Token{
+	// 	AccessToken:  cfg.Providers.Google.AccessToken,
+	// 	RefreshToken: cfg.Providers.Google.RefreshToken,
+	// 	Expiry:       time.Now().Add(1 * time.Hour),
+	// }
 
+	// initialize repositories
+>>>>>>> origin/master
+	repo := repositories.NewRepositoryManager(redisClient)
 	userRepo := repositories.NewUserRepository(redisClient)
+<<<<<<< HEAD
 	userService := services.NewUserService(userRepo, db)
 	userController := controllers.NewUserController(userService, logger)
 
+=======
+>>>>>>> origin/master
 	teamMemberRepo := repositories.NewTeamMemberRepository(redisClient)
+	testimonialRepo := repositories.NewTestimonialRepository(redisClient)
+	workspaceRepo := repositories.NewWorkspaceRepository(redisClient)
+	customerProfileRepo := repositories.NewCustomerProfileRepository(redisClient)
+	providerRepo := repositories.NewProviderConfigRepository(redisClient)
+
+	// initialize OAuth service
+	oauthService := services.NewOAuthService(
+		redisClient,
+		cfg.Server.BaseURL+"/api/v1/oauth/callback",
+		cfg,
+	)
+
+	// initialize sentiment service
+	sentimentService := services.NewSentimentService(
+		grpcClient,
+		cfg.Services.OpenAI.APIKey,
+		true,
+	)
+
+	// // initialize providers
+	// twitter := providers.NewTwitterProvider(
+	// 	cfg.Providers.Twitter.BearerToken,
+	// 	cfg.Providers.Twitter.Username,
+	// 	cfg.Providers.Twitter.APIKey,
+	// 	cfg.Providers.Twitter.APISecret,
+	// 	customerProfileRepo,
+	// 	db,
+	// )
+	// instagram := providers.NewInstagramProvider(
+	// 	cfg.Providers.Instagram.AccessToken,
+	// 	cfg.Providers.Instagram.UserID,
+	// 	customerProfileRepo,
+	// 	db,
+	// )
+	facebook := providers.NewFacebookProvider(
+		cfg.Providers.Facebook.ClientID,
+		cfg.Providers.Facebook.ClientSecret,
+		oauthService,
+		sentimentService,
+		customerProfileRepo,
+		db,
+	)
+	// trustpilot := providers.NewTrustpilotProvider(
+	// 	cfg.Providers.Trustpilot.APIKey,
+	// 	cfg.Providers.Trustpilot.BusinessID,
+	// 	customerProfileRepo,
+	// 	db,
+	// )
+	// yelp := providers.NewYelpProvider(
+	// 	cfg.Providers.Yelp.APIKey,
+	// 	cfg.Providers.Yelp.BusinessID,
+	// 	customerProfileRepo,
+	// 	db,
+	// )
+	// google := providers.NewGoogleProvider(
+	// 	cfg.Providers.Google.ClientID,
+	// 	cfg.Providers.Google.ClientSecret,
+	// 	cfg.Providers.Google.AccountName,
+	// 	token,
+	// 	customerProfileRepo,
+	// 	db,
+	// )
+
+	// providers := []providers.Provider{twitter, instagram, facebook, trustpilot, yelp, google}
+	providers := []providers.Provider{facebook}
+
+	// initialize services
+	userService := services.NewUserService(userRepo, db)
 	teamMemberService := services.NewTeamMemberService(teamMemberRepo, db)
+<<<<<<< HEAD
 	teamMemberController := controllers.NewTeamMemberController(teamMemberService, userService, logger)
 
+=======
+>>>>>>> origin/master
 	onboardingService := services.NewOnboardingService(repo, db)
-	onboardingController := controllers.NewOnboardingController(onboardingService, logger)
-
-	healthController := controllers.NewHealthController(logger)
-	swaggerController := controllers.NewSwaggerController()
-
-	twitter := providers.NewTwitterProvider(cfg.Providers.Twitter.BearerToken, cfg.Providers.Twitter.Username, cfg.Providers.Twitter.APIKey, cfg.Providers.Twitter.APISecret)
-	instagram := providers.NewInstagramProvider(cfg.Providers.Instagram.AccessToken, cfg.Providers.Instagram.UserID)
-	facebook := providers.NewFacebookProvider(cfg.Providers.Facebook.AccessToken, cfg.Providers.Facebook.PageID)
-	trustpilot := providers.NewTrustpilotProvider(cfg.Providers.Trustpilot.APIKey, cfg.Providers.Trustpilot.BusinessID)
-	yelp := providers.NewYelpProvider(cfg.Providers.Yelp.APIKey, cfg.Providers.Yelp.BusinessID)
-
-	token := &oauth2.Token{
-		AccessToken:  cfg.Providers.Google.AccessToken,
-		RefreshToken: cfg.Providers.Google.RefreshToken,
-		Expiry:       time.Now().Add(1 * time.Hour),
-	}
-	google := providers.NewGoogleProvider(cfg.Providers.Google.ClientID, cfg.Providers.Google.ClientSecret, cfg.Providers.Google.AccountName, token)
-
-	providers := []providers.Provider{
-		twitter, instagram, facebook, trustpilot, yelp, google,
-	}
-	testimonialRepo := repositories.NewTestimonialRepository(redisClient, db)
 	testimonialService := services.NewTestimonialService(testimonialRepo, db)
-
-	// Create service
+	workspaceService := services.NewWorkspaceService(workspaceRepo, db)
 	providerService := services.NewProviderService(
 		providers,
 		ratelimit.NewRedisLimiter(redisClient),
-		repositories.NewTestimonialRepository(redisClient, db),
+		testimonialRepo,
+		customerProfileRepo,
+		providerRepo,
+		oauthService,
+		sentimentService,
 		db,
 	)
 
+	// initialize controllers
+	userController := controllers.NewUserController(userService, logger)
+	teamMemberController := controllers.NewTeamMemberController(teamMemberService, userService, logger)
+	onboardingController := controllers.NewOnboardingController(onboardingService, logger)
+	healthController := controllers.NewHealthController(logger)
+	swaggerController := controllers.NewSwaggerController()
 	testimonialController := controllers.NewTestimonialController(testimonialService, *providerService, logger)
+	workspaceController := controllers.NewWorkspaceController(workspaceService, testimonialService, logger)
 
 	workspaceRepo := repositories.NewWorkspaceRepository(redisClient)
 	workspaceService := services.NewWorkspaceService(workspaceRepo, db)

@@ -4,9 +4,9 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { ViewToggle } from "@/components/custom/dashboard/ViewToggle";
 import { ReviewCardView } from "./ReviewCardView";
 import { ReviewListView } from "./ReviewListView";
-import { Review } from "@/types/types";
+import { Testimonial } from "@/types/testimonial";
 
-export const CustomerReviews = ({ reviews }: { reviews: Review[] }) => {
+export const CustomerReviews = ({ testimonials }: { testimonials: Testimonial[] }) => {
   const [viewMode, setViewMode] = useState("card"); 
 
   return (
@@ -29,9 +29,9 @@ export const CustomerReviews = ({ reviews }: { reviews: Review[] }) => {
       </CardHeader>
       <CardContent className="p-6">
         {viewMode === "card" ? (
-          <ReviewCardView reviews={reviews} />
+          <ReviewCardView testimonials={testimonials} />
         ) : (
-          <ReviewListView reviews={reviews} />
+          <ReviewListView testimonials={testimonials} />
         )}
       </CardContent>
     </Card>

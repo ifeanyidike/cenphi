@@ -9,6 +9,8 @@ import FeaturesColumn from "./FeaturesColumn";
 import Form from "./Form";
 import { observer } from "mobx-react-lite";
 import { workspaceHub } from "@/repo/workspace_hub";
+import { auth } from "@/config/firebase";
+import { notification } from "antd";
 
 const Onboarding: React.FC = observer(() => {
   const navigate = useNavigate();
@@ -35,8 +37,14 @@ const Onboarding: React.FC = observer(() => {
 
   useEffect(() => {
     if (formCompleted) {
+      console.log("Form completed, redirecting soon...");
       const timer = setTimeout(() => {
-        navigate("/dashboard");
+        console.log("Executing redirect to dashboard");
+        // Pass state to indicate we're coming from onboarding
+        navigate("/dashboard", {
+          replace: true,
+          state: { from: "onboarding" },
+        });
       }, 2000);
       return () => clearTimeout(timer);
     }
@@ -93,6 +101,16 @@ const Onboarding: React.FC = observer(() => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const user = auth.currentUser;
+
+    if (!user?.emailVerified) {
+      notification.error({
+        message: "Email verification error",
+        description:
+          "Your email is not verified. Please verify your email or contact the admin to get started.",
+      });
+      return;
+    }
 
     if (!validateForm(currentStep)) return;
 
@@ -104,27 +122,39 @@ const Onboarding: React.FC = observer(() => {
     setIsSubmitting(true);
 
     try {
-      // Simulate API call
-      //   await new Promise((resolve) => setTimeout(resolve, 1500));
       const updates = {
         name: formData.businessName,
         website_url: formData.websiteUrl,
         industry: formData.industry,
+        // Include company size if your API supports it
+        company_size: formData.companySize,
       };
-      await workspaceHub.update(updates);
-      setFormCompleted(true);
+
+      console.log("Updating workspace with:", updates);
+      const success = await workspaceHub.update(updates);
+
+      console.log("Workspace update result:", success);
+      if (success) {
+        // Clear the cached member data to force a refresh on next load
+        workspaceHub.memberManager.member = null;
+        setFormCompleted(true);
+        console.log("Form marked as completed");
+      } else {
+        notification.error({
+          message: "Error",
+          description: "Failed to update workspace. Please try again.",
+        });
+      }
     } catch (error) {
       console.error("Onboarding error:", error);
+      notification.error({
+        message: "Error",
+        description: "An error occurred while completing setup.",
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
-
-  //   const goToNextStep = () => {
-  //     if (validateForm(currentStep)) {
-  //       setCurrentStep(currentStep + 1);
-  //     }
-  //   };
 
   const goToPreviousStep = () => {
     if (currentStep > 1) {
@@ -182,17 +212,6 @@ const Onboarding: React.FC = observer(() => {
         </div>
 
         <div className="container mx-auto px-4 pt-8 pb-16 relative z-10">
-          {/* <header className="flex justify-center mb-8">
-            <div className="relative text-3xl font-playball">
-              Cenphi
-              <img
-                src="/api/placeholder/160/50"
-                alt="Cenphi.io"
-                className="h-12 w-auto"
-              />
-            </div>
-          </header> */}
-
           {formCompleted ? (
             <div className="max-w-lg mx-auto text-center bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 p-8 animate-fadeIn">
               <div className="h-20 w-20 bg-green-100 rounded-full mx-auto flex items-center justify-center mb-6">

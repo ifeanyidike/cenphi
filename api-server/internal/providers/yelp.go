@@ -58,21 +58,21 @@ func (y *YelpProvider) Fetch(ctx context.Context) ([]models.Testimonial, error) 
 	}
 
 	var testimonials []models.Testimonial
-	for _, review := range result.Reviews {
-		testimonials = append(testimonials, models.Testimonial{
-			Content:          review.Text,
-			Rating:           &review.Rating,
-			CustomerName:     review.User.Name,
-			CreatedAt:        review.TimeCreated,
-			Type:             models.TestimonialTypeText,
-			CollectionMethod: models.CollectionAPI,
-			SourceData: map[string]interface{}{
-				"yelp_review_id":   review.ID,
-				"source":           y.Name(),
-				"yelp_business_id": y.businessID,
-			},
-		})
-	}
+	// for _, review := range result.Reviews {
+	// 	testimonials = append(testimonials, models.Testimonial{
+	// 		Content:          review.Text,
+	// 		Rating:           &review.Rating,
+	// 		CustomerName:     review.User.Name,
+	// 		CreatedAt:        review.TimeCreated,
+	// 		Type:             models.TestimonialTypeText,
+	// 		CollectionMethod: models.CollectionAPI,
+	// 		SourceData: map[string]interface{}{
+	// 			"yelp_review_id":   review.ID,
+	// 			"source":           y.Name(),
+	// 			"yelp_business_id": y.businessID,
+	// 		},
+	// 	})
+	// }
 
 	return testimonials, nil
 }

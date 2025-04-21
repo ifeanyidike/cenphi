@@ -37,7 +37,11 @@ type testimonialRepository struct {
 	*BaseRepository[models.Testimonial]
 }
 
+<<<<<<< HEAD
 func NewTestimonialRepository(redis *redis.Client, db DB) TestimonialRepository {
+=======
+func NewTestimonialRepository(redis *redis.Client) TestimonialRepository {
+>>>>>>> origin/master
 	return &testimonialRepository{
 		BaseRepository: NewBaseRepository[models.Testimonial](redis, "testimonials"),
 	}
@@ -58,7 +62,11 @@ func (r *testimonialRepository) buildFilterQuery(query string, workspaceID uuid.
 		typesStr := "{" + strings.Join(mapSlice(filter.Types, func(t models.TestimonialType) string {
 			return string(t)
 		}), ",") + "}"
+<<<<<<< HEAD
 		query += fmt.Sprintf(" AND type = ANY($%d::text[])", argNum)
+=======
+		query += fmt.Sprintf(" AND testimonial_type = ANY($%d::text[])", argNum)
+>>>>>>> origin/master
 		args = append(args, typesStr)
 		argNum++
 	} else {
@@ -144,11 +152,26 @@ func (r *testimonialRepository) buildFilterQuery(query string, workspaceID uuid.
 }
 
 func (r *testimonialRepository) FetchByWorkspaceID(ctx context.Context, workspaceID uuid.UUID, filter models.TestimonialFilter, db DB) ([]models.Testimonial, error) {
+<<<<<<< HEAD
 
 	query := `
 	    SELECT * FROM testimonials
 	    WHERE workspace_id = $1
 	`
+=======
+	query := `
+		SELECT 
+		  id, workspace_id, customer_profile_id, testimonial_type, format, status, language,
+		  title, summary, content, transcript, media_urls, rating, media_url, media_duration,
+		  thumbnail_url, additional_media, product_context, experience_context,
+		  collection_method, verification_method, verification_data, verification_status,
+	  	  verified_at, authenticity_score, source_data, published, published_at, scheduled_publish_at,
+	  	  tags, categories, custom_fields, view_count, share_count, conversion_count, engagement_metrics,
+	  	  created_at, updated_at
+		FROM testimonials
+		WHERE workspace_id = $1
+`
+>>>>>>> origin/master
 	query, args := r.buildFilterQuery(query, workspaceID, filter)
 	query += " ORDER BY created_at DESC"
 
@@ -164,13 +187,44 @@ func (r *testimonialRepository) FetchByWorkspaceID(ctx context.Context, workspac
 	for rows.Next() {
 		var t models.Testimonial
 		if err := rows.Scan(
-			&t.ID, &t.WorkspaceID, &t.Type, &t.Status, &t.Content, &t.MediaURLs,
-			&t.Rating, &t.Language, &t.CustomerName, &t.CustomerEmail, &t.CustomerTitle,
-			&t.CustomerCompany, &t.CustomerLocation, &t.CustomerAvatarURL,
-			&t.CustomerMetadata, &t.CollectionMethod, &t.VerificationMethod,
-			&t.VerificationData, &t.VerifiedAt, &t.SourceData, &t.Tags, &t.Categories,
-			&t.CustomFields, &t.ViewCount, &t.ShareCount, &t.ConversionCount,
-			&t.EngagementMetrics, &t.CreatedAt, &t.UpdatedAt,
+			&t.ID,
+			&t.WorkspaceID,
+			&t.CustomerProfileID,
+			&t.TestimonialType,
+			&t.Format,
+			&t.Status,
+			&t.Language,
+			&t.Title,
+			&t.Summary,
+			&t.Content,
+			&t.Transcript,
+			&t.MediaURLs,
+			&t.Rating,
+			&t.MediaURL,
+			&t.MediaDuration,
+			&t.ThumbnailURL,
+			&t.AdditionalMedia,
+			&t.ProductContext,
+			&t.ExperienceContext,
+			&t.CollectionMethod,
+			&t.VerificationMethod,
+			&t.VerificationData,
+			&t.VerificationStatus,
+			&t.VerifiedAt,
+			&t.AuthenticityScore,
+			&t.SourceData,
+			&t.Published,
+			&t.PublishedAt,
+			&t.ScheduledPublishAt,
+			&t.Tags,
+			&t.Categories,
+			&t.CustomFields,
+			&t.ViewCount,
+			&t.ShareCount,
+			&t.ConversionCount,
+			&t.EngagementMetrics,
+			&t.CreatedAt,
+			&t.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("error scanning testimonial row: %w", err)
 		}
@@ -210,22 +264,59 @@ func (r *testimonialRepository) UpdateStatus(ctx context.Context, id uuid.UUID, 
 func (r *testimonialRepository) Create(ctx context.Context, t *models.Testimonial, db DB) error {
 	query := `
 	INSERT INTO testimonials (
-		workspace_id, type, status, content, media_urls, rating, language,
-		customer_name, customer_email, customer_title, customer_company,
-		customer_location, customer_avatar_url, customer_metadata,
-		collection_method, verification_method, verification_data, verified_at,
-		source_data, tags, categories, custom_fields
+		workspace_id, customer_profile_id, testimonial_type, format, status, language,
+		title, summary, content, transcript, media_urls, rating, media_url, media_duration,
+		thumbnail_url, additional_media, product_context, purchase_context, experience_context,
+		collection_method, verification_method, verification_data, verification_status, verified_at,
+		authenticity_score, source_data, published, published_at, scheduled_publish_at,
+		tags, categories, custom_fields, view_count, share_count, conversion_count, engagement_metrics
 	) VALUES (
-		$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
-		$18, $19, $20, $21, $22
-	) RETURNING id, created_at, updated_at`
+		$1, $2, $3, $4, $5, $6,
+		$7, $8, $9, $10, $11, $12, $13, $14,
+		$15, $16, $17, $18, $19,
+		$20, $21, $22, $23, $24,
+		$25, $26, $27, $28, $29,
+		$30, $31, $32, $33, $34, $35, $36
+	) RETURNING id, created_at, updated_at
+	`
 
 	return db.QueryRowContext(ctx, query,
-		t.WorkspaceID, t.Type, t.Status, t.Content, t.MediaURLs, t.Rating, t.Language,
-		t.CustomerName, t.CustomerEmail, t.CustomerTitle, t.CustomerCompany,
-		t.CustomerLocation, t.CustomerAvatarURL, t.CustomerMetadata,
-		t.CollectionMethod, t.VerificationMethod, t.VerificationData, t.VerifiedAt,
-		t.SourceData, t.Tags, t.Categories, t.CustomFields,
+		t.WorkspaceID,
+		t.CustomerProfileID,
+		t.TestimonialType,
+		t.Format,
+		t.Status,
+		t.Language,
+		t.Title,
+		t.Summary,
+		t.Content,
+		t.Transcript,
+		t.MediaURLs,
+		t.Rating,
+		t.MediaURL,
+		t.MediaDuration,
+		t.ThumbnailURL,
+		t.AdditionalMedia,
+		t.ProductContext,
+		t.PurchaseContext,
+		t.ExperienceContext,
+		t.CollectionMethod,
+		t.VerificationMethod,
+		t.VerificationData,
+		t.VerificationStatus,
+		t.VerifiedAt,
+		t.AuthenticityScore,
+		t.SourceData,
+		t.Published,
+		t.PublishedAt,
+		t.ScheduledPublishAt,
+		t.Tags,
+		t.Categories,
+		t.CustomFields,
+		t.ViewCount,
+		t.ShareCount,
+		t.ConversionCount,
+		t.EngagementMetrics,
 	).Scan(&t.ID, &t.CreatedAt, &t.UpdatedAt)
 }
 
@@ -280,51 +371,107 @@ func (r *testimonialRepository) BatchUpsert(ctx context.Context, testimonials []
 func (r *testimonialRepository) Upsert(ctx context.Context, testimonial models.Testimonial, db DB) error {
 	query := `
 	INSERT INTO testimonials (
+<<<<<<< HEAD
 		workspace_id, type, status, content, media_urls, rating, language,
 		customer_name, customer_email, customer_title, customer_company,
 		customer_location, customer_avatar_url, customer_metadata,
 		collection_method, verification_method, verification_data, verified_at,
 		source_data, tags, categories, custom_fields
+=======
+		workspace_id, customer_profile_id, testimonial_type, format, status, language,
+		title, summary, content, transcript, media_urls, rating, media_url, media_duration,
+		thumbnail_url, additional_media, product_context, purchase_context, experience_context,
+		collection_method, verification_method, verification_data, verification_status, verified_at,
+		authenticity_score, source_data, published, published_at, scheduled_publish_at,
+		tags, categories, custom_fields, view_count, share_count, conversion_count, engagement_metrics
+>>>>>>> origin/master
 	) VALUES (
-		$1, $2, $3, $4, $5, $6, $7, 
-		$8, $9, $10, $11, $12, 
-		$13, $14, $15, 
-		$16, $17, $18, $19, 
-		$20, $21, $22, $23
+		$1, $2, $3, $4, $5, $6,
+		$7, $8, $9, $10, $11, $12, $13, $14,
+		$15, $16, $17, $18, $19,
+		$20, $21, $22, $23, $24,
+		$25, $26, $27, $28, $29,
+		$30, $31, $32, $33, $34, $35, $36
 	)
-	ON CONFLICT (workspace_id, type)
+	ON CONFLICT (workspace_id, customer_profile_id)
 	DO UPDATE SET 
 		status = EXCLUDED.status,
+		title = EXCLUDED.title,
+		summary = EXCLUDED.summary,
 		content = EXCLUDED.content,
+		transcript = EXCLUDED.transcript,
 		media_urls = EXCLUDED.media_urls,
 		rating = EXCLUDED.rating,
-		language = EXCLUDED.language,
-		customer_name = EXCLUDED.customer_name,
-		customer_email = EXCLUDED.customer_email,
-		customer_title = EXCLUDED.customer_title,
-		customer_company = EXCLUDED.customer_company,
-		customer_location = EXCLUDED.customer_location,
-		customer_avatar_url = EXCLUDED.customer_avatar_url,
-		customer_metadata = EXCLUDED.customer_metadata,
+		media_url = EXCLUDED.media_url,
+		media_duration = EXCLUDED.media_duration,
+		thumbnail_url = EXCLUDED.thumbnail_url,
+		additional_media = EXCLUDED.additional_media,
+		product_context = EXCLUDED.product_context,
+		purchase_context = EXCLUDED.purchase_context,
+		experience_context = EXCLUDED.experience_context,
 		collection_method = EXCLUDED.collection_method,
 		verification_method = EXCLUDED.verification_method,
 		verification_data = EXCLUDED.verification_data,
+		verification_status = EXCLUDED.verification_status,
 		verified_at = EXCLUDED.verified_at,
+		authenticity_score = EXCLUDED.authenticity_score,
 		source_data = EXCLUDED.source_data,
+		published = EXCLUDED.published,
+		published_at = EXCLUDED.published_at,
+		scheduled_publish_at = EXCLUDED.scheduled_publish_at,
 		tags = EXCLUDED.tags,
 		categories = EXCLUDED.categories,
+<<<<<<< HEAD
 		custom_fields = EXCLUDED.custom_fields
+=======
+		custom_fields = EXCLUDED.custom_fields,
+		view_count = EXCLUDED.view_count,
+		share_count = EXCLUDED.share_count,
+		conversion_count = EXCLUDED.conversion_count,
+		engagement_metrics = EXCLUDED.engagement_metrics
+>>>>>>> origin/master
 	WHERE testimonials.source_data->>'review_id' IS NOT NULL
 	RETURNING id;
 	`
 	var id string
 
 	err := db.QueryRowContext(ctx, query,
-		testimonial.WorkspaceID, testimonial.Type, testimonial.Status, testimonial.Content, testimonial.MediaURLs, testimonial.Rating, testimonial.Language,
-		testimonial.CustomerName, testimonial.CustomerEmail, testimonial.CustomerTitle, testimonial.CustomerCompany,
-		testimonial.CustomerLocation, testimonial.CustomerAvatarURL, testimonial.CustomerMetadata,
-		testimonial.CollectionMethod, testimonial.VerificationMethod, testimonial.VerificationData, testimonial.VerifiedAt,
-		testimonial.SourceData, testimonial.Tags, testimonial.Categories, testimonial.CustomFields,
+		testimonial.WorkspaceID,
+		testimonial.CustomerProfileID,
+		testimonial.TestimonialType,
+		testimonial.Format,
+		testimonial.Status,
+		testimonial.Language,
+		testimonial.Title,
+		testimonial.Summary,
+		testimonial.Content,
+		testimonial.Transcript,
+		testimonial.MediaURLs,
+		testimonial.Rating,
+		testimonial.MediaURL,
+		testimonial.MediaDuration,
+		testimonial.ThumbnailURL,
+		testimonial.AdditionalMedia,
+		testimonial.ProductContext,
+		testimonial.PurchaseContext,
+		testimonial.ExperienceContext,
+		testimonial.CollectionMethod,
+		testimonial.VerificationMethod,
+		testimonial.VerificationData,
+		testimonial.VerificationStatus,
+		testimonial.VerifiedAt,
+		testimonial.AuthenticityScore,
+		testimonial.SourceData,
+		testimonial.Published,
+		testimonial.PublishedAt,
+		testimonial.ScheduledPublishAt,
+		testimonial.Tags,
+		testimonial.Categories,
+		testimonial.CustomFields,
+		testimonial.ViewCount,
+		testimonial.ShareCount,
+		testimonial.ConversionCount,
+		testimonial.EngagementMetrics,
 	).Scan(&id)
 
 	if err != nil {
@@ -334,10 +481,16 @@ func (r *testimonialRepository) Upsert(ctx context.Context, testimonial models.T
 }
 
 func (r *testimonialRepository) FetchByID(ctx context.Context, id uuid.UUID, db DB) (*models.Testimonial, error) {
+<<<<<<< HEAD
 	// query := `SELECT * FROM testimonials WHERE id = $1`
 	query := `
 		SELECT 
     		t.*,
+=======
+	query := `
+		SELECT 
+    		t.*, 
+>>>>>>> origin/master
     		(
       			SELECT json_agg(sa.*)
       			FROM story_analyses sa
@@ -352,7 +505,11 @@ func (r *testimonialRepository) FetchByID(ctx context.Context, id uuid.UUID, db 
       			SELECT json_agg(apj.*)
       			FROM ai_processing_jobs apj
       			WHERE apj.testimonial_id = t.id
+<<<<<<< HEAD
     			) AS processing_jobs,
+=======
+    		) AS processing_jobs,
+>>>>>>> origin/master
     		(
       			SELECT json_agg(agc.*)
       			FROM ai_generated_content agc
@@ -364,12 +521,23 @@ func (r *testimonialRepository) FetchByID(ctx context.Context, id uuid.UUID, db 
 
 	var testimonial models.Testimonial
 	err := db.QueryRowContext(ctx, query, id).Scan(
+<<<<<<< HEAD
 		&testimonial.ID, &testimonial.WorkspaceID, &testimonial.Type, &testimonial.Status,
 		&testimonial.Content, &testimonial.MediaURLs, &testimonial.Rating, &testimonial.Language,
 		&testimonial.CustomerName, &testimonial.CustomerEmail, &testimonial.CustomerTitle,
 		&testimonial.CustomerCompany, &testimonial.CustomerLocation, &testimonial.CustomerAvatarURL,
 		&testimonial.CustomerMetadata, &testimonial.CollectionMethod, &testimonial.VerificationMethod,
 		&testimonial.VerificationData, &testimonial.VerifiedAt, &testimonial.SourceData,
+=======
+		&testimonial.ID, &testimonial.WorkspaceID, &testimonial.CustomerProfileID,
+		&testimonial.TestimonialType, &testimonial.Format, &testimonial.Status, &testimonial.Language,
+		&testimonial.Title, &testimonial.Summary, &testimonial.Content, &testimonial.Transcript, &testimonial.MediaURLs,
+		&testimonial.Rating, &testimonial.MediaURL, &testimonial.MediaDuration, &testimonial.ThumbnailURL,
+		&testimonial.AdditionalMedia, &testimonial.ProductContext, &testimonial.PurchaseContext, &testimonial.ExperienceContext,
+		&testimonial.CollectionMethod, &testimonial.VerificationMethod, &testimonial.VerificationData, &testimonial.VerificationStatus,
+		&testimonial.VerifiedAt, &testimonial.AuthenticityScore, &testimonial.SourceData,
+		&testimonial.Published, &testimonial.PublishedAt, &testimonial.ScheduledPublishAt,
+>>>>>>> origin/master
 		&testimonial.Tags, &testimonial.Categories, &testimonial.CustomFields,
 		&testimonial.ViewCount, &testimonial.ShareCount, &testimonial.ConversionCount,
 		&testimonial.EngagementMetrics, &testimonial.CreatedAt, &testimonial.UpdatedAt,
@@ -386,7 +554,17 @@ func (r *testimonialRepository) FetchByID(ctx context.Context, id uuid.UUID, db 
 }
 
 func (r *testimonialRepository) FetchByCustomerEmail(ctx context.Context, workspaceID uuid.UUID, email string, db DB) ([]models.Testimonial, error) {
+<<<<<<< HEAD
 	query := `SELECT * FROM testimonials WHERE workspace_id = $1 AND customer_email = $2 ORDER BY created_at DESC`
+=======
+	query := `
+		SELECT t.* 
+		FROM testimonials t
+		JOIN customer_profiles cp ON cp.id = t.customer_profile_id
+		WHERE t.workspace_id = $1 AND cp.email = $2
+		ORDER BY t.created_at DESC
+	`
+>>>>>>> origin/master
 
 	rows, err := db.QueryContext(ctx, query, workspaceID, email)
 	if err != nil {
@@ -398,12 +576,22 @@ func (r *testimonialRepository) FetchByCustomerEmail(ctx context.Context, worksp
 	for rows.Next() {
 		var t models.Testimonial
 		if err := rows.Scan(
+<<<<<<< HEAD
 			&t.ID, &t.WorkspaceID, &t.Type, &t.Status, &t.Content, &t.MediaURLs,
 			&t.Rating, &t.Language, &t.CustomerName, &t.CustomerEmail, &t.CustomerTitle,
 			&t.CustomerCompany, &t.CustomerLocation, &t.CustomerAvatarURL,
 			&t.CustomerMetadata, &t.CollectionMethod, &t.VerificationMethod,
 			&t.VerificationData, &t.VerifiedAt, &t.SourceData, &t.Tags, &t.Categories,
 			&t.CustomFields, &t.ViewCount, &t.ShareCount, &t.ConversionCount,
+=======
+			&t.ID, &t.WorkspaceID, &t.CustomerProfileID, &t.TestimonialType, &t.Format, &t.Status, &t.Language,
+			&t.Title, &t.Summary, &t.Content, &t.Transcript, &t.MediaURLs, &t.Rating, &t.MediaURL,
+			&t.MediaDuration, &t.ThumbnailURL, &t.AdditionalMedia, &t.ProductContext,
+			&t.PurchaseContext, &t.ExperienceContext, &t.CollectionMethod, &t.VerificationMethod,
+			&t.VerificationData, &t.VerificationStatus, &t.VerifiedAt, &t.AuthenticityScore,
+			&t.SourceData, &t.Published, &t.PublishedAt, &t.ScheduledPublishAt,
+			&t.Tags, &t.Categories, &t.CustomFields, &t.ViewCount, &t.ShareCount, &t.ConversionCount,
+>>>>>>> origin/master
 			&t.EngagementMetrics, &t.CreatedAt, &t.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("error scanning testimonial: %w", err)
@@ -459,8 +647,55 @@ func (r *testimonialRepository) CountByWorkspaceID(ctx context.Context, workspac
 
 func (r *testimonialRepository) FetchTopRated(ctx context.Context, workspaceID uuid.UUID, limit int, db DB) ([]models.Testimonial, error) {
 	query := `
+<<<<<<< HEAD
 		SELECT * FROM testimonials 
 		WHERE workspace_id = $1 AND status = 'approved' AND rating IS NOT NULL 
+=======
+		SELECT 
+			id,
+			workspace_id,
+			customer_profile_id,
+			testimonial_type,
+			format,
+			status,
+			language,
+			title,
+			summary,
+			content,
+			transcript,
+			media_urls,
+			rating,
+			media_url,
+			media_duration,
+			thumbnail_url,
+			additional_media,
+			product_context,
+			purchase_context,
+			experience_context,
+			collection_method,
+			verification_method,
+			verification_data,
+			verification_status,
+			verified_at,
+			authenticity_score,
+			source_data,
+			published,
+			published_at,
+			scheduled_publish_at,
+			tags,
+			categories,
+			custom_fields,
+			view_count,
+			share_count,
+			conversion_count,
+			engagement_metrics,
+			created_at,
+			updated_at
+		FROM testimonials
+		WHERE workspace_id = $1 
+		  AND status = 'approved' 
+		  AND rating IS NOT NULL 
+>>>>>>> origin/master
 		ORDER BY rating DESC, created_at DESC 
 		LIMIT $2
 	`
@@ -475,6 +710,7 @@ func (r *testimonialRepository) FetchTopRated(ctx context.Context, workspaceID u
 	for rows.Next() {
 		var t models.Testimonial
 		if err := rows.Scan(
+<<<<<<< HEAD
 			&t.ID, &t.WorkspaceID, &t.Type, &t.Status, &t.Content, &t.MediaURLs,
 			&t.Rating, &t.Language, &t.CustomerName, &t.CustomerEmail, &t.CustomerTitle,
 			&t.CustomerCompany, &t.CustomerLocation, &t.CustomerAvatarURL,
@@ -484,6 +720,49 @@ func (r *testimonialRepository) FetchTopRated(ctx context.Context, workspaceID u
 			&t.EngagementMetrics, &t.CreatedAt, &t.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("error scanning testimonial: %w", err)
+=======
+			&t.ID,
+			&t.WorkspaceID,
+			&t.CustomerProfileID,
+			&t.TestimonialType,
+			&t.Format,
+			&t.Status,
+			&t.Language,
+			&t.Title,
+			&t.Summary,
+			&t.Content,
+			&t.Transcript,
+			&t.MediaURLs,
+			&t.Rating,
+			&t.MediaURL,
+			&t.MediaDuration,
+			&t.ThumbnailURL,
+			&t.AdditionalMedia,
+			&t.ProductContext,
+			&t.PurchaseContext,
+			&t.ExperienceContext,
+			&t.CollectionMethod,
+			&t.VerificationMethod,
+			&t.VerificationData,
+			&t.VerificationStatus,
+			&t.VerifiedAt,
+			&t.AuthenticityScore,
+			&t.SourceData,
+			&t.Published,
+			&t.PublishedAt,
+			&t.ScheduledPublishAt,
+			&t.Tags,
+			&t.Categories,
+			&t.CustomFields,
+			&t.ViewCount,
+			&t.ShareCount,
+			&t.ConversionCount,
+			&t.EngagementMetrics,
+			&t.CreatedAt,
+			&t.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("error scanning top rated testimonial: %w", err)
+>>>>>>> origin/master
 		}
 		testimonials = append(testimonials, t)
 	}
@@ -493,8 +772,54 @@ func (r *testimonialRepository) FetchTopRated(ctx context.Context, workspaceID u
 
 func (r *testimonialRepository) FetchMostRecent(ctx context.Context, workspaceID uuid.UUID, limit int, db DB) ([]models.Testimonial, error) {
 	query := `
+<<<<<<< HEAD
 		SELECT * FROM testimonials 
 		WHERE workspace_id = $1 AND status = 'approved' 
+=======
+		SELECT 
+			id,
+			workspace_id,
+			customer_profile_id,
+			testimonial_type,
+			format,
+			status,
+			language,
+			title,
+			summary,
+			content,
+			transcript,
+			media_urls,
+			rating,
+			media_url,
+			media_duration,
+			thumbnail_url,
+			additional_media,
+			product_context,
+			purchase_context,
+			experience_context,
+			collection_method,
+			verification_method,
+			verification_data,
+			verification_status,
+			verified_at,
+			authenticity_score,
+			source_data,
+			published,
+			published_at,
+			scheduled_publish_at,
+			tags,
+			categories,
+			custom_fields,
+			view_count,
+			share_count,
+			conversion_count,
+			engagement_metrics,
+			created_at,
+			updated_at
+		FROM testimonials
+		WHERE workspace_id = $1 
+		  AND status = 'approved'
+>>>>>>> origin/master
 		ORDER BY created_at DESC 
 		LIMIT $2
 	`
@@ -509,6 +834,7 @@ func (r *testimonialRepository) FetchMostRecent(ctx context.Context, workspaceID
 	for rows.Next() {
 		var t models.Testimonial
 		if err := rows.Scan(
+<<<<<<< HEAD
 			&t.ID, &t.WorkspaceID, &t.Type, &t.Status, &t.Content, &t.MediaURLs,
 			&t.Rating, &t.Language, &t.CustomerName, &t.CustomerEmail, &t.CustomerTitle,
 			&t.CustomerCompany, &t.CustomerLocation, &t.CustomerAvatarURL,
@@ -518,6 +844,49 @@ func (r *testimonialRepository) FetchMostRecent(ctx context.Context, workspaceID
 			&t.EngagementMetrics, &t.CreatedAt, &t.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("error scanning testimonial: %w", err)
+=======
+			&t.ID,
+			&t.WorkspaceID,
+			&t.CustomerProfileID,
+			&t.TestimonialType,
+			&t.Format,
+			&t.Status,
+			&t.Language,
+			&t.Title,
+			&t.Summary,
+			&t.Content,
+			&t.Transcript,
+			&t.MediaURLs,
+			&t.Rating,
+			&t.MediaURL,
+			&t.MediaDuration,
+			&t.ThumbnailURL,
+			&t.AdditionalMedia,
+			&t.ProductContext,
+			&t.PurchaseContext,
+			&t.ExperienceContext,
+			&t.CollectionMethod,
+			&t.VerificationMethod,
+			&t.VerificationData,
+			&t.VerificationStatus,
+			&t.VerifiedAt,
+			&t.AuthenticityScore,
+			&t.SourceData,
+			&t.Published,
+			&t.PublishedAt,
+			&t.ScheduledPublishAt,
+			&t.Tags,
+			&t.Categories,
+			&t.CustomFields,
+			&t.ViewCount,
+			&t.ShareCount,
+			&t.ConversionCount,
+			&t.EngagementMetrics,
+			&t.CreatedAt,
+			&t.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("error scanning most recent testimonial: %w", err)
+>>>>>>> origin/master
 		}
 		testimonials = append(testimonials, t)
 	}
@@ -530,14 +899,102 @@ func (r *testimonialRepository) FetchByTags(ctx context.Context, workspaceID uui
 	if matchAll {
 		// All tags must match (strict containment)
 		query = `
+<<<<<<< HEAD
 			SELECT * FROM testimonials 
+=======
+			SELECT 
+				id,
+				workspace_id,
+				customer_profile_id,
+				testimonial_type,
+				format,
+				status,
+				language,
+				title,
+				summary,
+				content,
+				transcript,
+				media_urls,
+				rating,
+				media_url,
+				media_duration,
+				thumbnail_url,
+				additional_media,
+				product_context,
+				purchase_context,
+				experience_context,
+				collection_method,
+				verification_method,
+				verification_data,
+				verification_status,
+				verified_at,
+				authenticity_score,
+				source_data,
+				published,
+				published_at,
+				scheduled_publish_at,
+				tags,
+				categories,
+				custom_fields,
+				view_count,
+				share_count,
+				conversion_count,
+				engagement_metrics,
+				created_at,
+				updated_at
+			FROM testimonials 
+>>>>>>> origin/master
 			WHERE workspace_id = $1 AND tags @> $2
 			ORDER BY created_at DESC
 		`
 	} else {
 		// Any tag can match (overlap)
 		query = `
+<<<<<<< HEAD
 			SELECT * FROM testimonials 
+=======
+			SELECT 
+				id,
+				workspace_id,
+				customer_profile_id,
+				testimonial_type,
+				format,
+				status,
+				language,
+				title,
+				summary,
+				content,
+				transcript,
+				media_urls,
+				rating,
+				media_url,
+				media_duration,
+				thumbnail_url,
+				additional_media,
+				product_context,
+				purchase_context,
+				experience_context,
+				collection_method,
+				verification_method,
+				verification_data,
+				verification_status,
+				verified_at,
+				authenticity_score,
+				source_data,
+				published,
+				published_at,
+				scheduled_publish_at,
+				tags,
+				categories,
+				custom_fields,
+				view_count,
+				share_count,
+				conversion_count,
+				engagement_metrics,
+				created_at,
+				updated_at
+			FROM testimonials 
+>>>>>>> origin/master
 			WHERE workspace_id = $1 AND tags && $2
 			ORDER BY created_at DESC
 		`
@@ -553,6 +1010,7 @@ func (r *testimonialRepository) FetchByTags(ctx context.Context, workspaceID uui
 	for rows.Next() {
 		var t models.Testimonial
 		if err := rows.Scan(
+<<<<<<< HEAD
 			&t.ID, &t.WorkspaceID, &t.Type, &t.Status, &t.Content, &t.MediaURLs,
 			&t.Rating, &t.Language, &t.CustomerName, &t.CustomerEmail, &t.CustomerTitle,
 			&t.CustomerCompany, &t.CustomerLocation, &t.CustomerAvatarURL,
@@ -562,6 +1020,49 @@ func (r *testimonialRepository) FetchByTags(ctx context.Context, workspaceID uui
 			&t.EngagementMetrics, &t.CreatedAt, &t.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("error scanning testimonial: %w", err)
+=======
+			&t.ID,
+			&t.WorkspaceID,
+			&t.CustomerProfileID,
+			&t.TestimonialType,
+			&t.Format,
+			&t.Status,
+			&t.Language,
+			&t.Title,
+			&t.Summary,
+			&t.Content,
+			&t.Transcript,
+			&t.MediaURLs,
+			&t.Rating,
+			&t.MediaURL,
+			&t.MediaDuration,
+			&t.ThumbnailURL,
+			&t.AdditionalMedia,
+			&t.ProductContext,
+			&t.PurchaseContext,
+			&t.ExperienceContext,
+			&t.CollectionMethod,
+			&t.VerificationMethod,
+			&t.VerificationData,
+			&t.VerificationStatus,
+			&t.VerifiedAt,
+			&t.AuthenticityScore,
+			&t.SourceData,
+			&t.Published,
+			&t.PublishedAt,
+			&t.ScheduledPublishAt,
+			&t.Tags,
+			&t.Categories,
+			&t.CustomFields,
+			&t.ViewCount,
+			&t.ShareCount,
+			&t.ConversionCount,
+			&t.EngagementMetrics,
+			&t.CreatedAt,
+			&t.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("error scanning testimonial by tags: %w", err)
+>>>>>>> origin/master
 		}
 		testimonials = append(testimonials, t)
 	}

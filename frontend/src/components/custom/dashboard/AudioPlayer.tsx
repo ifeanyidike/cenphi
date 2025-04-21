@@ -1,7 +1,7 @@
 // Audio player component
 import { useState } from "react";
 import { Volume2, Play, Pause } from "lucide-react";
-import { Testimonial } from "@//types/testimonial";
+import { Testimonial } from "@/types/testimonial";
 
 // Define or import the ExtendedReview type
 
@@ -24,7 +24,7 @@ export const AudioPlayer = ({ testimonial }: { testimonial: ExtendedTestimonial 
   };
 
   return (
-    <div className="mt-3 bg-gray-50 rounded-lg p-3">
+    <div className="mt-2 bg-gray-50 rounded-lg p-3">
       <div className="flex items-center">
         <button 
           onClick={togglePlay}

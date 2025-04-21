@@ -14,14 +14,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Testimonial } from "@/types/testimonial";
 import { formatMessageDateIntlShort } from "@/util/general";
+import { getInitials } from "@/util/testimonial";
 
-const getInitials = (review: Testimonial) =>
-  review.customer_name
-    ?.split(" ")
-    .map((n) => n[0].toUpperCase())
-    .join("");
-
-export const ReviewCard = ({ review }: { review: Testimonial }) => {
+export const ReviewCard = ({ testimonial }: { testimonial: Testimonial }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -44,11 +39,11 @@ export const ReviewCard = ({ review }: { review: Testimonial }) => {
     }
   };
 
-  const isLongContent = (review.content?.length || 0) > 150;
+  const isLongContent = (testimonial.content?.length || 0) > 150;
   const displayContent =
     isExpanded || !isLongContent
-      ? review.content
-      : `${review.content?.slice(0, 150)}...`;
+      ? testimonial.content
+      : `${testimonial.content?.slice(0, 150)}...`;
 
   return (
     <motion.div
@@ -68,22 +63,22 @@ export const ReviewCard = ({ review }: { review: Testimonial }) => {
           <div className="flex items-center">
             <Avatar className="h-12 w-12 border-2 border-purple-100">
               <AvatarFallback className="bg-gradient-to-br from-purple-400 to-indigo-500 text-white font-medium">
-                {getInitials(review)}
+                {getInitials(testimonial)}
               </AvatarFallback>
-              {review.customer_avatar_url && (
+              {testimonial.customer_profile?.avatar_url && (
                 <AvatarImage
-                  src={review.customer_avatar_url}
-                  alt={review.customer_name}
+                  src={testimonial.customer_profile?.avatar_url}
+                  alt={testimonial.customer_profile?.name}
                 />
               )}
             </Avatar>
             <div className="ml-3">
               <div className="font-semibold text-gray-900">
-                {review.customer_name}
+                {testimonial.customer_profile?.name}
               </div>
               <div className="flex items-center text-sm text-gray-500">
-                {formatMessageDateIntlShort(review.created_at as Date)}
-                {review.verified_at && (
+                {formatMessageDateIntlShort(testimonial.created_at as Date)}
+                {testimonial.verified_at && (
                   <div className="flex items-center ml-2 text-green-600">
                     <svg
                       className="h-4 w-4 mr-1"
@@ -106,8 +101,8 @@ export const ReviewCard = ({ review }: { review: Testimonial }) => {
           </div>
 
           <div className="flex items-center">
-            <Badge variant="outline" className={getBadgeColor(review.status)}>
-              {review.status}
+            <Badge variant="outline" className={getBadgeColor(testimonial.status)}>
+              {testimonial.status}
             </Badge>
             <button className="ml-2 text-gray-400 hover:text-gray-600 p-1">
               <MoreHorizontal className="h-5 w-5" />
@@ -121,7 +116,7 @@ export const ReviewCard = ({ review }: { review: Testimonial }) => {
               <Star
                 key={i}
                 className={`h-5 w-5 ${
-                  i < review.rating!
+                  i < testimonial.rating!
                     ? "text-yellow-400 fill-yellow-400"
                     : "text-gray-200"
                 }`}
@@ -143,7 +138,7 @@ export const ReviewCard = ({ review }: { review: Testimonial }) => {
 
         {/* Media content */}
         <AnimatePresence>
-          {review.type !== "text" && (
+          {testimonial.format !== "text" && (
             <motion.div
               className="mt-4 rounded-xl overflow-hidden bg-gray-100"
               initial={{ opacity: 0, height: 0 }}
@@ -151,11 +146,11 @@ export const ReviewCard = ({ review }: { review: Testimonial }) => {
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.3 }}
             >
-              {review.type === "video" && (
+              {testimonial.format === "video" && (
                 <div className="relative aspect-video bg-black flex items-center justify-center">
                   <img
                     src={
-                      (review as any).media_thumbnail ||
+                      (testimonial as any).media_thumbnail ||
                       "https://placehold.co/400x225"
                     }
                     alt="Video thumbnail"
@@ -169,7 +164,7 @@ export const ReviewCard = ({ review }: { review: Testimonial }) => {
                 </div>
               )}
 
-              {review.type === "audio" && (
+              {testimonial.format === "audio" && (
                 <div className="p-4 bg-gradient-to-r from-purple-50 to-indigo-50">
                   <div className="flex items-center">
                     <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center mr-3">
@@ -190,14 +185,14 @@ export const ReviewCard = ({ review }: { review: Testimonial }) => {
                 </div>
               )}
 
-              {review.type === "image" && (
+              {testimonial.format === "image" && (
                 <div className="aspect-video bg-gray-100">
                   <img
                     src={
-                      (review as any).media_url ||
+                      (testimonial as any).media_url ||
                       "https://placehold.co/600x225"
                     }
-                    alt={`Review by ${review.customer_name}`}
+                    alt={`Review by ${testimonial.customer_profile?.name}`}
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -210,11 +205,11 @@ export const ReviewCard = ({ review }: { review: Testimonial }) => {
           <div className="flex space-x-4">
             <button className="text-gray-500 flex items-center hover:text-purple-600 transition-colors group">
               <MessageSquare className="h-5 w-5 mr-1.5 group-hover:text-purple-600" />
-              <span className="text-sm">{(review as any).replies || 10}</span>
+              <span className="text-sm">{(testimonial as any).replies || 10}</span>
             </button>
             <button className="text-gray-500 flex items-center hover:text-red-500 transition-colors group">
               <Heart className="h-5 w-5 mr-1.5 group-hover:text-red-500" />
-              <span className="text-sm">{(review as any).likes || 50}</span>
+              <span className="text-sm">{(testimonial as any).likes || 50}</span>
             </button>
             <button className="text-gray-500 flex items-center hover:text-purple-600 transition-colors">
               <Share2 className="h-5 w-5 mr-1.5" />

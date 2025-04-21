@@ -4,6 +4,9 @@ import { createBrowserRouter } from "react-router-dom";
 import { Login } from "@/pages/Login";
 import { Signup } from "@/pages/SignUp";
 import ResetPasswordPage from "@/pages/ResetPassword";
+import Pending from "@/pages/Pending";
+import Approved from "@/pages/Approved";
+import Rejected from "@/pages/Rejected";
 
 import EmailPage from "@/pages/EmailPage";
 import AllReviewsPage from "@/pages/AllReviewsPage";
@@ -36,6 +39,8 @@ import OnboardingError from "@/components/onboarding/OnboardingError";
 import DashboardProtectedRoute from "@/components/auth/protected_routes/Dashboard";
 import GenericProtectedRoute from "@/components/auth/protected_routes/Generic";
 import OnboardingProtectedRoute from "@/components/auth/protected_routes/Onboarding";
+import { ViewPendingReview } from "@/pages/ViewPendingDetail";
+import Sentiment from "@/pages/Sentiment";
 
 // lazy load
 const LandingPage = lazy(() => import("@/pages/Landing"));
@@ -124,8 +129,31 @@ export const router = createBrowserRouter([
   },
 
   {
-    path: "/why-Cenphi",
+    path: "/about",
     element: <WhyCenphi />,
+  },
+  {
+    path: "/pending_detail",
+    element: <ViewPendingReview />,
+  },
+
+  {
+    path: "/pending",
+    element: <Pending />,
+  },
+
+  {
+    path: "/sentiment",
+element:   <Sentiment/>
+  },
+  {
+    path: "/rejected",
+    element: <Rejected />,
+  },
+
+  {
+    path: "/approved",
+    element: <Approved />,
   },
   {
     path: "/pricing",

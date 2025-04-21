@@ -1,22 +1,38 @@
 // repositories/managers/TestimonialManager.ts
-import { Testimonial } from "@/types/testimonial";
 
+import { Testimonial } from "@/types/testimonial";
 import { makeAutoObservable, runInAction } from "mobx";
 import { WorkspaceOrchestrator } from "../workspace_hub";
 import { MemberManager } from "./member";
 
+/**
+ * Manages testimonial-related operations within a workspace.
+ * This class handles fetching testimonials and maintaining their state.
+ */
 export class TestimonialManager {
   testimonials: Testimonial[] | null = null;
+
   loading_testimonials = true;
+
   private workspaceOrchestrator: WorkspaceOrchestrator;
   private memberManager: MemberManager;
 
+  /**
+   * Initializes the TestimonialManager with the provided workspace orchestrator.
+   * @param workspaceRepository - The workspace orchestrator instance.
+   */
   constructor(workspaceRepository: WorkspaceOrchestrator) {
     this.workspaceOrchestrator = workspaceRepository;
     this.memberManager = workspaceRepository.memberManager;
     makeAutoObservable(this); // Make all properties observable
   }
 
+  /**
+   * Fetches testimonials for the current workspace.
+   *
+   * @returns A promise that resolves to an array of testimonials.
+   * @throws Error if the workspace ID is missing or the request fails.
+   */
   async getTestimonials() {
     // Start loading
     this.loading_testimonials = true;
@@ -40,7 +56,6 @@ export class TestimonialManager {
 
       if (response.ok) {
         const data = await response.json();
-        // Use runInAction for updating observable state after async operations
         runInAction(() => {
           this.testimonials = data;
         });
@@ -52,7 +67,6 @@ export class TestimonialManager {
       console.error("Error fetching testimonials:", error);
       throw error;
     } finally {
-      // Mark loading as complete
       runInAction(() => {
         this.loading_testimonials = false;
       });
