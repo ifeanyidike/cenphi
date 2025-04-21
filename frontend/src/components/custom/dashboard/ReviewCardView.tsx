@@ -12,17 +12,9 @@ export const ReviewCardView: React.FC<ReviewCardViewProps> = ({
   testimonials=[],
   onReviewAction
 }) => {
-  // // If no testimonials, show empty state
-  // if (testimonials.length === 0) {
-  //   return (
-  //     <div className="text-center py-8 text-gray-500">
-  //       <EmptyDashboard/>
-  //     </div>
-  //   );
-  // }
-
+ 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+    <div className="flex gap-2 justify-center items-center">
       {testimonials.map((testimonial) => (
         <ReviewCard 
           key={testimonial.id} 

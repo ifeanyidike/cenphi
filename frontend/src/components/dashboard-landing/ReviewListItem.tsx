@@ -10,14 +10,9 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Testimonial } from "@/types/testimonial";
+import { getInitials } from "@/util/testimonial";
 
-const getInitials = (review: Testimonial) =>
-  review.customer_name
-    ?.split(" ")
-    .map((n) => n[0].toUpperCase())
-    .join("");
-
-export const ReviewListItem = ({ review }: { review: Testimonial }) => {
+export const ReviewListItem = ({ testimonial }: { testimonial: Testimonial }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
 
@@ -41,18 +36,18 @@ export const ReviewListItem = ({ review }: { review: Testimonial }) => {
       {/* Header Section with Avatar & Info */}
       <div className="flex items-start gap-4">
         <div className="relative">
-          {review.customer_avatar_url ? (
+          {testimonial.customer_profile?.avatar_url ? (
             <img
-              src={review.customer_avatar_url}
-              alt={review.customer_name}
+              src={testimonial.customer_profile?.avatar_url}
+              alt={testimonial.customer_profile?.name}
               className="h-14 w-14 rounded-xl object-cover ring-2 ring-white shadow-sm"
             />
           ) : (
             <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center font-medium text-lg shadow-md">
-              {getInitials(review)}
+              {getInitials(testimonial)}
             </div>
           )}
-          {review.verified_at && (
+          {testimonial.verified_at && (
             <div className="absolute -top-1 -right-1 bg-white rounded-full p-0.5 shadow-sm">
               <div className="bg-green-500 text-white rounded-full p-0.5">
                 <svg
@@ -78,18 +73,18 @@ export const ReviewListItem = ({ review }: { review: Testimonial }) => {
           <div className="flex items-center justify-between">
             <div className="flex flex-wrap items-center gap-2">
               <h4 className="font-semibold text-gray-900 truncate">
-                {review.customer_name}
+                {testimonial.customer_profile?.name}
               </h4>
               <Badge
                 className={`text-xs px-2 py-0.5 ${getBadgeColor(
-                  review.status
+                  testimonial.status
                 )}`}
               >
-                {review.status}
+                {testimonial.status}
               </Badge>
             </div>
             <span className="text-sm text-gray-500 whitespace-nowrap">
-              {review.created_at.toLocaleString()}
+              {testimonial.created_at.toLocaleString()}
             </span>
           </div>
 
@@ -100,7 +95,7 @@ export const ReviewListItem = ({ review }: { review: Testimonial }) => {
                 <Star
                   key={i}
                   className={`h-4 w-4 ${
-                    i < review.rating!
+                    i < testimonial.rating!
                       ? "text-yellow-400 fill-yellow-400"
                       : "text-gray-200"
                   }`}
@@ -108,7 +103,7 @@ export const ReviewListItem = ({ review }: { review: Testimonial }) => {
               ))}
             </div>
             <span className="ml-2 text-sm font-medium text-gray-700">
-              {review.rating}.0
+              {testimonial.rating}.0
             </span>
           </div>
         </div>
@@ -117,11 +112,11 @@ export const ReviewListItem = ({ review }: { review: Testimonial }) => {
       {/* Review Content */}
       <div className={`mt-3 ${isExpanded ? "" : "line-clamp-3"}`}>
         <p className="text-gray-700 text-sm leading-relaxed">
-          {review.content}
+          {testimonial.content}
         </p>
       </div>
 
-      {(review.content?.length || 0) > 180 && !isExpanded && (
+      {(testimonial.content?.length || 0) > 180 && !isExpanded && (
         <button
           onClick={() => setIsExpanded(true)}
           className="mt-1 text-sm font-medium text-indigo-600 hover:text-indigo-700 flex items-center gap-0.5"
@@ -132,13 +127,13 @@ export const ReviewListItem = ({ review }: { review: Testimonial }) => {
       )}
 
       {/* Media Preview */}
-      {review.type !== "text" && (
+      {testimonial.format !== "text" && (
         <div className="mt-4 relative rounded-xl overflow-hidden bg-gray-100">
-          {review.type === "video" && (
+          {testimonial.format === "video" && (
             <div className="group relative aspect-video bg-gray-900 rounded-xl overflow-hidden">
               <img
                 src={
-                  (review as any).media_url || "https://placehold.co/600x225"
+                  (testimonial as any).media_url || "https://placehold.co/600x225"
                 } // Add media_url to db
                 alt="Video thumbnail"
                 className="w-full h-full object-cover opacity-90"
@@ -149,13 +144,13 @@ export const ReviewListItem = ({ review }: { review: Testimonial }) => {
                 </div>
               </div>
               <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-0.5 rounded">
-                {(review as any).duration || 10}
+                {(testimonial as any).duration || 10}
                 {/* Add media duration to db */}
               </div>
             </div>
           )}
 
-          {review.type === "audio" && (
+          {testimonial.format === "audio" && (
             <div className="px-4 py-3 rounded-xl bg-gradient-to-r from-gray-100 to-gray-200 flex items-center gap-3">
               <div className="bg-indigo-600 rounded-full p-2 text-white">
                 <Volume2 className="h-4 w-4" />
@@ -166,7 +161,7 @@ export const ReviewListItem = ({ review }: { review: Testimonial }) => {
                 </div>
               </div>
               <span className="text-xs font-medium text-gray-600">
-                {(review as any).duration || 10}
+                {(testimonial as any).duration || 10}
               </span>
               <div className="bg-white rounded-full p-1.5 shadow-sm">
                 <Play className="h-3.5 w-3.5 text-gray-700" />
@@ -174,9 +169,9 @@ export const ReviewListItem = ({ review }: { review: Testimonial }) => {
             </div>
           )}
 
-          {review.type === "image" && (
+          {testimonial.format === "image" && (
             <div className="grid grid-cols-3 gap-2">
-              {review.media_urls?.slice(0, 3).map((img, idx) => (
+              {testimonial.media_urls?.slice(0, 3).map((img, idx) => (
                 <div
                   key={idx}
                   className="aspect-square rounded-lg overflow-hidden bg-gray-100"
@@ -188,9 +183,9 @@ export const ReviewListItem = ({ review }: { review: Testimonial }) => {
                   />
                 </div>
               ))}
-              {(review.media_urls?.length || 0) > 3 && (
+              {(testimonial.media_urls?.length || 0) > 3 && (
                 <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-0.5 rounded">
-                  +{review.media_urls!.length - 3} more
+                  +{testimonial.media_urls!.length - 3} more
                 </div>
               )}
             </div>
@@ -210,14 +205,14 @@ export const ReviewListItem = ({ review }: { review: Testimonial }) => {
             <Heart className={`h-4 w-4 ${isLiked ? "fill-rose-500" : ""}`} />
             <span>
               {isLiked
-                ? ((review as any).likes || 0) + 1
-                : (review as any).likes || 0}
+                ? ((testimonial as any).likes || 0) + 1
+                : (testimonial as any).likes || 0}
             </span>
           </button>
 
           <button className="flex items-center gap-1.5 text-sm hover:text-gray-700 transition-colors">
             <MessageSquare className="h-4 w-4" />
-            <span>{(review as any).comments || 0}</span>
+            <span>{(testimonial as any).comments || 0}</span>
           </button>
         </div>
 
@@ -227,21 +222,21 @@ export const ReviewListItem = ({ review }: { review: Testimonial }) => {
       </div>
 
       {/* Response Section (if any) */}
-      {(review as any).response && (
+      {(testimonial as any).response && (
         <div className="mt-4 pt-3 pl-4 border-l-2 border-indigo-100">
           <div className="flex items-center gap-2 mb-1.5">
             <div className="h-6 w-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-medium">
-              {(review as any).responseInitials || "SR"}
+              {(testimonial as any).responseInitials || "SR"}
             </div>
             <span className="text-sm font-medium text-gray-800">
-              {(review as any).responseFrom || "Store Response"}
+              {(testimonial as any).responseFrom || "Store Response"}
             </span>
             <span className="text-xs text-gray-500">
-              {(review as any).responseTime || "2 days ago"}
+              {(testimonial as any).responseTime || "2 days ago"}
             </span>
           </div>
           <p className="text-sm text-gray-600 leading-relaxed">
-            {(review as any).response}
+            {(testimonial as any).response}
           </p>
         </div>
       )}

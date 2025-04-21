@@ -40,6 +40,15 @@ const PricingCard = observer(
       currentPlan?.toLowerCase() === plan.name.toLowerCase();
 
     async function handleStartPlan() {
+      if (!user?.emailVerified) {
+        notification.error({
+          message: "Email verification error",
+          description:
+            "Your email is not verified. Plesae verify your email or contact the admin to get started.",
+        });
+
+        return;
+      }
       if (isCurrentPlan) return;
       if (!user?.uid) {
         return navigate(`/login`, { state: { from: location, plan: plan.id } });

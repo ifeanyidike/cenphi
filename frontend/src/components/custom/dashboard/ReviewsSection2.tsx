@@ -9,7 +9,7 @@ import { ReviewCardView } from "@/components/custom/dashboard/ReviewCardView";
 import { ReviewListView } from "@/components/custom/dashboard/ReviewListView";
 import FilterMenu from "@/components/custom/dashboard/FilterMenu";  
 import { useNavigate } from "react-router-dom"; 
-import { testimonials as allTestimonials } from "@/data/dataset";
+import testimonials from "@/data/dataset";
 
 export const ReviewsSection2 = () => {
   const navigate = useNavigate();
@@ -61,13 +61,13 @@ export const ReviewsSection2 = () => {
   ];
   
   // Fixed variable name from Testimonials to allTestimonials
-  const testimonials: Testimonial[] = allTestimonials as Testimonial[];
+  const allTestimonials: Testimonial[] = testimonials as Testimonial[];
  
   // Filter reviews based on activeFilters and searchQuery
-  const filteredTestimonials = testimonials.filter(testimonial => {
+  const filteredTestimonials = allTestimonials.filter(testimonial => {
     // Search filter
-    if (searchQuery && !testimonial.type == "text"?.toLowerCase().includes(searchQuery.toLowerCase()) && 
-        !testimonial.customer_title?.toLowerCase().includes(searchQuery.toLowerCase())) {
+    if (searchQuery && !testimonial.format == "text"?.toLowerCase().includes(searchQuery.toLowerCase()) && 
+        !testimonial.title?.toLowerCase().includes(searchQuery.toLowerCase())) {
       return false;
     }
     
@@ -75,7 +75,7 @@ export const ReviewsSection2 = () => {
     
     const statusMatch = activeFilters.some(filter => filter === testimonial.status);
     const ratingMatch = activeFilters.some(filter => testimonial.rating && filter === testimonial.rating.toString());
-    const typeMatch = activeFilters.some(filter => filter === testimonial.type);
+    const typeMatch = activeFilters.some(filter => filter === testimonial.format);
     
     // Time-based filtering using created_at date
     const timeMatch = activeFilters.some(filter => {

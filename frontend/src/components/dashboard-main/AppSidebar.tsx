@@ -98,15 +98,15 @@ const data = {
         },
         {
           title: "Pending Reviews",
-          url: "/testimonials/pending",
+          url: "/pending_reviews",
         },
         {
-          title: "Published",
-          url: "/testimonials/published",
+          title: "Approved",
+          url: "/approved",
         },
         {
-          title: "Flagged Content",
-          url: "/testimonials/flagged",
+          title: "Rejected Content",
+          url: "/rejected",
         },
         {
           title: "Video Testimonials",
@@ -129,7 +129,7 @@ const data = {
       items: [
         {
           title: "Sentiment Analysis",
-          url: "/ai/sentiment",
+          url: "/sentiment",
         },
         {
           title: "Content Enhancement",

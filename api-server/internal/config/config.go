@@ -12,6 +12,7 @@ type Config struct {
 	Redis     RedisConfig
 	AWS       AWSConfig
 	Providers ProviderConfig
+	Services  ServicesConfig
 }
 
 type ServerConfig struct {
@@ -21,6 +22,18 @@ type ServerConfig struct {
 	KeyFile           string
 	Environment       string
 	FirebaseProjectID string
+<<<<<<< HEAD
+=======
+	BaseURL           string
+}
+
+type ServicesConfig struct {
+	OpenAI
+}
+
+type OpenAI struct {
+	APIKey string
+>>>>>>> origin/master
 }
 
 type DatabaseConfig struct {
@@ -52,6 +65,10 @@ func NewConfig() *Config {
 				MaxUploadSize:     10 * 1024 * 1024, // 10MB
 				Environment:       os.Getenv("GO_ENV"),
 				FirebaseProjectID: os.Getenv("FIREBASE_PROJECT_ID"),
+<<<<<<< HEAD
+=======
+				BaseURL:           os.Getenv("BASE_URL"),
+>>>>>>> origin/master
 			},
 			Database: DatabaseConfig{
 				DSN: fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
@@ -72,6 +89,11 @@ func NewConfig() *Config {
 			AWS: AWSConfig{
 				Region:     os.Getenv("AWS_REGION"),
 				BucketName: os.Getenv("AWS_BUCKET_NAME"),
+			},
+			Services: ServicesConfig{
+				OpenAI: OpenAI{
+					APIKey: os.Getenv("OPENAI_APIKEY"),
+				},
 			},
 		}
 	})

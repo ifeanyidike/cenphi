@@ -13,6 +13,7 @@ import Navbar from "../nav";
 import { cn } from "@/lib/utils";
 import { observer } from "mobx-react-lite";
 import { useLocation, useNavigate } from "react-router-dom";
+import { auth } from "@/config/firebase";
 
 export const LoginForm = observer(
   ({ className, onSubmit, isLoading, ...props }: AuthFormProps) => {
@@ -22,7 +23,12 @@ export const LoginForm = observer(
 
     const location = useLocation();
     const navigate = useNavigate();
-    const from = location.state?.from?.pathname || "/dashboard";
+    const from = location.state?.from || { pathname: "/dashboard", search: "" };
+    const redirectUrl = `${from.pathname}${from.search}`;
+
+    useEffect(() => {
+      auth.currentUser?.reload();
+    }, []);
 
     // Local validation errors for email and password
     // const [validationErrors, setValidationErrors] = useState({
@@ -155,13 +161,13 @@ export const LoginForm = observer(
       }
 
       const result = await onSubmit({ email, password });
-      if (result) navigate(from, { replace: true });
+      if (result) navigate(redirectUrl, { replace: true });
     };
 
     async function onSocialLogin(provider: string) {
       const cred = await authStore.socialLoginPopup(provider as SocialProvider);
       if (cred) {
-        navigate(from, { replace: true });
+        navigate(redirectUrl, { replace: true });
       }
     }
 

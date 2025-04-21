@@ -37,19 +37,19 @@ export const ReviewDetailModal = ({ testimonial }: { testimonial: Testimonial })
             <div className="space-y-6">
               {/* Media Display */}
               <div className="relative rounded-xl overflow-hidden bg-gray-100">
-                {testimonial.type === 'video' && (
+                {testimonial.format === 'video' && (
                   <div className="aspect-video">
                     <VideoPlayer testimonial={testimonial} />
                   </div>
                 )}
                 
-                {testimonial.type === 'audio' && (
+                {testimonial.format === 'audio' && (
                   <div className="p-6">
                     <AudioPlayer testimonial={testimonial} />
                   </div>
                 )}
                 
-                {testimonial.type === 'image' && (
+                {testimonial.format === 'image' && (
              <img 
              src={(Array.isArray(testimonial.media_urls) ? testimonial.media_urls[0] : testimonial.media_urls) || ''} 
              alt={testimonial.content || "Testimonial image"} 
@@ -57,7 +57,7 @@ export const ReviewDetailModal = ({ testimonial }: { testimonial: Testimonial })
            />
                 )}
                 
-                {testimonial.type === 'text' && (
+                {testimonial.format === 'text' && (
                   <div className="p-6 flex items-center justify-center text-gray-500">
                     <MessageSquare className="h-12 w-12" />
                   </div>
@@ -69,11 +69,11 @@ export const ReviewDetailModal = ({ testimonial }: { testimonial: Testimonial })
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className="h-10 w-10 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-medium">
-                      {testimonial.customer_title}
+                    {testimonial.customer_profile?.name ? testimonial.customer_profile?.name.substring(0, 1).toUpperCase() : "?"}
                     </div>
                     <div>
-                      <h3 className="font-semibold text-lg">{testimonial.customer_name}</h3>
-                      <p className="text-sm text-gray-500">{testimonial.customer_title}</p>
+                      <h3 className="font-semibold text-lg">{testimonial.customer_profile?.name}</h3>
+                      <p className="text-sm text-gray-500">{testimonial.customer_profile?.title}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-1">
@@ -107,10 +107,10 @@ export const ReviewDetailModal = ({ testimonial }: { testimonial: Testimonial })
                   </Badge>
                   <span className="mx-1">•</span>
                   <div className="flex items-center space-x-1">
-                    {testimonial.type === 'video' && <Film className="h-4 w-4" />}
-                    {testimonial.type === 'audio' && <Volume2 className="h-4 w-4" />}
-                    {testimonial.type === 'image' && <ImageIcon className="h-4 w-4" />}
-                    <span className="capitalize">{testimonial.type}</span>
+                    {testimonial.format === 'video' && <Film className="h-4 w-4" />}
+                    {testimonial.format === 'audio' && <Volume2 className="h-4 w-4" />}
+                    {testimonial.format === 'image' && <ImageIcon className="h-4 w-4" />}
+                    <span className="capitalize">{testimonial.format}</span>
                   </div>
                 </div>
               </div>

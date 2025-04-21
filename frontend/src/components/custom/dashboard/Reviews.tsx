@@ -24,268 +24,99 @@ import { ReviewCardView } from "@/components/custom/dashboard/ReviewCardView";
 import { ReviewListView } from "@/components/custom/dashboard/ReviewListView";
 import FilterMenu from "@/components/custom/dashboard/FilterMenu";
 import { useNavigate } from "react-router";
-import { Review } from "@/types/types";
+import { Testimonial } from "@/types/testimonial";
+import {filterOptions} from "@/types/d";
 import { TransitionGroup, CSSTransition } from 'react-transition-group';
-import VideoReview1 from "@/assets/aboutbannervideo.mp4";
-import VideoThumbNail2 from "@/assets/myheroimage.png"
-import VideoThumbNail3 from "@/assets/girlwithflower.png"
+
+import testimonials from "@/data/dataset";
 
 const Reviews = () => {
     const navigate = useNavigate();
     const [viewMode, setViewMode] = useState("card");
     const [filterMenuOpen, setFilterMenuOpen] = useState(false);
     const [activeFilters, setActiveFilters] = useState<string[]>([]);
-    const [visibleReviews, setVisibleReviews] = useState<Review[]>([]);
+    const [visibleReviews, setVisibleReviews] = useState<Testimonial[]>([]);
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
     const loaderRef = useRef<HTMLDivElement>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const itemsPerPage = 6;
   
-             // Complete filter options
-             const filterOptions = [
-              {
-                title: "Status",
-                options: [
-                  { id: "status-new", value: "New", label: "New" },
-                  { id: "status-replied", value: "Replied", label: "Replied" },
-                  { id: "status-verified", value: "Verified", label: "Verified" },
-                  { id: "status-featured", value: "Featured", label: "Featured" },
-                ],
-              },
-              {
-                title: "Rating",
-                options: [
-                  { id: "rating-5", value: "5", label: "5 Stars" },
-                  { id: "rating-4", value: "4", label: "4 Stars" },
-                  { id: "rating-3", value: "3", label: "3 Stars" },
-                  { id: "rating-2", value: "2", label: "2 Stars" },
-                  { id: "rating-1", value: "1", label: "1 Star" },
-                ],
-              },
-              {
-                title: "Time",
-                options: [
-                  { id: "time-today", value: "Today", label: "Today" },
-                  { id: "time-week", value: "Week", label: "This Week" },
-                  { id: "time-month", value: "Month", label: "This Month" },
-                  { id: "time-year", value: "Year", label: "This Year" },
-                ],
-              },
-              {
-                title: "Media Type",
-                options: [
-                  { id: "media-text", value: "Text", label: "Text Only" },
-                  { id: "media-image", value: "Image", label: "With Images" },
-                  { id: "media-video", value: "Video", label: "With Videos" },
-                  { id: "media-audio", value: "Audio", label: "With Audio" },
-                ],
-              },
-            ];
    
     // Complete list of reviews
-    const allReviews: Review[] = useMemo(() => {
-      return    [
-      {
-        id: 1,
-        name: "John Doe",
-        initials: "JD",
-        rating: 5,
-        timeAgo: "2 days ago",
-        content: "The product exceeded all my expectations. The team was incredibly responsive and helpful throughout the entire process.",
-        status: "New",
-        mediaType: "text"
-      },
-      {
-        id: 2,
-        name: "Sarah Johnson",
-        initials: "SJ",
-        rating: 4,
-        timeAgo: "1 week ago",
-        content: "Great product overall. The only issue I had was with the delivery time, but the quality made up for it.",
-        status: "Replied",
-        mediaType: "text"
-      },
-      {
-        id: 3,
-        name: "Michael Brown",
-        initials: "MB",
-        rating: 5,
-        timeAgo: "3 days ago",
-        content: "Absolutely fantastic service! I've recommended this to all my colleagues.",
-        status: "Verified",
-        mediaType: "image",
-        mediaUrl: "/media/img/meeting.webp",
-      },
-      {
-        id: 4,
-        name: "Emily Wilson",
-        initials: "EW",
-        rating: 3,
-        timeAgo: "2 weeks ago",
-        content: "The product is good but could use some improvements. Customer service was helpful when I reached out.",
-        status: "Featured",
-        mediaType: "text"
-      },
-      {
-        id: 5,
-        name: "David Lee",
-        initials: "DL",
-        rating: 5,
-        timeAgo: "1 day ago",
-        content: "Exactly what I needed for my project. Will definitely purchase again in the future.",
-        status: "New",
-        mediaType: "video",
-        mediaUrl: "/videos/review-emily.mp4",
-        thumbnailUrl: VideoThumbNail3,
-        duration: "2:35"
-      },
-      {
-        id: 6,
-        name: "Lisa Martinez",
-        initials: "LM",
-        rating: 2,
-        timeAgo: "3 weeks ago",
-        content: "I expected more from this product. It didn't solve my problem as advertised.",
-        status: "Replied",
-        mediaType: "text"
-      },
-      {
-        id: 7,
-        name: "Robert Taylor",
-        initials: "RT",
-        rating: 4,
-        timeAgo: "5 days ago",
-        content: "Very satisfied with my purchase. The quality is excellent and it arrived earlier than expected.",
-        status: "Verified",
-        mediaType: "image",
-        mediaUrl: "/media/img/iStock-1339459004.webp",
-      },
-      {
-        id: 8,
-        name: "Jennifer Adams",
-        initials: "JA",
-        rating: 5,
-        timeAgo: "1 month ago",
-        content: "Best customer service I've ever experienced. They went above and beyond to help me.",
-        status: "Featured",
-        mediaType: "text"
-      },
-      {
-        id: 9,
-        name: "Thomas Wilson",
-        initials: "TW",
-        rating: 3,
-        timeAgo: "2 days ago",
-        content: "The product is average. It works, but there are better options available on the market.",
-        status: "New",
-        mediaType: "text"
-      },
-      {
-        id: 10,
-        name: "Amanda Clark",
-        initials: "AC",
-        rating: 5,
-        timeAgo: "1 week ago",
-        content: "Impressive quality and attention to detail. This product has made my daily tasks so much easier.",
-        status: "Verified",
-        mediaType: "video",
-        mediaUrl: "/videos/review-emily.mp4",
-        thumbnailUrl: VideoThumbNail2,
-        duration: "2:35"
-      },
-      {
-        id: 11,
-        name: "Kevin Rodriguez",
-        initials: "KR",
-        rating: 4,
-        timeAgo: "4 days ago",
-        content: "Good value for money. The product is durable and well-designed.",
-        status: "Replied",
-        mediaType: "text"
-      },
-      {
-        id: 12,
-        name: "Patricia Moore",
-        initials: "PM",
-        rating: 5,
-        timeAgo: "2 weeks ago",
-        content: "Excellent product! The features are intuitive and it solved my problem perfectly.",
-        status: "Featured",
-        mediaType: "image",
-        imageUrl: "/media/img/iStock-1354196176.webp",
-      },
-      {
-      id: 13,
-      name: "Vincent Tilon",
-      initials: "VT",
-      rating: 4.5,
-      timeAgo: "1 days ago",
-      content: "Very satisfied with my purchase. The quality is excellent and it arrived earlier than expected.",
-      status: "Verified",
-      mediaType: "audio",
-      audioUrl: "/media/aud/Recording3.m4a",
-    },
-
-      {
-        id: 14,
-        name: "Emily Rodriguez",
-        initials: "ER",
-        rating: 3,
-        timeAgo: "2 weeks ago",
-        content: "The product works well for my basic needs, but I found some features difficult to navigate. Customer service was helpful though.",
-        status: "Featured",
-        mediaType: "video",
-        videoUrl: VideoReview1,
-        thumbnailUrl: "/media/img/iStock-1354196176.webp", 
-        duration: "2:35"
-      },
-    ].map(review => ({
-      ...review,
-      duration: review.duration || "",
-      mediaUrl: review.mediaUrl || "",
-      thumbnailUrl: review.thumbnailUrl || "",
-      videoUrl: review.videoUrl || "",
-      imageUrl: review.imageUrl || "",
-      audioUrl: review.audioUrl || ""
+    const allReviews: Testimonial[] = useMemo(() => {
+      return testimonials.map(testimonial => ({
+      ...testimonial,
     })) 
   },
   []);
 
   const filteredReviews = useMemo(() => {
-    return allReviews.filter(review => {
+    return allReviews.filter(testimonial => {
       // First apply name search filter if present
-      if (searchQuery && !review.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+      if (searchQuery && 
+          !(testimonial.customer_profile?.name ?? "")
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase())) {
         return false;
       }
       
       // Then apply category filters
       if (activeFilters.length === 0) return true;
-      
-      return activeFilters.some((filter: string) => {
-        if (filter === "New" || filter === "Replied" || filter === "Verified" || filter === "Featured") {
-          return review.status === filter;
+  
+      return activeFilters.every((filter: string) => {
+        switch (filter) {
+          // Status filters
+          case "pending":
+          case "approved":
+          case "rejected":
+          case "archived":
+          case "featured":
+          case "scheduled":
+            return testimonial.status === filter;
+          
+          // Rating filters
+          case "5":
+          case "4":
+          case "3":
+          case "2":
+          case "1":
+            return testimonial.rating === parseInt(filter);
+          
+          // Time filters
+          case "Today": {
+            const today = new Date();
+            const createdDate = new Date(testimonial.created_at);
+            return today.toDateString() === createdDate.toDateString();
+          }
+          case "Week": {
+            const today = new Date();
+            const createdDate = new Date(testimonial.created_at);
+            const oneWeekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+            return createdDate >= oneWeekAgo && createdDate <= today;
+          }
+          case "Month": {
+            const today = new Date();
+            const createdDate = new Date(testimonial.created_at);
+            return createdDate.getMonth() === today.getMonth() && 
+                   createdDate.getFullYear() === today.getFullYear();
+          }
+          case "Year": {
+            const today = new Date();
+            const createdDate = new Date(testimonial.created_at);
+            return createdDate.getFullYear() === today.getFullYear();
+          }
+          
+          // Media type filters
+          case "Text":
+          case "Image":
+          case "Video":
+          case "Audio":
+            return testimonial.format.toLowerCase() === filter.toLowerCase();
+          
+          default:
+            return false;
         }
-        
-        if (filter === "5" || filter === "4" || filter === "3" || filter === "2" || filter === "1") {
-          return review.rating === parseInt(filter);
-        }
-        
-        if (filter === "Today") {
-          return review.timeAgo.includes("day");
-        }
-        if (filter === "Week") {
-          return review.timeAgo.includes("week") || review.timeAgo.includes("day");
-        }
-        if (filter === "Month") {
-          return review.timeAgo.includes("month") || review.timeAgo.includes("week") || review.timeAgo.includes("day");
-        }
-        
-        if (filter === "Text" || filter === "Image" || filter === "Video" || filter === "Audio") {
-          return review.mediaType.toLowerCase() === filter.toLowerCase();
-        }
-        
-        return false;
       });
     });
   }, [activeFilters, allReviews, searchQuery]);
@@ -396,7 +227,7 @@ useEffect(() => {
             </div>
           </header>
     <div className="p-4 lg:p-8">
-      <Card className="hover:shadow-lg transition-shadow">
+      <Card className="hover:shadow-lg transition-shadow max-w-5xl mx-auto">
         <CardHeader className="p-6">
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-4">
@@ -499,9 +330,9 @@ useEffect(() => {
           <div className="absolute -bottom-12 -right-8 w-32 h-32 bg-gradient-to-tr from-pink-300/20 to-purple-300/20 rounded-full blur-xl" />
           
           <TransitionGroup className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {visibleReviews.map((review, index) => (
+            {visibleReviews.map((testimonial, index) => (
               <CSSTransition
-                key={review.id}
+                key={testimonial.id}
                 timeout={500}
                 classNames={{
                   enter: "opacity-0 transform translate-y-8",
@@ -527,7 +358,7 @@ useEffect(() => {
                   
                   {/* Card container with consistent dimensions */}
                   <div className="w-full h-full z-10 transform transition-all duration-500 group-hover:translate-y-px">
-                    <ReviewCardView reviews={[review]} />
+                    <ReviewCardView testimonials={[testimonial]} />
                   </div>
                 </div>
               </CSSTransition>
@@ -541,9 +372,9 @@ useEffect(() => {
           <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-gradient-to-tr from-pink-400/5 to-fuchsia-400/5 rounded-full blur-3xl" />
           
           <TransitionGroup component="div" className="flex flex-col gap-6 relative z-10">
-            {visibleReviews.map((review, index) => (
+            {visibleReviews.map((testimonial, index) => (
               <CSSTransition
-                key={review.id}
+                key={testimonial.id}
                 timeout={500}
                 classNames={{
                   enter: "opacity-0 transform -translate-x-4",
@@ -553,22 +384,20 @@ useEffect(() => {
                 }}
               >
                 <div 
-                  className="bg-white rounded-xl p-5 border border-gray-100 shadow-lg hover:shadow-xl transition-all duration-500 transform hover:-translate-y-1 hover:border-purple-100 relative overflow-hidden group"
+                 className="bg-white rounded-xl p-5 relative overflow-hidden group transition-all duration-500 transform"
+      
                   style={{ 
                     animationDelay: `${index * 150}ms`,
                     background: "linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(252,252,255,0.95) 100%)"
                   }}
                 >
-                  {/* Premium gradient border effect on hover */}
-                  <div className="absolute inset-0 p-px rounded-xl bg-gradient-to-r from-indigo-500/50 via-purple-500/50 to-pink-500/50 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                  
                   {/* Subtle shimmer effect on hover */}
                   <div className="absolute inset-0 overflow-hidden opacity-0 group-hover:opacity-20 transition-opacity duration-700">
                     <div className="absolute top-0 -inset-full h-full w-1/2 z-5 block transform -skew-x-12 bg-gradient-to-r from-transparent to-white opacity-40 group-hover:animate-shine" />
                   </div>
                   
                   <div className="relative z-10">
-                    <ReviewListView reviews={[review]} />
+                    <ReviewListView testimonials={[testimonial]} />
                   </div>
                 </div>
               </CSSTransition>

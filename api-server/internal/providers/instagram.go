@@ -60,27 +60,27 @@ func (p *InstagramProvider) Fetch(ctx context.Context) ([]models.Testimonial, er
 	}
 
 	var testimonials []models.Testimonial
-	for _, media := range result.Data {
-		t := models.Testimonial{
-			Type:      models.TestimonialTypeImage,
-			Content:   media.Caption,
-			CreatedAt: media.Timestamp,
-			SourceData: map[string]interface{}{
-				"media_id":   media.ID,
-				"media_type": media.MediaType,
-				"platform":   "instagram",
-				"source":     p.Name(),
-			},
-			CollectionMethod: models.CollectionAPI,
-		}
+	// for _, media := range result.Data {
+	// 	t := models.Testimonial{
+	// 		Type:      models.TestimonialTypeImage,
+	// 		Content:   media.Caption,
+	// 		CreatedAt: media.Timestamp,
+	// 		SourceData: map[string]interface{}{
+	// 			"media_id":   media.ID,
+	// 			"media_type": media.MediaType,
+	// 			"platform":   "instagram",
+	// 			"source":     p.Name(),
+	// 		},
+	// 		CollectionMethod: models.CollectionAPI,
+	// 	}
 
-		if media.MediaType == "VIDEO" {
-			t.Type = models.TestimonialTypeVideo
-		}
+	// 	if media.MediaType == "VIDEO" {
+	// 		t.Type = models.TestimonialTypeVideo
+	// 	}
 
-		t.MediaURLs = append(t.MediaURLs, media.MediaURL)
-		testimonials = append(testimonials, t)
-	}
+	// 	t.MediaURLs = append(t.MediaURLs, media.MediaURL)
+	// 	testimonials = append(testimonials, t)
+	// }
 
 	return testimonials, nil
 }

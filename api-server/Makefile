@@ -1,6 +1,6 @@
 # Load environment variables from the system or .env file
-include .env
-export $(shell sed 's/=.*//' .env)
+include .env.prod
+export $(shell sed 's/=.*//' .env.prod)
 
 # Variables
 DB_URL ?= postgres://${DB_USERNAME}:${DB_PASSWORD}@${DB_HOST}/${DB_NAME}?sslmode=${DB_SSL_MODE}

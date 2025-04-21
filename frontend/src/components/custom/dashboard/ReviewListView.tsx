@@ -10,7 +10,7 @@ interface ReviewsListProps {
 
 export const ReviewListView: React.FC<ReviewsListProps> = ({ testimonials }) => {
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+    <div className="max-w-5xl mx-auto rounded-2xl overflow-hidden">
       {testimonials.map((testimonial, index) => (
         <motion.div
           key={testimonial.id}
@@ -18,7 +18,7 @@ export const ReviewListView: React.FC<ReviewsListProps> = ({ testimonials }) => 
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.2, delay: index * 0.03 }}
         >
-          <ReviewListItem testimonial={testimonial as any} />
+          <ReviewListItem testimonial={testimonial} />
         </motion.div>
       ))}
     </div>

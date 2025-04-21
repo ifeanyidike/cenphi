@@ -91,6 +91,8 @@ func (c *userController) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		utils.RespondWithError(w, http.StatusBadRequest, "The user data is malformed: Invalid user")
 		return
 	}
+	user.ID = uuid.New()
+
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 

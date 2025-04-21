@@ -141,7 +141,10 @@ export function NavUser({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator className="my-1" />
-            <DropdownMenuItem className="flex gap-2 rounded-lg m-1 p-2.5 hover:bg-dropdown-hover transition-colors duration-150">
+            <DropdownMenuItem
+              onClick={() => {}}
+              className="flex gap-2 rounded-lg m-1 p-2.5 hover:bg-dropdown-hover transition-colors duration-150"
+            >
               <LogOut className="size-4 text-dropdown-icon" />
               <span>Log out</span>
             </DropdownMenuItem>
