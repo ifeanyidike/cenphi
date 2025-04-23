@@ -1,7 +1,7 @@
 // export default VideoPlayer;
 
 import { useState, useRef } from "react";
-import { Play, Pause } from "lucide-react";
+import { Play } from "lucide-react";
 import { Testimonial } from "@/types/testimonial";
 
 export const VideoPlayer = ({ testimonial }: { testimonial: Testimonial }) => {

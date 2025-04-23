@@ -418,11 +418,10 @@
 
 import React, { useState } from "react";
 import { 
-  CheckCircle, 
+  
   MoreHorizontal,
   Calendar,
-  ArchiveIcon,
-  Star,
+   Star,
   ChevronLeft,
   ChevronRight,
   Trash2,

@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React from "react";
 import { 
   Share2, 
   Star,  
@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { Testimonial } from "@/types/testimonial";
 import { ReviewDetailModal } from "@/components/custom/dashboard/ReviewDetailModal.tsx";
-import { ShareModal } from "@/components/custom/dashboard/ShareModal";
+// import { ShareModal } from "@/components/custom/dashboard/ShareModal";
 import { motion } from "framer-motion";
 
 export const ReviewListItem = ({ 
@@ -27,7 +27,7 @@ export const ReviewListItem = ({
   onActionClick?: (testimonial: Testimonial, action: 'feature' | 'share' | 'archive') => void;
   renderFormatIcon?: (format: string) => React.ReactNode;
 }) => {
-  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  // const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   
   // Format date for display
   const formatDate = (date: Date) => {
@@ -211,13 +211,13 @@ export const ReviewListItem = ({
                 </>
               )}
               <button 
-                onClick={() => {
-                  if (onActionClick) {
-                    onActionClick(testimonial, 'share');
-                  } else {
-                    setIsShareModalOpen(true);
-                  }
-                }}
+                // onClick={() => {
+                //   if (onActionClick) {
+                //     onActionClick(testimonial, 'share');
+                //   } else {
+                //     setIsShareModalOpen(true);
+                //   }
+                // }}
                 className="text-blue-600 bg-blue-50 hover:bg-blue-100 p-2 rounded-lg transition-colors"
                 title="Share"
               >
@@ -233,11 +233,11 @@ export const ReviewListItem = ({
       </div>
 
       {/* Share Modal */}
-      <ShareModal
+      {/* <ShareModal
         testimonial={testimonial}
         isOpen={isShareModalOpen}
         onClose={() => setIsShareModalOpen(false)}
-      />
+      /> */}
     </motion.div>
   );
 };

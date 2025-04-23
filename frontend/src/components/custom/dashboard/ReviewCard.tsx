@@ -1,11 +1,11 @@
 
-import { useState } from "react";
+import React from "react";
 import { MessageSquare, Share2, Star, CheckCircle, XCircle, MoreHorizontal, Calendar, VideoIcon, HeadsetIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Testimonial } from "@/types/testimonial";
 import { AudioPlayer } from "@/components/custom/dashboard/AudioPlayer";
 import { ReviewDetailModal } from "@/components/custom/dashboard/ReviewDetailModal.tsx";
-import { ShareModal } from "@/components/custom/dashboard/ShareModal";
+// import { ShareModal } from "@/components/custom/dashboard/ShareModal";
 
 interface ReviewCardProps {
   testimonial: Testimonial;
@@ -13,7 +13,7 @@ interface ReviewCardProps {
 }
 
 export const ReviewCard: React.FC<ReviewCardProps> = ({ testimonial, onAction }) => {
-  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  // const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   
   // Determine status styling
   const getStatusStyle = () => {
@@ -207,7 +207,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ testimonial, onAction })
             <button 
               className="flex items-center text-gray-600 hover:text-indigo-600 
                 transition-all group px-2 py-1 rounded-full hover:bg-indigo-50 hover:shadow-sm"
-              onClick={() => setIsShareModalOpen(true)}
+             
             >
               <Share2 className="h-3 w-3 mr-1 group-hover:scale-110 transition-transform" />
               <span className="text-[10px] font-medium">Share</span>
@@ -232,11 +232,11 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ testimonial, onAction })
       </div>
 
       {/* Share Modal */}
-      <ShareModal
+      {/* <ShareModal
         testimonial={testimonial}
         isOpen={isShareModalOpen}
         onClose={() => setIsShareModalOpen(false)}
-      />
+      /> */}
     </div>
   );
 };

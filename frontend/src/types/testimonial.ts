@@ -794,6 +794,6 @@ export interface TrackedObject {
       y: number;
       width: number;
       height: number;
-    };
-  }[];
+};
+}[];
 }
