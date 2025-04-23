@@ -1,5 +1,4 @@
-import { Testimonial, TestimonialAnalysis } from "@/types/testimonial"; // Import your type definitions
-import { Avatar } from "antd";
+import { Testimonial } from "@/types/testimonial"; // Import your type definitions
 
 // Sample avatar URLs
 const avatars = {

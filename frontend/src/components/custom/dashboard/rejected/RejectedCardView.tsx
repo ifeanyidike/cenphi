@@ -209,7 +209,7 @@ export const RejectedCardView: React.FC<RejectedCardViewProps> = ({
       }
     }
 
-    for (let i of range) {
+    for (const i of range) {
       if (l) {
         if (i - l === 2) {
           rangeWithDots.push(l + 1);

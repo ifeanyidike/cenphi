@@ -4,7 +4,7 @@ import { Testimonial } from '@/types/testimonial';
 import { ArrowUpIcon, ArrowDownIcon } from 'lucide-react';
 
 // Define the extended column type with sorting properties
-interface SortableColumnInstance<D extends object = {}> extends ColumnInstance<D> {
+interface SortableColumnInstance<D extends object = object> extends ColumnInstance<D> {
   isSorted: boolean;
   isSortedDesc: boolean;
   getSortByToggleProps: () => any;
