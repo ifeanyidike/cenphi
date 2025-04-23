@@ -9,26 +9,21 @@ on:
       - ".github/workflows/**"
       - "scripts/**"
       - "docker-compose.prod.yaml"
-      - "protobuf/**"
+      # - "protobuf/**"
 
 jobs:
   prepare:
     runs-on: ubuntu-latest
     outputs:
       cache_key: ${{ steps.generate_cache_key.outputs.cache_key }}
-<<<<<<< HEAD
-=======
       api_changed: ${{ steps.check_changes.outputs.api_changed }}
       ai_changed: ${{ steps.check_changes.outputs.ai_changed }}
->>>>>>> origin/master
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
         with:
           fetch-depth: 0 # Fetch all history to ensure proper change detection
 
-<<<<<<< HEAD
-=======
       - name: Check which services changed
         id: check_changes
         run: |
@@ -42,7 +37,6 @@ jobs:
           echo "Changes detected:"
           git diff --name-only ${{ github.event.before }} ${{ github.sha }}
 
->>>>>>> origin/master
       - name: Generate unique cache keys
         id: generate_cache_key
         run: |
@@ -79,12 +73,9 @@ jobs:
           echo "Created placeholder docker-entrypoint.sh file"
           fi
 
-  test:
+  test_api:
     needs: prepare
-<<<<<<< HEAD
-=======
-    if: ${{ needs.prepare.outputs.api_changed == 'true' || needs.prepare.outputs.ai_changed == 'true' }}
->>>>>>> origin/master
+    if: ${{ needs.prepare.outputs.api_changed == 'true' }}
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -100,15 +91,11 @@ jobs:
           --health-interval 10s 
           --health-timeout 5s 
           --health-retries 5
-    strategy:
-      matrix:
-        service: [api-server, ai-service]
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
 
       - name: Cache Go modules
-        if: ${{ matrix.service == 'api-server' }}
         uses: actions/cache@v3
         with:
           path: ~/go/pkg/mod
@@ -116,8 +103,62 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
+      - name: Create .env.test file
+        run: |
+          cat > .env.test << 'ENDOFFILE'
+          DB_USERNAME=ifeanyidike
+          DB_PASSWORD=test_password
+          DB_HOST=127.0.0.1
+          DB_PORT=5434
+          DB_NAME=cenphidb_test
+          ENDOFFILE
+
+      - name: Wait for PostgreSQL to be ready
+        run: |
+          for i in {1..30}; do
+            if nc -z localhost 5434; then
+              echo "Postgres is up!"
+              exit 0
+            fi
+            echo "Waiting for Postgres..."
+            sleep 2
+          done
+          echo "Postgres did not start in time."
+          exit 1
+
+      - name: Set up Go for API Server
+        uses: actions/setup-go@v2
+        with:
+          go-version: "1.23.1"
+
+      - name: Test API Server
+        run: |
+          cd api-server
+          go test ./...
+
+  test_ai:
+    needs: prepare
+    if: ${{ needs.prepare.outputs.ai_changed == 'true' }}
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:13
+        ports:
+          - 5434:5432
+        env:
+          POSTGRES_USER: ifeanyidike
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: cenphidb_test
+        options: >-
+          --health-cmd "pg_isready -U ifeanyidike" 
+          --health-interval 10s 
+          --health-timeout 5s 
+          --health-retries 5
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
       - name: Cache Python packages
-        if: ${{ matrix.service == 'ai-service' }}
         uses: actions/cache@v3
         with:
           path: ~/.cache/pip
@@ -148,26 +189,12 @@ jobs:
           echo "Postgres did not start in time."
           exit 1
 
-      - name: Set up Go for API Server
-        if: ${{ matrix.service == 'api-server' }}
-        uses: actions/setup-go@v2
-        with:
-          go-version: "1.23.1"
-
-      - name: Test API Server
-        if: ${{ matrix.service == 'api-server' }}
-        run: |
-          cd api-server
-          go test ./...
-
       - name: Set up Python for AI Service
-        if: ${{ matrix.service == 'ai-service' }}
         uses: actions/setup-python@v4
         with:
           python-version: "3.12"
 
       - name: Install dependencies for AI Service
-        if: ${{ matrix.service == 'ai-service' }}
         run: |
           cd ai-service
           pip install --upgrade pip
@@ -175,23 +202,14 @@ jobs:
           pip install pytest
 
       - name: Test AI Service
-        if: ${{ matrix.service == 'ai-service' }}
         run: |
           cd ai-service
           python -m pytest
 
-  build-and-push:
-    needs: [prepare, test]
+  build_api:
+    needs: [prepare, test_api]
+    if: ${{ needs.prepare.outputs.api_changed == 'true' && (needs.test_api.result == 'success' || needs.test_api.result == 'skipped') }}
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        service: [api-server, ai-service]
-        exclude:
-          - service: api-server
-            if: ${{ needs.prepare.outputs.api_changed == 'false' }}
-          - service: ai-service
-            if: ${{ needs.prepare.outputs.ai_changed == 'false' }}
-
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -199,7 +217,6 @@ jobs:
           fetch-depth: 0
 
       - name: Verify critical files for API Server
-        if: ${{ matrix.service == 'api-server' }}
         run: |
           # Ensure google_roots.pem exists
           if [ ! -f "api-server/google_roots.pem" ]; then
@@ -219,8 +236,7 @@ jobs:
 
       - name: Create .env files
         run: |
-          if [ "${{ matrix.service }}" == "api-server" ]; then
-            cat > ./api-server/.env << 'ENDOFFILE'
+          cat > ./api-server/.env << 'ENDOFFILE'
           DB_USERNAME=ifeanyidike
           DB_PASSWORD=test_password
           DB_HOST=cenphidb
@@ -228,21 +244,82 @@ jobs:
           DB_NAME=cenphidb
           # Add other necessary API server variables
           ENDOFFILE
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          logout: false
+
+      - name: Verify Docker login
+        run: |
+          echo "Checking Docker login status..."
+          docker info
+
+      - name: Build and push API image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./api-server
+          file: ./api-server/Dockerfile
+          push: true
+          tags: |
+            lorddickson/api-server:latest
+            lorddickson/api-server:${{ github.sha }}
+          no-cache: true
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+            CACHE_BUSTER=${{ github.sha }}
+
+      - name: Verify Docker image
+        run: |
+          # Wait for Docker Hub to register the image
+          sleep 10
+
+          # Check that both tags exist
+          docker pull lorddickson/api-server:latest
+          docker pull lorddickson/api-server:${{ github.sha }}
+
+          # Get image IDs to verify they are the same image (just different tags)
+          LATEST_ID=$(docker inspect --format='{{.Id}}' lorddickson/api-server:latest)
+          SHA_ID=$(docker inspect --format='{{.Id}}' lorddickson/api-server:${{ github.sha }})
+
+          echo "Latest image ID: $LATEST_ID"
+          echo "SHA image ID: $SHA_ID"
+
+          if [ "$LATEST_ID" = "$SHA_ID" ]; then
+            echo "✅ Image verification successful - latest and SHA tags point to the same image"
+          else
+            echo "⚠️ Warning: latest and SHA tags point to different images"
           fi
 
-          if [ "${{ matrix.service }}" == "ai-service" ]; then
-            mkdir -p ./ai-service
-            cat > ./ai-service/.env << 'ENDOFFILE'
+  build_ai:
+    needs: [prepare, test_ai]
+    if: ${{ needs.prepare.outputs.ai_changed == 'true' && (needs.test_ai.result == 'success' || needs.test_ai.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Create .env files
+        run: |
+          mkdir -p ./ai-service
+          cat > ./ai-service/.env << 'ENDOFFILE'
           # Add necessary AI service variables here
           PYTHONUNBUFFERED=1
-          TRANSFORMERS_CACHE=/root/.cache/huggingface
+          HF_HOME=/root/.cache/huggingface
           # Add other necessary AI service variables
           ENDOFFILE
-          fi
 
-      # Verify that the main.py file exists
       - name: Verify AI Service Files
-        if: ${{ matrix.service == 'ai-service' }}
         run: |
           echo "Checking for main.py in ai-service directory..."
           if [ ! -f "./ai-service/main.py" ]; then
@@ -300,34 +377,32 @@ jobs:
           echo "Checking Docker login status..."
           docker info
 
-      # Force rebuilding images with --no-cache option
-      - name: Build and push ${{ matrix.service }} image
+      - name: Build and push AI image
         uses: docker/build-push-action@v4
         with:
-          context: ./${{ matrix.service }}
-          file: ./${{ matrix.service }}/Dockerfile
+          context: ./ai-service
+          file: ./ai-service/Dockerfile
           push: true
           tags: |
-            lorddickson/${{ matrix.service }}:latest
-            lorddickson/${{ matrix.service }}:${{ github.sha }}
+            lorddickson/ai-service:latest
+            lorddickson/ai-service:${{ github.sha }}
           no-cache: true
           build-args: |
             BUILDKIT_INLINE_CACHE=1
             CACHE_BUSTER=${{ github.sha }}
 
-      # Verify the image was pushed correctly
       - name: Verify Docker image
         run: |
           # Wait for Docker Hub to register the image
           sleep 10
 
           # Check that both tags exist
-          docker pull lorddickson/${{ matrix.service }}:latest
-          docker pull lorddickson/${{ matrix.service }}:${{ github.sha }}
+          docker pull lorddickson/ai-service:latest
+          docker pull lorddickson/ai-service:${{ github.sha }}
 
           # Get image IDs to verify they are the same image (just different tags)
-          LATEST_ID=$(docker inspect --format='{{.Id}}' lorddickson/${{ matrix.service }}:latest)
-          SHA_ID=$(docker inspect --format='{{.Id}}' lorddickson/${{ matrix.service }}:${{ github.sha }})
+          LATEST_ID=$(docker inspect --format='{{.Id}}' lorddickson/ai-service:latest)
+          SHA_ID=$(docker inspect --format='{{.Id}}' lorddickson/ai-service:${{ github.sha }})
 
           echo "Latest image ID: $LATEST_ID"
           echo "SHA image ID: $SHA_ID"
@@ -339,7 +414,7 @@ jobs:
           fi
 
   deploy_api:
-    needs: build-and-push
+    needs: [prepare, build_api]
     if: ${{ needs.prepare.outputs.api_changed == 'true' }}
     runs-on: ubuntu-latest
     env:
@@ -443,9 +518,6 @@ jobs:
                 echo "Created basic Docker Compose files"
             fi
 
-            # Always force pull latest image before running deploy script
-            # docker pull lorddickson/api-server:latest
-
             # Use specific SHA-tagged image instead of latest
             docker pull lorddickson/api-server:$GITHUB_SHA || echo "Falling back to latest image"
 
@@ -478,7 +550,7 @@ jobs:
             fi
 
   deploy_ai:
-    needs: build-and-push
+    needs: [prepare, build_ai]
     if: ${{ needs.prepare.outputs.ai_changed == 'true' }}
     runs-on: ubuntu-latest
     env:
@@ -539,9 +611,6 @@ jobs:
             echo "App directory structure:"
             mkdir -p /home/opc/app
 
-            # Ensure the shebang line is correct
-            # sed -i '1s/^.*$/\#!\/bin\/bash/' ai-deploy.sh
-
             # Verify Docker Compose files exist
             if [ ! -f "/home/opc/app/docker-compose.prod.yaml" ]; then
                 echo "ERROR: docker-compose.prod.yaml not found in /home/opc/app"
@@ -558,7 +627,7 @@ jobs:
                             - ai-model-cache:/root/.cache/huggingface
                         environment:
                             - PYTHONUNBUFFERED=1
-                            - TRANSFORMERS_CACHE=/root/.cache/huggingface
+                            - HF_HOME=/root/.cache/huggingface
                             - PYTHON_ENV=production
                         command: ["/opt/venv/bin/python", "main.py"]
                 volumes:

@@ -16,10 +16,7 @@ type TestimonialController interface {
 	HandleAPISubmission(w http.ResponseWriter, r *http.Request)
 	TriggerSync(w http.ResponseWriter, r *http.Request)
 	GetByWorkspaceID(w http.ResponseWriter, r *http.Request)
-<<<<<<< HEAD
-=======
 	FetchFromProvider(w http.ResponseWriter, r *http.Request)
->>>>>>> origin/master
 }
 
 type testimonialController struct {
@@ -85,8 +82,6 @@ func (c *testimonialController) GetByWorkspaceID(w http.ResponseWriter, r *http.
 
 	utils.RespondWithJSON(w, http.StatusOK, testimonials)
 }
-<<<<<<< HEAD
-=======
 
 func (c *testimonialController) FetchFromProvider(w http.ResponseWriter, r *http.Request) {
 	providerName := chi.URLParam(r, "provider")
@@ -125,4 +120,3 @@ func (c *testimonialController) FetchFromProvider(w http.ResponseWriter, r *http
 
 	utils.RespondWithJSON(w, http.StatusOK, testimonials)
 }
->>>>>>> origin/master

@@ -1,61 +1,61 @@
--- +migrate Down
--- SQL for rolling back this migration
+-- -- +migrate Down
+-- -- SQL for rolling back this migration
 
--- Drop triggers (order matters if they reference functions/tables)
-DROP TRIGGER IF EXISTS update_comments_updated_at ON comments;
-DROP TRIGGER IF EXISTS update_content_displays_updated_at ON content_displays;
-DROP TRIGGER IF EXISTS update_collections_updated_at ON collections;
-DROP TRIGGER IF EXISTS update_collection_portals_updated_at ON collection_portals;
-DROP TRIGGER IF EXISTS update_testimonials_updated_at ON testimonials;
-DROP TRIGGER IF EXISTS update_workspaces_updated_at ON workspaces;
+-- -- Drop triggers (order matters if they reference functions/tables)
+-- DROP TRIGGER IF EXISTS update_comments_updated_at ON comments;
+-- DROP TRIGGER IF EXISTS update_content_displays_updated_at ON content_displays;
+-- DROP TRIGGER IF EXISTS update_collections_updated_at ON collections;
+-- DROP TRIGGER IF EXISTS update_collection_portals_updated_at ON collection_portals;
+-- DROP TRIGGER IF EXISTS update_testimonials_updated_at ON testimonials;
+-- DROP TRIGGER IF EXISTS update_workspaces_updated_at ON workspaces;
 
--- Drop trigger functions
-DROP FUNCTION IF EXISTS update_updated_at_column();
-DROP FUNCTION IF EXISTS cascade_workspace_deletion();
+-- -- Drop trigger functions
+-- DROP FUNCTION IF EXISTS update_updated_at_column();
+-- DROP FUNCTION IF EXISTS cascade_workspace_deletion();
 
--- Drop tables in reverse order of dependency
-DROP TABLE IF EXISTS semantic_indices CASCADE;
-DROP TABLE IF EXISTS conversion_tracking CASCADE;
-DROP TABLE IF EXISTS analytics_events CASCADE;
-DROP TABLE IF EXISTS comments CASCADE;
-DROP TABLE IF EXISTS assignments CASCADE;
-DROP TABLE IF EXISTS display_placements CASCADE;
-DROP TABLE IF EXISTS display_templates CASCADE;
-DROP TABLE IF EXISTS display_widgets CASCADE;
-DROP TABLE IF EXISTS content_displays CASCADE;
-DROP TABLE IF EXISTS collection_items CASCADE;
-DROP TABLE IF EXISTS collections CASCADE;
-DROP TABLE IF EXISTS collection_portals CASCADE;
-DROP TABLE IF EXISTS ai_generated_content CASCADE;
-DROP TABLE IF EXISTS story_analyses CASCADE;
-DROP TABLE IF EXISTS testimonial_dna_profiles CASCADE;
-DROP TABLE IF EXISTS ai_processing_jobs CASCADE;
-DROP TABLE IF EXISTS competitor_mentions CASCADE;
-DROP TABLE IF EXISTS testimonials CASCADE;
-DROP TABLE IF EXISTS customer_profiles CASCADE;
-DROP TABLE IF EXISTS team_members CASCADE;
-DROP TABLE IF EXISTS users CASCADE;
-DROP TABLE IF EXISTS workspaces CASCADE;
-DROP TABLE IF EXISTS audit_log CASCADE;
+-- -- Drop tables in reverse order of dependency
+-- DROP TABLE IF EXISTS semantic_indices CASCADE;
+-- DROP TABLE IF EXISTS conversion_tracking CASCADE;
+-- DROP TABLE IF EXISTS analytics_events CASCADE;
+-- DROP TABLE IF EXISTS comments CASCADE;
+-- DROP TABLE IF EXISTS assignments CASCADE;
+-- DROP TABLE IF EXISTS display_placements CASCADE;
+-- DROP TABLE IF EXISTS display_templates CASCADE;
+-- DROP TABLE IF EXISTS display_widgets CASCADE;
+-- DROP TABLE IF EXISTS content_displays CASCADE;
+-- DROP TABLE IF EXISTS collection_items CASCADE;
+-- DROP TABLE IF EXISTS collections CASCADE;
+-- DROP TABLE IF EXISTS collection_portals CASCADE;
+-- DROP TABLE IF EXISTS ai_generated_content CASCADE;
+-- DROP TABLE IF EXISTS story_analyses CASCADE;
+-- DROP TABLE IF EXISTS testimonial_dna_profiles CASCADE;
+-- DROP TABLE IF EXISTS ai_processing_jobs CASCADE;
+-- DROP TABLE IF EXISTS competitor_mentions CASCADE;
+-- DROP TABLE IF EXISTS testimonials CASCADE;
+-- DROP TABLE IF EXISTS customer_profiles CASCADE;
+-- DROP TABLE IF EXISTS team_members CASCADE;
+-- DROP TABLE IF EXISTS users CASCADE;
+-- DROP TABLE IF EXISTS workspaces CASCADE;
+-- DROP TABLE IF EXISTS audit_log CASCADE;
 
--- Drop ENUM types
-DROP TYPE IF EXISTS workspace_plan;
-DROP TYPE IF EXISTS member_role;
-DROP TYPE IF EXISTS testimonial_type;
-DROP TYPE IF EXISTS content_format;
-DROP TYPE IF EXISTS content_status;
-DROP TYPE IF EXISTS collection_method;
-DROP TYPE IF EXISTS verification_type;
-DROP TYPE IF EXISTS ai_service_category;
-DROP TYPE IF EXISTS follow_up_status;
-DROP TYPE IF EXISTS sentiment;
-DROP TYPE IF EXISTS integration_type;
-DROP TYPE IF EXISTS placement_type;
-DROP TYPE IF EXISTS campaign_status;
-DROP TYPE IF EXISTS analysis_aspect;
+-- -- Drop ENUM types
+-- DROP TYPE IF EXISTS workspace_plan;
+-- DROP TYPE IF EXISTS member_role;
+-- DROP TYPE IF EXISTS testimonial_type;
+-- DROP TYPE IF EXISTS content_format;
+-- DROP TYPE IF EXISTS content_status;
+-- DROP TYPE IF EXISTS collection_method;
+-- DROP TYPE IF EXISTS verification_type;
+-- DROP TYPE IF EXISTS ai_service_category;
+-- DROP TYPE IF EXISTS follow_up_status;
+-- DROP TYPE IF EXISTS sentiment;
+-- DROP TYPE IF EXISTS integration_type;
+-- DROP TYPE IF EXISTS placement_type;
+-- DROP TYPE IF EXISTS campaign_status;
+-- DROP TYPE IF EXISTS analysis_aspect;
 
--- Drop Extensions (if desired)
-DROP EXTENSION IF EXISTS "citext";
-DROP EXTENSION IF EXISTS "hstore";
-DROP EXTENSION IF EXISTS "pg_trgm";
-DROP EXTENSION IF EXISTS "uuid-ossp";
+-- -- Drop Extensions (if desired)
+-- DROP EXTENSION IF EXISTS "citext";
+-- DROP EXTENSION IF EXISTS "hstore";
+-- DROP EXTENSION IF EXISTS "pg_trgm";
+-- DROP EXTENSION IF EXISTS "uuid-ossp";

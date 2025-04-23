@@ -144,8 +144,6 @@ func (s *onboardingService) OnboardOwner(ctx context.Context, uid string, worksp
 		log.Printf("user not found: %v", uid)
 		tx.Rollback()
 		return fmt.Errorf("user not found: %v", uid)
-<<<<<<< HEAD
-=======
 	}
 
 	existing_member, err := s.repo.TeamMember().GetDataByUserID(ctx, user.ID, tx)
@@ -154,7 +152,6 @@ func (s *onboardingService) OnboardOwner(ctx context.Context, uid string, worksp
 		log.Printf("team member already exists: %v", err)
 		tx.Rollback()
 		return fmt.Errorf("team member already exists: %v", err)
->>>>>>> origin/master
 	}
 
 	// Create the workspace

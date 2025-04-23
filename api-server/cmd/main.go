@@ -26,7 +26,7 @@ func main() {
 		os.Setenv("GODEBUG", "x509roots=1,x509cert=1")
 	}
 
-	config.LoadEnv()
+	config.LoadEnv(".env")
 
 	cfg := config.NewConfig()
 	db, redisClient, err := config.InitializeDatabase(cfg)
