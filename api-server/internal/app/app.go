@@ -49,10 +49,6 @@ func NewApplication(cfg *config.Config, db *sql.DB, redisClient *redis.Client, g
 	if err != nil {
 		log.Fatalf("failed to create auth middleware: %v", err)
 	}
-<<<<<<< HEAD
-
-	// Initialize controllers
-=======
 	// token := &oauth2.Token{
 	// 	AccessToken:  cfg.Providers.Google.AccessToken,
 	// 	RefreshToken: cfg.Providers.Google.RefreshToken,
@@ -60,15 +56,8 @@ func NewApplication(cfg *config.Config, db *sql.DB, redisClient *redis.Client, g
 	// }
 
 	// initialize repositories
->>>>>>> origin/master
 	repo := repositories.NewRepositoryManager(redisClient)
 	userRepo := repositories.NewUserRepository(redisClient)
-<<<<<<< HEAD
-	userService := services.NewUserService(userRepo, db)
-	userController := controllers.NewUserController(userService, logger)
-
-=======
->>>>>>> origin/master
 	teamMemberRepo := repositories.NewTeamMemberRepository(redisClient)
 	testimonialRepo := repositories.NewTestimonialRepository(redisClient)
 	workspaceRepo := repositories.NewWorkspaceRepository(redisClient)
@@ -139,11 +128,6 @@ func NewApplication(cfg *config.Config, db *sql.DB, redisClient *redis.Client, g
 	// initialize services
 	userService := services.NewUserService(userRepo, db)
 	teamMemberService := services.NewTeamMemberService(teamMemberRepo, db)
-<<<<<<< HEAD
-	teamMemberController := controllers.NewTeamMemberController(teamMemberService, userService, logger)
-
-=======
->>>>>>> origin/master
 	onboardingService := services.NewOnboardingService(repo, db)
 	testimonialService := services.NewTestimonialService(testimonialRepo, db)
 	workspaceService := services.NewWorkspaceService(workspaceRepo, db)
@@ -165,10 +149,6 @@ func NewApplication(cfg *config.Config, db *sql.DB, redisClient *redis.Client, g
 	healthController := controllers.NewHealthController(logger)
 	swaggerController := controllers.NewSwaggerController()
 	testimonialController := controllers.NewTestimonialController(testimonialService, *providerService, logger)
-	workspaceController := controllers.NewWorkspaceController(workspaceService, testimonialService, logger)
-
-	workspaceRepo := repositories.NewWorkspaceRepository(redisClient)
-	workspaceService := services.NewWorkspaceService(workspaceRepo, db)
 	workspaceController := controllers.NewWorkspaceController(workspaceService, testimonialService, logger)
 
 	return &Application{

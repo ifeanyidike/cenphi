@@ -6,10 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-<<<<<<< HEAD
-	"log"
-=======
->>>>>>> origin/master
 	"strings"
 	"time"
 

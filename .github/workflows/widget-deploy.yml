@@ -1,0 +1,129 @@
+name: Widget Build and Deploy
+
+on:
+  workflow_dispatch: # Allow manual triggering
+  push:
+    branches: [master, main]
+    paths:
+      - "src/embed/**" # Only run when widget source files change
+      - "vite.widget.config.ts"
+
+# Add permissions at the workflow level
+permissions:
+  contents: write
+
+jobs:
+  build-widget:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          # No cache option since yarn.lock might not be in the expected location
+
+      - name: Verify directory structure
+        run: |
+          ls -la
+          echo "Current directory: $(pwd)"
+          find . -name "package.json" -type f
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          echo "Installing dependencies in $(pwd)"
+          yarn install --ignore-engines
+
+      - name: Update build-widget.js to ES modules
+        run: |
+          cd frontend
+          echo "Updating build-widget.js in $(pwd)"
+          cat > build-widget.js << 'EOF'
+          // build-widget.js
+          import { execSync } from "child_process";
+          import fs from "fs";
+          import path from "path";
+          import { fileURLToPath } from "url";
+
+          // Get __dirname equivalent in ES modules
+          const __filename = fileURLToPath(import.meta.url);
+          const __dirname = path.dirname(__filename);
+
+          // Create widget build directory if it doesn't exist
+          const widgetDir = path.join(__dirname, "public", "widget");
+          if (!fs.existsSync(widgetDir)) {
+            fs.mkdirSync(widgetDir, { recursive: true });
+          }
+
+          // Build widget
+          console.log("Building widget...");
+          execSync("vite build --config vite.widget.config.ts", { stdio: "inherit" });
+
+          // Copy widget files to public directory
+          console.log("Copying widget files to public/widget...");
+          fs.copyFileSync(
+            path.join(__dirname, "dist", "testimonial-widget.umd.js"),
+            path.join(widgetDir, "testimonial-widget.umd.js")
+          );
+          fs.copyFileSync(
+            path.join(__dirname, "dist", "testimonial-widget.css"),
+            path.join(widgetDir, "testimonial-widget.css")
+          );
+
+          console.log("Widget built and files copied to public/widget/");
+          EOF
+
+      - name: Build widget
+        run: |
+          # Execute in a single shell session to maintain directory context
+          cd frontend
+          echo "Building widget in $(pwd)"
+          yarn build:widget
+
+      - name: Verify widget files
+        run: |
+          cd frontend
+          echo "Checking for widget files in $(pwd)/public/widget"
+          ls -la public/widget || echo "Widget directory not found!"
+
+      - name: Upload widget artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: widget-build
+          path: |
+            frontend/public/widget/testimonial-widget.umd.js
+            frontend/public/widget/testimonial-widget.css
+
+      - name: Create index.html for widget
+        run: |
+          cd frontend
+          cat > public/widget/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Testimonial Widget</title>
+            <link rel="stylesheet" href="testimonial-widget.css">
+          </head>
+          <body>
+            <div id="testimonial-widget-root"></div>
+            <script src="testimonial-widget.umd.js"></script>
+            <script>
+              // Initialize the widget if needed
+              // This depends on how your widget is designed to be used
+            </script>
+          </body>
+          </html>
+          EOF
+
+      # Deploy to your preferred hosting (GitHub Pages example)
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./frontend/public/widget
+          destination_dir: widget

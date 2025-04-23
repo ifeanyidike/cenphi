@@ -70,6 +70,10 @@ services:
     image: busybox
     command: ["tail", "-f", "/dev/null"]
 
+  # cenphidb:
+  #   image: busybox
+  #   command: ["tail", "-f", "/dev/null"]
+
 volumes:
   dbdata:
     name: cenphi_dbdata

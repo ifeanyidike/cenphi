@@ -13,7 +13,7 @@ export default function DashboardFilters({ filters, onFilterChange }: Props) {
         value={filters.testimonialType}
         onChange={e => onFilterChange({ ...filters, testimonialType: e.target.value })}
       >
-        <option value="">All Types</option>
+      
         <option value="customer">Customer</option>
         <option value="expert">Expert</option>
         <option value="influencer">Influencer</option>
@@ -24,7 +24,7 @@ export default function DashboardFilters({ filters, onFilterChange }: Props) {
         value={filters.status}
         onChange={e => onFilterChange({ ...filters, status: e.target.value })}
       >
-        <option value="">All Statuses</option>
+        
         <option value="approved">Approved</option>
         <option value="rejected">Rejected</option>
         <option value="featured">Featured</option>

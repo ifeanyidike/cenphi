@@ -1,7 +1,7 @@
 // components/custom/dashboard/sentimentanalysis/MetricCards.tsx
 import { ArrowUpIcon, ArrowDownIcon } from 'lucide-react';
 import { ScrollText, StarIcon, HeartIcon, ChartBarIcon } from 'lucide-react';
-import { Testimonial } from '@/types/testimonial';
+
 
 // Individual Metric Card Component
 function MetricCard({

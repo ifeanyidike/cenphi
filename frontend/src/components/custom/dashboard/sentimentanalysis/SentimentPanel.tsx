@@ -184,12 +184,17 @@ interface SentimentPanelProps {
 export function SentimentPanel({ testimonial /* , isDarkMode = true */ }: SentimentPanelProps) {
   if (!testimonial) return null;
 
-  const sentiment = testimonial.sentiment || { 
-    score: 0.5, 
-    label: "neutral",
-    count: 0,
-    keywords: []
-  };
+  const sentimentAnalysis = testimonial.analyses?.find(analysis => 
+    analysis.analysis_type === "sentiment"
+  );
+
+  const sentiment: { score: number; label: string; count: number; keywords: string[] } = 
+  (sentimentAnalysis?.analysis_data.sentiment as { score: number; label: string; count: number; keywords: string[] }) || {
+  score: 0.5,
+  label: "neutral",
+  count: 0,
+  keywords: []
+};
 
   // Get color based on emotion type
   const getEmotionColor = (type: string) => {

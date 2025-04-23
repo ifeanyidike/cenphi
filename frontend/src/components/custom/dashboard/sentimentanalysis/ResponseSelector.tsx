@@ -7,7 +7,7 @@ interface ResponseTemplatesProps {
   isDarkMode: boolean;
 }
 
-export function ResponseTemplates({ testimonial, isDarkMode }: ResponseTemplatesProps) {
+export function ResponseTemplates({ isDarkMode }: ResponseTemplatesProps) {
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   

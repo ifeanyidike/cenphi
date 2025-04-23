@@ -13,8 +13,9 @@ import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Testimonial } from "@/types/testimonial";
-import { formatMessageDateIntlShort } from "@/util/general";
-import { getInitials } from "@/util/testimonial";
+import { formatMessageDateIntlShort } from "@/utils/general";
+import { getInitials } from "@/utils/testimonial";
+import { Link } from "react-router-dom";
 
 export const ReviewCard = ({ testimonial }: { testimonial: Testimonial }) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -148,12 +149,8 @@ export const ReviewCard = ({ testimonial }: { testimonial: Testimonial }) => {
             >
               {testimonial.format === "video" && (
                 <div className="relative aspect-video bg-black flex items-center justify-center">
-                  <img
-                    src={
-                      (testimonial as any).media_thumbnail ||
-                      "https://placehold.co/400x225"
-                    }
-                    alt="Video thumbnail"
+                  <video
+                    src={testimonial.media_url || "https://placehold.co/400x225"}
                     className="w-full h-full object-cover opacity-80"
                   />
                   <div className="absolute inset-0 flex items-center justify-center">
@@ -169,6 +166,7 @@ export const ReviewCard = ({ testimonial }: { testimonial: Testimonial }) => {
                   <div className="flex items-center">
                     <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center mr-3">
                       <Volume2 className="h-5 w-5 text-white" />
+                      <audio src={testimonial.media_url} />
                     </div>
                     <div className="flex-1">
                       <div className="mb-1.5">
@@ -188,10 +186,7 @@ export const ReviewCard = ({ testimonial }: { testimonial: Testimonial }) => {
               {testimonial.format === "image" && (
                 <div className="aspect-video bg-gray-100">
                   <img
-                    src={
-                      (testimonial as any).media_url ||
-                      "https://placehold.co/600x225"
-                    }
+                    src={testimonial.media_url || "https://placehold.co/600x225"}
                     alt={`Review by ${testimonial.customer_profile?.name}`}
                     className="w-full h-full object-cover"
                   />
@@ -216,10 +211,13 @@ export const ReviewCard = ({ testimonial }: { testimonial: Testimonial }) => {
             </button>
           </div>
 
-          <button className="flex items-center text-purple-600 font-medium text-sm hover:text-purple-800 transition-colors group">
+          <Link
+            to={`/testimonial/detail/${testimonial.id}`}
+            className="flex items-center text-purple-600 font-medium text-sm hover:text-purple-800 transition-colors group"
+          >
             <span>Details</span>
             <ChevronRight className="h-5 w-5 ml-0.5 group-hover:translate-x-0.5 transition-transform" />
-          </button>
+          </Link>
         </div>
       </div>
     </motion.div>

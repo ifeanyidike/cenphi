@@ -24,25 +24,36 @@ type database struct {
 var DB Database
 
 func retryConnection(dsn string, maxRetries int, delay time.Duration) (*sql.DB, error) {
-	for range maxRetries {
+	var lastErr error
+	for i := 0; i < maxRetries; i++ {
 		db, err := sql.Open("postgres", dsn)
-
-		if err == nil {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-			if err := db.PingContext(ctx); err == nil {
-				db.SetMaxOpenConns(30)
-				db.SetConnMaxIdleTime(time.Duration(15 * 60))
-				db.SetMaxIdleConns(30)
-				return db, nil
-			}
-
+		if err != nil {
+			lastErr = err
+			log.Printf("Database open failed: dsn: %v, %v. Retrying in %v...", dsn, err, delay)
+			time.Sleep(delay)
+			continue
 		}
-log.Printf("Postgres DSN: %v.", dsn)
-		log.Printf("Database connection failed: %v. Retrying in %v...", err, delay)
-		time.Sleep(delay)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		pingErr := db.PingContext(ctx)
+		cancel() // Cancel the context right after using it
+
+		if pingErr != nil {
+			lastErr = pingErr
+			log.Printf("Database ping failed: %v. Retrying in %v...", pingErr, delay)
+			db.Close() // Make sure to close the connection if ping fails
+			time.Sleep(delay)
+			continue
+		}
+
+		// Connection successful
+		db.SetMaxOpenConns(30)
+		db.SetConnMaxIdleTime(15 * time.Minute) // Use time.Minute for clarity
+		db.SetMaxIdleConns(30)
+		return db, nil
 	}
-	return nil, fmt.Errorf("failed to connect to the db after %d retries", maxRetries)
+
+	return nil, fmt.Errorf("failed to connect to the db after %d retries: %v", maxRetries, lastErr)
 }
 
 func InitializeDatabase(cfg *Config) (*sql.DB, *redis.Client, error) {

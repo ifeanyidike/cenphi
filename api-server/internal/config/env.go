@@ -18,7 +18,8 @@ func FindFile(filename string) (string, error) {
 	}
 
 	for _, path := range paths {
-		if _, err := os.Stat(path); err == nil {
+		fileInfo, err := os.Stat(path)
+		if err == nil && !fileInfo.IsDir() { // Check that it's a file, not a directory
 			absPath, _ := filepath.Abs(path)
 			slog.Debug(fmt.Sprintf("File found %s", absPath))
 
@@ -57,8 +58,7 @@ func FindFile(filename string) (string, error) {
 // 	return err
 // }
 
-func LoadEnv() error {
-	envFile := ".env"
+func LoadEnv(envFile string) error {
 	path, err := FindFile(envFile)
 
 	if err != nil {

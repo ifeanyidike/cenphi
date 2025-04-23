@@ -1,4 +1,4 @@
-import { Users, LineChart, Brain, ArrowUpRight, Target } from 'lucide-react';
+import { Brain, ArrowUpRight } from 'lucide-react';
 import { Testimonial } from '@/types/testimonial';
 
 interface AIInsightsProps {
@@ -7,15 +7,18 @@ interface AIInsightsProps {
 }
 
 export function AIInsights({ testimonial, isDarkMode }: AIInsightsProps) {
+  // Access sentiment from the analyses array
+  const sentimentAnalysis = testimonial.analyses?.find(analysis => analysis.analysis_type === 'sentiment');
+  const sentimentLabel = (sentimentAnalysis?.analysis_data?.sentiment as { label: string })?.label || 'neutral';
+  
   // In a real application, these values would be derived from actual testimonial analysis
-  const priority = testimonial.sentiment?.label === 'negative' ? 'High' : 'Medium';
+  const priority = sentimentLabel === 'negative' ? 'High' : 'Medium';
   const priorityColor = priority === 'High' ? 
     (isDarkMode ? "text-red-400" : "text-red-600") : 
     (isDarkMode ? "text-emerald-400" : "text-emerald-600");
 
   const topicAnalysis = 'Product UX'; // Example topic
   const similarCases = 3; // Example count
-  // Removed unused sentimentStrength variable
   const customerValue = 'High'; // Example value
 
   return (
