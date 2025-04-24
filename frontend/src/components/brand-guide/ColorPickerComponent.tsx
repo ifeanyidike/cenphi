@@ -68,7 +68,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
   const [isCopied, setIsCopied] = useState(false);
   const [history, setHistory] = useState<string[]>([color]);
   const [historyIndex, setHistoryIndex] = useState(0);
-  const popoverRef = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement | null>(null);
   const { toast } = useToast();
   const { recentColors, addRecentColor } = brandGuideStore;
 

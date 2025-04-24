@@ -2087,7 +2087,7 @@ const TestimonialTemplateSelector: React.FC<TemplateSelectionProps> = ({
                               >
                                 {formatInfo?.icon &&
                                   React.cloneElement(
-                                    formatInfo.icon as React.ReactElement,
+                                    formatInfo.icon,
                                     { className: "h-3 w-3" }
                                   )}
                                 {format}
@@ -2260,8 +2260,7 @@ const TestimonialTemplateSelector: React.FC<TemplateSelectionProps> = ({
                         >
                           {formatInfo?.icon &&
                             React.cloneElement(
-                              formatInfo.icon as React.ReactElement,
-                              { className: "h-3.5 w-3.5 mr-1.5" }
+                              formatInfo.icon, { className: "h-3.5 w-3.5 mr-1.5" }
                             )}
                           {formatInfo?.label}
                         </Badge>

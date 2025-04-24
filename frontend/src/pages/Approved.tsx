@@ -16,6 +16,7 @@ const Approved = () => {
           ...testimonial,
           customer_profile: {
             ...testimonial.customer_profile,
+            id: testimonial.customer_profile?.id || 'default_id',
             workspace_id: testimonial.workspace_id || 'default_workspace_id',
             created_at: testimonial.created_at || new Date(),
             updated_at: testimonial.updated_at || new Date(),

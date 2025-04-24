@@ -545,7 +545,7 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
     // Check if this testimonial matches discovery mode criteria
     const { matches, reason } = matchesDiscoveryMode(testimonial);
     const isHighlightedByDiscovery =
-      testimonial.status === "pending_review" &&
+      testimonial.status === "pending" &&
       discoveryMode !== "manual" &&
       matches;
 
@@ -757,7 +757,7 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
           )}
 
           <div className="flex items-center gap-1">
-            {testimonial.status === "pending_review" ? (
+            {testimonial.status === "pending" ? (
               <>
                 <Button
                   variant="ghost"
@@ -881,7 +881,7 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
     // Check if this testimonial matches discovery mode criteria
     const { matches, reason } = matchesDiscoveryMode(testimonial);
     const isHighlightedByDiscovery =
-      testimonial.status === "pending_review" &&
+      testimonial.status === "pending" &&
       discoveryMode !== "manual" &&
       matches;
 
@@ -1093,7 +1093,7 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
               <Eye className="h-4 w-4" />
             </Button>
 
-            {testimonial.status === "pending_review" ? (
+            {testimonial.status === "pending" ? (
               <>
                 <Button
                   variant="ghost"
@@ -1552,7 +1552,7 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
                   <span>
                     {activeTab === "all"
                       ? "Status"
-                      : activeTab === "pending_review"
+                      : activeTab === "pending"
                         ? "Pending"
                         : activeTab === "approved"
                           ? "Approved"
@@ -1579,12 +1579,12 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
                   </Button>
                   <Button
                     variant={
-                      activeTab === "pending_review" ? "outline" : "ghost"
+                      activeTab === "pending" ? "outline" : "ghost"
                     }
                     size="sm"
                     className="w-full justify-start"
                     onClick={() => {
-                      setActiveTab("pending_review");
+                      setActiveTab("pending");
                       setActiveFilter(null);
                     }}
                   >
@@ -2490,7 +2490,7 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
                   </div>
 
                   {/* Check if testimonial matches discovery criteria */}
-                  {selectedTestimonial.status === "pending_review" &&
+                  {selectedTestimonial.status === "pending" &&
                     discoveryMode !== "manual" &&
                     matchesDiscoveryMode(selectedTestimonial).matches && (
                       <div className="bg-green-50 border border-green-200 rounded-md p-3 mb-2">
@@ -2713,7 +2713,7 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="py-3 space-y-3">
-                        {selectedTestimonial.status === "pending_review" ? (
+                        {selectedTestimonial.status === "pending" ? (
                           <div className="space-y-3">
                             <Button
                               className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
@@ -3145,7 +3145,7 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
                   Close
                 </Button>
 
-                {selectedTestimonial.status === "pending_review" ? (
+                {selectedTestimonial.status === "pending" ? (
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
