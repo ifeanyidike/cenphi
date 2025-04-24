@@ -94,7 +94,7 @@ export const ReviewsSection = observer(
       if (activeTab !== "all") {
         switch (activeTab) {
           case "new":
-            if (testimonial.status !== "pending_review") return false;
+            if (testimonial.status !== "pending") return false;
             break;
           case "featured":
             if (testimonial.status !== "featured") return false;

@@ -393,6 +393,9 @@ export type ContentStatus =
   | "featured"
   | "scheduled"
   | "requested"
+  | "deleted"
+  | "view_more"
+  | "return_to_pending"
   | "all";
 
 export type CollectionMethod =

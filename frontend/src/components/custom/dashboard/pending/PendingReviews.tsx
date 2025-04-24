@@ -103,7 +103,7 @@ export const PendingReviews: React.FC<PendingReviewsProps> = ({
           case "pending":
             return testimonial.status === filter;
           case "rejected":
-            return testimonial.status === "pending" && testimonial.is_featured;
+            return testimonial.status === "rejected"
           
           // Rating filters
           case "5":

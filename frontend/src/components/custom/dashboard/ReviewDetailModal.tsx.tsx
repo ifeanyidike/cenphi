@@ -99,7 +99,7 @@ export const ReviewDetailModal = ({ testimonial }: { testimonial: Testimonial })
                       testimonial.status === "featured" ? "bg-blue-50 text-blue-600" :
                       testimonial.status === "archived" ? "bg-blue-50 text-brown-600" :
                       testimonial.status === "rejected" ? "bg-red-50 text-red-600" :
-                      testimonial.status === "pending_review" ? "bg-yellow-50 text-yellow-600" :
+                      testimonial.status === "pending" ? "bg-yellow-50 text-yellow-600" :
                       "bg-purple-50 text-purple-600"
                     }`}
                   >

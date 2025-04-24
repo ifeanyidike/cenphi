@@ -14,7 +14,7 @@ interface UseAudioSetupOptions {
 interface UseAudioSetupReturn {
   audioRef: React.RefObject<HTMLAudioElement>;
   canvasRef: React.RefObject<HTMLCanvasElement>;
-  containerRef: React.RefObject<HTMLDivElement>;
+  containerRef: React.RefObject<HTMLDivElement | null>;
   isReady: boolean;
   isLoading: boolean;
   error: string | null;
@@ -43,8 +43,8 @@ export const useAudioSetup = ({
   visualize = true,
 }: UseAudioSetupOptions): UseAudioSetupReturn => {
   // Refs
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null as unknown as HTMLAudioElement);
+  const canvasRef = useRef<HTMLCanvasElement>(null as unknown as HTMLCanvasElement);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Web Audio API refs

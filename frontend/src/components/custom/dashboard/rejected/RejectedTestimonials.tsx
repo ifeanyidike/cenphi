@@ -493,7 +493,7 @@ import StatusFilterMenu from "@/components/custom/dashboard/approved/StatusFilte
 import { statusFilterOptions } from "@/types/d";
 import { Badge } from "@/components/ui/badge";
 
-type ActionType = 'approve' | 'reject' | 'feature' | 'archive' | 'delete' | 'pending_review'  | 'view_more';
+type ActionType = 'approve' | 'reject' | 'feature' | 'archive' | 'delete' | 'pending' | 'view_more' | 'return_to_pending';
 
 interface RejectedReviewsProps {
   testimonials: Testimonial[];
@@ -732,7 +732,7 @@ export const RejectedTestimonials: React.FC<RejectedReviewsProps> = ({
           description: "This action cannot be undone. Are you sure you want to delete?",
           confirmClass: "bg-red-500 hover:bg-red-600"
         };
-      case 'pending_review':
+      case 'pending':
         return {
           icon: <RefreshCw className="mx-auto mb-4 text-blue-600" size={80} strokeWidth={1.5} />,
           title: "Return to Pending",

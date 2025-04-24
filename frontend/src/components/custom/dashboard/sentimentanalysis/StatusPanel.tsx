@@ -1026,13 +1026,13 @@ export function StatusPanel({
               const narrativeData = narrativeAnalysis.analysis_data;
               const themes = narrativeData.key_themes || [];
               
-              return themes.length > 0 ? (
+              return Array.isArray(themes) && themes.length > 0 ? (
                 <div className="mt-4 bg-slate-100 border-slate-200 p-3 rounded-lg border">
                   <p className="text-xs text-slate-500 mb-1">KEY THEMES</p>
                   <div className="flex flex-wrap gap-2 mt-1">
                     {themes.map((theme, index) => (
                       <span key={index} className="bg-blue-100 text-blue-700 px-2 py-1 text-xs rounded-full">
-                        {theme}
+                        {String(theme)}
                       </span>
                     ))}
                   </div>
