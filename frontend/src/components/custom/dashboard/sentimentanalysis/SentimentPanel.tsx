@@ -417,7 +417,7 @@ export function SentimentPanel({ testimonial /* , isDarkMode = true */ }: Sentim
           </h3>
           <div className={`${cardBg} p-4 rounded-xl border`}>
             {/* Recharts Integration - Explicitly set isDarkMode to false */}
-            <SentimentMiniCharts sentiment={sentiment} isDarkMode={false} />
+            <SentimentMiniCharts testimonial={testimonial} isDarkMode={false} />
           </div>
         </div>
         

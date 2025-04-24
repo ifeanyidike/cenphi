@@ -38,8 +38,8 @@ const Navbar: React.FC<NavbarProps> = observer(
       useState<boolean>(false);
 
     const navRef = useRef<HTMLDivElement>(null);
-    const userMenuRef = useRef<HTMLDivElement>(null);
-    const notificationRef = useRef<HTMLDivElement>(null);
+    const userMenuRef = useRef<HTMLDivElement>(null!) as React.RefObject<HTMLDivElement>;
+    const notificationRef = useRef<HTMLDivElement>(null!) as React.RefObject<HTMLDivElement>;
     const searchInputRef = useRef<HTMLInputElement>(null);
     const location = useLocation();
 

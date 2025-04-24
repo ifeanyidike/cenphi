@@ -31,10 +31,16 @@ export function DateRangePicker({ value, onChange }: DateRangePickerProps) {
   }, [value?.from, value?.to]);
 
   // Handle date selection
-  const handleSelect = (newDate: DateRange) => {
-    setDate(newDate);
-    if (newDate.from && newDate.to) {
-      onChange(newDate);
+  const handleSelect = (newDate: import("react-day-picker").DateRange | undefined) => {
+    if (newDate) {
+      const updatedDate: DateRange = {
+        from: newDate.from,
+        to: newDate.to || undefined, // Ensure compatibility with your custom DateRange type
+      };
+      setDate(updatedDate);
+      if (updatedDate.from && updatedDate.to) {
+        onChange(updatedDate);
+      }
     }
   };
 

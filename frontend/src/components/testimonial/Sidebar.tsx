@@ -74,7 +74,7 @@ const Sidebar: FC<SidebarProps> = observer(({ actionsRef }) => {
   const [activeTab, setActiveTab] = useState<string>("author");
 
   // Refs
-  const nameInputRef = useRef<HTMLInputElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null as unknown as HTMLInputElement);
 
   // Update author form when testimonial changes
   useEffect(() => {

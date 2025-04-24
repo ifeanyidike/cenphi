@@ -104,7 +104,7 @@ export const ApprovedTestimonials: React.FC<ApproveReviewsProps> = ({
           case "approved":
             return testimonial.status === filter;
           case "featured":
-            return testimonial.status === "approved" && testimonial.is_featured;
+            return testimonial.status === "approved" 
           
           // Rating filters
           case "5":

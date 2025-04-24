@@ -1,4 +1,14 @@
-import { Filters } from '@/types/testimonial';
+
+
+
+// Existing content of the file
+
+// Add this export if it doesn't exist
+export interface Filters {
+  testimonialType: string;
+  status: string;
+  // Add other filter properties as needed
+}
 
 interface Props {
   filters: Filters;

@@ -1,7 +1,13 @@
 // PerformanceMetricsCard.tsx
 import { ArrowUpRight, Zap, Heart, CheckCircle } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "../ui/card";
-import { MetricItem } from "@/types/types";
+// Replace MetricItem with the correct type or define it locally if missing
+type MetricItem = {
+  label: string;
+  value: string;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  trend: "up" | "down";
+};
 
 export const PerformanceMetricsCard = () => {
   const metrics: MetricItem[] = [
