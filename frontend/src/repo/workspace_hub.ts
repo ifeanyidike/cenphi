@@ -32,7 +32,6 @@
 // export const rootStore = new RootStore();
 
 // repositories/WorkspaceRepository.ts
-
 import { auth } from "@/config/firebase";
 import { Workspace } from "@/types/workspace";
 import { makeAutoObservable, observable } from "mobx";

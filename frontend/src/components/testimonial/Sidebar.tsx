@@ -5,7 +5,7 @@ import { workspaceHub } from "../../repo/workspace_hub";
 
 // Sidebar Props
 type SidebarProps = {
-  actionsRef: React.RefObject<HTMLDivElement>;
+  actionsRef: React.RefObject<HTMLDivElement | null>;
 };
 
 // Define animation variants
@@ -74,7 +74,7 @@ const Sidebar: FC<SidebarProps> = observer(({ actionsRef }) => {
   const [activeTab, setActiveTab] = useState<string>("author");
 
   // Refs
-  const nameInputRef = useRef<HTMLInputElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null as unknown as HTMLInputElement);
 
   // Update author form when testimonial changes
   useEffect(() => {

@@ -449,7 +449,7 @@ export const mockTestimonials: Testimonial[] = [
     workspace_id: "workspace_1",
     testimonial_type: "customer",
     format: "social_post",
-    status: "pending_review", // mapped from original "pending"
+    status: "pending", // mapped from original "pending"
     content:
       "I've been using @brandname for the past 3 months and it has completely transformed how I organize my projects. The intuitive interface and powerful features are exactly what I've been looking for!",
     rating: 5,
@@ -568,7 +568,7 @@ export const mockTestimonials: Testimonial[] = [
     workspace_id: "workspace_1",
     testimonial_type: "customer",
     format: "social_post",
-    status: "pending_review",
+    status: "pending",
     content:
       "Been testing several similar products for our company and this one stands out by far. The team behind it really understands what professionals need. Highly recommend for any business looking to streamline their processes.",
     collection_method: "social_import",
@@ -688,7 +688,7 @@ export const mockTestimonials: Testimonial[] = [
     workspace_id: "workspace_1",
     testimonial_type: "customer",
     format: "social_post",
-    status: "pending_review",
+    status: "pending",
     content:
       "Just switched to @brandname and wish I'd done it sooner! Their customer support team went above and beyond to help with my migration. This is how you build customer loyalty! 🙌",
     collection_method: "social_import",
@@ -728,7 +728,7 @@ export const mockTestimonials: Testimonial[] = [
     workspace_id: "workspace_1",
     testimonial_type: "customer",
     format: "social_post",
-    status: "pending_review",
+    status: "pending",
     content:
       "I've been using the product for 2 weeks now. It's okay, but nothing revolutionary. There are some nice features, but also a few annoying bugs that should have been caught before release.",
     collection_method: "social_import",
@@ -763,7 +763,7 @@ export const mockTestimonials: Testimonial[] = [
     workspace_id: "workspace_1",
     testimonial_type: "customer",
     format: "social_post",
-    status: "pending_review",
+    status: "pending",
     content:
       "Our entire marketing team made the switch to @brandname last quarter, and we've seen a 30% increase in productivity. The collaboration features are unmatched in the industry. A game-changer for enterprise teams.",
     collection_method: "social_import",

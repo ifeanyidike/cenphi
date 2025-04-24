@@ -200,7 +200,7 @@ const SmartAnalyticsDashboard: React.FC<SmartAnalyticsDashboardProps> =
       return isDarkMode ? "text-slate-400" : "text-slate-600";
     };
 
-    const getChangeIcon = (change: number): JSX.Element => {
+    const getChangeIcon = (change: number) => {
       if (change > 0) {
         return (
           <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">

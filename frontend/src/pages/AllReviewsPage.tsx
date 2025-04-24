@@ -1,9 +1,9 @@
-import AllReviews from "@/components/custom/dashboard/AllReviews";
+import AllReviews from "@/components/custom/dashboard/Reviews";
 const AllReviewsPage = () => {
   return (
-    <div>
+    
       <AllReviews />
-    </div>
+   
   );
 };
 

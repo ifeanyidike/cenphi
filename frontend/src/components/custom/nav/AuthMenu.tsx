@@ -17,7 +17,7 @@ type Props = {
   setIsUserMenuOpen: (isOpen: boolean) => void;
   setIsNotificationOpen: (isOpen: boolean) => void;
   setActiveMenu: (menu: string | null) => void;
-  userMenuRef: React.RefObject<HTMLDivElement>;
+  userMenuRef: React.RefObject<HTMLDivElement |null>;
   isUserMenuOpen: boolean;
   className: string;
 };

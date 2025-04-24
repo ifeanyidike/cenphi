@@ -25,6 +25,11 @@ const Onboarding: React.FC = observer(() => {
   const [currentStep, setCurrentStep] = useState(1);
   const [progress, setProgress] = useState(25);
   const [formCompleted, setFormCompleted] = useState(false);
+  // const [initialized, setInitialized] = useState(false);
+
+  // useEffect(() => {
+  //   if (initialized) return;
+  // }, []);
 
   useEffect(() => {
     setProgress(currentStep * 25);

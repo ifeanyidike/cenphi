@@ -13,7 +13,7 @@ import { observer } from "mobx-react-lite";
 import { workspaceHub } from "@/repo/workspace_hub";
 
 type ImageCanvasElementProps = {
-  containerRef: RefObject<HTMLDivElement>;
+  containerRef: RefObject<HTMLDivElement | null>;
   overlay: TextOverlay;
   setIsAnyOverlayDragging: Dispatch<SetStateAction<boolean>>;
   editTextOverlay: (overlay: TextOverlay) => void;

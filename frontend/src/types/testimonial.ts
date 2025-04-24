@@ -386,13 +386,16 @@ export type ContentFormat =
   | "interview";
 
 export type ContentStatus =
-  | "pending_review"
+  | "pending"
   | "approved"
   | "rejected"
   | "archived"
   | "featured"
   | "scheduled"
   | "requested"
+  | "deleted"
+  | "view_more"
+  | "return_to_pending"
   | "all";
 
 export type CollectionMethod =
@@ -794,6 +797,6 @@ export interface TrackedObject {
       y: number;
       width: number;
       height: number;
-    };
-  }[];
+};
+}[];
 }

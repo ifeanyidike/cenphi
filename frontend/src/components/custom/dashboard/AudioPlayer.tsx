@@ -1,18 +1,16 @@
 // Audio player component
 import { useState } from "react";
 import { Volume2, Play, Pause } from "lucide-react";
-import { Review } from "@/types/types";
+import { Testimonial } from "@/types/testimonial";
 
 // Define or import the ExtendedReview type
 
-export type ExtendedReview = Review & {
+export type ExtendedTestimonial = Testimonial & {
   id: string;
-  duration: string;
-  audioUrl: string;
-  thumbnailUrl: string;
+
 }
 
-export const AudioPlayer = ({ review }: { review: ExtendedReview }) => {
+export const AudioPlayer = ({ testimonial }: { testimonial: ExtendedTestimonial }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress] = useState(0);
 
@@ -20,13 +18,13 @@ export const AudioPlayer = ({ review }: { review: ExtendedReview }) => {
     if (isPlaying) {
       setPlayingMedia(null);
     } else {
-      setPlayingMedia(review.id);
+      setPlayingMedia(testimonial.id);
     }
     setIsPlaying(!isPlaying);
   };
 
   return (
-    <div className="mt-3 bg-gray-50 rounded-lg p-3">
+    <div className="mt-2 bg-gray-50 rounded-lg p-3">
       <div className="flex items-center">
         <button 
           onClick={togglePlay}
@@ -44,7 +42,7 @@ export const AudioPlayer = ({ review }: { review: ExtendedReview }) => {
           </div>
           <div className="flex justify-between text-xs text-gray-500 mt-1">
             <span>{isPlaying ? "Playing..." : "Audio review"}</span>
-            <span>{review.duration}</span>
+            <span>{testimonial.share_count}</span>
           </div>
         </div>
         

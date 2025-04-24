@@ -63,7 +63,7 @@ const useMousePosition = () => {
 };
 
 const useParticles = (
-  canvasRef: React.RefObject<HTMLCanvasElement>,
+  canvasRef: React.RefObject<HTMLCanvasElement | null>,
   mousePosition: Coordinates,
   particleSettings: {
     count: number;
@@ -431,7 +431,7 @@ const NotFoundPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
   const [activeSection, setActiveSection] = useState<string>("main");
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const isInView = useInView(containerRef);

@@ -34,7 +34,7 @@ type Props = {
   setIsNotificationOpen: (isOpen: boolean) => void;
   setActiveMenu: (menu: string | null) => void;
   setIsUserMenuOpen: (isOpen: boolean) => void;
-  notificationRef: React.RefObject<HTMLDivElement>;
+  notificationRef: React.RefObject<HTMLDivElement | null>;
 };
 const NotificationBell = ({
   isNotificationOpen,

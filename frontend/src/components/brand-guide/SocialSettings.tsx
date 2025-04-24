@@ -328,7 +328,7 @@ const SocialSettings: FC = () => {
   }, [activePlatform, activeTab]);
 
   // Platform specific tone tips
-  const getPlatformToneTips = (): JSX.Element => {
+  const getPlatformToneTips = () => {
     const platform = getCurrentPlatform().id as
       | "twitter"
       | "facebook"
@@ -516,7 +516,7 @@ const SocialSettings: FC = () => {
   };
 
   // Get message type icon
-  const getMessageTypeIcon = (type: string): JSX.Element => {
+  const getMessageTypeIcon = (type: string) => {
     if (type === "request") return <MessageCircle className="h-4 w-4" />;
     if (type === "thankYou") return <Heart className="h-4 w-4" />;
     return <CornerDownRight className="h-4 w-4" />;
