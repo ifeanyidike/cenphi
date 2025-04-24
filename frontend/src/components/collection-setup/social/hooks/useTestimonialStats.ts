@@ -41,7 +41,7 @@ export const useTestimonialStats = (testimonials: Testimonial[]) => {
 
     const total = testimonials.length;
     const pending = testimonials.filter(
-      (t) => t.status === "pending_review"
+      (t) => t.status === "pending"
     ).length;
     const approved = testimonials.filter((t) => t.status === "approved").length;
     const rejected = testimonials.filter((t) => t.status === "rejected").length;

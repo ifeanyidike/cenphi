@@ -37,7 +37,7 @@ import { itemVariants, standardFieldOptions } from "./constants";
 import { observer } from "mobx-react-lite";
 
 type FormPreviewProps = {
-  previewRef: React.RefObject<HTMLDivElement>;
+  previewRef: React.RefObject<HTMLDivElement | null>;
   settings: CollectionSettings["custom"];
 };
 const FormPreview: FC<FormPreviewProps> = ({ previewRef, settings }) => {

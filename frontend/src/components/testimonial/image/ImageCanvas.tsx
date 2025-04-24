@@ -10,7 +10,7 @@ import { workspaceHub } from "@/repo/workspace_hub";
 
 interface ImageCanvasProps {
   imageUrl: string;
-  containerRef: React.RefObject<HTMLDivElement>;
+  containerRef: React.RefObject<HTMLDivElement | null>;
   alt: string;
 }
 

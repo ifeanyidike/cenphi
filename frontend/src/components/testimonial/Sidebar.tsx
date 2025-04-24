@@ -5,7 +5,7 @@ import { workspaceHub } from "../../repo/workspace_hub";
 
 // Sidebar Props
 type SidebarProps = {
-  actionsRef: React.RefObject<HTMLDivElement>;
+  actionsRef: React.RefObject<HTMLDivElement | null>;
 };
 
 // Define animation variants

@@ -9,7 +9,7 @@ on:
       - ".github/workflows/**"
       - "scripts/**"
       - "docker-compose.prod.yaml"
-      # - "protobuf/**"
+      - "protobuf/**"
 
 jobs:
   prepare:
@@ -315,7 +315,7 @@ jobs:
           cat > ./ai-service/.env << 'ENDOFFILE'
           # Add necessary AI service variables here
           PYTHONUNBUFFERED=1
-          HF_HOME=/root/.cache/huggingface
+          TRANSFORMERS_CACHE=/root/.cache/huggingface
           # Add other necessary AI service variables
           ENDOFFILE
 
@@ -627,7 +627,7 @@ jobs:
                             - ai-model-cache:/root/.cache/huggingface
                         environment:
                             - PYTHONUNBUFFERED=1
-                            - HF_HOME=/root/.cache/huggingface
+                            - TRANSFORMERS_CACHE=/root/.cache/huggingface
                             - PYTHON_ENV=production
                         command: ["/opt/venv/bin/python", "main.py"]
                 volumes:

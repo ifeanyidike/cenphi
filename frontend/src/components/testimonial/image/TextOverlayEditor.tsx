@@ -20,7 +20,7 @@ interface TextInputState {
 interface TextOverlayEditorProps {
   textInput: TextInputState;
   setTextInput: React.Dispatch<React.SetStateAction<TextInputState>>;
-  textAreaRef: React.RefObject<HTMLTextAreaElement>;
+  textAreaRef: React.RefObject<HTMLTextAreaElement | null>;
   showTextControls: boolean;
   confirmTextOverlay: () => void;
   cancelTextOverlay: () => void;

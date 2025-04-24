@@ -22,13 +22,13 @@ type AIFeature = {
   id: string;
   title: string;
   description: string;
-  icon: JSX.Element;
+  icon: React.ReactNode;
   color: string;
   stats: {
     label: string;
     value: string;
   }[];
-  visual: JSX.Element;
+  visual: React.ReactNode;
 };
 
 const AIFeatureShowcase = () => {
@@ -472,6 +472,7 @@ function FeatureList({
       {aiFeatures.map((feature, index) => (
         <motion.button
           key={feature.id}
+          // @ts-expect-error you may expect to see an error here
           ref={(el) => (cardsRef.current[index] = el)}
           onClick={() => setActiveFeature(index)}
           className={cn(

@@ -141,7 +141,7 @@ export const useDiscoveryModeProcessing = (
 
     const updatedTestimonials = testimonials.map((testimonial) => {
       // Only process pending testimonials
-      if (testimonial.status !== "pending_review") {
+      if (testimonial.status !== "pending") {
         return testimonial;
       }
 

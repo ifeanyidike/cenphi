@@ -19,7 +19,7 @@ interface DrawingCanvasProps {
   setIsDrawing: React.Dispatch<React.SetStateAction<boolean>>;
   currentPath: Array<Point>;
   setCurrentPath: React.Dispatch<React.SetStateAction<Array<Point>>>;
-  imageRef: React.RefObject<HTMLImageElement>;
+  imageRef: React.RefObject<HTMLImageElement |null>;
   saveChanges: () => void;
 }
 
