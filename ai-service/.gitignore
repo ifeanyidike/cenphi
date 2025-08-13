@@ -4,3 +4,4 @@ storage
 poetry.lock
 pyproject.toml
 encoded_key.txt
+cloudrun-deployment-service.yaml

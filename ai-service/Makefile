@@ -38,7 +38,7 @@ PROJECT_ID = cenphiio
 IMAGE_REPO = us-central1-docker.pkg.dev/cenphiio/cenphi-ai-service-repo
 IMAGE_NAME = ai-service-grpc
 DOCKERFILE = Dockerfile.cloudrun
-YAML_FILE = cloudrun-service.yaml
+YAML_FILE = cloudrun-deployment-service.yaml
 
 # Build and Deploy
 deploy:
