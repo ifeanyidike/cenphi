@@ -20,7 +20,6 @@ RUN echo "Cache buster: ${CACHE_BUSTER}"
 COPY . .
 
 # Build a static binary with optimizations
-ARG VERSION=dev
 RUN CGO_ENABLED=0 go build \
     -ldflags="-s -w -X main.Version=${VERSION}" \
     -trimpath \
@@ -29,8 +28,8 @@ RUN CGO_ENABLED=0 go build \
 
 # Create a custom certificate directory and download certificates
 RUN mkdir -p /app/certs && \
-    curl -sSL https://pki.goog/roots.pem -o /app/certs/google_roots.pem && \
-    curl -sSL https://curl.se/ca/cacert.pem -o /app/certs/cacert.pem
+    (curl -sSL --retry 3 --retry-delay 5 https://pki.goog/roots.pem -o /app/certs/google_roots.pem || true) && \
+    (curl -sSL --retry 3 --retry-delay 5 https://curl.se/ca/cacert.pem -o /app/certs/cacert.pem || true)
 
 # Final stage - Minimal production image
 FROM alpine:latest
