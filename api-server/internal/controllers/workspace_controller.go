@@ -47,7 +47,7 @@ func NewWorkspaceController(service services.WorkspaceService, testimonialSvc se
 // @Failure 404 {object} utils.ErrorResponse
 // @Router /workspaces [get]
 func (c *workspaceController) GetWorkspace(w http.ResponseWriter, r *http.Request) {
-	// id, err := uuid.Parse(r.URL.Query().Get("id")). using params for now
+	// id, err := uuid.Parse(r.URL.Query().Get("id")). using params for now.
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		utils.RespondWithError(w, http.StatusBadRequest, apperrors.ErrInvalidWorkspaceID.Error())
