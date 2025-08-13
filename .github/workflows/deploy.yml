@@ -218,6 +218,7 @@ jobs:
             lorddickson/api-server:${{ github.sha }}
           no-cache: true
           build-args: |
+            VERSION=${{ github.sha }}
             BUILDKIT_INLINE_CACHE=1
             CACHE_BUSTER=${{ github.sha }}
 

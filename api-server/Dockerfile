@@ -20,8 +20,9 @@ RUN echo "Cache buster: ${CACHE_BUSTER}"
 COPY . .
 
 # Build a static binary with optimizations
+ARG VERSION=dev
 RUN CGO_ENABLED=0 go build \
-    -ldflags="-s -w -X main.Version=$(git describe --tags --always || echo 'dev')" \
+    -ldflags="-s -w -X main.Version=${VERSION}" \
     -trimpath \
     -o /app/api \
     ./cmd

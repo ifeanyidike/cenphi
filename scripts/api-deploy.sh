@@ -509,8 +509,20 @@ if [ -z "$REDIS_HOST" ] || [ -z "$REDIS_PASSWORD" ] || [ -z "$REDIS_PORT" ]; the
 fi
 
 if [ -z "$OCI_BUCKET" ] || [ -z "$OCI_REGION" ] || [ -z "$OCI_PRIVATE_KEY_CONTENT" ] || [ -z "$OCI_FINGERPRINT" ] || [ -z "$OCI_NAMESPACE" ]; then
-    echo "❌ Error: One or more AWS environment variables are not set!"
+    echo "❌ Error: One or more OCI variables are not set!"
     echo "Required: OCI_BUCKET, OCI_REGION, OCI_PRIVATE_KEY_CONTENT, OCI_FINGERPRINT, OCI_NAMESPACE"
+    exit 1
+fi
+
+if [ -z "$OPENAI_API_KEY" ] || [ -z "$ANTHROPIC_API_KEY" ] || [ -z "$ASSEMBLYAI_API_KEY" ]; then
+    echo "❌ Error: One or more models are not set!"
+    echo "Required: OPENAI_API_KEY, ANTHROPIC_API_KEY, ASSEMBLYAI_API_KEY"
+    exit 1
+fi
+
+if [ -z "$LINKEDIN_CLIENT_ID" ] || [ -z "$LINKEDIN_CLIENT_SECRET" ] || [ -z "$GOOGLE_DRIVE_CLIENT_ID" ] || [ -z "$GOOGLE_DRIVE_CLIENT_SECRET" ]; then
+    echo "❌ Error: One or more secret keys and ids are not set!"
+    echo "Required: LINKEDIN_CLIENT_ID, LINKEDIN_CLIENT_SECRET, GOOGLE_DRIVE_CLIENT_ID, GOOGLE_DRIVE_CLIENT_SECRET"
     exit 1
 fi
 
@@ -663,7 +675,7 @@ EOFDC
 
 # Stop any existing containers
 echo "🛑 Stopping existing containers..."
-docker-compose -f docker-compose.prod.yaml -f docker-compose.override.yaml down api-server || true
+docker compose -f docker-compose.prod.yaml -f docker-compose.override.yaml down api-server || true
 
 # Clean up any old containers
 echo "🧹 Cleaning up old containers..."
@@ -690,7 +702,7 @@ echo "📦 Image created: $IMAGE_CREATED"
 
 # Start the service
 echo "🚀 Starting API server..."
-docker-compose -f docker-compose.prod.yaml -f docker-compose.override.yaml up -d api-server
+docker compose -f docker-compose.prod.yaml -f docker-compose.override.yaml up -d api-server
 
 # Verify the container is running
 sleep 3
