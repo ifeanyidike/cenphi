@@ -546,24 +546,40 @@ func (r *socialPostRepository) DeletePost(ctx context.Context, id uuid.UUID, db 
 }
 
 func (r *socialPostRepository) GetPostsNeedingMetricsSync(ctx context.Context, platform string, since time.Time, limit int, db DB) ([]*models.SocialPost, error) {
-	query := `
-		SELECT id, workspace_id, testimonial_id, social_account_id, content, post_type,
-			   media_urls, hashtags, platform, platform_post_id, platform_url,
-			   status, scheduled_at, published_at, views_count, likes_count,
-			   comments_count, shares_count, platform_data, error_details,
-			   retry_count, max_retries, last_metrics_sync, created_at, updated_at
-		FROM social_posts 
-		WHERE platform = $1 
-		  AND status = 'published' 
-		  AND platform_post_id IS NOT NULL
-		  AND published_at >= $2
-		  AND (last_metrics_sync IS NULL OR last_metrics_sync < NOW() - INTERVAL '1 hour')
-		ORDER BY published_at DESC
-		LIMIT $3
-	`
+	// query := `
+	// 	SELECT id, workspace_id, testimonial_id, social_account_id, content, post_type,
+	// 		   media_urls, hashtags, platform, platform_post_id, platform_url,
+	// 		   status, scheduled_at, published_at, views_count, likes_count,
+	// 		   comments_count, shares_count, platform_data, error_details,
+	// 		   retry_count, max_retries, last_metrics_sync, created_at, updated_at
+	// 	FROM social_posts
+	// 	WHERE platform = $1
+	// 	  AND status = 'published'
+	// 	  AND platform_post_id IS NOT NULL
+	// 	  AND published_at >= $2
+	// 	  AND (last_metrics_sync IS NULL OR last_metrics_sync < NOW() - INTERVAL '1 hour')
+	// 	ORDER BY published_at DESC
+	// 	LIMIT $3
+	// `
+
+	query := fmt.Sprintf(`
+        SELECT id, workspace_id, testimonial_id, social_account_id, content, post_type, 
+               media_urls, hashtags, platform, platform_post_id, platform_url, 
+               status, scheduled_at, published_at, views_count, likes_count, 
+               comments_count, shares_count, platform_data, error_details, 
+               retry_count, max_retries, last_metrics_sync, created_at, updated_at 
+        FROM social_posts  
+        WHERE platform = $1  
+          AND status = 'published'  
+          AND platform_post_id IS NOT NULL 
+          AND published_at >= $2 
+          AND (last_metrics_sync IS NULL OR last_metrics_sync < NOW() - INTERVAL '1 hour') 
+        ORDER BY published_at DESC 
+        LIMIT %d
+    `, limit)
 
 	// FIXED: Now using 3 parameters to match the 3 placeholders ($1, $2, $3)
-	rows, err := db.QueryContext(ctx, query, platform, since, limit)
+	rows, err := db.QueryContext(ctx, query, platform, since)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query posts needing metrics sync: %w", err)
 	}
