@@ -45,7 +45,7 @@ package repositories_test
 // 			},
 // 			WebsiteURL: "https://my-org.cenphi.app",
 // 		}
-
+//
 // 		// settingsJSON, _ := workspace.MarshalSettings()
 // 		// brandingJSON, _ := workspace.MarshalBrandingSettings()
 // 		// analyticsJSON, _ := workspace.MarshalAnalyticsSettings()
@@ -123,7 +123,7 @@ package repositories_test
 // 		assert.Equal(t, workspace.WebsiteURL, storedWorkspace.WebsiteURL)
 // 		assert.Equal(t, workspace.CustomDomain, storedWorkspace.CustomDomain)
 // 		assert.Equal(t, workspace.Industry, storedWorkspace.Industry)
-
+//
 // 	})
 
 // 	t.Run("DeleteUser", func(t *testing.T) {
