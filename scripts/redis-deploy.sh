@@ -138,10 +138,10 @@ echo "✅ Docker Compose configuration created"
 # Stop any existing containers
 if [ "$REDIS_RUNNING" = true ]; then
     echo "🔄 Performing graceful Redis update..."
-    REDIS_PASSWORD="$REDIS_PASSWORD" docker-compose -f docker-compose.redis.yaml down --timeout 30 2>/dev/null || true
+    REDIS_PASSWORD="$REDIS_PASSWORD" docker compose -f docker-compose.redis.yaml down --timeout 30 2>/dev/null || true
 else
     echo "🆕 Fresh Redis deployment..."
-    REDIS_PASSWORD="$REDIS_PASSWORD" docker-compose -f docker-compose.redis.yaml down 2>/dev/null || true
+    REDIS_PASSWORD="$REDIS_PASSWORD" docker compose -f docker-compose.redis.yaml down 2>/dev/null || true
     docker rm -f cenphi_redis 2>/dev/null || true
 fi
 
@@ -151,7 +151,7 @@ docker pull redis:7.2-alpine
 
 # Start Redis
 echo "🚀 Starting Redis..."
-REDIS_PASSWORD="$REDIS_PASSWORD" docker-compose -f docker-compose.redis.yaml up -d redis
+REDIS_PASSWORD="$REDIS_PASSWORD" docker compose -f docker-compose.redis.yaml up -d redis
 
 # Wait for Redis to be ready
 echo "⏳ Waiting for Redis to start..."
@@ -286,3 +286,4 @@ chmod +x /home/opc/redis-monitor.sh
 echo "✅ Redis deployment completed successfully!"
 echo "💡 Monitor Redis with: ./redis-monitor.sh"
 echo "📋 View logs with: docker logs -f cenphi_redis"
+echo "🔧 Restart Redis with: docker compose -f docker-compose.redis.yaml restart redis"
