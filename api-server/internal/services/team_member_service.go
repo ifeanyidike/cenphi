@@ -1,4 +1,4 @@
-// team_member_service.go
+// internal/service/team_member_service.go
 package services
 
 //go:generate mockery --name=TeamMemberService --output=./mocks --case=underscore
@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/ifeanyidike/cenphi/internal/models"
 	"github.com/ifeanyidike/cenphi/internal/repositories"
+	"go.uber.org/zap"
 )
 
 type TeamMemberService interface {
@@ -25,7 +26,7 @@ type teamMemberService struct {
 	db   *sql.DB
 }
 
-func NewTeamMemberService(repo repositories.TeamMemberRepository, db *sql.DB) TeamMemberService {
+func NewTeamMemberService(repo repositories.TeamMemberRepository, db *sql.DB, logger *zap.Logger) TeamMemberService {
 	return &teamMemberService{repo: repo, db: db}
 }
 

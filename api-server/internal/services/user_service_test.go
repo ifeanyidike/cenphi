@@ -13,12 +13,14 @@ import (
 	"github.com/ifeanyidike/cenphi/internal/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"go.uber.org/zap"
 )
 
 func TestUserService(t *testing.T) {
 	mockRepo := &mocks.UserRepository{}
 	db, _, _ := sqlmock.New()
-	svc := NewUserService(mockRepo, db)
+	mockLogger := zap.NewNop()
+	svc := NewUserService(mockRepo, db, mockLogger)
 
 	t.Run("RegisterUser", func(t *testing.T) {
 		user := &models.User{

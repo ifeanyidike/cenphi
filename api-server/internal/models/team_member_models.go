@@ -8,13 +8,18 @@ import (
 )
 
 type TeamMember struct {
-	ID          uuid.UUID      `json:"id" db:"id"`
-	WorkspaceID uuid.UUID      `json:"workspace_id" db:"workspace_id" validate:"required"`
-	UserID      uuid.UUID      `json:"user_id" db:"user_id" validate:"required"`
-	Role        MemberRole     `json:"role" db:"role" validate:"required,oneof=owner admin member"`
-	Settings    map[string]any `json:"settings,omitempty" db:"settings"`
-	Permissions map[string]any `json:"permissions,omitempty" db:"permissions"`
-	CreatedAt   time.Time      `json:"created_at" db:"created_at"`
+	ID          uuid.UUID  `json:"id" db:"id"`
+	WorkspaceID uuid.UUID  `json:"workspace_id" db:"workspace_id" validate:"required"`
+	UserID      uuid.UUID  `json:"user_id" db:"user_id" validate:"required"`
+	Role        MemberRole `json:"role" db:"role" validate:"required,oneof=owner admin member"`
+	Permissions JSONMap    `json:"permissions,omitempty" db:"permissions"`
+
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
+
+	// Relationships
+	User      *User      `json:"user,omitempty" db:"-"`
+	Workspace *Workspace `json:"workspace,omitempty" db:"-"`
 }
 
 type MemberRole string

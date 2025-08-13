@@ -34,3 +34,6 @@ deployment/
 slim.report.json
 .qodo
 .vercel
+localai-models
+localai-models/**
+requests.http

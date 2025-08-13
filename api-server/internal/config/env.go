@@ -5,6 +5,8 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strconv"
+	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -68,3 +70,83 @@ func LoadEnv(envFile string) error {
 
 	return godotenv.Load(path)
 }
+
+// Helper functions for environment variables
+func getEnvWithDefault(key, defaultValue string) string {
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue
+	}
+	return value
+}
+
+func getEnvInt(key string, defaultValue int) int {
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue
+	}
+
+	intValue, err := strconv.Atoi(value)
+	if err != nil {
+		return defaultValue
+	}
+
+	return intValue
+}
+
+func getEnvBool(key string, defaultValue bool) bool {
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue
+	}
+
+	boolValue, err := strconv.ParseBool(value)
+	if err != nil {
+		return defaultValue
+	}
+
+	return boolValue
+}
+
+func getEnvDuration(key string, defaultValue time.Duration) time.Duration {
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue
+	}
+
+	duration, err := time.ParseDuration(value)
+	if err != nil {
+		return defaultValue
+	}
+
+	return duration
+}
+
+func getEnvInt64(key string, defaultValue int64) int64 {
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue
+	}
+
+	intValue, err := strconv.ParseInt(value, 10, 64)
+	if err != nil {
+		return defaultValue
+	}
+
+	return intValue
+}
+
+// Environment-specific defaults
+//
+//	func getDefaultGRPCAddress(env string) string {
+//		if env == "production" {
+//			return os.Getenv("GRPC_PRODUCTION_ADDRESS") // Set in production .env
+//		}
+//		return "ai-service:8000" // Docker compose service name
+//	}
+// func getDefaultConnectTimeout(env string) time.Duration {
+// 	if env == "production" {
+// 		return 45 * time.Second // Shorter timeout for production
+// 	}
+// 	return 5 * time.Minute // Longer timeout for local development (container startup)
+// }

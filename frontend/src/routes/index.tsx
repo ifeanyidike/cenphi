@@ -36,9 +36,10 @@ import OnboardingError from "@/components/onboarding/OnboardingError";
 import DashboardProtectedRoute from "@/components/auth/protected_routes/Dashboard";
 import GenericProtectedRoute from "@/components/auth/protected_routes/Generic";
 import OnboardingProtectedRoute from "@/components/auth/protected_routes/Onboarding";
-import TestimonialCollectionSettingsPage from "@/pages/TestimonialCollectionSettingsPage";
 import BrandGuidePage from "@/pages/BrandGuidePage";
 import TestimonialPage from "@/pages/TestimonialPage";
+import AIServiceTester from "@/pages/AIServiceTester";
+import Tester from "@/pages/PageTester";
 
 // lazy load
 const LandingPage = lazy(() => import("@/pages/Landing"));
@@ -70,12 +71,9 @@ export const router = createBrowserRouter([
     path: "/",
     element: <LandingPage />,
   },
-  {
-    path: "/collection-settings",
-    element: <TestimonialCollectionSettingsPage />,
-  },
-
   { element: <BrandGuidePage />, path: "/brand-guide" },
+  { element: <AIServiceTester />, path: "/ai-tests" },
+  { element: <Tester />, path: "/tester" },
   {
     element: <DashboardProtectedRoute />,
     children: [

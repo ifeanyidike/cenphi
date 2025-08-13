@@ -49,7 +49,7 @@ func TestUserController(t *testing.T) {
 
 		mockService.On("RegisterUser", mock.Anything, mock.AnythingOfType("*models.User")).Return(nil)
 		body, _ := json.Marshal(user)
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/users", bytes.NewReader(body))
+		req := httptest.NewRequest(http.MethodPost, "/api/users", bytes.NewReader(body))
 		rec := httptest.NewRecorder()
 		controller.RegisterUser(rec, req)
 
@@ -67,7 +67,7 @@ func TestUserController(t *testing.T) {
 			UpdatedAt:     time.Now(),
 		}
 
-		route := fmt.Sprintf("/api/v1/users/%v", user.ID)
+		route := fmt.Sprintf("/api/users/%v", user.ID)
 		req := httptest.NewRequest(http.MethodGet, route, nil)
 
 		// Create a new RouteContext and add the userId parameter

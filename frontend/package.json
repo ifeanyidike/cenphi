@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "build:widget": "node build-widget.js"
+    "build:widget": "vite build --config vite.config.widget.ts"
   },
   "overrides": {
     "vite": {
@@ -50,6 +50,7 @@
     "@stripe/stripe-js": "^5.10.0",
     "antd": "^5.22.7",
     "canvas-confetti": "^1.9.3",
+    "chart.js": "^4.5.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
@@ -64,6 +65,7 @@
     "qrcode.react": "^4.2.0",
     "react": "^18.3.1",
     "react-beautiful-dnd": "^13.1.1",
+    "react-chartjs-2": "^5.3.0",
     "react-colorful": "^5.6.1",
     "react-day-picker": "8.10.1",
     "react-dom": "^18.3.1",

@@ -30,7 +30,7 @@
 # HF_TOKEN=$HF_TOKEN
 # MODEL_ENDPOINT=model_endpoint
 # PYTHONUNBUFFERED=1
-# TRANSFORMERS_CACHE=/root/.cache/huggingface
+# HF_HOME=/root/.cache/huggingface
 # EOL
 # echo "Created ai-service .env file."
 
@@ -148,7 +148,7 @@
 #       - "50052:50052"
 #     environment:
 #       - PYTHONUNBUFFERED=1
-#       - TRANSFORMERS_CACHE=/root/.cache/huggingface
+#       - HF_HOME=/root/.cache/huggingface
 #       - PYTHON_ENV=production
 #       - HF_TOKEN=$HF_TOKEN
 #     volumes:
@@ -269,7 +269,7 @@ cat > ai-service/.env << EOL
 HF_TOKEN=$HF_TOKEN
 MODEL_ENDPOINT=model_endpoint
 PYTHONUNBUFFERED=1
-TRANSFORMERS_CACHE=/root/.cache/huggingface
+HF_HOME=/root/.cache/huggingface
 EOL
 echo "Created ai-service .env file."
 
@@ -294,7 +294,7 @@ services:
       - "50052:50052"
     environment:
       - PYTHONUNBUFFERED=1
-      - TRANSFORMERS_CACHE=/root/.cache/huggingface
+      - HF_HOME=/root/.cache/huggingface
       - PYTHON_ENV=production
       - HF_TOKEN=$HF_TOKEN
     volumes:

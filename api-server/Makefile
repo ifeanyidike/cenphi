@@ -14,7 +14,7 @@ DEST_DIR ?= ./internal/services/mocks
 SERVICE  ?= onboarding_service
 
 # Targets
-.PHONY: all up down create init-db swagger mock migrate-to
+.PHONY: all up down create init-db swagger mock migrate-to reset-db clean-db
 
 all: up
 
@@ -62,3 +62,15 @@ swagger:
 
 mock:
 	$(MOCKGEN) -source=$(SRC_DIR)/$(SERVICE).go -destination=$(DEST_DIR)/mock_$(SERVICE).go -package=mocks
+
+reset-db:
+	@echo "Dropping everything in: ${DB_URL}"
+	# $(MIGRATE_CMD) -path=/migrations -database=${DB_URL} drop -f
+	$(MIGRATE_CMD) -path=/migrations -database=${DB_URL} drop -f
+
+clean-db:
+	@echo "Rolling back all migrations…"
+	$(MIGRATE_CMD) -path=/migrations -database=${DB_URL} down -all
+	@echo "Forcing version to 0 (clean state)…"
+	$(MIGRATE_CMD) -path=/migrations -database=${DB_URL} force 0
+
