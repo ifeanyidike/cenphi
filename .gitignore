@@ -37,3 +37,4 @@ slim.report.json
 localai-models
 localai-models/**
 requests.http
+cloudrun-service.yaml
