@@ -136,8 +136,8 @@ func (r *socialAccountRepository) GetAccountsByWorkspace(ctx context.Context, wo
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
+	defer rows.Close()
 	var accounts []*models.SocialAccount
 
 	for rows.Next() {
@@ -261,6 +261,7 @@ func (r *socialAccountRepository) UpdateTokens(ctx context.Context, accountID uu
 	return err
 }
 
+// DeleteAccount deletes a social account repository
 func (r *socialAccountRepository) DeleteAccount(ctx context.Context, id uuid.UUID, db DB) error {
 	query := `DELETE FROM social_accounts WHERE id = $1`
 	_, err := db.ExecContext(ctx, query, id)
