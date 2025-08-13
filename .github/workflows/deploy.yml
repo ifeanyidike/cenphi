@@ -283,8 +283,8 @@ jobs:
             echo "✅ Redis deployment completed!"
 
   deploy_api:
-    needs: [prepare, build_api, deploy_redis]
-    if: ${{ needs.prepare.outputs.api_changed == 'true' && (needs.deploy_redis.result == 'success' || needs.deploy_redis.result == 'skipped') }}
+    needs: [prepare, build_api]
+    if: ${{ needs.prepare.outputs.api_changed == 'true' }}
     runs-on: ubuntu-latest
     env:
       DB_USERNAME: ${{ secrets.DB_USERNAME }}
