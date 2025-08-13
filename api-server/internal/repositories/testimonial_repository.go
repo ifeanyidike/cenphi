@@ -21,7 +21,6 @@ import (
 	"github.com/ifeanyidike/cenphi/internal/models"
 	"github.com/lib/pq"
 	"github.com/redis/go-redis/v9"
-	"go.uber.org/zap"
 )
 
 type TestimonialRepository interface {
@@ -884,9 +883,9 @@ func (r *testimonialRepository) UpdateAny(ctx context.Context, id uuid.UUID, upd
 
 	for field, value := range updates {
 		slog.Debug("Processing field for update",
-			zap.String("field", field),
-			zap.String("value_type", fmt.Sprintf("%T", value)),
-			zap.Bool("needs_json", needsJSONSerialization(value)))
+			slog.String("attr", field),
+			slog.String("value_type", fmt.Sprintf("%T", value)),
+			slog.Bool("needs_json", needsJSONSerialization(value)))
 
 		// Handle special types that need JSON serialization
 		if needsJSONSerialization(value) {
@@ -907,8 +906,8 @@ func (r *testimonialRepository) UpdateAny(ctx context.Context, id uuid.UUID, upd
 				}
 				value = jsonBytes
 				slog.Debug("Serialized field to JSON",
-					zap.String("field", field),
-					zap.String("json", string(jsonBytes)))
+					slog.String("field", field),
+					slog.String("json", string(jsonBytes)))
 			}
 		} else {
 			// Handle pointers to basic types
