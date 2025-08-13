@@ -85,7 +85,7 @@ func (r *userRepository) UpdateAny(ctx context.Context, updates map[string]any, 
 			default:
 				return fmt.Errorf("unexpected type for %s: %T", field, value)
 			}
-		case "settings", "permissions":
+		case "settings":
 			dbField = field
 			jsonValue, err := json.Marshal(value)
 			if err != nil {

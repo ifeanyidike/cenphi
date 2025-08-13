@@ -1,0 +1,61 @@
+# requirements-runpod.txt
+
+# RunPod integration
+runpod==1.7.13
+
+torch==1.13.1
+torchvision==0.14.1 
+torchaudio==0.13.1
+
+# Core ML
+# transformers>=4.53.0,<5.0.0
+# transformers==4.21.3 
+transformers==4.53.0
+# huggingface-hub>=0.8.1,<0.20.0
+
+# AI Video Enhancement (Compatible versions)
+basicsr==1.4.2
+realesrgan==0.3.0
+gfpgan==1.3.8
+facexlib==0.3.0
+
+# AI Audio Enhancement  
+demucs==4.0.1
+soundfile>=0.12.1,<0.13.0
+
+# Computer Vision and Image Processing
+opencv-python>=4.11.0.86,<5.0.0.0
+pillow>=11.3.0,<12.0.0
+mediapipe==0.10.18
+
+# Audio Processing
+librosa>=0.11.0,<0.12.0
+# webrtcvad>=2.0.10,<3.0.0
+webrtcvad-wheels==2.0.14
+
+# Scientific Computing  
+numpy>=1.21.0,<1.25.0
+# scipy>=1.16.0,<2.0.0
+scipy>=1.5.0,<1.16.0
+
+# Cloud and Infrastructure
+oci>=2.155.0,<3.0.0
+
+# AI API Clients
+openai>=1.93.0,<2.0.0
+anthropic>=0.57.1,<0.58.0
+elevenlabs>=2.6.0,<3.0.0
+together>=1.5.19,<2.0.0
+
+# Utilities
+num2words>=0.5.14,<0.6.0
+psutil>=5.9.0,<6.0.0
+
+# REST API Framework
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic==2.8.2
+
+# Optional performance improvements
+orjson>=3.9.0
+python-multipart>=0.0.6

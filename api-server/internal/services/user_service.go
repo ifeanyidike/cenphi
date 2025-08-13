@@ -1,4 +1,4 @@
-// user_service.go
+// internal/service/user_service.go
 package services
 
 //go:generate mockery --name=UserService --output=./mocks --case=underscore
@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/ifeanyidike/cenphi/internal/models"
 	"github.com/ifeanyidike/cenphi/internal/repositories"
+	"go.uber.org/zap"
 )
 
 type UserService interface {
@@ -25,7 +26,7 @@ type userService struct {
 	db   *sql.DB
 }
 
-func NewUserService(repo repositories.UserRepository, db *sql.DB) UserService {
+func NewUserService(repo repositories.UserRepository, db *sql.DB, logger *zap.Logger) UserService {
 	return &userService{repo: repo, db: db}
 }
 

@@ -5,12 +5,12 @@ PYTHON_PROTO=python -m grpc_tools.protoc \
     --proto_path=. \
     --python_out=ai-service \
     --grpc_python_out=ai-service \
-    protobuf/intelligence.proto
+    ./intelligence.proto
 
 GO_PROTO=protoc --proto_path=. \
     --go_out=api-server \
     --go-grpc_out=api-server \
-    protobuf/intelligence.proto
+    ./intelligence.proto
 
 DOCKER_COMPOSE=docker-compose
 # DOCKER_COMPOSE_DEV=docker-compose -f docker-compose.yaml -f docker-compose.dev.yaml

@@ -2,3 +2,4 @@ cenphiapp-service-account.json
 cenphiio-service-account.json
 .env.*
 !.env.test
+*.out

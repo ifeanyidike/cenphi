@@ -1,14 +1,55 @@
-
-
-# Ignore everything
+# Your existing .dockerignore (keep as is)
+# 1. Exclude everything by default
 *
 
-# Then explicitly allow only what's needed
+# 2. Whitelist specific root files
 !main.py
-!requirements.txt
-!dev-requirements.txt
+# !runpod_handler.py
+# !requirements.txt
+# !dev-requirements.txt
+# !requirements-runpod.txt
+!requirements-cloudrun.txt
+# !pyproject.toml
+# !poetry.lock
+!init.py
+!rest_gateway.py
+!intelligence_pb2.py
+!intelligence_pb2_grpc.py
+!test_validation_errors.py
+!intelligence.proto
 
-# Ensure these are always ignored
+# 3. Whitelist directories AND their contents
+!services/
+!services/**
+!utils/
+!utils/**
+!config/
+!config/**
+!modal_processors/
+!modal_processors/**
+!storage/
+!storage/**
+!core
+!core/**
+!shared
+!shared/**
+!clients
+!clients/**
+!scripts
+!scripts/**
+!src
+!src/**
+
+# Optional additions (if you have these files):
+# Environment files (if you use them)
+!.env.example
+!.env.production
+
+# Scripts directory (if you create one)
+!scripts/
+!scripts/**
+
+# 4. Still ignore Python artifacts and binaries
 **/__pycache__
 **/*.pyc
 **/*.pyo
@@ -17,3 +58,15 @@
 **/*.so
 **/*.dylib
 **/*.dll
+**/pyproject.toml
+**/poetry.lock
+
+# Additional artifacts to ignore (optional but recommended)
+**/.pytest_cache
+**/.mypy_cache
+**/.coverage
+**/*.egg-info
+**/node_modules
+**/.DS_Store
+**/.vscode
+**/.idea

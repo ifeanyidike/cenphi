@@ -1,0 +1,458 @@
+syntax = "proto3";
+
+package intelligence;
+
+option go_package = "./pb";
+
+// ============================================================================
+// Common Types
+// ============================================================================
+
+message BrandContext {
+  string about_info = 1;
+  repeated string keywords = 2;
+  string tone = 3;
+  map<string, string> brand_colors = 4;
+  repeated string color_slice = 5;
+  map<string, string> brand_fonts = 6;
+  string logo_url = 7;
+  repeated string values = 8;
+  string tagline = 9;
+  string target_audience = 10;
+  string mission_statement = 11;
+  string business_model = 12;
+  string company_size = 13;
+  map<string, string> extracted_data = 14;
+}
+
+message MediaOpt {
+  string testimonial_id = 1;
+  string media_url = 2;
+}
+
+// ============================================================================
+// Emotion Analysis Service
+// ============================================================================
+
+service EmotionAnalysisService {
+  rpc AnalyzeEmotion(EmotionRequest) returns (EmotionResponse);
+}
+
+message EmotionRequest {
+  string testimonial_id = 1;
+  string media_url = 2;
+  repeated string target_emotions = 3;
+  string analysis_depth = 4; // "quick", "standard", "comprehensive"
+  string job_id = 5;
+}
+
+message EmotionResponse {
+  repeated EmotionSegment segments = 1;
+  double overall_confidence = 2;
+  double customer_satisfaction_score = 3;
+  map<string, double> emotion_distribution = 4;
+  string error = 5;
+}
+
+message EmotionSegment {
+  double start_time = 1;
+  double end_time = 2;
+  string dominant_emotion = 3;
+  double confidence = 4;
+  string facial_expression = 5;
+  map<string, double> emotion_scores = 6;
+  double authenticity_score = 7;
+}
+
+// ============================================================================
+// Media Enhancement Service
+// ============================================================================
+
+service MediaEnhancementService {
+  rpc EnhanceMedia(EnhanceRequest) returns (EnhanceResponse);
+  rpc BatchEnhanceMedia(BatchEnhanceRequest) returns (BatchEnhanceResponse);
+}
+
+message EnhanceRequest {
+  string testimonial_id = 1;
+  string media_url = 2;
+  string quality = 3; // "high", "medium", "low"
+  bool upload_to_cloud = 4;
+  repeated string custom_enhancements = 5;
+  string logo_url = 6;
+  string watermark_text = 7;
+  string watermark_position = 8;
+  string brand_color = 9;
+  bool add_branding = 10;
+  string job_id = 11;
+}
+
+message EnhanceResponse {
+  string enhanced_url = 1;
+  repeated string applied_enhancements = 2;
+  double quality_score = 3;
+  string media_type = 4;
+  string error = 5;
+}
+
+message BatchEnhanceRequest {
+  repeated MediaOpt options = 1;
+  string quality = 2; // "high", "medium", "low"
+  bool upload_to_cloud = 3;
+  repeated string custom_enhancements = 4;
+  string logo_url = 5;
+  string watermark_text = 6;
+  string watermark_position = 7;
+  string brand_color = 8;
+  bool add_branding = 9;
+  string job_id = 10;
+}
+
+message BatchEnhanceResponseOpt {
+  string testimonial_id = 1;
+  string enhanced_url = 2;
+  repeated string applied_enhancements = 3;
+  string error = 4;
+}
+
+message BatchEnhanceResponse {
+  repeated BatchEnhanceResponseOpt response = 1;
+}
+
+// ============================================================================
+// Narration Service
+// ============================================================================
+
+service NarrationService {
+  rpc GenerateNarration(NarrationRequest) returns (NarrationResponse);
+  rpc BatchGenerateNarration(BatchNarrationRequest) returns (BatchNarrationResponse);
+}
+
+message NarrationRequest {
+  string testimonial_id = 1;
+  string text = 2;
+  string language = 3;
+  string voice_id = 4; // Optional, fallback to default if not set
+  string gender = 5; // Optional
+  string style = 6; // Optional
+  string prompt = 7; // Optional
+  string background_music = 8; // Optional
+  string music_volume = 9; // Optional
+  bool add_background_music = 10;
+  bool optimize_speech = 11;
+  string job_id = 12;
+}
+message NarrationResponse {
+  string audio_url = 1;
+  double audio_duration_seconds = 2;
+  string voice_provider = 3;
+  double quality_score = 4;
+  string processed_text = 5;
+  string error = 6;
+}
+
+message BatchNarrationOpt {
+  string testimonial_id = 1;
+  string text = 2;
+}
+
+message BatchNarrationRequest {
+  repeated BatchNarrationOpt options = 1;
+  string language = 2;
+  string voice_id = 3; // Optional, fallback to default if not set
+  string gender = 4; // Optional
+  string style = 5; // Optional
+  string prompt = 6; // Optional
+  string background_music = 7; // Optional
+  string music_volume = 8; // Optional
+  bool add_background_music = 9;
+  bool optimize_speech = 10;
+  string job_id = 11;
+}
+
+message BatchNarrationResponse {
+  repeated NarrationResponse response = 1;
+}
+
+// ============================================================================
+// Smart Clipping Service
+// ============================================================================
+
+service SmartClippingService {
+  rpc GenerateClips(ClippingRequest) returns (ClippingResponse);
+  rpc BatchGenerateClips(BatchClippingRequest) returns (BatchClippingResponse);
+}
+
+message ClippingRequest {
+  string testimonial_id = 1;
+  string media_url = 2;
+  repeated HighlightMoment highlight_moments = 3;
+  BrandingOptions branding = 4;
+  string background_music = 5; // Optional
+  string music_volume = 6; // Optional
+  string job_id = 7;
+}
+
+message Word {
+  string text = 1;
+  double start = 2;
+  double end = 3;
+  double confidence = 4;
+  string speaker = 5;
+}
+
+message TranscriptSegment {
+  string text = 1;
+  double start_time = 2;
+  double end_time = 3;
+  string speaker = 4;
+  repeated Word words = 5;
+}
+
+message HighlightMoment {
+  double start_time = 1;
+  double end_time = 2;
+  string text = 3;
+  string theme = 4;
+  repeated Word words = 5; 
+  bool social_media_optimize = 6;
+  bool enhance_clip = 7;
+  bool include_logo = 8;
+  bool include_subtitle = 9;
+  bool include_watermark = 10;
+  string quality = 11; // "high", "medium", "low"
+  bool add_background_music = 12;
+  bool include_theme = 13;
+  bool remove_noise = 14;
+
+  double importance_score = 15;
+  string highlight_type = 16;        // "general", "problem", "results", etc.
+  string suggested_title = 17;       // Title for video clip
+  repeated string keywords = 18;     // Searchable keywords
+  double emotional_intensity = 19;  // 0-10 emotional score
+  double shareability = 20;         // 0-10 social media potential score
+}
+
+message BrandingOptions {
+  string logo_url = 1;
+  string brand_color = 2;
+  string watermark_position = 3;
+}
+
+message ClippingResponse {
+  repeated Clip clips = 1;
+  int32 clips_generated = 2;
+  double average_quality = 3;
+  string detection_method = 4;
+  string error = 5;
+}
+
+message Clip {
+  string url = 1;
+  double start_time = 2;
+  double end_time = 3;
+  string title = 4;
+  string theme = 5;
+  double engagement_score = 6;
+  double duration_seconds = 7;
+  map<string, bool> social_media_ready = 8; // platform -> ready status
+}
+
+message ClippingRequestOpt {
+  string testimonial_id = 1;
+  string media_url = 2;
+  repeated HighlightMoment highlight_moments = 3;
+}
+
+message BatchClippingRequest {
+  repeated ClippingRequestOpt options = 1;
+  BrandingOptions branding = 2;
+  string background_music = 3; // Optional
+  string music_volume = 4; // Optional
+  string job_id = 5;
+}
+
+message BatchClippingResponse {
+  repeated ClippingResponse response = 1;
+}
+
+// ============================================================================
+// Platform Optimizer Service
+// ============================================================================
+
+service PlatformOptimizerService {
+  rpc OptimizeMedia(OptimizeRequest) returns (OptimizeResponse);
+  rpc BatchOptimizeMedia(BatchOptimizeRequest) returns (BatchOptimizeResponse);
+}
+
+message OptimizeRequest {
+  string testimonial_id = 1;
+  string media_url = 2;
+  string target_platform = 3;
+  BrandContext brand_context = 4;
+  string transcript = 5;
+  string optimization_quality = 6; // "high", "medium", "low"
+  int32 max_moments = 7;
+  bool enable_transitions = 8;
+  bool add_branding = 9;
+  string background_music = 10; // Optional
+  string music_volume = 11; // Optional
+  bool enable_captions = 12;
+  bool enable_media_enhancement = 13;
+  string watermark_text = 14;
+  string logo_position = 15;
+  string watermark_position = 16;
+  repeated TranscriptSegment transcript_segments = 17; 
+  bool add_background_music = 18;
+  string job_id = 19;
+}
+
+message OptimizeOptions {
+  string testimonial_id = 1;
+  string media_url = 2;
+  repeated TestimonialSegment transcript_segments = 3;
+}
+message BatchOptimizeRequest {
+  repeated OptimizeOptions options = 1;
+  string target_platform = 2;
+  BrandContext brand_context = 3;
+  string transcript = 4;
+  string optimization_quality = 5; // "high", "medium", "low"
+  int32 max_moments = 6;
+  bool enable_transitions = 7;
+  bool add_branding = 8;
+  string background_music = 9; // Optional
+  string music_volume = 10; // Optional
+  bool enable_captions = 11;
+  bool enable_media_enhancement = 12;
+  string watermark_text = 13;
+  string logo_position = 14;
+  string watermark_position = 15;
+  bool add_background_music = 16;
+  string job_id = 17;
+}
+
+message OptimizeResponse {
+  string optimized_url = 1;
+  repeated string applied_optimizations = 2;
+  string platform = 3;
+  string media_type = 4;
+  bool success = 5;
+  string error = 6;
+  string testimonial_id = 7;
+}
+
+message BatchOptimizeResponse {
+  repeated OptimizeResponse responses = 1;
+}
+
+
+// ============================================================================
+// Thumbnail Service
+// ============================================================================
+
+service ThumbnailService {
+  rpc SelectThumbnails (ThumbnailRequest) returns (ThumbnailResponse);
+}
+
+message ThumbnailRequest {
+  string testimonial_id = 1;
+  string media_url = 2;
+  int32 max_thumbnails = 3;
+  string job_id = 4;
+}
+
+message ThumbnailResponse {
+  repeated string thumbnail_urls = 1;
+}
+
+
+// ============================================================================
+// StoryMode Service
+// ============================================================================
+
+service StoryModeService {
+  rpc GenerateStoryVideo (StoryModeRequest) returns (StoryModeResponse);
+  rpc BatchGenerateStoryVideos (BatchStoryModeRequest) returns (BatchStoryModeResponse);
+}
+
+message TestimonialSegment {
+  string testimonial_id = 1;
+  string media_url = 2;
+  repeated HighlightMoment highlights = 3;
+}
+
+message StoryModeRequest {
+  repeated TestimonialSegment testimonial_segments = 1;
+  BrandContext brand_context = 2;
+  string output_format = 3;
+  string background_music = 4;
+  string music_volume = 5;
+  string prompt = 6;
+  string intro_image_url = 7;
+  string outro_image_url = 8;
+  string company_name = 9;
+  bool add_background_music = 10;
+  string job_id = 11;
+}
+
+message BatchStoryModeOptions {
+  repeated TestimonialSegment opt = 1;
+}
+
+
+message BatchStoryModeRequest {
+  repeated BatchStoryModeOptions testimonial_segments = 1;
+  BrandContext brand_context = 2;
+  string output_format = 3;
+  string background_music = 4;
+  string music_volume = 5;
+  string prompt = 6;
+  string intro_image_url = 7;
+  string outro_image_url = 8;
+  string company_name = 9;
+  bool add_background_music = 10;
+  string job_id = 11;
+}
+
+message StoryModeResponse {
+  string story_video_url = 1;
+}
+
+message BatchStoryModeResponse {
+  repeated string story_video_urls = 1;
+}
+
+
+// ============================================================================
+// Noise Reducer
+// ============================================================================
+
+service NoiseReducerService {
+  rpc ReduceNoise(NoiseReductionRequest) returns (NoiseReductionResponse);
+  rpc BatchReduceNoise(BatchNoiseReductionRequest) returns (BatchNoiseReductionResponse);
+}
+
+message NoiseReductionRequest {
+  string testimonial_id = 1;
+  string media_url = 2;
+  string level = 3;
+  string job_id= 4;
+}
+
+message NoiseReductionResponse {
+  string testimonial_id = 1;
+  string denoised_media_url = 2;
+  string error = 3;
+}
+
+message BatchNoiseReductionRequest {
+  repeated MediaOpt options = 1;
+  string level = 2;
+  string job_id = 3;
+}
+
+
+message BatchNoiseReductionResponse {
+  repeated NoiseReductionResponse response = 1;
+}

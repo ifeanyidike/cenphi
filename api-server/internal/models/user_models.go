@@ -8,16 +8,15 @@ import (
 
 // User represents a user in the system.
 type User struct {
-	ID            uuid.UUID   `json:"id"`
-	Email         string      `json:"email"`
-	EmailVerified bool        `json:"email_verified"`
-	FirebaseUID   string      `json:"firebase_uid"`
-	Name          string      `json:"name"`
-	Settings      interface{} `json:"settings"`
-	Permissions   interface{} `json:"permissions"`
-	LastActiveAt  time.Time   `json:"last_active_at"`
-	CreatedAt     time.Time   `json:"created_at"`
-	UpdatedAt     time.Time   `json:"updated_at,omitempty"`
+	ID            uuid.UUID  `json:"id" db:"id"`
+	FirebaseUID   string     `json:"firebase_uid" db:"firebase_uid"`
+	Email         string     `json:"email" db:"email"`
+	EmailVerified bool       `json:"email_verified" db:"email_verified"`
+	Name          string     `json:"name" db:"name"`
+	Settings      JSONMap    `json:"settings" db:"settings"`
+	LastActiveAt  *time.Time `json:"last_active_at" db:"last_active_at"`
+	UpdatedAt     time.Time  `json:"updated_at" db:"updated_at"`
+	CreatedAt     time.Time  `json:"created_at" db:"created_at"`
 }
 
 // FullName returns the user's full name.

@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v4.25.3
-// source: protobuf/intelligence.proto
+// source: intelligence.proto
 
 package pb
 
@@ -19,787 +19,1048 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Intelligence_EnhanceTestimonial_FullMethodName                = "/intelligence.Intelligence/EnhanceTestimonial"
-	Intelligence_AnalyzeSentiment_FullMethodName                  = "/intelligence.Intelligence/AnalyzeSentiment"
-	Intelligence_DetectFakeTestimonial_FullMethodName             = "/intelligence.Intelligence/DetectFakeTestimonial"
-	Intelligence_GenerateStoryFromTestimonials_FullMethodName     = "/intelligence.Intelligence/GenerateStoryFromTestimonials"
-	Intelligence_TranslateTestimonial_FullMethodName              = "/intelligence.Intelligence/TranslateTestimonial"
-	Intelligence_GenerateVideoTestimonial_FullMethodName          = "/intelligence.Intelligence/GenerateVideoTestimonial"
-	Intelligence_GenerateVoiceTestimonial_FullMethodName          = "/intelligence.Intelligence/GenerateVoiceTestimonial"
-	Intelligence_BenchmarkAgainstCompetitors_FullMethodName       = "/intelligence.Intelligence/BenchmarkAgainstCompetitors"
-	Intelligence_GenerateAIJourneyMap_FullMethodName              = "/intelligence.Intelligence/GenerateAIJourneyMap"
-	Intelligence_GenerateAIProductDemo_FullMethodName             = "/intelligence.Intelligence/GenerateAIProductDemo"
-	Intelligence_GenerateAIROIPredictor_FullMethodName            = "/intelligence.Intelligence/GenerateAIROIPredictor"
-	Intelligence_GenerateAIMicrosite_FullMethodName               = "/intelligence.Intelligence/GenerateAIMicrosite"
-	Intelligence_GenerateSalesConversation_FullMethodName         = "/intelligence.Intelligence/GenerateSalesConversation"
-	Intelligence_AnalyzeEmotionalResonance_FullMethodName         = "/intelligence.Intelligence/AnalyzeEmotionalResonance"
-	Intelligence_AnalyzeCompetitiveDifferentiators_FullMethodName = "/intelligence.Intelligence/AnalyzeCompetitiveDifferentiators"
-	Intelligence_SynthesizeMultimodalTestimonial_FullMethodName   = "/intelligence.Intelligence/SynthesizeMultimodalTestimonial"
-	Intelligence_ChatStream_FullMethodName                        = "/intelligence.Intelligence/ChatStream"
-	Intelligence_ProcessVideoByChunks_FullMethodName              = "/intelligence.Intelligence/ProcessVideoByChunks"
+	EmotionAnalysisService_AnalyzeEmotion_FullMethodName = "/intelligence.EmotionAnalysisService/AnalyzeEmotion"
 )
 
-// IntelligenceClient is the client API for Intelligence service.
+// EmotionAnalysisServiceClient is the client API for EmotionAnalysisService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-//
-// Service defining comprehensive AI-powered testimonial processing
-type IntelligenceClient interface {
-	// Enhances testimonials by improving clarity, grammar, and emotional impact while
-	// preserving authenticity
-	EnhanceTestimonial(ctx context.Context, in *EnhanceTestimonialRequest, opts ...grpc.CallOption) (*EnhanceTestimonialResponse, error)
-	// Performs comprehensive sentiment analysis including customer satisfaction scoring,
-	// key pain points, and improvement suggestions
-	AnalyzeSentiment(ctx context.Context, in *AnalyzeSentimentRequest, opts ...grpc.CallOption) (*AnalyzeSentimentResponse, error)
-	// Advanced fake review detection using multi-modal analysis (text patterns, metadata,
-	// user behavior)
-	DetectFakeTestimonial(ctx context.Context, in *DetectFakeTestimonialRequest, opts ...grpc.CallOption) (*DetectFakeTestimonialResponse, error)
-	// Transforms testimonials into compelling success stories with business impact metrics
-	GenerateStoryFromTestimonials(ctx context.Context, in *GenerateStoryRequest, opts ...grpc.CallOption) (*GenerateStoryResponse, error)
-	// Context-aware translation that preserves emotional nuance and cultural relevance
-	TranslateTestimonial(ctx context.Context, in *TranslateTestimonialRequest, opts ...grpc.CallOption) (*TranslateTestimonialResponse, error)
-	// Creates dynamic video testimonials with AI-generated avatars, expressions, and
-	// voice synchronization
-	GenerateVideoTestimonial(ctx context.Context, in *GenerateVideoTestimonialRequest, opts ...grpc.CallOption) (*GenerateVideoTestimonialResponse, error)
-	// Generates natural-sounding voice testimonials with emotion-aware voice modulation
-	GenerateVoiceTestimonial(ctx context.Context, in *GenerateVoiceTestimonialRequest, opts ...grpc.CallOption) (*GenerateVoiceTestimonialResponse, error)
-	// Real-time competitor testimonial analysis and benchmarking
-	BenchmarkAgainstCompetitors(ctx context.Context, in *BenchmarkRequest, opts ...grpc.CallOption) (*BenchmarkResponse, error)
-	// AI-powered journey mapping and visualization
-	GenerateAIJourneyMap(ctx context.Context, in *JourneyMapRequest, opts ...grpc.CallOption) (*JourneyMapResponse, error)
-	// Personalized demo generation using testimonial insights
-	GenerateAIProductDemo(ctx context.Context, in *ProductDemoRequest, opts ...grpc.CallOption) (*ProductDemoResponse, error)
-	// AI-driven ROI prediction and visualization
-	GenerateAIROIPredictor(ctx context.Context, in *ROIPredictorRequest, opts ...grpc.CallOption) (*ROIPredictorResponse, error)
-	// Creates personalized microsites using AI content generation
-	GenerateAIMicrosite(ctx context.Context, in *MicrositeRequest, opts ...grpc.CallOption) (*MicrositeResponse, error)
-	// AI-powered sales conversation generator
-	GenerateSalesConversation(ctx context.Context, in *SalesConversationRequest, opts ...grpc.CallOption) (*SalesConversationResponse, error)
-	// Emotional resonance analyzer and optimizer
-	AnalyzeEmotionalResonance(ctx context.Context, in *EmotionalResonanceRequest, opts ...grpc.CallOption) (*EmotionalResonanceResponse, error)
-	// AI competitive differentiator analysis
-	AnalyzeCompetitiveDifferentiators(ctx context.Context, in *CompetitiveDiffRequest, opts ...grpc.CallOption) (*CompetitiveDiffResponse, error)
-	// Multimodal testimonial synthesis (text, audio, video)
-	SynthesizeMultimodalTestimonial(ctx context.Context, in *MultimodalRequest, opts ...grpc.CallOption) (*MultimodalResponse, error)
-	// A bidirectional streaming RPC: both client and server send streams of messages.
-	ChatStream(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[ChatMessage, ChatResponse], error)
-	// A client-side streaming RPC: the client sends a stream of VideoChunk
-	// messages and then waits for a single VideoSummary response.
-	ProcessVideoByChunks(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[VideoChunk, VideoSummary], error)
+type EmotionAnalysisServiceClient interface {
+	AnalyzeEmotion(ctx context.Context, in *EmotionRequest, opts ...grpc.CallOption) (*EmotionResponse, error)
 }
 
-type intelligenceClient struct {
+type emotionAnalysisServiceClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewIntelligenceClient(cc grpc.ClientConnInterface) IntelligenceClient {
-	return &intelligenceClient{cc}
+func NewEmotionAnalysisServiceClient(cc grpc.ClientConnInterface) EmotionAnalysisServiceClient {
+	return &emotionAnalysisServiceClient{cc}
 }
 
-func (c *intelligenceClient) EnhanceTestimonial(ctx context.Context, in *EnhanceTestimonialRequest, opts ...grpc.CallOption) (*EnhanceTestimonialResponse, error) {
+func (c *emotionAnalysisServiceClient) AnalyzeEmotion(ctx context.Context, in *EmotionRequest, opts ...grpc.CallOption) (*EmotionResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(EnhanceTestimonialResponse)
-	err := c.cc.Invoke(ctx, Intelligence_EnhanceTestimonial_FullMethodName, in, out, cOpts...)
+	out := new(EmotionResponse)
+	err := c.cc.Invoke(ctx, EmotionAnalysisService_AnalyzeEmotion_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *intelligenceClient) AnalyzeSentiment(ctx context.Context, in *AnalyzeSentimentRequest, opts ...grpc.CallOption) (*AnalyzeSentimentResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(AnalyzeSentimentResponse)
-	err := c.cc.Invoke(ctx, Intelligence_AnalyzeSentiment_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *intelligenceClient) DetectFakeTestimonial(ctx context.Context, in *DetectFakeTestimonialRequest, opts ...grpc.CallOption) (*DetectFakeTestimonialResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(DetectFakeTestimonialResponse)
-	err := c.cc.Invoke(ctx, Intelligence_DetectFakeTestimonial_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *intelligenceClient) GenerateStoryFromTestimonials(ctx context.Context, in *GenerateStoryRequest, opts ...grpc.CallOption) (*GenerateStoryResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GenerateStoryResponse)
-	err := c.cc.Invoke(ctx, Intelligence_GenerateStoryFromTestimonials_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *intelligenceClient) TranslateTestimonial(ctx context.Context, in *TranslateTestimonialRequest, opts ...grpc.CallOption) (*TranslateTestimonialResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(TranslateTestimonialResponse)
-	err := c.cc.Invoke(ctx, Intelligence_TranslateTestimonial_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *intelligenceClient) GenerateVideoTestimonial(ctx context.Context, in *GenerateVideoTestimonialRequest, opts ...grpc.CallOption) (*GenerateVideoTestimonialResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GenerateVideoTestimonialResponse)
-	err := c.cc.Invoke(ctx, Intelligence_GenerateVideoTestimonial_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *intelligenceClient) GenerateVoiceTestimonial(ctx context.Context, in *GenerateVoiceTestimonialRequest, opts ...grpc.CallOption) (*GenerateVoiceTestimonialResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GenerateVoiceTestimonialResponse)
-	err := c.cc.Invoke(ctx, Intelligence_GenerateVoiceTestimonial_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *intelligenceClient) BenchmarkAgainstCompetitors(ctx context.Context, in *BenchmarkRequest, opts ...grpc.CallOption) (*BenchmarkResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(BenchmarkResponse)
-	err := c.cc.Invoke(ctx, Intelligence_BenchmarkAgainstCompetitors_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *intelligenceClient) GenerateAIJourneyMap(ctx context.Context, in *JourneyMapRequest, opts ...grpc.CallOption) (*JourneyMapResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(JourneyMapResponse)
-	err := c.cc.Invoke(ctx, Intelligence_GenerateAIJourneyMap_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *intelligenceClient) GenerateAIProductDemo(ctx context.Context, in *ProductDemoRequest, opts ...grpc.CallOption) (*ProductDemoResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ProductDemoResponse)
-	err := c.cc.Invoke(ctx, Intelligence_GenerateAIProductDemo_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *intelligenceClient) GenerateAIROIPredictor(ctx context.Context, in *ROIPredictorRequest, opts ...grpc.CallOption) (*ROIPredictorResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ROIPredictorResponse)
-	err := c.cc.Invoke(ctx, Intelligence_GenerateAIROIPredictor_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *intelligenceClient) GenerateAIMicrosite(ctx context.Context, in *MicrositeRequest, opts ...grpc.CallOption) (*MicrositeResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(MicrositeResponse)
-	err := c.cc.Invoke(ctx, Intelligence_GenerateAIMicrosite_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *intelligenceClient) GenerateSalesConversation(ctx context.Context, in *SalesConversationRequest, opts ...grpc.CallOption) (*SalesConversationResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SalesConversationResponse)
-	err := c.cc.Invoke(ctx, Intelligence_GenerateSalesConversation_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *intelligenceClient) AnalyzeEmotionalResonance(ctx context.Context, in *EmotionalResonanceRequest, opts ...grpc.CallOption) (*EmotionalResonanceResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(EmotionalResonanceResponse)
-	err := c.cc.Invoke(ctx, Intelligence_AnalyzeEmotionalResonance_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *intelligenceClient) AnalyzeCompetitiveDifferentiators(ctx context.Context, in *CompetitiveDiffRequest, opts ...grpc.CallOption) (*CompetitiveDiffResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CompetitiveDiffResponse)
-	err := c.cc.Invoke(ctx, Intelligence_AnalyzeCompetitiveDifferentiators_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *intelligenceClient) SynthesizeMultimodalTestimonial(ctx context.Context, in *MultimodalRequest, opts ...grpc.CallOption) (*MultimodalResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(MultimodalResponse)
-	err := c.cc.Invoke(ctx, Intelligence_SynthesizeMultimodalTestimonial_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *intelligenceClient) ChatStream(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[ChatMessage, ChatResponse], error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &Intelligence_ServiceDesc.Streams[0], Intelligence_ChatStream_FullMethodName, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &grpc.GenericClientStream[ChatMessage, ChatResponse]{ClientStream: stream}
-	return x, nil
-}
-
-// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type Intelligence_ChatStreamClient = grpc.BidiStreamingClient[ChatMessage, ChatResponse]
-
-func (c *intelligenceClient) ProcessVideoByChunks(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[VideoChunk, VideoSummary], error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &Intelligence_ServiceDesc.Streams[1], Intelligence_ProcessVideoByChunks_FullMethodName, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &grpc.GenericClientStream[VideoChunk, VideoSummary]{ClientStream: stream}
-	return x, nil
-}
-
-// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type Intelligence_ProcessVideoByChunksClient = grpc.ClientStreamingClient[VideoChunk, VideoSummary]
-
-// IntelligenceServer is the server API for Intelligence service.
-// All implementations must embed UnimplementedIntelligenceServer
+// EmotionAnalysisServiceServer is the server API for EmotionAnalysisService service.
+// All implementations must embed UnimplementedEmotionAnalysisServiceServer
 // for forward compatibility.
-//
-// Service defining comprehensive AI-powered testimonial processing
-type IntelligenceServer interface {
-	// Enhances testimonials by improving clarity, grammar, and emotional impact while
-	// preserving authenticity
-	EnhanceTestimonial(context.Context, *EnhanceTestimonialRequest) (*EnhanceTestimonialResponse, error)
-	// Performs comprehensive sentiment analysis including customer satisfaction scoring,
-	// key pain points, and improvement suggestions
-	AnalyzeSentiment(context.Context, *AnalyzeSentimentRequest) (*AnalyzeSentimentResponse, error)
-	// Advanced fake review detection using multi-modal analysis (text patterns, metadata,
-	// user behavior)
-	DetectFakeTestimonial(context.Context, *DetectFakeTestimonialRequest) (*DetectFakeTestimonialResponse, error)
-	// Transforms testimonials into compelling success stories with business impact metrics
-	GenerateStoryFromTestimonials(context.Context, *GenerateStoryRequest) (*GenerateStoryResponse, error)
-	// Context-aware translation that preserves emotional nuance and cultural relevance
-	TranslateTestimonial(context.Context, *TranslateTestimonialRequest) (*TranslateTestimonialResponse, error)
-	// Creates dynamic video testimonials with AI-generated avatars, expressions, and
-	// voice synchronization
-	GenerateVideoTestimonial(context.Context, *GenerateVideoTestimonialRequest) (*GenerateVideoTestimonialResponse, error)
-	// Generates natural-sounding voice testimonials with emotion-aware voice modulation
-	GenerateVoiceTestimonial(context.Context, *GenerateVoiceTestimonialRequest) (*GenerateVoiceTestimonialResponse, error)
-	// Real-time competitor testimonial analysis and benchmarking
-	BenchmarkAgainstCompetitors(context.Context, *BenchmarkRequest) (*BenchmarkResponse, error)
-	// AI-powered journey mapping and visualization
-	GenerateAIJourneyMap(context.Context, *JourneyMapRequest) (*JourneyMapResponse, error)
-	// Personalized demo generation using testimonial insights
-	GenerateAIProductDemo(context.Context, *ProductDemoRequest) (*ProductDemoResponse, error)
-	// AI-driven ROI prediction and visualization
-	GenerateAIROIPredictor(context.Context, *ROIPredictorRequest) (*ROIPredictorResponse, error)
-	// Creates personalized microsites using AI content generation
-	GenerateAIMicrosite(context.Context, *MicrositeRequest) (*MicrositeResponse, error)
-	// AI-powered sales conversation generator
-	GenerateSalesConversation(context.Context, *SalesConversationRequest) (*SalesConversationResponse, error)
-	// Emotional resonance analyzer and optimizer
-	AnalyzeEmotionalResonance(context.Context, *EmotionalResonanceRequest) (*EmotionalResonanceResponse, error)
-	// AI competitive differentiator analysis
-	AnalyzeCompetitiveDifferentiators(context.Context, *CompetitiveDiffRequest) (*CompetitiveDiffResponse, error)
-	// Multimodal testimonial synthesis (text, audio, video)
-	SynthesizeMultimodalTestimonial(context.Context, *MultimodalRequest) (*MultimodalResponse, error)
-	// A bidirectional streaming RPC: both client and server send streams of messages.
-	ChatStream(grpc.BidiStreamingServer[ChatMessage, ChatResponse]) error
-	// A client-side streaming RPC: the client sends a stream of VideoChunk
-	// messages and then waits for a single VideoSummary response.
-	ProcessVideoByChunks(grpc.ClientStreamingServer[VideoChunk, VideoSummary]) error
-	mustEmbedUnimplementedIntelligenceServer()
+type EmotionAnalysisServiceServer interface {
+	AnalyzeEmotion(context.Context, *EmotionRequest) (*EmotionResponse, error)
+	mustEmbedUnimplementedEmotionAnalysisServiceServer()
 }
 
-// UnimplementedIntelligenceServer must be embedded to have
+// UnimplementedEmotionAnalysisServiceServer must be embedded to have
 // forward compatible implementations.
 //
 // NOTE: this should be embedded by value instead of pointer to avoid a nil
 // pointer dereference when methods are called.
-type UnimplementedIntelligenceServer struct{}
+type UnimplementedEmotionAnalysisServiceServer struct{}
 
-func (UnimplementedIntelligenceServer) EnhanceTestimonial(context.Context, *EnhanceTestimonialRequest) (*EnhanceTestimonialResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method EnhanceTestimonial not implemented")
+func (UnimplementedEmotionAnalysisServiceServer) AnalyzeEmotion(context.Context, *EmotionRequest) (*EmotionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AnalyzeEmotion not implemented")
 }
-func (UnimplementedIntelligenceServer) AnalyzeSentiment(context.Context, *AnalyzeSentimentRequest) (*AnalyzeSentimentResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method AnalyzeSentiment not implemented")
+func (UnimplementedEmotionAnalysisServiceServer) mustEmbedUnimplementedEmotionAnalysisServiceServer() {
 }
-func (UnimplementedIntelligenceServer) DetectFakeTestimonial(context.Context, *DetectFakeTestimonialRequest) (*DetectFakeTestimonialResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DetectFakeTestimonial not implemented")
-}
-func (UnimplementedIntelligenceServer) GenerateStoryFromTestimonials(context.Context, *GenerateStoryRequest) (*GenerateStoryResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GenerateStoryFromTestimonials not implemented")
-}
-func (UnimplementedIntelligenceServer) TranslateTestimonial(context.Context, *TranslateTestimonialRequest) (*TranslateTestimonialResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method TranslateTestimonial not implemented")
-}
-func (UnimplementedIntelligenceServer) GenerateVideoTestimonial(context.Context, *GenerateVideoTestimonialRequest) (*GenerateVideoTestimonialResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GenerateVideoTestimonial not implemented")
-}
-func (UnimplementedIntelligenceServer) GenerateVoiceTestimonial(context.Context, *GenerateVoiceTestimonialRequest) (*GenerateVoiceTestimonialResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GenerateVoiceTestimonial not implemented")
-}
-func (UnimplementedIntelligenceServer) BenchmarkAgainstCompetitors(context.Context, *BenchmarkRequest) (*BenchmarkResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method BenchmarkAgainstCompetitors not implemented")
-}
-func (UnimplementedIntelligenceServer) GenerateAIJourneyMap(context.Context, *JourneyMapRequest) (*JourneyMapResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GenerateAIJourneyMap not implemented")
-}
-func (UnimplementedIntelligenceServer) GenerateAIProductDemo(context.Context, *ProductDemoRequest) (*ProductDemoResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GenerateAIProductDemo not implemented")
-}
-func (UnimplementedIntelligenceServer) GenerateAIROIPredictor(context.Context, *ROIPredictorRequest) (*ROIPredictorResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GenerateAIROIPredictor not implemented")
-}
-func (UnimplementedIntelligenceServer) GenerateAIMicrosite(context.Context, *MicrositeRequest) (*MicrositeResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GenerateAIMicrosite not implemented")
-}
-func (UnimplementedIntelligenceServer) GenerateSalesConversation(context.Context, *SalesConversationRequest) (*SalesConversationResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GenerateSalesConversation not implemented")
-}
-func (UnimplementedIntelligenceServer) AnalyzeEmotionalResonance(context.Context, *EmotionalResonanceRequest) (*EmotionalResonanceResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method AnalyzeEmotionalResonance not implemented")
-}
-func (UnimplementedIntelligenceServer) AnalyzeCompetitiveDifferentiators(context.Context, *CompetitiveDiffRequest) (*CompetitiveDiffResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method AnalyzeCompetitiveDifferentiators not implemented")
-}
-func (UnimplementedIntelligenceServer) SynthesizeMultimodalTestimonial(context.Context, *MultimodalRequest) (*MultimodalResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SynthesizeMultimodalTestimonial not implemented")
-}
-func (UnimplementedIntelligenceServer) ChatStream(grpc.BidiStreamingServer[ChatMessage, ChatResponse]) error {
-	return status.Errorf(codes.Unimplemented, "method ChatStream not implemented")
-}
-func (UnimplementedIntelligenceServer) ProcessVideoByChunks(grpc.ClientStreamingServer[VideoChunk, VideoSummary]) error {
-	return status.Errorf(codes.Unimplemented, "method ProcessVideoByChunks not implemented")
-}
-func (UnimplementedIntelligenceServer) mustEmbedUnimplementedIntelligenceServer() {}
-func (UnimplementedIntelligenceServer) testEmbeddedByValue()                      {}
+func (UnimplementedEmotionAnalysisServiceServer) testEmbeddedByValue() {}
 
-// UnsafeIntelligenceServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to IntelligenceServer will
+// UnsafeEmotionAnalysisServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to EmotionAnalysisServiceServer will
 // result in compilation errors.
-type UnsafeIntelligenceServer interface {
-	mustEmbedUnimplementedIntelligenceServer()
+type UnsafeEmotionAnalysisServiceServer interface {
+	mustEmbedUnimplementedEmotionAnalysisServiceServer()
 }
 
-func RegisterIntelligenceServer(s grpc.ServiceRegistrar, srv IntelligenceServer) {
-	// If the following call pancis, it indicates UnimplementedIntelligenceServer was
+func RegisterEmotionAnalysisServiceServer(s grpc.ServiceRegistrar, srv EmotionAnalysisServiceServer) {
+	// If the following call pancis, it indicates UnimplementedEmotionAnalysisServiceServer was
 	// embedded by pointer and is nil.  This will cause panics if an
 	// unimplemented method is ever invoked, so we test this at initialization
 	// time to prevent it from happening at runtime later due to I/O.
 	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
 		t.testEmbeddedByValue()
 	}
-	s.RegisterService(&Intelligence_ServiceDesc, srv)
+	s.RegisterService(&EmotionAnalysisService_ServiceDesc, srv)
 }
 
-func _Intelligence_EnhanceTestimonial_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(EnhanceTestimonialRequest)
+func _EmotionAnalysisService_AnalyzeEmotion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EmotionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(IntelligenceServer).EnhanceTestimonial(ctx, in)
+		return srv.(EmotionAnalysisServiceServer).AnalyzeEmotion(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Intelligence_EnhanceTestimonial_FullMethodName,
+		FullMethod: EmotionAnalysisService_AnalyzeEmotion_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(IntelligenceServer).EnhanceTestimonial(ctx, req.(*EnhanceTestimonialRequest))
+		return srv.(EmotionAnalysisServiceServer).AnalyzeEmotion(ctx, req.(*EmotionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Intelligence_AnalyzeSentiment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AnalyzeSentimentRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(IntelligenceServer).AnalyzeSentiment(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Intelligence_AnalyzeSentiment_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(IntelligenceServer).AnalyzeSentiment(ctx, req.(*AnalyzeSentimentRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Intelligence_DetectFakeTestimonial_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DetectFakeTestimonialRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(IntelligenceServer).DetectFakeTestimonial(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Intelligence_DetectFakeTestimonial_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(IntelligenceServer).DetectFakeTestimonial(ctx, req.(*DetectFakeTestimonialRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Intelligence_GenerateStoryFromTestimonials_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GenerateStoryRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(IntelligenceServer).GenerateStoryFromTestimonials(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Intelligence_GenerateStoryFromTestimonials_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(IntelligenceServer).GenerateStoryFromTestimonials(ctx, req.(*GenerateStoryRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Intelligence_TranslateTestimonial_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(TranslateTestimonialRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(IntelligenceServer).TranslateTestimonial(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Intelligence_TranslateTestimonial_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(IntelligenceServer).TranslateTestimonial(ctx, req.(*TranslateTestimonialRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Intelligence_GenerateVideoTestimonial_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GenerateVideoTestimonialRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(IntelligenceServer).GenerateVideoTestimonial(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Intelligence_GenerateVideoTestimonial_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(IntelligenceServer).GenerateVideoTestimonial(ctx, req.(*GenerateVideoTestimonialRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Intelligence_GenerateVoiceTestimonial_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GenerateVoiceTestimonialRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(IntelligenceServer).GenerateVoiceTestimonial(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Intelligence_GenerateVoiceTestimonial_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(IntelligenceServer).GenerateVoiceTestimonial(ctx, req.(*GenerateVoiceTestimonialRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Intelligence_BenchmarkAgainstCompetitors_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(BenchmarkRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(IntelligenceServer).BenchmarkAgainstCompetitors(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Intelligence_BenchmarkAgainstCompetitors_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(IntelligenceServer).BenchmarkAgainstCompetitors(ctx, req.(*BenchmarkRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Intelligence_GenerateAIJourneyMap_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(JourneyMapRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(IntelligenceServer).GenerateAIJourneyMap(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Intelligence_GenerateAIJourneyMap_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(IntelligenceServer).GenerateAIJourneyMap(ctx, req.(*JourneyMapRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Intelligence_GenerateAIProductDemo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ProductDemoRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(IntelligenceServer).GenerateAIProductDemo(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Intelligence_GenerateAIProductDemo_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(IntelligenceServer).GenerateAIProductDemo(ctx, req.(*ProductDemoRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Intelligence_GenerateAIROIPredictor_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ROIPredictorRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(IntelligenceServer).GenerateAIROIPredictor(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Intelligence_GenerateAIROIPredictor_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(IntelligenceServer).GenerateAIROIPredictor(ctx, req.(*ROIPredictorRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Intelligence_GenerateAIMicrosite_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MicrositeRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(IntelligenceServer).GenerateAIMicrosite(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Intelligence_GenerateAIMicrosite_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(IntelligenceServer).GenerateAIMicrosite(ctx, req.(*MicrositeRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Intelligence_GenerateSalesConversation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SalesConversationRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(IntelligenceServer).GenerateSalesConversation(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Intelligence_GenerateSalesConversation_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(IntelligenceServer).GenerateSalesConversation(ctx, req.(*SalesConversationRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Intelligence_AnalyzeEmotionalResonance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(EmotionalResonanceRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(IntelligenceServer).AnalyzeEmotionalResonance(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Intelligence_AnalyzeEmotionalResonance_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(IntelligenceServer).AnalyzeEmotionalResonance(ctx, req.(*EmotionalResonanceRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Intelligence_AnalyzeCompetitiveDifferentiators_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CompetitiveDiffRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(IntelligenceServer).AnalyzeCompetitiveDifferentiators(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Intelligence_AnalyzeCompetitiveDifferentiators_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(IntelligenceServer).AnalyzeCompetitiveDifferentiators(ctx, req.(*CompetitiveDiffRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Intelligence_SynthesizeMultimodalTestimonial_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MultimodalRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(IntelligenceServer).SynthesizeMultimodalTestimonial(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Intelligence_SynthesizeMultimodalTestimonial_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(IntelligenceServer).SynthesizeMultimodalTestimonial(ctx, req.(*MultimodalRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Intelligence_ChatStream_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(IntelligenceServer).ChatStream(&grpc.GenericServerStream[ChatMessage, ChatResponse]{ServerStream: stream})
-}
-
-// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type Intelligence_ChatStreamServer = grpc.BidiStreamingServer[ChatMessage, ChatResponse]
-
-func _Intelligence_ProcessVideoByChunks_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(IntelligenceServer).ProcessVideoByChunks(&grpc.GenericServerStream[VideoChunk, VideoSummary]{ServerStream: stream})
-}
-
-// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type Intelligence_ProcessVideoByChunksServer = grpc.ClientStreamingServer[VideoChunk, VideoSummary]
-
-// Intelligence_ServiceDesc is the grpc.ServiceDesc for Intelligence service.
+// EmotionAnalysisService_ServiceDesc is the grpc.ServiceDesc for EmotionAnalysisService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var Intelligence_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "intelligence.Intelligence",
-	HandlerType: (*IntelligenceServer)(nil),
+var EmotionAnalysisService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "intelligence.EmotionAnalysisService",
+	HandlerType: (*EmotionAnalysisServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "EnhanceTestimonial",
-			Handler:    _Intelligence_EnhanceTestimonial_Handler,
-		},
-		{
-			MethodName: "AnalyzeSentiment",
-			Handler:    _Intelligence_AnalyzeSentiment_Handler,
-		},
-		{
-			MethodName: "DetectFakeTestimonial",
-			Handler:    _Intelligence_DetectFakeTestimonial_Handler,
-		},
-		{
-			MethodName: "GenerateStoryFromTestimonials",
-			Handler:    _Intelligence_GenerateStoryFromTestimonials_Handler,
-		},
-		{
-			MethodName: "TranslateTestimonial",
-			Handler:    _Intelligence_TranslateTestimonial_Handler,
-		},
-		{
-			MethodName: "GenerateVideoTestimonial",
-			Handler:    _Intelligence_GenerateVideoTestimonial_Handler,
-		},
-		{
-			MethodName: "GenerateVoiceTestimonial",
-			Handler:    _Intelligence_GenerateVoiceTestimonial_Handler,
-		},
-		{
-			MethodName: "BenchmarkAgainstCompetitors",
-			Handler:    _Intelligence_BenchmarkAgainstCompetitors_Handler,
-		},
-		{
-			MethodName: "GenerateAIJourneyMap",
-			Handler:    _Intelligence_GenerateAIJourneyMap_Handler,
-		},
-		{
-			MethodName: "GenerateAIProductDemo",
-			Handler:    _Intelligence_GenerateAIProductDemo_Handler,
-		},
-		{
-			MethodName: "GenerateAIROIPredictor",
-			Handler:    _Intelligence_GenerateAIROIPredictor_Handler,
-		},
-		{
-			MethodName: "GenerateAIMicrosite",
-			Handler:    _Intelligence_GenerateAIMicrosite_Handler,
-		},
-		{
-			MethodName: "GenerateSalesConversation",
-			Handler:    _Intelligence_GenerateSalesConversation_Handler,
-		},
-		{
-			MethodName: "AnalyzeEmotionalResonance",
-			Handler:    _Intelligence_AnalyzeEmotionalResonance_Handler,
-		},
-		{
-			MethodName: "AnalyzeCompetitiveDifferentiators",
-			Handler:    _Intelligence_AnalyzeCompetitiveDifferentiators_Handler,
-		},
-		{
-			MethodName: "SynthesizeMultimodalTestimonial",
-			Handler:    _Intelligence_SynthesizeMultimodalTestimonial_Handler,
+			MethodName: "AnalyzeEmotion",
+			Handler:    _EmotionAnalysisService_AnalyzeEmotion_Handler,
 		},
 	},
-	Streams: []grpc.StreamDesc{
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "intelligence.proto",
+}
+
+const (
+	MediaEnhancementService_EnhanceMedia_FullMethodName      = "/intelligence.MediaEnhancementService/EnhanceMedia"
+	MediaEnhancementService_BatchEnhanceMedia_FullMethodName = "/intelligence.MediaEnhancementService/BatchEnhanceMedia"
+)
+
+// MediaEnhancementServiceClient is the client API for MediaEnhancementService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type MediaEnhancementServiceClient interface {
+	EnhanceMedia(ctx context.Context, in *EnhanceRequest, opts ...grpc.CallOption) (*EnhanceResponse, error)
+	BatchEnhanceMedia(ctx context.Context, in *BatchEnhanceRequest, opts ...grpc.CallOption) (*BatchEnhanceResponse, error)
+}
+
+type mediaEnhancementServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewMediaEnhancementServiceClient(cc grpc.ClientConnInterface) MediaEnhancementServiceClient {
+	return &mediaEnhancementServiceClient{cc}
+}
+
+func (c *mediaEnhancementServiceClient) EnhanceMedia(ctx context.Context, in *EnhanceRequest, opts ...grpc.CallOption) (*EnhanceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(EnhanceResponse)
+	err := c.cc.Invoke(ctx, MediaEnhancementService_EnhanceMedia_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *mediaEnhancementServiceClient) BatchEnhanceMedia(ctx context.Context, in *BatchEnhanceRequest, opts ...grpc.CallOption) (*BatchEnhanceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BatchEnhanceResponse)
+	err := c.cc.Invoke(ctx, MediaEnhancementService_BatchEnhanceMedia_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// MediaEnhancementServiceServer is the server API for MediaEnhancementService service.
+// All implementations must embed UnimplementedMediaEnhancementServiceServer
+// for forward compatibility.
+type MediaEnhancementServiceServer interface {
+	EnhanceMedia(context.Context, *EnhanceRequest) (*EnhanceResponse, error)
+	BatchEnhanceMedia(context.Context, *BatchEnhanceRequest) (*BatchEnhanceResponse, error)
+	mustEmbedUnimplementedMediaEnhancementServiceServer()
+}
+
+// UnimplementedMediaEnhancementServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedMediaEnhancementServiceServer struct{}
+
+func (UnimplementedMediaEnhancementServiceServer) EnhanceMedia(context.Context, *EnhanceRequest) (*EnhanceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method EnhanceMedia not implemented")
+}
+func (UnimplementedMediaEnhancementServiceServer) BatchEnhanceMedia(context.Context, *BatchEnhanceRequest) (*BatchEnhanceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BatchEnhanceMedia not implemented")
+}
+func (UnimplementedMediaEnhancementServiceServer) mustEmbedUnimplementedMediaEnhancementServiceServer() {
+}
+func (UnimplementedMediaEnhancementServiceServer) testEmbeddedByValue() {}
+
+// UnsafeMediaEnhancementServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to MediaEnhancementServiceServer will
+// result in compilation errors.
+type UnsafeMediaEnhancementServiceServer interface {
+	mustEmbedUnimplementedMediaEnhancementServiceServer()
+}
+
+func RegisterMediaEnhancementServiceServer(s grpc.ServiceRegistrar, srv MediaEnhancementServiceServer) {
+	// If the following call pancis, it indicates UnimplementedMediaEnhancementServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&MediaEnhancementService_ServiceDesc, srv)
+}
+
+func _MediaEnhancementService_EnhanceMedia_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EnhanceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MediaEnhancementServiceServer).EnhanceMedia(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MediaEnhancementService_EnhanceMedia_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MediaEnhancementServiceServer).EnhanceMedia(ctx, req.(*EnhanceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MediaEnhancementService_BatchEnhanceMedia_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BatchEnhanceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MediaEnhancementServiceServer).BatchEnhanceMedia(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MediaEnhancementService_BatchEnhanceMedia_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MediaEnhancementServiceServer).BatchEnhanceMedia(ctx, req.(*BatchEnhanceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// MediaEnhancementService_ServiceDesc is the grpc.ServiceDesc for MediaEnhancementService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var MediaEnhancementService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "intelligence.MediaEnhancementService",
+	HandlerType: (*MediaEnhancementServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
 		{
-			StreamName:    "ChatStream",
-			Handler:       _Intelligence_ChatStream_Handler,
-			ServerStreams: true,
-			ClientStreams: true,
+			MethodName: "EnhanceMedia",
+			Handler:    _MediaEnhancementService_EnhanceMedia_Handler,
 		},
 		{
-			StreamName:    "ProcessVideoByChunks",
-			Handler:       _Intelligence_ProcessVideoByChunks_Handler,
-			ClientStreams: true,
+			MethodName: "BatchEnhanceMedia",
+			Handler:    _MediaEnhancementService_BatchEnhanceMedia_Handler,
 		},
 	},
-	Metadata: "protobuf/intelligence.proto",
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "intelligence.proto",
+}
+
+const (
+	NarrationService_GenerateNarration_FullMethodName      = "/intelligence.NarrationService/GenerateNarration"
+	NarrationService_BatchGenerateNarration_FullMethodName = "/intelligence.NarrationService/BatchGenerateNarration"
+)
+
+// NarrationServiceClient is the client API for NarrationService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type NarrationServiceClient interface {
+	GenerateNarration(ctx context.Context, in *NarrationRequest, opts ...grpc.CallOption) (*NarrationResponse, error)
+	BatchGenerateNarration(ctx context.Context, in *BatchNarrationRequest, opts ...grpc.CallOption) (*BatchNarrationResponse, error)
+}
+
+type narrationServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewNarrationServiceClient(cc grpc.ClientConnInterface) NarrationServiceClient {
+	return &narrationServiceClient{cc}
+}
+
+func (c *narrationServiceClient) GenerateNarration(ctx context.Context, in *NarrationRequest, opts ...grpc.CallOption) (*NarrationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(NarrationResponse)
+	err := c.cc.Invoke(ctx, NarrationService_GenerateNarration_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *narrationServiceClient) BatchGenerateNarration(ctx context.Context, in *BatchNarrationRequest, opts ...grpc.CallOption) (*BatchNarrationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BatchNarrationResponse)
+	err := c.cc.Invoke(ctx, NarrationService_BatchGenerateNarration_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// NarrationServiceServer is the server API for NarrationService service.
+// All implementations must embed UnimplementedNarrationServiceServer
+// for forward compatibility.
+type NarrationServiceServer interface {
+	GenerateNarration(context.Context, *NarrationRequest) (*NarrationResponse, error)
+	BatchGenerateNarration(context.Context, *BatchNarrationRequest) (*BatchNarrationResponse, error)
+	mustEmbedUnimplementedNarrationServiceServer()
+}
+
+// UnimplementedNarrationServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedNarrationServiceServer struct{}
+
+func (UnimplementedNarrationServiceServer) GenerateNarration(context.Context, *NarrationRequest) (*NarrationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GenerateNarration not implemented")
+}
+func (UnimplementedNarrationServiceServer) BatchGenerateNarration(context.Context, *BatchNarrationRequest) (*BatchNarrationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BatchGenerateNarration not implemented")
+}
+func (UnimplementedNarrationServiceServer) mustEmbedUnimplementedNarrationServiceServer() {}
+func (UnimplementedNarrationServiceServer) testEmbeddedByValue()                          {}
+
+// UnsafeNarrationServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to NarrationServiceServer will
+// result in compilation errors.
+type UnsafeNarrationServiceServer interface {
+	mustEmbedUnimplementedNarrationServiceServer()
+}
+
+func RegisterNarrationServiceServer(s grpc.ServiceRegistrar, srv NarrationServiceServer) {
+	// If the following call pancis, it indicates UnimplementedNarrationServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&NarrationService_ServiceDesc, srv)
+}
+
+func _NarrationService_GenerateNarration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(NarrationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NarrationServiceServer).GenerateNarration(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: NarrationService_GenerateNarration_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NarrationServiceServer).GenerateNarration(ctx, req.(*NarrationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _NarrationService_BatchGenerateNarration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BatchNarrationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NarrationServiceServer).BatchGenerateNarration(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: NarrationService_BatchGenerateNarration_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NarrationServiceServer).BatchGenerateNarration(ctx, req.(*BatchNarrationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// NarrationService_ServiceDesc is the grpc.ServiceDesc for NarrationService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var NarrationService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "intelligence.NarrationService",
+	HandlerType: (*NarrationServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GenerateNarration",
+			Handler:    _NarrationService_GenerateNarration_Handler,
+		},
+		{
+			MethodName: "BatchGenerateNarration",
+			Handler:    _NarrationService_BatchGenerateNarration_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "intelligence.proto",
+}
+
+const (
+	SmartClippingService_GenerateClips_FullMethodName      = "/intelligence.SmartClippingService/GenerateClips"
+	SmartClippingService_BatchGenerateClips_FullMethodName = "/intelligence.SmartClippingService/BatchGenerateClips"
+)
+
+// SmartClippingServiceClient is the client API for SmartClippingService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type SmartClippingServiceClient interface {
+	GenerateClips(ctx context.Context, in *ClippingRequest, opts ...grpc.CallOption) (*ClippingResponse, error)
+	BatchGenerateClips(ctx context.Context, in *BatchClippingRequest, opts ...grpc.CallOption) (*BatchClippingResponse, error)
+}
+
+type smartClippingServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewSmartClippingServiceClient(cc grpc.ClientConnInterface) SmartClippingServiceClient {
+	return &smartClippingServiceClient{cc}
+}
+
+func (c *smartClippingServiceClient) GenerateClips(ctx context.Context, in *ClippingRequest, opts ...grpc.CallOption) (*ClippingResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ClippingResponse)
+	err := c.cc.Invoke(ctx, SmartClippingService_GenerateClips_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *smartClippingServiceClient) BatchGenerateClips(ctx context.Context, in *BatchClippingRequest, opts ...grpc.CallOption) (*BatchClippingResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BatchClippingResponse)
+	err := c.cc.Invoke(ctx, SmartClippingService_BatchGenerateClips_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// SmartClippingServiceServer is the server API for SmartClippingService service.
+// All implementations must embed UnimplementedSmartClippingServiceServer
+// for forward compatibility.
+type SmartClippingServiceServer interface {
+	GenerateClips(context.Context, *ClippingRequest) (*ClippingResponse, error)
+	BatchGenerateClips(context.Context, *BatchClippingRequest) (*BatchClippingResponse, error)
+	mustEmbedUnimplementedSmartClippingServiceServer()
+}
+
+// UnimplementedSmartClippingServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedSmartClippingServiceServer struct{}
+
+func (UnimplementedSmartClippingServiceServer) GenerateClips(context.Context, *ClippingRequest) (*ClippingResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GenerateClips not implemented")
+}
+func (UnimplementedSmartClippingServiceServer) BatchGenerateClips(context.Context, *BatchClippingRequest) (*BatchClippingResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BatchGenerateClips not implemented")
+}
+func (UnimplementedSmartClippingServiceServer) mustEmbedUnimplementedSmartClippingServiceServer() {}
+func (UnimplementedSmartClippingServiceServer) testEmbeddedByValue()                              {}
+
+// UnsafeSmartClippingServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to SmartClippingServiceServer will
+// result in compilation errors.
+type UnsafeSmartClippingServiceServer interface {
+	mustEmbedUnimplementedSmartClippingServiceServer()
+}
+
+func RegisterSmartClippingServiceServer(s grpc.ServiceRegistrar, srv SmartClippingServiceServer) {
+	// If the following call pancis, it indicates UnimplementedSmartClippingServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&SmartClippingService_ServiceDesc, srv)
+}
+
+func _SmartClippingService_GenerateClips_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ClippingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SmartClippingServiceServer).GenerateClips(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SmartClippingService_GenerateClips_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SmartClippingServiceServer).GenerateClips(ctx, req.(*ClippingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SmartClippingService_BatchGenerateClips_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BatchClippingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SmartClippingServiceServer).BatchGenerateClips(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SmartClippingService_BatchGenerateClips_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SmartClippingServiceServer).BatchGenerateClips(ctx, req.(*BatchClippingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// SmartClippingService_ServiceDesc is the grpc.ServiceDesc for SmartClippingService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var SmartClippingService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "intelligence.SmartClippingService",
+	HandlerType: (*SmartClippingServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GenerateClips",
+			Handler:    _SmartClippingService_GenerateClips_Handler,
+		},
+		{
+			MethodName: "BatchGenerateClips",
+			Handler:    _SmartClippingService_BatchGenerateClips_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "intelligence.proto",
+}
+
+const (
+	PlatformOptimizerService_OptimizeMedia_FullMethodName      = "/intelligence.PlatformOptimizerService/OptimizeMedia"
+	PlatformOptimizerService_BatchOptimizeMedia_FullMethodName = "/intelligence.PlatformOptimizerService/BatchOptimizeMedia"
+)
+
+// PlatformOptimizerServiceClient is the client API for PlatformOptimizerService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type PlatformOptimizerServiceClient interface {
+	OptimizeMedia(ctx context.Context, in *OptimizeRequest, opts ...grpc.CallOption) (*OptimizeResponse, error)
+	BatchOptimizeMedia(ctx context.Context, in *BatchOptimizeRequest, opts ...grpc.CallOption) (*BatchOptimizeResponse, error)
+}
+
+type platformOptimizerServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewPlatformOptimizerServiceClient(cc grpc.ClientConnInterface) PlatformOptimizerServiceClient {
+	return &platformOptimizerServiceClient{cc}
+}
+
+func (c *platformOptimizerServiceClient) OptimizeMedia(ctx context.Context, in *OptimizeRequest, opts ...grpc.CallOption) (*OptimizeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(OptimizeResponse)
+	err := c.cc.Invoke(ctx, PlatformOptimizerService_OptimizeMedia_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *platformOptimizerServiceClient) BatchOptimizeMedia(ctx context.Context, in *BatchOptimizeRequest, opts ...grpc.CallOption) (*BatchOptimizeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BatchOptimizeResponse)
+	err := c.cc.Invoke(ctx, PlatformOptimizerService_BatchOptimizeMedia_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// PlatformOptimizerServiceServer is the server API for PlatformOptimizerService service.
+// All implementations must embed UnimplementedPlatformOptimizerServiceServer
+// for forward compatibility.
+type PlatformOptimizerServiceServer interface {
+	OptimizeMedia(context.Context, *OptimizeRequest) (*OptimizeResponse, error)
+	BatchOptimizeMedia(context.Context, *BatchOptimizeRequest) (*BatchOptimizeResponse, error)
+	mustEmbedUnimplementedPlatformOptimizerServiceServer()
+}
+
+// UnimplementedPlatformOptimizerServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedPlatformOptimizerServiceServer struct{}
+
+func (UnimplementedPlatformOptimizerServiceServer) OptimizeMedia(context.Context, *OptimizeRequest) (*OptimizeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method OptimizeMedia not implemented")
+}
+func (UnimplementedPlatformOptimizerServiceServer) BatchOptimizeMedia(context.Context, *BatchOptimizeRequest) (*BatchOptimizeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BatchOptimizeMedia not implemented")
+}
+func (UnimplementedPlatformOptimizerServiceServer) mustEmbedUnimplementedPlatformOptimizerServiceServer() {
+}
+func (UnimplementedPlatformOptimizerServiceServer) testEmbeddedByValue() {}
+
+// UnsafePlatformOptimizerServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to PlatformOptimizerServiceServer will
+// result in compilation errors.
+type UnsafePlatformOptimizerServiceServer interface {
+	mustEmbedUnimplementedPlatformOptimizerServiceServer()
+}
+
+func RegisterPlatformOptimizerServiceServer(s grpc.ServiceRegistrar, srv PlatformOptimizerServiceServer) {
+	// If the following call pancis, it indicates UnimplementedPlatformOptimizerServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&PlatformOptimizerService_ServiceDesc, srv)
+}
+
+func _PlatformOptimizerService_OptimizeMedia_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(OptimizeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PlatformOptimizerServiceServer).OptimizeMedia(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PlatformOptimizerService_OptimizeMedia_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PlatformOptimizerServiceServer).OptimizeMedia(ctx, req.(*OptimizeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PlatformOptimizerService_BatchOptimizeMedia_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BatchOptimizeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PlatformOptimizerServiceServer).BatchOptimizeMedia(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PlatformOptimizerService_BatchOptimizeMedia_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PlatformOptimizerServiceServer).BatchOptimizeMedia(ctx, req.(*BatchOptimizeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// PlatformOptimizerService_ServiceDesc is the grpc.ServiceDesc for PlatformOptimizerService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var PlatformOptimizerService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "intelligence.PlatformOptimizerService",
+	HandlerType: (*PlatformOptimizerServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "OptimizeMedia",
+			Handler:    _PlatformOptimizerService_OptimizeMedia_Handler,
+		},
+		{
+			MethodName: "BatchOptimizeMedia",
+			Handler:    _PlatformOptimizerService_BatchOptimizeMedia_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "intelligence.proto",
+}
+
+const (
+	ThumbnailService_SelectThumbnails_FullMethodName = "/intelligence.ThumbnailService/SelectThumbnails"
+)
+
+// ThumbnailServiceClient is the client API for ThumbnailService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type ThumbnailServiceClient interface {
+	SelectThumbnails(ctx context.Context, in *ThumbnailRequest, opts ...grpc.CallOption) (*ThumbnailResponse, error)
+}
+
+type thumbnailServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewThumbnailServiceClient(cc grpc.ClientConnInterface) ThumbnailServiceClient {
+	return &thumbnailServiceClient{cc}
+}
+
+func (c *thumbnailServiceClient) SelectThumbnails(ctx context.Context, in *ThumbnailRequest, opts ...grpc.CallOption) (*ThumbnailResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ThumbnailResponse)
+	err := c.cc.Invoke(ctx, ThumbnailService_SelectThumbnails_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// ThumbnailServiceServer is the server API for ThumbnailService service.
+// All implementations must embed UnimplementedThumbnailServiceServer
+// for forward compatibility.
+type ThumbnailServiceServer interface {
+	SelectThumbnails(context.Context, *ThumbnailRequest) (*ThumbnailResponse, error)
+	mustEmbedUnimplementedThumbnailServiceServer()
+}
+
+// UnimplementedThumbnailServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedThumbnailServiceServer struct{}
+
+func (UnimplementedThumbnailServiceServer) SelectThumbnails(context.Context, *ThumbnailRequest) (*ThumbnailResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SelectThumbnails not implemented")
+}
+func (UnimplementedThumbnailServiceServer) mustEmbedUnimplementedThumbnailServiceServer() {}
+func (UnimplementedThumbnailServiceServer) testEmbeddedByValue()                          {}
+
+// UnsafeThumbnailServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to ThumbnailServiceServer will
+// result in compilation errors.
+type UnsafeThumbnailServiceServer interface {
+	mustEmbedUnimplementedThumbnailServiceServer()
+}
+
+func RegisterThumbnailServiceServer(s grpc.ServiceRegistrar, srv ThumbnailServiceServer) {
+	// If the following call pancis, it indicates UnimplementedThumbnailServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&ThumbnailService_ServiceDesc, srv)
+}
+
+func _ThumbnailService_SelectThumbnails_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ThumbnailRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ThumbnailServiceServer).SelectThumbnails(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ThumbnailService_SelectThumbnails_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ThumbnailServiceServer).SelectThumbnails(ctx, req.(*ThumbnailRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// ThumbnailService_ServiceDesc is the grpc.ServiceDesc for ThumbnailService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var ThumbnailService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "intelligence.ThumbnailService",
+	HandlerType: (*ThumbnailServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "SelectThumbnails",
+			Handler:    _ThumbnailService_SelectThumbnails_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "intelligence.proto",
+}
+
+const (
+	StoryModeService_GenerateStoryVideo_FullMethodName       = "/intelligence.StoryModeService/GenerateStoryVideo"
+	StoryModeService_BatchGenerateStoryVideos_FullMethodName = "/intelligence.StoryModeService/BatchGenerateStoryVideos"
+)
+
+// StoryModeServiceClient is the client API for StoryModeService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type StoryModeServiceClient interface {
+	GenerateStoryVideo(ctx context.Context, in *StoryModeRequest, opts ...grpc.CallOption) (*StoryModeResponse, error)
+	BatchGenerateStoryVideos(ctx context.Context, in *BatchStoryModeRequest, opts ...grpc.CallOption) (*BatchStoryModeResponse, error)
+}
+
+type storyModeServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewStoryModeServiceClient(cc grpc.ClientConnInterface) StoryModeServiceClient {
+	return &storyModeServiceClient{cc}
+}
+
+func (c *storyModeServiceClient) GenerateStoryVideo(ctx context.Context, in *StoryModeRequest, opts ...grpc.CallOption) (*StoryModeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(StoryModeResponse)
+	err := c.cc.Invoke(ctx, StoryModeService_GenerateStoryVideo_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *storyModeServiceClient) BatchGenerateStoryVideos(ctx context.Context, in *BatchStoryModeRequest, opts ...grpc.CallOption) (*BatchStoryModeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BatchStoryModeResponse)
+	err := c.cc.Invoke(ctx, StoryModeService_BatchGenerateStoryVideos_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// StoryModeServiceServer is the server API for StoryModeService service.
+// All implementations must embed UnimplementedStoryModeServiceServer
+// for forward compatibility.
+type StoryModeServiceServer interface {
+	GenerateStoryVideo(context.Context, *StoryModeRequest) (*StoryModeResponse, error)
+	BatchGenerateStoryVideos(context.Context, *BatchStoryModeRequest) (*BatchStoryModeResponse, error)
+	mustEmbedUnimplementedStoryModeServiceServer()
+}
+
+// UnimplementedStoryModeServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedStoryModeServiceServer struct{}
+
+func (UnimplementedStoryModeServiceServer) GenerateStoryVideo(context.Context, *StoryModeRequest) (*StoryModeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GenerateStoryVideo not implemented")
+}
+func (UnimplementedStoryModeServiceServer) BatchGenerateStoryVideos(context.Context, *BatchStoryModeRequest) (*BatchStoryModeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BatchGenerateStoryVideos not implemented")
+}
+func (UnimplementedStoryModeServiceServer) mustEmbedUnimplementedStoryModeServiceServer() {}
+func (UnimplementedStoryModeServiceServer) testEmbeddedByValue()                          {}
+
+// UnsafeStoryModeServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to StoryModeServiceServer will
+// result in compilation errors.
+type UnsafeStoryModeServiceServer interface {
+	mustEmbedUnimplementedStoryModeServiceServer()
+}
+
+func RegisterStoryModeServiceServer(s grpc.ServiceRegistrar, srv StoryModeServiceServer) {
+	// If the following call pancis, it indicates UnimplementedStoryModeServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&StoryModeService_ServiceDesc, srv)
+}
+
+func _StoryModeService_GenerateStoryVideo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StoryModeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StoryModeServiceServer).GenerateStoryVideo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: StoryModeService_GenerateStoryVideo_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StoryModeServiceServer).GenerateStoryVideo(ctx, req.(*StoryModeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _StoryModeService_BatchGenerateStoryVideos_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BatchStoryModeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StoryModeServiceServer).BatchGenerateStoryVideos(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: StoryModeService_BatchGenerateStoryVideos_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StoryModeServiceServer).BatchGenerateStoryVideos(ctx, req.(*BatchStoryModeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// StoryModeService_ServiceDesc is the grpc.ServiceDesc for StoryModeService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var StoryModeService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "intelligence.StoryModeService",
+	HandlerType: (*StoryModeServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GenerateStoryVideo",
+			Handler:    _StoryModeService_GenerateStoryVideo_Handler,
+		},
+		{
+			MethodName: "BatchGenerateStoryVideos",
+			Handler:    _StoryModeService_BatchGenerateStoryVideos_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "intelligence.proto",
+}
+
+const (
+	NoiseReducerService_ReduceNoise_FullMethodName      = "/intelligence.NoiseReducerService/ReduceNoise"
+	NoiseReducerService_BatchReduceNoise_FullMethodName = "/intelligence.NoiseReducerService/BatchReduceNoise"
+)
+
+// NoiseReducerServiceClient is the client API for NoiseReducerService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type NoiseReducerServiceClient interface {
+	ReduceNoise(ctx context.Context, in *NoiseReductionRequest, opts ...grpc.CallOption) (*NoiseReductionResponse, error)
+	BatchReduceNoise(ctx context.Context, in *BatchNoiseReductionRequest, opts ...grpc.CallOption) (*BatchNoiseReductionResponse, error)
+}
+
+type noiseReducerServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewNoiseReducerServiceClient(cc grpc.ClientConnInterface) NoiseReducerServiceClient {
+	return &noiseReducerServiceClient{cc}
+}
+
+func (c *noiseReducerServiceClient) ReduceNoise(ctx context.Context, in *NoiseReductionRequest, opts ...grpc.CallOption) (*NoiseReductionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(NoiseReductionResponse)
+	err := c.cc.Invoke(ctx, NoiseReducerService_ReduceNoise_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *noiseReducerServiceClient) BatchReduceNoise(ctx context.Context, in *BatchNoiseReductionRequest, opts ...grpc.CallOption) (*BatchNoiseReductionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BatchNoiseReductionResponse)
+	err := c.cc.Invoke(ctx, NoiseReducerService_BatchReduceNoise_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// NoiseReducerServiceServer is the server API for NoiseReducerService service.
+// All implementations must embed UnimplementedNoiseReducerServiceServer
+// for forward compatibility.
+type NoiseReducerServiceServer interface {
+	ReduceNoise(context.Context, *NoiseReductionRequest) (*NoiseReductionResponse, error)
+	BatchReduceNoise(context.Context, *BatchNoiseReductionRequest) (*BatchNoiseReductionResponse, error)
+	mustEmbedUnimplementedNoiseReducerServiceServer()
+}
+
+// UnimplementedNoiseReducerServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedNoiseReducerServiceServer struct{}
+
+func (UnimplementedNoiseReducerServiceServer) ReduceNoise(context.Context, *NoiseReductionRequest) (*NoiseReductionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReduceNoise not implemented")
+}
+func (UnimplementedNoiseReducerServiceServer) BatchReduceNoise(context.Context, *BatchNoiseReductionRequest) (*BatchNoiseReductionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BatchReduceNoise not implemented")
+}
+func (UnimplementedNoiseReducerServiceServer) mustEmbedUnimplementedNoiseReducerServiceServer() {}
+func (UnimplementedNoiseReducerServiceServer) testEmbeddedByValue()                             {}
+
+// UnsafeNoiseReducerServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to NoiseReducerServiceServer will
+// result in compilation errors.
+type UnsafeNoiseReducerServiceServer interface {
+	mustEmbedUnimplementedNoiseReducerServiceServer()
+}
+
+func RegisterNoiseReducerServiceServer(s grpc.ServiceRegistrar, srv NoiseReducerServiceServer) {
+	// If the following call pancis, it indicates UnimplementedNoiseReducerServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&NoiseReducerService_ServiceDesc, srv)
+}
+
+func _NoiseReducerService_ReduceNoise_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(NoiseReductionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NoiseReducerServiceServer).ReduceNoise(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: NoiseReducerService_ReduceNoise_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NoiseReducerServiceServer).ReduceNoise(ctx, req.(*NoiseReductionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _NoiseReducerService_BatchReduceNoise_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BatchNoiseReductionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NoiseReducerServiceServer).BatchReduceNoise(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: NoiseReducerService_BatchReduceNoise_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NoiseReducerServiceServer).BatchReduceNoise(ctx, req.(*BatchNoiseReductionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// NoiseReducerService_ServiceDesc is the grpc.ServiceDesc for NoiseReducerService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var NoiseReducerService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "intelligence.NoiseReducerService",
+	HandlerType: (*NoiseReducerServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ReduceNoise",
+			Handler:    _NoiseReducerService_ReduceNoise_Handler,
+		},
+		{
+			MethodName: "BatchReduceNoise",
+			Handler:    _NoiseReducerService_BatchReduceNoise_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "intelligence.proto",
 }

@@ -1,5 +1,3 @@
-import { SocialPlatformName } from "./social";
-
 // Define types
 export type ColorMode = "light" | "dark";
 export type DeviceView = "desktop" | "tablet" | "mobile";
@@ -28,104 +26,6 @@ export interface FontOption {
   fallback: string;
   description?: string;
 }
-
-// export interface BrandGuide {
-//   id: string;
-//   name: string;
-//   tagline: string;
-//   description: string;
-//   logo: {
-//     main: string | null;
-//     alt: string | null;
-//     favicon: string | null;
-//     darkMode: string | null;
-//   };
-//   colors: {
-//     primary: string;
-//     secondary: string;
-//     accent: string;
-//     success: string;
-//     warning: string;
-//     error: string;
-//     background: string;
-//     foreground: string;
-//     muted: string;
-//     surface: string;
-//   };
-//   typography: {
-//     headingFont: string;
-//     bodyFont: string;
-//     baseSize: number;
-//     ratio: number;
-//     weights: {
-//       heading: number;
-//       body: number;
-//     };
-//     letterSpacing: number;
-//     lineHeight: number;
-//   };
-//   testimonials: {
-//     style: TestimonialStyle;
-//     shape: TestimonialShape;
-//     layout: TestimonialLayout;
-//     showRating: boolean;
-//     showAvatar: boolean;
-//     showDate: boolean;
-//     showCompany: boolean;
-//     animation: boolean;
-//     shadow: "none" | "sm" | "md" | "lg";
-//     border: boolean;
-//     ratingStyle: "stars" | "number" | "text";
-//   };
-//   voice: {
-//     tone: string;
-//     values: string[];
-//     ctas: string[];
-//     examples: string[];
-//     channels: {
-//       // social: Record<"requestTemplate" | "thankYouTemplate", string>;
-//       social: {
-//         platforms: Record<
-//           SocialPlatformName,
-//           {
-//             requestTemplate: string;
-//             thankYouTemplate: string;
-//             followupTemplate: string;
-//           }
-//         >;
-//       };
-//       custom: Record<
-//         CustomPageTemplateType | "customSlug" | "customDomain",
-//         string
-//       >;
-
-//       website: Record<"requestTemplate" | "thankYouTemplate", string>;
-//       chat: Record<"requestTemplate" | "followupTemplate", string>;
-//       email: {
-//         requestTemplate: string;
-//         thankYouTemplate: string;
-//         signature: {
-//           templateId: string;
-//           text: string;
-//           includeSocialLinks?: boolean;
-//           includeCompanyLogo?: boolean;
-//         };
-//         sender: {
-//           email: string;
-//           name: string;
-//         };
-//       };
-//     };
-//   };
-//   ui: {
-//     radius: number;
-//     animation: boolean;
-//     density: "compact" | "default" | "relaxed";
-//     darkMode: boolean;
-//   };
-//   createdAt: Date;
-//   updatedAt: Date;
-// }
 
 export interface BrandGuide {
   id: string;
@@ -197,41 +97,6 @@ export interface BrandGuide {
   rating_style?: "stars" | "number" | "text";
 
   // Brand voice
-  voice: {
-    tone: string;
-    values: string[];
-    ctas: string[];
-    examples: string[];
-    channels: {
-      social?: {
-        platforms: Record<
-          SocialPlatformName,
-          {
-            requestTemplate: string;
-            thankYouTemplate: string;
-            followupTemplate: string;
-          }
-        >;
-      };
-      custom?: Record<string, string>;
-      website?: Record<"requestTemplate" | "thankYouTemplate", string>;
-      chat?: Record<"requestTemplate" | "followupTemplate", string>;
-      email?: {
-        requestTemplate: string;
-        thankYouTemplate: string;
-        signature?: {
-          templateId: string;
-          text: string;
-          includeSocialLinks?: boolean;
-          includeCompanyLogo?: boolean;
-        };
-        sender?: {
-          email: string;
-          name: string;
-        };
-      };
-    };
-  };
 
   // UI settings
   ui_settings?: {
