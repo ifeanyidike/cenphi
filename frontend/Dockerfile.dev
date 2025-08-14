@@ -1,13 +1,25 @@
-# Use a more stable LTS Node version with Alpine for minimal footprint
-FROM node:20-alpine AS builder
+# Use Node.js 18 for better compatibility with native modules
+FROM node:18 AS builder
 
 WORKDIR /usr/src/app
+
+# Install build dependencies for native modules
+RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
 
 # Copy only package files first (for better caching)
 COPY package.json yarn.lock ./
 
-# Install dependencies with better caching and cleanup
-RUN yarn install --ignore-platform --frozen-lockfile && \
+# Set environment variables to handle platform-specific binaries
+ENV NODE_ENV=development
+ENV ROLLUP_SKIP_NATIVE=true
+ENV VITE_SKIP_NATIVE=true
+ENV ROLLUP_USE_WASM=true
+
+# Clear any existing node_modules and reinstall for the correct platform
+# Use yarn with specific flags and force WebAssembly version
+RUN rm -rf node_modules package-lock.json && \
+    yarn install --ignore-platform --frozen-lockfile --ignore-optional && \
+    yarn add rollup@^4.0.0 && \
     yarn cache clean
 
 # Copy only necessary source files

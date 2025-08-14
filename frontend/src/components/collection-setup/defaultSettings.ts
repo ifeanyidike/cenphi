@@ -277,6 +277,80 @@ export const defaultSettings: CollectionSettings = {
       providers: [],
     },
   },
+  "google-drive": {
+    enabled: false,
+    formats: [
+      { type: "video", enabled: true },
+      { type: "audio", enabled: true },
+      { type: "document", enabled: true },
+      { type: "image", enabled: true },
+    ],
+    connection: {
+      isConnected: false,
+      accountEmail: undefined,
+      lastSync: undefined,
+      syncInterval: 30,
+      autoSync: false,
+    },
+    folders: {
+      selectedFolders: [],
+      includeSubfolders: true,
+      fileTypes: ["video", "audio", "document", "image"],
+      maxFileSize: 100,
+    },
+    processing: {
+      autoProcess: true,
+      extractMetadata: true,
+      generateTranscripts: true,
+      createThumbnails: true,
+    },
+    notifications: {
+      onNewFile: true,
+      onProcessingComplete: true,
+      onError: true,
+    },
+  },
+  linkedin: {
+    enabled: false,
+    formats: [
+      { type: "text", enabled: true },
+      { type: "video", enabled: false },
+      { type: "audio", enabled: false },
+      { type: "image", enabled: false },
+    ],
+    connection: {
+      isConnected: false,
+      accountId: undefined,
+      accountName: undefined,
+      lastSync: undefined,
+      syncInterval: 60,
+      autoSync: false,
+    },
+    collection: {
+      includeRecommendations: true,
+      includeEndorsements: true,
+      includePosts: false,
+      includeComments: false,
+      dateRange: {
+        start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
+        end: new Date(),
+      },
+      keywords: [],
+      excludeKeywords: [],
+    },
+    processing: {
+      autoProcess: true,
+      extractSentiment: true,
+      generateSummaries: true,
+      identifyKeyPhrases: true,
+    },
+    notifications: {
+      onNewRecommendation: true,
+      onNewEndorsement: true,
+      onProcessingComplete: true,
+      onError: true,
+    },
+  },
 };
 
 export const socialPlatforms: Record<

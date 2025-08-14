@@ -23,6 +23,8 @@ import EmailSettings from "./email/EmailSettings";
 import ChatSettings from "./chat/ChatSettings";
 import SocialSettings from "./social/SocialSettings";
 import CustomPageSettings from "./custom/CustomPageSettings";
+import GoogleDriveSettings from "./google-drive/GoogleDriveSettings";
+import LinkedInSettings from "./linkedin/LinkedInSettings";
 import { TriggerType } from "@/types/setup/triggers";
 
 const TestimonialCollectionSettings: React.FC = () => {
@@ -249,6 +251,44 @@ const TestimonialCollectionSettings: React.FC = () => {
                 }
                 copiedElement={settingsStore.copiedElement}
                 onCopyElement={handleCopyElement}
+                showToast={toast}
+              />
+            </TabsContent>
+
+            <TabsContent value="google-drive" className="mt-0">
+              <GoogleDriveSettings
+                settings={settingsStore.settings["google-drive"]}
+                onFormatToggle={handleFormatToggle("google-drive")}
+                onSettingsChange={(field, value) =>
+                  settingsStore.updateSettings("google-drive", field, value)
+                }
+                onNestedSettingsChange={(parentField, field, value) =>
+                  settingsStore.updateNestedSettings(
+                    "google-drive",
+                    parentField,
+                    field,
+                    value
+                  )
+                }
+                showToast={toast}
+              />
+            </TabsContent>
+
+            <TabsContent value="linkedin" className="mt-0">
+              <LinkedInSettings
+                settings={settingsStore.settings.linkedin}
+                onFormatToggle={handleFormatToggle("linkedin")}
+                onSettingsChange={(field, value) =>
+                  settingsStore.updateSettings("linkedin", field, value)
+                }
+                onNestedSettingsChange={(parentField, field, value) =>
+                  settingsStore.updateNestedSettings(
+                    "linkedin",
+                    parentField,
+                    field,
+                    value
+                  )
+                }
                 showToast={toast}
               />
             </TabsContent>

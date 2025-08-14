@@ -44,7 +44,8 @@ export class TestimonialManager {
     try {
       const workspaceID = this.memberManager.member?.workspace_id;
       if (!workspaceID) {
-        throw new Error("No workspace ID found");
+        console.warn("No workspace ID found, skipping testimonial fetch");
+        return null;
       }
 
       const url = `${this.workspaceOrchestrator.server}/${workspaceID}/testimonials`;
@@ -66,10 +67,11 @@ export class TestimonialManager {
         return data;
       }
 
-      throw new Error("Could not get testimonials");
+      console.error("Could not get testimonials");
+      return null;
     } catch (error) {
       console.error("Error fetching testimonials:", error);
-      throw error;
+      return null;
     } finally {
       runInAction(() => {
         this.loading_testimonials = false;

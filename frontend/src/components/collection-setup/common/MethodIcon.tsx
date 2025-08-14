@@ -1,6 +1,6 @@
 import React from "react";
 import { CollectionMethod } from "@/types/setup";
-import { Globe, Mail, MessageSquare, Share2, Layout } from "lucide-react";
+import { Globe, Mail, MessageSquare, Share2, Layout, Cloud, Linkedin } from "lucide-react";
 
 interface MethodIconProps {
   method: CollectionMethod;
@@ -14,6 +14,8 @@ const MethodIcon: React.FC<MethodIconProps> = ({ method, className }) => {
     chat: MessageSquare,
     social: Share2,
     custom: Layout,
+    "google-drive": Cloud,
+    linkedin: Linkedin,
   };
 
   const IconComponent = iconMapping[method];

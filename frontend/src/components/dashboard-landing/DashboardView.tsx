@@ -7,6 +7,8 @@ import {
   Activity,
   Settings,
   PlusCircle,
+  Cloud,
+  Linkedin,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -18,16 +20,40 @@ import { ContentView } from "./ContentView";
 import { EmptyStateView } from "./EmptyView";
 import { Testimonial } from "@/types/testimonial";
 import { workspaceHub } from "@/repo/workspace_hub";
+import { mockTestimonials } from "@/utils/mock";
+import { authStore } from "@/stores/authStore";
 
 const DashboardView: React.FC = observer(() => {
   useEffect(() => {
     (async () => {
-      await workspaceHub.testimonialManager.getTestimonials();
+      try {
+        // Check if user is authenticated
+        if (!authStore.isAuthenticated) {
+          console.log("User not authenticated, using mock data");
+          // Set mock data when user is not authenticated
+          workspaceHub.testimonialManager.testimonials = mockTestimonials;
+          workspaceHub.testimonialManager.loading_testimonials = false;
+          return;
+        }
+
+        // First ensure member data is loaded
+        if (!workspaceHub.memberManager.member) {
+          await workspaceHub.memberManager.getUser();
+        }
+        
+        // Then fetch testimonials
+        await workspaceHub.testimonialManager.getTestimonials();
+      } catch (error) {
+        console.error("Error loading dashboard data:", error);
+        // If there's an error, fall back to mock data
+        workspaceHub.testimonialManager.testimonials = mockTestimonials;
+        workspaceHub.testimonialManager.loading_testimonials = false;
+      }
     })();
-  }, []);
+  }, [authStore.isAuthenticated]);
 
   const testimonials = workspaceHub.testimonialManager.testimonials;
-  const isLoading = workspaceHub.testimonialManager.loading_testimonials;
+  const isLoading = workspaceHub.testimonialManager.loading_testimonials || (workspaceHub.memberManager.loadingMembers && authStore.isAuthenticated);
 
   const hasTestimonials = testimonials?.length;
   const totalRating = testimonials?.reduce(
@@ -41,6 +67,18 @@ const DashboardView: React.FC = observer(() => {
     (acc: number, curr: Testimonial) => acc + (curr.conversion_count || 0),
     0
   );
+
+  // Show loading state while data is being fetched
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -64,6 +102,14 @@ const DashboardView: React.FC = observer(() => {
                 <Settings className="h-4 w-4 mr-2" />
                 Settings
               </Button>
+              <Button variant="outline" size="sm" className="hidden md:flex">
+                <Cloud className="h-4 w-4 mr-2" />
+                Google Drive
+              </Button>
+              <Button variant="outline" size="sm" className="hidden md:flex">
+                <Linkedin className="h-4 w-4 mr-2" />
+                LinkedIn
+              </Button>
               <Button className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-md hover:shadow-lg transition-all duration-300">
                 <PlusCircle className="h-4 w-4 mr-2" />
                 Add Testimonial
@@ -82,13 +128,29 @@ const DashboardView: React.FC = observer(() => {
                 dashboard.
               </p>
             </div>
-            <Button
-              variant="default"
-              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              New Testimonial
-            </Button>
+            <div className="flex items-center space-x-3">
+              <Button
+                variant="outline"
+                className="border-gray-300 hover:border-gray-400 text-gray-700 hover:text-gray-800"
+              >
+                <Cloud className="h-4 w-4 mr-2" />
+                Import from Drive
+              </Button>
+              <Button
+                variant="outline"
+                className="border-gray-300 hover:border-gray-400 text-gray-700 hover:text-gray-800"
+              >
+                <Linkedin className="h-4 w-4 mr-2" />
+                Import from LinkedIn
+              </Button>
+              <Button
+                variant="default"
+                className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                New Testimonial
+              </Button>
+            </div>
           </>
         )}
       </motion.div>

@@ -10,7 +10,8 @@ import DisplayQuestion from "@/components/collection/DisplayQuestion";
 import AudioRecorder from "@/components/collection/AudioRecorder";
 import ChangeRenderType from "@/components/collection/ChangeRenderType";
 
-const AudioTestimonialRecorder = observer(() => {
+const AudioTestimonialRecorder = () => {
+  console.log('currentPromptIndex:', collectionStore.state.currentPromptIndex);
   const state = collectionStore.state;
   const progress = useMotionValue(0);
 
@@ -35,6 +36,8 @@ const AudioTestimonialRecorder = observer(() => {
           <AudioRecorder
             onRecordingComplete={collectionStore.handleCompleteRecordingSection}
             maxDuration={MAX_RECORDING_DURATION / (GUIDED_PROMPTS.length || 1)}
+            onContinue={() => {}}
+            onSubmit={() => {}}
           />
         </div>
 
@@ -46,6 +49,6 @@ const AudioTestimonialRecorder = observer(() => {
       </motion.div>
     </AnimatePresence>
   );
-});
+};
 
 export default AudioTestimonialRecorder;

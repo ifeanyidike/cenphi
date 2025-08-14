@@ -27,6 +27,8 @@ const MethodTabs: React.FC<MethodTabsProps> = ({
     chat: "Chat Integration",
     social: "Social Media",
     custom: "Custom Pages",
+    "google-drive": "Google Drive",
+    linkedin: "LinkedIn",
   };
 
   const methodDescriptions: Record<CollectionMethod, string> = {
@@ -35,6 +37,8 @@ const MethodTabs: React.FC<MethodTabsProps> = ({
     chat: "Prompt customers to give testimonials during or after chat sessions.",
     social: "Gather testimonials from social media platforms.",
     custom: "Create dedicated testimonial collection pages.",
+    "google-drive": "Import testimonials from Google Drive files and folders.",
+    linkedin: "Collect testimonials and recommendations from LinkedIn.",
   };
 
   return (

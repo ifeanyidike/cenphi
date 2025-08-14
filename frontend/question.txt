@@ -1,0 +1,155 @@
+ const questions: Question[] = [
+      {
+        id: 1,
+        question: "Could you describe a time that Cenphi helped you?",
+        tips: [
+          "Pick a quiet and well-lit place",
+          "Relax & be yourself – it doesn't have to be perfect",
+          "You can redo your recording if you're not happy with it"
+        ]
+      },
+      {
+        id: 2,
+        question: "What specific results did you achieve with Cenphi?",
+        tips: [
+          "Be specific about the outcomes",
+          "Include numbers or metrics if possible",
+          "Focus on the impact it had on your business"
+        ]
+      },
+      {
+        id: 3,
+        question: "How would you describe your experience with Cenphi?",
+        tips: [
+          "Share your honest opinion",
+          "Mention what stood out to you",
+          "Talk about the service quality"
+        ]
+      },
+      {
+        id: 4,
+        question: "Would you recommend Cenphi to others?",
+        tips: [
+          "Explain why you would or wouldn't recommend",
+          "Think about who would benefit most",
+          "Keep it genuine and authentic"
+        ]
+      }
+    ];
+
+
+    // All icons imported do not reimport
+// import {
+//   PlayCircle,
+//   Mic,
+//   MicOff,
+//   Camera,
+//   CameraOff,
+//   Settings,
+//   RefreshCw,
+//   CheckCircle,
+//   ChevronRight,
+//   Loader2,
+//   Volume2,
+//   VolumeX,
+//   ChevronDown,
+//   Download,
+//   Scissors,
+//   Maximize,
+//   ChevronLeft,
+//   AlertOctagon,
+//   Sun,
+//   SunMoon,
+//   Moon,
+//   ImagePlus,
+//   PauseCircle,
+//   Pause, 
+//   Square, 
+//   Video, 
+//   VideoOff, 
+//   X,
+//   Clock,
+//   Check,
+//   RotateCcw,
+//   Send,
+
+// } from "lucide-react";
+
+
+
+import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
+import { useToast } from "@/hooks/use-toast";
+
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+
+
+const VideoRecorderInterface: React.FC<VideoRecorderProps> = ({ 
+    onRecordingComplete, 
+    maxDuration ,
+  currentQuestion = "What problem were you trying to solve?",
+    currentQuestionIndex = 0,
+    totalQuestions = 4,
+    companyLogo = "",
+    companyName = "Your Company",
+    primaryColor = "#6366F1",
+    forceMobileView = false,
+  tips:
+  }) => {
+    const [isRecording, setIsRecording] = useState<boolean>(false);
+    const [isPaused, setIsPaused] = useState<boolean>(false);
+    const [recordingTime, setRecordingTime] = useState<number>(0);
+    const [micEnabled, setMicEnabled] = useState<boolean>(true);
+    const [cameraEnabled, setCameraEnabled] = useState<boolean>(true);
+    const [currentStep, setCurrentStep] = useState<number>(1);
+    const [maxSteps] = useState<number>(4);
+    const [showSettings, setShowSettings] = useState<boolean>(false);
+    const [hasRecorded, setHasRecorded] = useState<boolean>(false);
+    const [showMobileMenu, setShowMobileMenu] = useState<boolean>(false);
+
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const streamRef = useRef<MediaStream | null>(null);
+    const intervalRef = useRef<number | null>(null);
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const recordedChunksRef = useRef<Blob[]>([]);
+
+
+
+    const adjustColor = (color: string, amount: number): string => {
+  // Remove the # if it exists
+  color = color.replace("#", "");
+
+  // Parse the color to RGB
+  const r = parseInt(color.substring(0, 2), 16);
+  const g = parseInt(color.substring(2, 4), 16);
+  const b = parseInt(color.substring(4, 6), 16);
+
+  // Adjust the color
+  const newR = Math.max(0, Math.min(255, r + amount));
+  const newG = Math.max(0, Math.min(255, g + amount));
+  const newB = Math.max(0, Math.min(255, b + amount));
+
+  // Convert back to hex
+  return `#${newR.toString(16).padStart(2, "0")}${newG
+    .toString(16)
+    .padStart(2, "0")}${newB.toString(16).padStart(2, "0")}`;
+};

@@ -328,7 +328,7 @@ const VoiceAndTone: FC<VoiceAndToneProps> = ({
       initial="hidden"
       animate="visible"
       exit="exit"
-      className="space-y-6"
+     className="space-y-6 h-full overflow-y-auto"
     >
       {/* Main Header */}
       <div className="flex items-center justify-between">
@@ -388,6 +388,64 @@ const VoiceAndTone: FC<VoiceAndToneProps> = ({
 
       {/* Mobile navigation menu */}
       {isMenuOpen && (
+  <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-800 rounded-xl shadow-lg p-3 space-y-2 z-10 max-h-[60vh] overflow-y-auto">
+    <div className="font-medium text-sm mb-2">Navigation</div>
+    <Button
+      variant={activeTab === "brand-voice" ? "default" : "ghost"}
+      className={`w-full justify-start text-sm h-10 ${
+        activeTab === "brand-voice" ? "bg-gradient-to-r from-indigo-600 to-purple-600" : ""
+      }`}
+      onClick={() => {
+        setActiveTab("brand-voice");
+        setIsMenuOpen(false);
+      }}
+    >
+      <Megaphone className="h-4 w-4 mr-2" />
+      <span>Brand Voice</span>
+    </Button>
+    <Button
+      variant={activeTab === "channels" ? "default" : "ghost"}
+      className={`w-full justify-start text-sm h-10 ${
+        activeTab === "channels" ? "bg-gradient-to-r from-indigo-600 to-purple-600" : ""
+      }`}
+      onClick={() => {
+        setActiveTab("channels");
+        setIsMenuOpen(false);
+      }}
+    >
+      <Layout className="h-4 w-4 mr-2" />
+      <span>Channels</span>
+    </Button>
+    <div className="font-medium text-sm mt-4 mb-2">Channels</div>
+    {channels.map((channel) => (
+      <Button
+        key={channel.id}
+        variant={activeChannel === channel.id ? "default" : "ghost"}
+        className={`w-full justify-start text-sm h-10 ${
+          activeChannel === channel.id ? `bg-gradient-to-r ${channel.gradient}` : ""
+        }`}
+        onClick={() => {
+          setActiveChannel(channel.id);
+          setActiveTab("channels");
+          setIsMenuOpen(false);
+        }}
+        disabled={channel.status === "coming-soon"}
+      >
+        <channel.icon className="h-4 w-4 mr-2" />
+        <span>{channel.name}</span>
+        {channel.status === "coming-soon" && (
+          <Badge
+            variant="outline"
+            className="ml-auto text-[10px] bg-gray-100 dark:bg-gray-800"
+          >
+            Soon
+          </Badge>
+        )}
+      </Button>
+    ))}
+  </div>
+)}
+      {/* {isMenuOpen && (
         <div className="md:hidden bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-800 rounded-xl shadow-lg p-3 space-y-2">
           <div className="font-medium text-sm mb-2">Navigation</div>
           <Button
@@ -438,10 +496,10 @@ const VoiceAndTone: FC<VoiceAndToneProps> = ({
             </Button>
           ))}
         </div>
-      )}
+      )} */}
 
       {/* Main Content */}
-      <div className="grid grid-cols-12 gap-6">
+      <div className="grid grid-cols-12 gap-6 overflow-x-hidden">
         {/* Left Sidebar - Hidden on mobile */}
         <div className="hidden md:block md:col-span-3 space-y-4">
           <Card className="border-2 border-gray-200 dark:border-gray-800 shadow-lg rounded-xl overflow-hidden">
@@ -648,7 +706,7 @@ const VoiceAndTone: FC<VoiceAndToneProps> = ({
                 </CardDescription>
               </CardHeader>
 
-              <CardContent className="p-6 space-y-8">
+              <CardContent className="p-6 space-y-8 overflow-y-auto">
                 {/* Brand Tone */}
                 <div className="space-y-3">
                   <div

@@ -26,6 +26,8 @@ import {
   MessagesSquare,
   Film,
   Trophy,
+  Cloud,
+  Linkedin,
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -98,7 +100,7 @@ const data = {
         },
         {
           title: "Pending Reviews",
-          url: "/pending_reviews",
+          url: "/pending",
         },
         {
           title: "Approved",
@@ -119,6 +121,60 @@ const data = {
         {
           title: "Review Requests",
           url: "/testimonials/requests",
+        },
+        {
+          title: "Google Drive Import",
+          url: "/dashboard?tab=google-drive",
+        },
+        {
+          title: "LinkedIn Import",
+          url: "/dashboard?tab=linkedin",
+        },
+      ],
+    },
+    {
+      title: "Google Drive",
+      url: "/dashboard?tab=google-drive",
+      icon: Cloud,
+      items: [
+        {
+          title: "Import Files",
+          url: "/dashboard?tab=google-drive",
+        },
+        {
+          title: "Connected Folders",
+          url: "/dashboard?tab=google-drive&section=folders",
+        },
+        {
+          title: "Sync Settings",
+          url: "/dashboard?tab=google-drive&section=settings",
+        },
+        {
+          title: "Processing Queue",
+          url: "/dashboard?tab=google-drive&section=queue",
+        },
+      ],
+    },
+    {
+      title: "LinkedIn",
+      url: "/dashboard?tab=linkedin",
+      icon: Linkedin,
+      items: [
+        {
+          title: "Import Recommendations",
+          url: "/dashboard?tab=linkedin",
+        },
+        {
+          title: "Endorsements",
+          url: "/dashboard?tab=linkedin&section=endorsements",
+        },
+        {
+          title: "Posts & Comments",
+          url: "/dashboard?tab=linkedin&section=posts",
+        },
+        {
+          title: "Collection Settings",
+          url: "/dashboard?tab=linkedin&section=settings",
         },
       ],
     },
@@ -322,6 +378,16 @@ const data = {
       name: "User Feedback",
       url: "/feedback",
       icon: MessagesSquare,
+    },
+    {
+      name: "Google Drive",
+      url: "/dashboard?tab=google-drive",
+      icon: Cloud,
+    },
+    {
+      name: "LinkedIn",
+      url: "/dashboard?tab=linkedin",
+      icon: Linkedin,
     },
   ],
 };

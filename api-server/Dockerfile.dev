@@ -1,5 +1,5 @@
 # Base image with Go and Air preinstalled
-FROM golang:1.23.2-alpine
+FROM golang:1.24-alpine
 
 # Set the working directory 
 WORKDIR /app
@@ -20,7 +20,7 @@ CMD ["air", "-c", ".air.toml"]
 
 
 
-# FROM golang:1.23.2-alpine
+# FROM golang:1.24-alpine
 
 # WORKDIR /app
 

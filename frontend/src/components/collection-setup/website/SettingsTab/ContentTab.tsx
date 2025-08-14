@@ -2198,7 +2198,7 @@ const ContentTab: React.FC<ContentTabProps> = observer(({ onShowPreview }) => {
         <CardHeader>
           <CardTitle>Testimonial Formats</CardTitle>
           <CardDescription>
-            Choose which types of content users can submit
+            Choose which type(s) of content users can submit
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">

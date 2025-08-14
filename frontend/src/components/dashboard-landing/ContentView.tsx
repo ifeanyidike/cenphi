@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { Sparkles } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Sparkles, Cloud, Linkedin } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -7,10 +8,27 @@ import { motion } from "framer-motion";
 import { ReviewsSection } from "./ReviewsSection";
 import { AIActionsCard } from "./AIActionsCard";
 import { PerformanceMetricsCard } from "./PerformanceMetricsCard";
+import { GoogleDriveCard } from "./GoogleDriveCard";
+import { LinkedInCard } from "./LinkedInCard";
+import GoogleDriveTestimonialCollection from "@/components/collection/GoogleDriveTestimonialCollection";
+import LinkedInTestimonialCollection from "./LinkedInTestimonialCollection";
 import { observer } from "mobx-react-lite";
 
 export const ContentView = observer(() => {
+  const [searchParams] = useSearchParams();
   const [currentTab, setCurrentTab] = useState("overview");
+  
+  console.log('ContentView rendered, currentTab:', currentTab);
+  
+  // Handle URL parameters to set initial tab
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam && ['overview', 'reviews', 'google-drive', 'linkedin', 'analytics'].includes(tabParam)) {
+      console.log('Setting tab from URL parameter:', tabParam);
+      setCurrentTab(tabParam);
+    }
+  }, [searchParams]);
+
   const fadeIn = {
     hidden: { opacity: 0, y: 20 },
     visible: {
@@ -40,6 +58,20 @@ export const ContentView = observer(() => {
             className="data-[state=active]:bg-purple-50 data-[state=active]:text-purple-700 dark:data-[state=active]:bg-gray-700"
           >
             Reviews
+          </TabsTrigger>
+          <TabsTrigger
+            value="google-drive"
+            className="data-[state=active]:bg-purple-50 data-[state=active]:text-purple-700 dark:data-[state=active]:bg-gray-700"
+          >
+            <Cloud className="w-4 h-4 mr-2" />
+            Google Drive
+          </TabsTrigger>
+          <TabsTrigger
+            value="linkedin"
+            className="data-[state=active]:bg-purple-50 data-[state=active]:text-purple-700 dark:data-[state=active]:bg-gray-700"
+          >
+            <Linkedin className="w-4 h-4 mr-2" />
+            LinkedIn
           </TabsTrigger>
           <TabsTrigger
             value="analytics"
@@ -79,6 +111,8 @@ export const ContentView = observer(() => {
           <div className="space-y-6">
             <AIActionsCard />
             <PerformanceMetricsCard />
+            <GoogleDriveCard />
+            <LinkedInCard />
             {/* <RecentActivityFeed /> */}
           </div>
         </motion.div>
@@ -95,6 +129,36 @@ export const ContentView = observer(() => {
           variants={fadeIn}
         >
           <ReviewsSection fullWidth={true} />
+        </motion.div>
+      </TabsContent>
+
+      <TabsContent
+        value="google-drive"
+        className="mt-0 focus-visible:outline-none focus-visible:ring-0"
+      >
+        <motion.div
+          key="google-drive"
+          initial="hidden"
+          animate="visible"
+          variants={fadeIn}
+          className="bg-white dark:bg-gray-800 rounded-xl shadow-sm"
+        >
+          <GoogleDriveTestimonialCollection />
+        </motion.div>
+      </TabsContent>
+
+      <TabsContent
+        value="linkedin"
+        className="mt-0 focus-visible:outline-none focus-visible:ring-0"
+      >
+        <motion.div
+          key="linkedin"
+          initial="hidden"
+          animate="visible"
+          variants={fadeIn}
+          className="bg-white dark:bg-gray-800 rounded-xl shadow-sm"
+        >
+          <LinkedInTestimonialCollection />
         </motion.div>
       </TabsContent>
 

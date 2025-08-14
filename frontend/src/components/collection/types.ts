@@ -1,5 +1,5 @@
 // types.ts
-export type TestimonialType = "video" | "audio" | "text";
+export type TestimonialType = "video" | "audio" | "text" | "google-drive";
 
 export interface GuidedPrompt {
   id: string;
