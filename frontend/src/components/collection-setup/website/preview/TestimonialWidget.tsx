@@ -1752,6 +1752,8 @@ const TestimonialWidget: React.FC<TestimonialWidgetProps> = observer(
                       <AudioRecorder
                         onRecordingComplete={handleMediaRecording}
                         forceMobileView
+                        onContinue={() => {}}
+                          onSubmit={() => {}}
                         primaryColor={currentStyle.primaryColor}
                       />
                     </div>

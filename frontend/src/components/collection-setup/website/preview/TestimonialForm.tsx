@@ -22,6 +22,7 @@ import {
   Star,
   ChevronLeft,
   X,
+  FileText,
   Gift,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -92,6 +93,7 @@ const formatIcons = {
   image: Camera,
   audio: Mic,
   video: Video,
+  document: FileText,
 };
 
 const TestimonialForm: React.FC<TestimonialFormProps> = observer(
@@ -477,6 +479,8 @@ const TestimonialForm: React.FC<TestimonialFormProps> = observer(
             <div className="space-y-4">
               <EnhancedAudioRecorder
                 forceMobileView
+                onContinue={() => {}}
+                onSubmit={() => {}}  
                 onRecordingComplete={handleMediaSubmission}
                 maxDuration={120}
                 currentQuestion={questions[currentQuestion]}

@@ -132,6 +132,8 @@ const TestimonialCollectionSettings: React.FC = () => {
           chat: settingsStore.settings.chat.enabled,
           social: settingsStore.settings.social.enabled,
           custom: settingsStore.settings.custom.enabled,
+          "google-drive": settingsStore.settings["google-drive"].enabled,
+          linkedin: settingsStore.settings.linkedin.enabled,
         }}
         onToggleMethod={handleToggleMethod}
       />
@@ -265,8 +267,8 @@ const TestimonialCollectionSettings: React.FC = () => {
                 onNestedSettingsChange={(parentField, field, value) =>
                   settingsStore.updateNestedSettings(
                     "google-drive",
-                    parentField,
-                    field,
+                    parentField as any,
+                    field as any,
                     value
                   )
                 }
@@ -284,8 +286,8 @@ const TestimonialCollectionSettings: React.FC = () => {
                 onNestedSettingsChange={(parentField, field, value) =>
                   settingsStore.updateNestedSettings(
                     "linkedin",
-                    parentField,
-                    field,
+                    parentField as any,
+                    field as any,
                     value
                   )
                 }

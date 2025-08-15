@@ -1,14 +1,11 @@
 import React from "react";
 import { observer } from "mobx-react-lite";
-import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { Linkedin, Settings, RefreshCw, CheckCircle, AlertCircle } from "lucide-react";
 import { LinkedInSettings as LinkedInSettingsType } from "@/types/setup";
-import { FormatOption } from "@/types/setup";
+
 import LinkedInTestimonialCollection from "@/components/dashboard-landing/LinkedInTestimonialCollection";
 
 interface LinkedInSettingsProps {
@@ -22,9 +19,7 @@ interface LinkedInSettingsProps {
 const LinkedInSettings: React.FC<LinkedInSettingsProps> = observer(({
   settings,
   onFormatToggle,
-  onSettingsChange,
   onNestedSettingsChange,
-  showToast,
 }) => {
   const formatLabels: Record<string, string> = {
     text: "Text Recommendations",

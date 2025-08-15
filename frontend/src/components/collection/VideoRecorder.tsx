@@ -3,13 +3,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   PlayCircle,
   Mic,
-  MicOff,
   Camera,
   CameraOff,
-  Settings,
-
   CheckCircle,
-  
   PauseCircle,
   Square,
 } from "lucide-react";
@@ -74,7 +70,6 @@ const adjustColor = (color: string, amount: number): string => {
 };
 
 interface EnhancedVideoRecorderProps {
-  onRecordingComplete: (blob: Blob) => void;
   maxDuration?: number;
   currentQuestion?: string;
   currentQuestionIndex?: number;
@@ -84,6 +79,7 @@ interface EnhancedVideoRecorderProps {
   primaryColor?: string;
   showAIHelp?: boolean;
   forceMobileView?: boolean;
+  onRecordingComplete?: (blob: Blob) => void;
 }
 
 type RecordingState =
@@ -94,11 +90,9 @@ type RecordingState =
   | "reviewing"
   | "processing"
   | "complete";
-type VideoQuality = "standard" | "high" | "hd" | "4k";
-type LightingMode = "auto" | "light" | "dark";
+// type VideoQuality = "standard" | "high" | "hd" | "4k";
 
 export const EnhancedVideoRecorder: React.FC<EnhancedVideoRecorderProps> = ({
-  onRecordingComplete,
   maxDuration = 60,
   currentQuestion = "What problem were you trying to solve?",
   currentQuestionIndex = 0,
@@ -112,10 +106,7 @@ export const EnhancedVideoRecorder: React.FC<EnhancedVideoRecorderProps> = ({
   const [recordingState, setRecordingState] = useState<RecordingState>("idle");
   const [countdown, setCountdown] = useState(3);
   const [recordingTime, setRecordingTime] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
   const [cameraEnabled, setCameraEnabled] = useState(true);
-  const [micEnabled, setMicEnabled] = useState(true);
   const [selectedCamera, setSelectedCamera] = useState<string>("");
   const [selectedMic, setSelectedMic] = useState<string>("");
   const [isBackgroundBlurred] = useState(false);
@@ -240,13 +231,7 @@ export const EnhancedVideoRecorder: React.FC<EnhancedVideoRecorderProps> = ({
   };
   const constraints: MediaStreamConstraints = {
     video: cameraEnabled ? videoConstraints : false,
-    audio: micEnabled
-      ? {
-          deviceId: selectedMic ? { exact: selectedMic } : undefined,
-          echoCancellation: true,
-          noiseSuppression: true,
-        }
-      : false,
+    audio: false, // Always false as micEnabled is removed
   };
 
   // Initialize media stream with improved resolution handling
@@ -364,19 +349,19 @@ export const EnhancedVideoRecorder: React.FC<EnhancedVideoRecorderProps> = ({
         try {
           const fallbackStream = await navigator.mediaDevices.getUserMedia({
             video: cameraEnabled ? fallbackConstraints : false,
-            audio: constraints.audio,
+            audio: false, // Always false as micEnabled is removed
           });
 
           streamRef.current = fallbackStream;
 
           // Get the actual fallback resolution
-          const videoTrack = fallbackStream.getVideoTracks()[0];
-          if (videoTrack) {
-            const settings = videoTrack.getSettings();
-            // setActualResolution( // Removed
-            //   `${settings.width}×${settings.height} (best available)`
-            // );
-          }
+          // const videoTrack = fallbackStream.getVideoTracks()[0];
+          // if (videoTrack) {
+          //   const settings = videoTrack.getSettings();
+          //   // setActualResolution( // Removed
+          //   //   `${settings.width}×${settings.height} (best available)`
+          //   // );
+          // }
 
           if (videoRef.current) {
             videoRef.current.srcObject = fallbackStream;
@@ -499,94 +484,6 @@ export const EnhancedVideoRecorder: React.FC<EnhancedVideoRecorderProps> = ({
     }
   };
 
-  // Create a test recording to check quality
-  const createTestRecording = async () => {
-    if (!streamRef.current) {
-      toast({
-        title: "Test Failed",
-        description:
-          "No camera stream available. Please check your camera settings.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    toast({
-      title: "Testing Quality",
-      description: "Recording 2 seconds of video to verify quality settings...",
-    });
-
-    // Set appropriate bitrate based on selected quality
-    let videoBitsPerSecond = 2500000; // Default to 2.5 Mbps
-
-    // switch (videoQuality) { // Removed
-    //   case "standard": // Removed
-    //     videoBitsPerSecond = 1000000; // Removed
-    //     break; // Removed
-    //   case "high": // Removed
-    //     videoBitsPerSecond = 2500000; // Removed
-    //     break; // Removed
-    //   case "hd": // Removed
-    //     videoBitsPerSecond = 5000000; // Removed
-    //     break; // Removed
-    //   case "4k": // Removed
-    //     videoBitsPerSecond = 20000000; // Removed
-    //     break; // Removed
-    // }
-
-    let options: MediaRecorderOptions = {
-      mimeType: "video/webm;codecs=vp9,opus",
-      videoBitsPerSecond: videoBitsPerSecond,
-    };
-
-    // Fallback codecs if vp9 is not supported
-    if (!MediaRecorder.isTypeSupported(options.mimeType as string)) {
-      options.mimeType = "video/webm;codecs=vp8,opus";
-
-      if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-        options.mimeType = "video/webm";
-
-        if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-          options = {}; // Use browser defaults if no supported type is found
-        }
-      }
-    }
-
-    try {
-      const testRecorder = new MediaRecorder(streamRef.current, options);
-      const testChunks: Blob[] = [];
-
-      testRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) testChunks.push(e.data);
-      };
-
-      testRecorder.onstop = () => {
-        const testBlob = new Blob(testChunks, {
-          type: options.mimeType || "video/webm",
-        });
-
-        // Clean up previous test URL if it exists
-        // if (testVideoURL) { // Removed
-        //   URL.revokeObjectURL(testVideoURL); // Removed
-        // }
-
-        const newTestURL = URL.createObjectURL(testBlob);
-        // setTestVideoURL(newTestURL); // Removed
-        // setShowTestVideo(true); // Removed
-      };
-
-      testRecorder.start();
-      setTimeout(() => testRecorder.stop(), 2000);
-    } catch (err) {
-      console.error("Test recording error:", err);
-      toast({
-        title: "Test Failed",
-        description: "Could not create a test recording with current settings.",
-        variant: "destructive",
-      });
-    }
-  };
-
   // Pause recording
   const pauseRecording = () => {
     if (mediaRecorderRef.current && recordingState === "recording") {
@@ -635,30 +532,6 @@ export const EnhancedVideoRecorder: React.FC<EnhancedVideoRecorderProps> = ({
     }
   };
 
-  // Reset recording
-  const resetRecording = () => {
-    setRecordingState("idle");
-    setRecordingTime(0);
-
-    if (recordedVideoURL.current) {
-      URL.revokeObjectURL(recordedVideoURL.current);
-      recordedVideoURL.current = null;
-    }
-
-    initializeStream();
-  };
-
-  // Complete recording
-  const completeRecording = () => {
-    setRecordingState("processing");
-
-    setTimeout(() => {
-      const blob = new Blob(recordedChunksRef.current, { type: "video/webm" });
-      onRecordingComplete(blob);
-      setRecordingState("complete");
-    }, 2000);
-  };
-
   // Format time for display (MM:SS)
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -668,81 +541,6 @@ export const EnhancedVideoRecorder: React.FC<EnhancedVideoRecorderProps> = ({
       .padStart(2, "0")}`;
   };
 
-  // Toggle fullscreen
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      containerRef.current?.requestFullscreen();
-      // setIsFullscreen(true); // Removed
-    } else {
-      document.exitFullscreen();
-      // setIsFullscreen(false); // Removed
-    }
-  };
-
-  // Handle playback
-  const handlePlaybackChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (videoRef.current) {
-      const time = parseInt(e.target.value);
-      videoRef.current.currentTime = time;
-      // setPlaybackTime(time); // removed
-    }
-  };
-
-  // Toggle playback
-  const togglePlayback = () => {
-    if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.pause();
-      } else {
-        videoRef.current.play();
-      }
-      setIsPlaying(!isPlaying);
-    }
-  };
-
-  // Toggle mute
-  const toggleMute = () => {
-    if (videoRef.current) {
-      videoRef.current.muted = !isMuted;
-      setIsMuted(!isMuted);
-    }
-  };
-
-  // Handle volume change
-  const handleVolumeChange = (values: number[]) => {
-    const newVolume = values[0];
-    // setVolume(newVolume); // Removed
-
-    if (videoRef.current) {
-      videoRef.current.volume = newVolume;
-    }
-
-    if (newVolume === 0) {
-      setIsMuted(true);
-    } else if (isMuted) {
-      setIsMuted(false);
-    }
-  };
-
-  // Handle lighting mode change
-  const handleLightingChange = (mode: LightingMode) => {
-    // setLightingMode(mode); // Removed
-
-    // Apply CSS filter to video element based on lighting mode
-    if (videoRef.current) {
-      switch (mode) {
-        case "light":
-          videoRef.current.style.filter = "brightness(1.2) contrast(1.1)";
-          break;
-        case "dark":
-          videoRef.current.style.filter = "brightness(1.4) contrast(1.2)";
-          break;
-        default:
-          videoRef.current.style.filter = "none";
-      }
-    }
-  };
-
   // Toggle camera
   const toggleCamera = () => {
     setCameraEnabled(!cameraEnabled);
@@ -750,14 +548,8 @@ export const EnhancedVideoRecorder: React.FC<EnhancedVideoRecorderProps> = ({
 
   // Toggle microphone
   const toggleMicrophone = () => {
-    setMicEnabled(!micEnabled);
+    // This function is no longer needed as micEnabled is removed
   };
-
-  // Check if recording is short
-  const isRecordingTooShort = recordingTime < 5;
-
-  // Set aspect ratio class based on screen size
-  const aspectRatioClass = isMobileView ? "aspect-[9/16]" : "aspect-video";
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-black">
@@ -834,7 +626,7 @@ export const EnhancedVideoRecorder: React.FC<EnhancedVideoRecorderProps> = ({
             )}
             autoPlay
             playsInline
-            muted={recordingState !== "reviewing" || isMuted}
+            muted={recordingState !== "reviewing"}
             onTimeUpdate={() => {
               if (videoRef.current && recordingState === "reviewing") {
                 // setPlaybackTime(Math.floor(videoRef.current.currentTime)); // removed
@@ -842,7 +634,7 @@ export const EnhancedVideoRecorder: React.FC<EnhancedVideoRecorderProps> = ({
             }}
             onEnded={() => {
               if (recordingState === "reviewing") {
-                setIsPlaying(false);
+                // setIsPlaying(false); // removed
               }
             }}
             onLoadedMetadata={() => {
@@ -897,7 +689,7 @@ export const EnhancedVideoRecorder: React.FC<EnhancedVideoRecorderProps> = ({
               {cameraEnabled ? <Camera className="w-6 h-6" /> : <CameraOff className="w-6 h-6 text-red-500" />}
             </Button>
             <Button size="icon" variant="ghost" onClick={toggleMicrophone} className="bg-black/60 text-white hover:bg-black/80">
-              {micEnabled ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6 text-red-500" />}
+              <Mic className="w-6 h-6" />
             </Button>
           </div>
           {/* Large record button centered below video */}

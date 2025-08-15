@@ -1,4 +1,3 @@
-import React from "react";
 import { Cloud, Upload, Shield, Star, ArrowRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { motion } from "framer-motion";

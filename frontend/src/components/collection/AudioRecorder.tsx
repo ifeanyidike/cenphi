@@ -103,6 +103,7 @@ interface EnhancedAudioRecorderProps {
   primaryColor?: string;
   showAIHelp?: boolean;
   forceMobileView?: boolean;
+  
   onContinue: () => void;
   onSubmit: () => void;
 }

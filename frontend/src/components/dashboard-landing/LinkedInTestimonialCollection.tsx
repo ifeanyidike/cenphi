@@ -6,10 +6,8 @@ import {
   CheckCircle, 
   ArrowRight, 
   Sparkles, 
-  
   Award,
   Search,
-
   Grid,
   List,
   ChevronDown,

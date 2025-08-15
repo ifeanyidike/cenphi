@@ -1,14 +1,10 @@
 import React from "react";
 import { observer } from "mobx-react-lite";
-import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { Cloud, Settings, RefreshCw, CheckCircle, AlertCircle } from "lucide-react";
 import { GoogleDriveSettings as GoogleDriveSettingsType } from "@/types/setup";
-import { FormatOption } from "@/types/setup";
 import GoogleDriveTestimonialCollection from "@/components/collection/GoogleDriveTestimonialCollection";
 
 interface GoogleDriveSettingsProps {
@@ -22,9 +18,7 @@ interface GoogleDriveSettingsProps {
 const GoogleDriveSettings: React.FC<GoogleDriveSettingsProps> = observer(({
   settings,
   onFormatToggle,
-  onSettingsChange,
   onNestedSettingsChange,
-  showToast,
 }) => {
   const formatLabels: Record<string, string> = {
     video: "Video Files",
