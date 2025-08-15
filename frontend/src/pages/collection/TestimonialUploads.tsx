@@ -43,7 +43,11 @@ const TestimonialUploads = observer(() => {
           }
         />
         <ChangeRenderType
-          type={state.type}
+          type={
+            ["audio", "video", "text"].includes(state.type as string)
+              ? (state.type as "audio" | "video" | "text")
+              : null
+          }
           isComplete={state.currentPromptIndex === GUIDED_PROMPTS.length - 1}
         />
       </motion.div>

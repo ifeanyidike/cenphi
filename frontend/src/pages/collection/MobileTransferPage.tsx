@@ -30,7 +30,11 @@ const MobileTransferPage = observer(() => {
         <MobileTransfer />
 
         <ChangeRenderType
-          type={state.type || (p as "video" | "audio")}
+          type={
+            ["audio", "video", "text"].includes(state.type as string)
+              ? (state.type as "audio" | "video" | "text")
+              : (p as "audio" | "video" | "text") || null
+          }
           isComplete={state.currentPromptIndex === GUIDED_PROMPTS.length - 1}
         />
       </motion.div>

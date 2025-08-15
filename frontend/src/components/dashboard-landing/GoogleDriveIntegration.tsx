@@ -12,23 +12,22 @@ import {
   Shield,
   Sparkles,
   Download,
-  Link,
+ 
   Star,
-  Award,
-  Users,
+
   Clock,
   Eye,
-  Trash2,
+
   RefreshCw,
   ExternalLink,
   FolderOpen,
   Search,
-  Filter,
+
   Grid,
   List,
   ChevronDown,
   X,
-  Info,
+
   Zap,
   Lock,
   Plus
@@ -67,9 +66,9 @@ const GoogleDriveIntegration: React.FC = () => {
   const [filterType, setFilterType] = useState<'all' | 'video' | 'audio' | 'document' | 'image'>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  // const [isLoading, setIsLoading] = useState(false);
   const [showIntegration, setShowIntegration] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+ 
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Mock Google Drive files

@@ -7,62 +7,50 @@ import {
   Camera,
   CameraOff,
   Settings,
-  RefreshCw,
+
   CheckCircle,
-  ChevronRight,
-  Loader2,
-  Volume2,
-  VolumeX,
-  ChevronDown,
-  Download,
-  Scissors,
-  Maximize,
-  ChevronLeft,
-  AlertOctagon,
-  Sun,
-  SunMoon,
-  Moon,
-  ImagePlus,
+  
   PauseCircle,
   Square,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
+// import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
-
-import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+
+// import { Badge } from "@/components/ui/badge";
+// import { Switch } from "@/components/ui/switch";
+// import { Label } from "@/components/ui/label";
+// import { cn } from "@/lib/utils";
+// import {
+//   Tooltip,
+//   TooltipContent,
+//   TooltipProvider,
+//   TooltipTrigger,
+// } from "@/components/ui/tooltip";
+// import {
+//   Select,
+//   SelectContent,
+//   SelectItem,
+//   SelectTrigger,
+//   SelectValue,
+// } from "@/components/ui/select";
+// import {
+//   Dialog,
+//   DialogContent,
+//   DialogDescription,
+//   DialogFooter,
+//   DialogHeader,
+//   DialogTitle,
+//   DialogTrigger,
+// } from "@/components/ui/dialog";
+// import {
+//   DropdownMenu,
+//   DropdownMenuContent,
+//   DropdownMenuItem,
+//   DropdownMenuSeparator,
+//   DropdownMenuTrigger,
+// } from "@/components/ui/dropdown-menu";
 
 // Helper function to adjust color brightness
 const adjustColor = (color: string, amount: number): string => {
@@ -124,31 +112,13 @@ export const EnhancedVideoRecorder: React.FC<EnhancedVideoRecorderProps> = ({
   const [recordingState, setRecordingState] = useState<RecordingState>("idle");
   const [countdown, setCountdown] = useState(3);
   const [recordingTime, setRecordingTime] = useState(0);
-  const [playbackTime, setPlaybackTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
-  const [volume, setVolume] = useState(0.8);
-  const [videoQuality, setVideoQuality] = useState<VideoQuality>("high");
   const [cameraEnabled, setCameraEnabled] = useState(true);
   const [micEnabled, setMicEnabled] = useState(true);
-  const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>(
-    []
-  );
-  const [availableMics, setAvailableMics] = useState<MediaDeviceInfo[]>([]);
   const [selectedCamera, setSelectedCamera] = useState<string>("");
   const [selectedMic, setSelectedMic] = useState<string>("");
-  const [showSettings, setShowSettings] = useState(false);
-  const [lightingMode, setLightingMode] = useState<LightingMode>("auto");
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const [isBackgroundBlurred] = useState(false);
-  // New state variables for quality improvement
-  const [actualResolution, setActualResolution] =
-    useState<string>("Detecting...");
-  const [testVideoURL, setTestVideoURL] = useState<string | null>(null);
-  const [showTestVideo, setShowTestVideo] = useState(false);
-  const [lastResolutionError, setLastResolutionError] = useState<string | null>(
-    null
-  );
   // New state for responsive layout
   const [isMobileView, setIsMobileView] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -192,9 +162,6 @@ export const EnhancedVideoRecorder: React.FC<EnhancedVideoRecorderProps> = ({
         );
         const mics = devices.filter((device) => device.kind === "audioinput");
 
-        setAvailableCameras(cameras);
-        setAvailableMics(mics);
-
         if (cameras.length > 0) {
           setSelectedCamera(cameras[0].deviceId || `camera-0`);
         } else {
@@ -231,11 +198,6 @@ export const EnhancedVideoRecorder: React.FC<EnhancedVideoRecorderProps> = ({
         streamRef.current.getTracks().forEach((track) => track.stop());
       }
 
-      // Clean up test video URLs
-      if (testVideoURL) {
-        URL.revokeObjectURL(testVideoURL);
-      }
-
       // Clean up recorded video URL
       if (recordedVideoURL.current) {
         URL.revokeObjectURL(recordedVideoURL.current);
@@ -251,8 +213,6 @@ export const EnhancedVideoRecorder: React.FC<EnhancedVideoRecorderProps> = ({
   }, [
     selectedCamera,
     selectedMic,
-    videoQuality,
-    isBackgroundBlurred,
     isMobileView,
   ]);
 
@@ -297,50 +257,15 @@ export const EnhancedVideoRecorder: React.FC<EnhancedVideoRecorderProps> = ({
         streamRef.current.getTracks().forEach((track) => track.stop());
       }
 
-      // Reset resolution error state
-      setLastResolutionError(null);
-
       // Define quality presets with both ideal and min values for better enforcement
       if (isMobileView) {
         // For mobile, we want portrait-oriented video (taller than wide)
-        switch (videoQuality) {
-          case "standard":
-            videoConstraints.width = { min: 480, ideal: 480 };
-            videoConstraints.height = { min: 640, ideal: 640 };
-            break;
-          case "high":
-            videoConstraints.width = { min: 720, ideal: 720 };
-            videoConstraints.height = { min: 1280, ideal: 1280 };
-            break;
-          case "hd":
-            videoConstraints.width = { min: 1080, ideal: 1080 };
-            videoConstraints.height = { min: 1920, ideal: 1920 };
-            break;
-          case "4k":
-            videoConstraints.width = { min: 2160, ideal: 2160 };
-            videoConstraints.height = { min: 3840, ideal: 3840 };
-            break;
-        }
+        videoConstraints.width = { min: 480, ideal: 480 };
+        videoConstraints.height = { min: 640, ideal: 640 };
       } else {
         // For desktop, maintain landscape orientation (wider than tall)
-        switch (videoQuality) {
-          case "standard":
-            videoConstraints.width = { min: 640, ideal: 640 };
-            videoConstraints.height = { min: 480, ideal: 480 };
-            break;
-          case "high":
-            videoConstraints.width = { min: 1280, ideal: 1280 };
-            videoConstraints.height = { min: 720, ideal: 720 };
-            break;
-          case "hd":
-            videoConstraints.width = { min: 1920, ideal: 1920 };
-            videoConstraints.height = { min: 1080, ideal: 1080 };
-            break;
-          case "4k":
-            videoConstraints.width = { min: 3840, ideal: 3840 };
-            videoConstraints.height = { min: 2160, ideal: 2160 };
-            break;
-        }
+        videoConstraints.width = { min: 640, ideal: 640 };
+        videoConstraints.height = { min: 480, ideal: 480 };
       }
 
       // Add frameRate constraint for smoother video at higher resolutions
@@ -358,7 +283,7 @@ export const EnhancedVideoRecorder: React.FC<EnhancedVideoRecorderProps> = ({
       const videoTrack = stream.getVideoTracks()[0];
       if (videoTrack) {
         const settings = videoTrack.getSettings();
-        setActualResolution(`${settings.width}×${settings.height}`);
+        // setActualResolution(`${settings.width}×${settings.height}`); // Removed
 
         // Log detailed info about the video track capabilities
         console.log("Video track settings:", settings);
@@ -366,19 +291,10 @@ export const EnhancedVideoRecorder: React.FC<EnhancedVideoRecorderProps> = ({
 
         // Check if we got the expected resolution based on quality setting
         let expectedWidth = 0;
-        switch (videoQuality) {
-          case "standard":
-            expectedWidth = 640;
-            break;
-          case "high":
-            expectedWidth = 1280;
-            break;
-          case "hd":
-            expectedWidth = 1920;
-            break;
-          case "4k":
-            expectedWidth = 3840;
-            break;
+        if (isMobileView) {
+          expectedWidth = 480;
+        } else {
+          expectedWidth = 640;
         }
 
         if (settings.width && settings.width < expectedWidth * 0.9) {
@@ -387,12 +303,12 @@ export const EnhancedVideoRecorder: React.FC<EnhancedVideoRecorderProps> = ({
             description: `Your camera provided ${settings.width}×${settings.height} instead of the requested quality. This is the best your camera can do.`,
             variant: "destructive",
           });
-          setLastResolutionError(
-            "Camera cannot provide the requested resolution"
-          );
+          // setLastResolutionError( // Removed
+          //   "Camera cannot provide the requested resolution"
+          // );
         }
       } else {
-        setActualResolution("No video");
+        // setActualResolution("No video"); // Removed
       }
 
       if (videoRef.current) {
@@ -415,11 +331,11 @@ export const EnhancedVideoRecorder: React.FC<EnhancedVideoRecorderProps> = ({
       }
     } catch (err: any) {
       console.error("Error initializing stream:", err);
-      setActualResolution("Failed to set resolution");
+      // setActualResolution("Failed to set resolution"); // Removed
 
       // Handle OverconstrainedError specifically
       if (err.name === "OverconstrainedError") {
-        setLastResolutionError("Your camera doesn't support this resolution");
+        // setLastResolutionError("Your camera doesn't support this resolution"); // Removed
         toast({
           title: "Resolution Not Supported",
           description:
@@ -457,9 +373,9 @@ export const EnhancedVideoRecorder: React.FC<EnhancedVideoRecorderProps> = ({
           const videoTrack = fallbackStream.getVideoTracks()[0];
           if (videoTrack) {
             const settings = videoTrack.getSettings();
-            setActualResolution(
-              `${settings.width}×${settings.height} (best available)`
-            );
+            // setActualResolution( // Removed
+            //   `${settings.width}×${settings.height} (best available)`
+            // );
           }
 
           if (videoRef.current) {
@@ -500,20 +416,20 @@ export const EnhancedVideoRecorder: React.FC<EnhancedVideoRecorderProps> = ({
     // Set appropriate bitrate based on selected quality
     let videoBitsPerSecond = 2500000; // Default to 2.5 Mbps
 
-    switch (videoQuality) {
-      case "standard":
-        videoBitsPerSecond = 1000000; // 1 Mbps for 480p
-        break;
-      case "high":
-        videoBitsPerSecond = 2500000; // 2.5 Mbps for 720p
-        break;
-      case "hd":
-        videoBitsPerSecond = 5000000; // 5 Mbps for 1080p
-        break;
-      case "4k":
-        videoBitsPerSecond = 20000000; // 20 Mbps for 4K
-        break;
-    }
+    // switch (videoQuality) { // Removed
+    //   case "standard": // Removed
+    //     videoBitsPerSecond = 1000000; // 1 Mbps for 480p // Removed
+    //     break; // Removed
+    //   case "high": // Removed
+    //     videoBitsPerSecond = 2500000; // 2.5 Mbps for 720p // Removed
+    //     break; // Removed
+    //   case "hd": // Removed
+    //     videoBitsPerSecond = 5000000; // 5 Mbps for 1080p // Removed
+    //     break; // Removed
+    //   case "4k": // Removed
+    //     videoBitsPerSecond = 20000000; // 20 Mbps for 4K // Removed
+    //     break; // Removed
+    // }
 
     let options: MediaRecorderOptions = {
       mimeType: "video/webm;codecs=vp9,opus",
@@ -603,20 +519,20 @@ export const EnhancedVideoRecorder: React.FC<EnhancedVideoRecorderProps> = ({
     // Set appropriate bitrate based on selected quality
     let videoBitsPerSecond = 2500000; // Default to 2.5 Mbps
 
-    switch (videoQuality) {
-      case "standard":
-        videoBitsPerSecond = 1000000;
-        break; // 1 Mbps for 480p
-      case "high":
-        videoBitsPerSecond = 2500000;
-        break; // 2.5 Mbps for 720p
-      case "hd":
-        videoBitsPerSecond = 5000000;
-        break; // 5 Mbps for 1080p
-      case "4k":
-        videoBitsPerSecond = 20000000;
-        break; // 20 Mbps for 4K
-    }
+    // switch (videoQuality) { // Removed
+    //   case "standard": // Removed
+    //     videoBitsPerSecond = 1000000; // Removed
+    //     break; // Removed
+    //   case "high": // Removed
+    //     videoBitsPerSecond = 2500000; // Removed
+    //     break; // Removed
+    //   case "hd": // Removed
+    //     videoBitsPerSecond = 5000000; // Removed
+    //     break; // Removed
+    //   case "4k": // Removed
+    //     videoBitsPerSecond = 20000000; // Removed
+    //     break; // Removed
+    // }
 
     let options: MediaRecorderOptions = {
       mimeType: "video/webm;codecs=vp9,opus",
@@ -650,13 +566,13 @@ export const EnhancedVideoRecorder: React.FC<EnhancedVideoRecorderProps> = ({
         });
 
         // Clean up previous test URL if it exists
-        if (testVideoURL) {
-          URL.revokeObjectURL(testVideoURL);
-        }
+        // if (testVideoURL) { // Removed
+        //   URL.revokeObjectURL(testVideoURL); // Removed
+        // }
 
         const newTestURL = URL.createObjectURL(testBlob);
-        setTestVideoURL(newTestURL);
-        setShowTestVideo(true);
+        // setTestVideoURL(newTestURL); // Removed
+        // setShowTestVideo(true); // Removed
       };
 
       testRecorder.start();
@@ -756,10 +672,10 @@ export const EnhancedVideoRecorder: React.FC<EnhancedVideoRecorderProps> = ({
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       containerRef.current?.requestFullscreen();
-      setIsFullscreen(true);
+      // setIsFullscreen(true); // Removed
     } else {
       document.exitFullscreen();
-      setIsFullscreen(false);
+      // setIsFullscreen(false); // Removed
     }
   };
 
@@ -768,7 +684,7 @@ export const EnhancedVideoRecorder: React.FC<EnhancedVideoRecorderProps> = ({
     if (videoRef.current) {
       const time = parseInt(e.target.value);
       videoRef.current.currentTime = time;
-      setPlaybackTime(time);
+      // setPlaybackTime(time); // removed
     }
   };
 
@@ -795,7 +711,7 @@ export const EnhancedVideoRecorder: React.FC<EnhancedVideoRecorderProps> = ({
   // Handle volume change
   const handleVolumeChange = (values: number[]) => {
     const newVolume = values[0];
-    setVolume(newVolume);
+    // setVolume(newVolume); // Removed
 
     if (videoRef.current) {
       videoRef.current.volume = newVolume;
@@ -810,7 +726,7 @@ export const EnhancedVideoRecorder: React.FC<EnhancedVideoRecorderProps> = ({
 
   // Handle lighting mode change
   const handleLightingChange = (mode: LightingMode) => {
-    setLightingMode(mode);
+    // setLightingMode(mode); // Removed
 
     // Apply CSS filter to video element based on lighting mode
     if (videoRef.current) {
@@ -921,7 +837,7 @@ export const EnhancedVideoRecorder: React.FC<EnhancedVideoRecorderProps> = ({
             muted={recordingState !== "reviewing" || isMuted}
             onTimeUpdate={() => {
               if (videoRef.current && recordingState === "reviewing") {
-                setPlaybackTime(Math.floor(videoRef.current.currentTime));
+                // setPlaybackTime(Math.floor(videoRef.current.currentTime)); // removed
               }
             }}
             onEnded={() => {
@@ -982,9 +898,6 @@ export const EnhancedVideoRecorder: React.FC<EnhancedVideoRecorderProps> = ({
             </Button>
             <Button size="icon" variant="ghost" onClick={toggleMicrophone} className="bg-black/60 text-white hover:bg-black/80">
               {micEnabled ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6 text-red-500" />}
-            </Button>
-            <Button size="icon" variant="ghost" onClick={() => setShowSettings(true)} className="bg-black/60 text-white hover:bg-black/80">
-              <Settings className="w-6 h-6" />
             </Button>
           </div>
           {/* Large record button centered below video */}

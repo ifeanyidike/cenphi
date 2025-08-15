@@ -6,10 +6,10 @@ import {
   CheckCircle, 
   ArrowRight, 
   Sparkles, 
-  TrendingUp, 
+  
   Award,
   Search,
-  Filter,
+
   Grid,
   List,
   ChevronDown,
@@ -58,7 +58,7 @@ const LinkedInTestimonialCollection = () => {
   const [filterType, setFilterType] = useState<'all' | 'colleague' | 'client' | 'manager'>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  // const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 

@@ -13,19 +13,6 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 
-const adjustColor = (color: string, amount: number): string => {
-  color = color.replace("#", "");
-  const r = parseInt(color.substring(0, 2), 16);
-  const g = parseInt(color.substring(2, 4), 16);
-  const b = parseInt(color.substring(4, 6), 16);
-  const newR = Math.max(0, Math.min(255, r + amount));
-  const newG = Math.max(0, Math.min(255, g + amount));
-  const newB = Math.max(0, Math.min(255, b + amount));
-  return `#${newR.toString(16).padStart(2, "0")}${newG
-    .toString(16)
-    .padStart(2, "0")}${newB.toString(16).padStart(2, "0")}`;
-};
-
 const questions = [
   (company: string) => `Can you share a specific moment or challenge where ${company} made a difference for you?`,
   () => "What are your favorite features or aspects of the product/service, and why?",
@@ -50,20 +37,12 @@ const VideoRecorder2 = ({ companyName = "Your Company", companyLogoUrl = "", com
   const [countdown, setCountdown] = useState(3);
   const [recordingTime, setRecordingTime] = useState(0);
   
-  const [isMuted, setIsMuted] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [volume, setVolume] = useState(0.8);
-  const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([]);
-  const [availableMics, setAvailableMics] = useState<MediaDeviceInfo[]>([]);
-  const [videoQuality, setVideoQuality] = useState("high");
-  const [cameraEnabled, setCameraEnabled] = useState(true);
-  const [micEnabled, setMicEnabled] = useState(true);
-  
+  // Removed unused state
+  // const [isMuted, setIsMuted] = useState(false);
+  // const [isPlaying, setIsPlaying] = useState(false);
+ 
   const [selectedCamera, setSelectedCamera] = useState("");
   const [selectedMic, setSelectedMic] = useState("");
-  const [lightingMode, setLightingMode] = useState("auto");
-  const [testVideoURL, setTestVideoURL] = useState<string>("");
-  const [showTestVideo, setShowTestVideo] = useState(false);
   const [isMobileView, setIsMobileView] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -92,8 +71,6 @@ const VideoRecorder2 = ({ companyName = "Your Company", companyLogoUrl = "", com
         const devices = await navigator.mediaDevices.enumerateDevices();
         const cameras = devices.filter((device) => device.kind === "videoinput");
         const mics = devices.filter((device) => device.kind === "audioinput");
-        setAvailableCameras(cameras);
-        setAvailableMics(mics);
         setSelectedCamera(cameras[0]?.deviceId || "");
         setSelectedMic(mics[0]?.deviceId || "");
         await initializeStream();
@@ -110,7 +87,6 @@ const VideoRecorder2 = ({ companyName = "Your Company", companyLogoUrl = "", com
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
       }
-      if (testVideoURL) URL.revokeObjectURL(testVideoURL);
       if (recordedVideoURL.current) URL.revokeObjectURL(recordedVideoURL.current);
     };
     // eslint-disable-next-line
@@ -121,33 +97,11 @@ const VideoRecorder2 = ({ companyName = "Your Company", companyLogoUrl = "", com
       initializeStream();
     }
     // eslint-disable-next-line
-  }, [selectedCamera, selectedMic, videoQuality, isMobileView]);
+  }, [selectedCamera, selectedMic, isMobileView]);
 
-  // Toggle camera track enabled state
-  const handleToggleCamera = () => {
-    setCameraEnabled((prev) => {
-      const newValue = !prev;
-      if (streamRef.current) {
-        streamRef.current.getVideoTracks().forEach((track) => {
-          track.enabled = newValue;
-        });
-      }
-      return newValue;
-    });
-  };
-
-  // Toggle mic track enabled state
-  const handleToggleMic = () => {
-    setMicEnabled((prev) => {
-      const newValue = !prev;
-      if (streamRef.current) {
-        streamRef.current.getAudioTracks().forEach((track) => {
-          track.enabled = newValue;
-        });
-      }
-      return newValue;
-    });
-  };
+  // Removed unused function
+  // const handleToggleCamera = () => { ... }
+  // const handleToggleMic = () => { ... }
 
   useEffect(() => {
     if (recordingState === "countdown") {
@@ -166,10 +120,10 @@ const VideoRecorder2 = ({ companyName = "Your Company", companyLogoUrl = "", com
     deviceId: selectedCamera ? { exact: selectedCamera } : undefined,
   };
   const constraints = {
-    video: cameraEnabled ? videoConstraints : false,
-    audio: micEnabled
+    video: videoConstraints,
+    audio: selectedMic
       ? {
-          deviceId: selectedMic ? { exact: selectedMic } : undefined,
+          deviceId: { exact: selectedMic },
           echoCancellation: true,
           noiseSuppression: true,
         }
@@ -182,43 +136,11 @@ const VideoRecorder2 = ({ companyName = "Your Company", companyLogoUrl = "", com
         streamRef.current.getTracks().forEach((track) => track.stop());
       }
       if (isMobileView) {
-        switch (videoQuality) {
-          case "standard":
-            videoConstraints.width = { min: 480, ideal: 480 };
-            videoConstraints.height = { min: 640, ideal: 640 };
-            break;
-          case "high":
-            videoConstraints.width = { min: 720, ideal: 720 };
-            videoConstraints.height = { min: 1280, ideal: 1280 };
-            break;
-          case "hd":
-            videoConstraints.width = { min: 1080, ideal: 1080 };
-            videoConstraints.height = { min: 1920, ideal: 1920 };
-            break;
-          case "4k":
-            videoConstraints.width = { min: 2160, ideal: 2160 };
-            videoConstraints.height = { min: 3840, ideal: 3840 };
-            break;
-        }
+        videoConstraints.width = { min: 480, ideal: 480 };
+        videoConstraints.height = { min: 640, ideal: 640 };
       } else {
-        switch (videoQuality) {
-          case "standard":
-            videoConstraints.width = { min: 640, ideal: 640 };
-            videoConstraints.height = { min: 480, ideal: 480 };
-            break;
-          case "high":
-            videoConstraints.width = { min: 1280, ideal: 1280 };
-            videoConstraints.height = { min: 720, ideal: 720 };
-            break;
-          case "hd":
-            videoConstraints.width = { min: 1920, ideal: 1920 };
-            videoConstraints.height = { min: 1080, ideal: 1080 };
-            break;
-          case "4k":
-            videoConstraints.width = { min: 3840, ideal: 3840 };
-            videoConstraints.height = { min: 2160, ideal: 2160 };
-            break;
-        }
+        videoConstraints.width = { min: 640, ideal: 640 };
+        videoConstraints.height = { min: 480, ideal: 480 };
       }
       videoConstraints.frameRate = { min: 24, ideal: 30 };
       if (isMobileView) videoConstraints.facingMode = "user";
@@ -243,20 +165,6 @@ const VideoRecorder2 = ({ companyName = "Your Company", companyLogoUrl = "", com
     if (!streamRef.current) return;
     recordedChunksRef.current = [];
     let videoBitsPerSecond = 2500000;
-    switch (videoQuality) {
-      case "standard":
-        videoBitsPerSecond = 1000000;
-        break;
-      case "high":
-        videoBitsPerSecond = 2500000;
-        break;
-      case "hd":
-        videoBitsPerSecond = 5000000;
-        break;
-      case "4k":
-        videoBitsPerSecond = 20000000;
-        break;
-    }
     let options = {
       mimeType: "video/webm;codecs=vp9,opus",
       videoBitsPerSecond,
@@ -334,106 +242,6 @@ const VideoRecorder2 = ({ companyName = "Your Company", companyLogoUrl = "", com
     }
   };
 
-  const resetRecording = () => {
-    setRecordingState("idle");
-    setRecordingTime(0);
-    if (recordedVideoURL.current) {
-      URL.revokeObjectURL(recordedVideoURL.current);
-      recordedVideoURL.current = null;
-    }
-    if (mediaRecorderRef.current) {
-      mediaRecorderRef.current = null;
-    }
-    if (recordingTimerRef.current) {
-      clearInterval(recordingTimerRef.current);
-    }
-    initializeStream();
-  };
-
-  const createTestRecording = async () => {
-    if (!streamRef.current) {
-      toast({
-        title: "Test Failed",
-        description: "No camera stream available. Please check your camera settings.",
-        variant: "destructive",
-      });
-      return;
-    }
-    toast({
-      title: "Testing Quality",
-      description: "Recording 2 seconds of video to verify quality settings...",
-    });
-    let videoBitsPerSecond = 2500000;
-    switch (videoQuality) {
-      case "standard":
-        videoBitsPerSecond = 1000000;
-        break;
-      case "high":
-        videoBitsPerSecond = 2500000;
-        break;
-      case "hd":
-        videoBitsPerSecond = 5000000;
-        break;
-      case "4k":
-        videoBitsPerSecond = 20000000;
-        break;
-    }
-    let options: any = {
-      mimeType: "video/webm;codecs=vp9,opus",
-      videoBitsPerSecond,
-    };
-    if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-      options.mimeType = "video/webm;codecs=vp8,opus";
-      if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-        options.mimeType = "video/webm";
-        if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-          options = {} as any;
-        }
-      }
-    }
-    try {
-      const testRecorder = new MediaRecorder(streamRef.current, options);
-      const testChunks: Blob[] = [];
-      testRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) testChunks.push(e.data);
-      };
-      testRecorder.onstop = () => {
-        const testBlob = new Blob(testChunks, {
-          type: options.mimeType || "video/webm",
-        });
-        if (testVideoURL && testVideoURL !== "") URL.revokeObjectURL(testVideoURL);
-        const newTestURL = URL.createObjectURL(testBlob);
-        setTestVideoURL(newTestURL);
-        setShowTestVideo(true);
-      };
-      testRecorder.start();
-      setTimeout(() => testRecorder.stop(), 2000);
-    } catch (err) {
-      toast({
-        title: "Test Failed",
-        description: "Could not create a test recording with current settings.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // const handleLightingChange = (mode: string) => {
-  //   setLightingMode(mode);
-  //   if (videoRef.current) {
-  //     switch (mode) {
-  //       case "light":
-  //         videoRef.current.style.filter = "brightness(1.2) contrast(1.1)";
-  //         break;
-  //       case "dark":
-  //         videoRef.current.style.filter = "brightness(1.4) contrast(1.2)";
-  //         break;
-  //       default:
-  //         videoRef.current.style.filter = "none";
-  //     }
-  //   }
-  // };
-
-  // Placeholder submit handler
   const handleSubmit = () => {
     setSubmitting(true);
     setTimeout(() => {
@@ -444,14 +252,6 @@ const VideoRecorder2 = ({ companyName = "Your Company", companyLogoUrl = "", com
         className: "bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg border-0"
       });
     }, 1500);
-  };
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs
-      .toString()
-      .padStart(2, "0")}`;
   };
 
   // Favicon fallback logic
@@ -562,7 +362,8 @@ const VideoRecorder2 = ({ companyName = "Your Company", companyLogoUrl = "", com
             )}
             autoPlay
             playsInline
-            muted={recordingState !== "reviewing" || isMuted}
+            // muted={recordingState !== "reviewing" || isMuted} // Remove isMuted reference
+            muted={recordingState !== "reviewing"}
           />
           {/* Countdown Overlay */}
           {recordingState === "countdown" && (

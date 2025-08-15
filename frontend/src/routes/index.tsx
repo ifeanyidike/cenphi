@@ -84,18 +84,18 @@ export const router = createBrowserRouter([
   {
     element: <DashboardProtectedRoute />,
     children: [
-      // {
-      //   path: "/dashboard",
-      //   element: (
-      //     <ErrorBoundary
-      //       ErrorComponent={DashboardErrorComponent}
-      //       LoadingComponent={LoadingIndicator}
-      //       componentName="Dashboard"
-      //     >
-      //       <TestimonialsDashboard />
-      //     </ErrorBoundary>
-      //   ),
-      // },
+      {
+        path: "/dashboard",
+        element: (
+          <ErrorBoundary
+            ErrorComponent={DashboardErrorComponent}
+            LoadingComponent={LoadingIndicator}
+            componentName="Dashboard"
+          >
+            <TestimonialsDashboard />
+          </ErrorBoundary>
+        ),
+      },
       {
         path: "/testimonial/detail/:id",
         element: (

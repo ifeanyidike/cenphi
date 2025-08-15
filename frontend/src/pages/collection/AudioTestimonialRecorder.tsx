@@ -1,4 +1,4 @@
-import { observer } from "mobx-react-lite";
+// import { observer } from "mobx-react-lite";
 import { collectionStore } from "@/stores/collectionStore";
 import { AnimatePresence, motion, useMotionValue } from "framer-motion";
 import TestimonialProgress from "@/components/collection/TestimonialProgress";
@@ -42,7 +42,11 @@ const AudioTestimonialRecorder = () => {
         </div>
 
         <ChangeRenderType
-          type={state.type}
+          type={
+            ["audio", "video", "text"].includes(state.type as string)
+              ? (state.type as "audio" | "video" | "text")
+              : null
+          }
           isComplete={state.currentPromptIndex === GUIDED_PROMPTS.length - 1}
           onNext={() => collectionStore.handleNext(progress)}
         />

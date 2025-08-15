@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { 
   Play, 
   Pause, 
@@ -9,15 +9,13 @@ import {
   MicOff, 
   CameraOff,
   Settings,
-  X,
+
   ChevronRight,
   ChevronLeft,
   RotateCcw,
-  Download,
+ 
   Maximize,
-  Volume2,
-  VolumeX,
-  CheckCircle,
+  
   Timer,
   Lightbulb,
   Target,
@@ -33,7 +31,7 @@ const EnhancedVideoRecorder = () => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [isCameraEnabled, setIsCameraEnabled] = useState(true);
   const [isMicEnabled, setIsMicEnabled] = useState(true);
-  const [stream, setStream] = useState(null);
+  const [stream, setStream] = useState<MediaStream | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [showFaceGuide, setShowFaceGuide] = useState(true);
@@ -41,7 +39,7 @@ const EnhancedVideoRecorder = () => {
 
 const videoRef = useRef<HTMLVideoElement | null>(null);
 const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-const timerRef = useRef<NodeJS.Timeout | null>(null);
+const timerRef = useRef<number | null>(null);
 
 
 
@@ -95,7 +93,7 @@ useEffect(() => {
   initializeCamera();
   return () => {
     if (stream) {
-      stream.getTracks().forEach((track: MediaStreamTrack) => track.stop());
+      (stream as MediaStream).getTracks().forEach((track: MediaStreamTrack) => track.stop());
     }
   };
 }, []);
@@ -220,7 +218,7 @@ const startCountdown = (): void => {
   const toggleCamera = (): void => {
   setIsCameraEnabled(!isCameraEnabled);
   if (stream) {
-    stream.getVideoTracks().forEach((track: MediaStreamTrack) => {
+    (stream as MediaStream).getVideoTracks().forEach((track: MediaStreamTrack) => {
       track.enabled = !isCameraEnabled;
     });
   }
@@ -229,7 +227,7 @@ const startCountdown = (): void => {
   const toggleMic = (): void => {
   setIsMicEnabled(!isMicEnabled);
   if (stream) {
-    stream.getAudioTracks().forEach((track: MediaStreamTrack) => {
+    (stream as MediaStream).getAudioTracks().forEach((track: MediaStreamTrack) => {
       track.enabled = !isMicEnabled;
     });
   }

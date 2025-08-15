@@ -13,21 +13,20 @@ import {
   Sparkles,
   Download,
   Star,
-  Award,
-  Users,
+  
   Clock,
   Eye,
-  Trash2,
+ 
   RefreshCw,
   ExternalLink,
   FolderOpen,
   Search,
-  Filter,
+ 
   Grid,
   List,
   ChevronDown,
   X,
-  Info,
+  
   Zap,
   Lock
 } from "lucide-react";
@@ -65,9 +64,9 @@ const GoogleDriveTestimonialCollection: React.FC = () => {
   const [filterType, setFilterType] = useState<'all' | 'video' | 'audio' | 'document' | 'image'>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  
   const [error, setError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const containerRef = useRef<HTMLDivElement>(null);
 
 

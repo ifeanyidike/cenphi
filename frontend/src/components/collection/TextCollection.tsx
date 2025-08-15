@@ -13,7 +13,7 @@ import {
   ArrowRight,
   CheckCircle2,
   Circle,
-  Plus,
+
   XCircle,
   HelpCircle,
   MinusCircle,

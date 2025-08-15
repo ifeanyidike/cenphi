@@ -131,7 +131,7 @@ export const EnhancedAudioRecorder: React.FC<EnhancedAudioRecorderProps> = ({
   primaryColor = "#6366F1",
   showAIHelp = true,
   forceMobileView = false,
-  onContinue,
+
   onSubmit,
 }) => {
   const { toast } = useToast();

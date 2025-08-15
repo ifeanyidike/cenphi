@@ -1,5 +1,5 @@
-import React from "react";
-import { Linkedin, Users, Shield, Star, ArrowRight, TrendingUp } from "lucide-react";
+
+import { Linkedin, Users, Shield, ArrowRight, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
