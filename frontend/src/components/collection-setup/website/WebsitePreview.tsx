@@ -766,4 +766,3 @@ const WebsitePreview: React.FC<WebsitePreviewProps> = ({
 };
 
 export default observer(WebsitePreview);
-

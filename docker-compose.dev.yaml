@@ -2,85 +2,16 @@
 services:
   frontend:
     build:
-      context: ./frontend
       dockerfile: Dockerfile.dev
     ports:
       - 3300:3000
-    volumes:
-      - ./frontend:/usr/src/app
-    tty: true
-    depends_on:
-      - api-server
     command: ["yarn", "vite", "--host"]
-
+    tty: true
   api-server:
     build:
-      context: ./api-server
       dockerfile: Dockerfile.dev
-    ports:
-      - "8081:8081"
-    volumes:
-      - ./api-server:/app
-    depends_on:
-      - cenphidb
-      - redis
-    environment:
-      - DB_HOST=cenphidb
-      - DB_PORT=5432
-      - DB_USERNAME=cenphi
-      - DB_PASSWORD=cenphi123
-      - DB_NAME=cenphidb
-      - DB_SSL_MODE=disable
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_PASSWORD=
-      - REDIS_DB=0
-      - SERVER_ADDRESS=:8081
-      - GO_ENV=development
-      - BASE_URL=http://localhost:8081
-      - JWT_SECRET=dev-secret-key
-      - JWT_EXPIRY=24h
-      - GOOGLE_APPLICATION_CREDENTIALS=/app/cenphiio-service-account.json
-      - SSL_CERT_FILE=/app/certs/cacert.pem
     command: ["air", "-c", ".air.toml"]
-
   ai-service:
     build:
-      context: ./ai-service
       dockerfile: Dockerfile.dev
-    ports:
-      - "50052:50052"
-    volumes:
-      - ./ai-service:/app
-    environment:
-      - PYTHONUNBUFFERED=1
-    depends_on:
-      - api-server
     command: ["python", "main.py"]
-
-  cenphidb:
-    image: postgres:latest
-    container_name: cenphi_postgres_dev
-    ports:
-      - "5434:5432"
-    environment:
-      POSTGRES_USER: "cenphi"
-      POSTGRES_PASSWORD: "cenphi123"
-      POSTGRES_DB: "cenphidb"
-    volumes:
-      - dbdata_dev:/var/lib/postgresql/data
-      - ./init_test_db.sql:/docker-entrypoint-initdb.d/init_test_db.sql
-
-  redis:
-    image: redis:alpine
-    container_name: cenphi_redis_dev
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data_dev:/data
-
-volumes:
-  dbdata_dev:
-    name: cenphi_dbdata_dev
-  redis_data_dev:
-    name: cenphi_redis_data_dev

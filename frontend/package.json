@@ -57,7 +57,6 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "fabric": "^6.6.2",
-    "face-api.js": "^0.22.2",
     "firebase": "^11.2.0",
     "framer-motion": "^11.16.4",
     "lamejs": "^1.2.1",

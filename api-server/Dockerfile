@@ -1,5 +1,5 @@
 # # Build stage
-# FROM golang:1.24-alpine AS builder
+# FROM golang:1.23.1-alpine AS builder
 
 # # Set the working directory
 # WORKDIR /app
@@ -35,7 +35,7 @@
 
 
 # # api-server Build Stage
-# FROM golang:1.24-alpine AS builder
+# FROM golang:1.23.1-alpine AS builder
 
 # WORKDIR /app
 
@@ -122,7 +122,7 @@
 # ENTRYPOINT ["/app/api"]
 
 
-# FROM golang:1.24-alpine AS builder
+# FROM golang:1.23.1-alpine AS builder
 
 # WORKDIR /app
 
@@ -171,7 +171,7 @@
 
 
 # Build stage
-FROM golang:1.24-alpine AS builder
+FROM golang:1.23.1-alpine AS builder
 
 # Install build dependencies
 RUN apk add --no-cache make git tzdata ca-certificates curl

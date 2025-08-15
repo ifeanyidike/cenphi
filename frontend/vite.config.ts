@@ -54,11 +54,5 @@ export default defineConfig(({ mode }) => {
           }
         : {},
     },
-    // Force use of WebAssembly version of Rollup
-    build: {
-      rollupOptions: {
-        external: [],
-      },
-    },
   };
 });

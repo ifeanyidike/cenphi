@@ -45,7 +45,6 @@ import TestimonialCollectionSettingsPage from "@/pages/TestimonialCollectionSett
 import BrandGuidePage from "@/pages/BrandGuidePage";
 import TestimonialPage from "@/pages/TestimonialPage";
 
-
 // lazy load
 const LandingPage = lazy(() => import("@/pages/Landing"));
 const Pricing = lazy(() => import("@/pages/Pricing"));
@@ -76,7 +75,6 @@ export const router = createBrowserRouter([
     path: "/",
     element: <LandingPage />,
   },
-
   {
     path: "/collection-settings",
     element: <TestimonialCollectionSettingsPage />,
@@ -112,19 +110,6 @@ export const router = createBrowserRouter([
       },
     ],
   },
-
-  {
-        path: "/dashboard",
-        element: (
-          <ErrorBoundary
-            ErrorComponent={DashboardErrorComponent}
-            LoadingComponent={LoadingIndicator}
-            componentName="Dashboard"
-          >
-            <TestimonialsDashboard />
-          </ErrorBoundary>
-        ),
-      },
   {
     element: <OnboardingProtectedRoute />,
     children: [

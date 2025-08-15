@@ -1,5 +1,4 @@
-import { AnimatePresence, motion } from "framer-motion";
-import { observer } from "mobx-react-lite";
+
 import { collectionStore } from "@/stores/collectionStore";
 import {
   GUIDED_PROMPTS,
