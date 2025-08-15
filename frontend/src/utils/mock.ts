@@ -55,14 +55,26 @@ export const getTypeColor = (type: ContentFormat) => {
         text: "text-amber-700",
         accent: "bg-amber-100",
       },
+      
       dark: {
         bg: "from-amber-600 to-orange-700",
         text: "text-amber-400",
         accent: "bg-amber-900/30",
       },
     },
+    document: {
+      light: {
+        bg: "from-gray-500 to-gray-600",
+        text: "text-gray-700",
+        accent: "bg-gray-100",
+      },
+      dark: {
+        bg: "from-gray-600 to-gray-700",
+        text: "text-gray-400",
+        accent: "bg-gray-900/30",
+      },
+    },
   };
-
   // return isDarkMode ? colors[type].dark : colors[type].light;
   return colors[type as TestimonialFormat].light;
 };

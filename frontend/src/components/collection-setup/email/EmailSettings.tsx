@@ -177,7 +177,9 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({
             </div> */}
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {settings.formats.map((format) => {
+              {settings.formats
+                .filter((format) => ["video", "audio", "text", "image"].includes(format.type))
+                .map((format) => {
                 const isEnabled = format.enabled;
                 let Icon;
                 switch (format.type) {
@@ -205,7 +207,7 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({
                         ? "border-blue-200 bg-blue-50"
                         : "border-gray-200 hover:border-gray-300"
                     }`}
-                    onClick={() => onFormatToggle(format.type)}
+                    onClick={() => onFormatToggle(format.type as "video" | "audio" | "text" | "image")}
                   >
                     <div
                       className={`w-12 h-12 rounded-full flex items-center justify-center ${

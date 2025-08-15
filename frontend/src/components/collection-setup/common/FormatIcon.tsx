@@ -1,6 +1,6 @@
 import React from "react";
 import { TestimonialFormat } from "@/types/setup";
-import { Video, Mic, Type, Image as ImageIcon } from "lucide-react";
+import { Video, Mic, Type, Image as ImageIcon, FileText } from "lucide-react";
 
 interface FormatIconProps {
   format: TestimonialFormat;
@@ -13,6 +13,7 @@ const FormatIcon: React.FC<FormatIconProps> = ({ format, className }) => {
     audio: Mic,
     text: Type,
     image: ImageIcon,
+    document: FileText, // Added support for 'document'
   };
 
   const IconComponent = iconMapping[format];

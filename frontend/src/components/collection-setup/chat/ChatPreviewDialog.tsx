@@ -1319,26 +1319,28 @@ const ChatPreviewDialog: React.FC<ChatPreviewDialogProps> = ({
         </div>
 
         <div className="grid grid-cols-2 gap-2">
-          {enabledFormats.map((format) => (
-            <button
-              key={format.type}
-              className={cn(
-                "flex items-center justify-center gap-2 py-3 px-4 border rounded-lg hover:bg-gray-50 transition-colors",
-                platform.layout.borderRadius
-              )}
-              onClick={() => handleFormatSelect(format.type)}
-            >
-              <div
-                className="p-1 rounded"
-                style={{ color: platform.primaryColor }}
+          {enabledFormats
+            .filter((format) => ["video", "audio", "text", "image"].includes(format.type))
+            .map((format) => (
+              <button
+                key={format.type}
+                className={cn(
+                  "flex items-center justify-center gap-2 py-3 px-4 border rounded-lg hover:bg-gray-50 transition-colors",
+                  platform.layout.borderRadius
+                )}
+                onClick={() => handleFormatSelect(format.type as TestimonialFormatType)}
               >
-                {formatIcons[format.type as keyof typeof formatIcons]}
-              </div>
-              <span className="text-sm font-medium capitalize">
-                {format.type}
-              </span>
-            </button>
-          ))}
+                <div
+                  className="p-1 rounded"
+                  style={{ color: platform.primaryColor }}
+                >
+                  {formatIcons[format.type as keyof typeof formatIcons]}
+                </div>
+                <span className="text-sm font-medium capitalize">
+                  {format.type}
+                </span>
+              </button>
+            ))}
         </div>
       </motion.div>
     );

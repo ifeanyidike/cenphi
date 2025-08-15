@@ -85,6 +85,7 @@ export const SimpleTemplate: React.FC<SimpleTemplateProps> = ({
     video: { icon: "🎬", label: "Video" },
     audio: { icon: "🎙️", label: "Audio" },
     image: { icon: "📸", label: "Photo" },
+    document: { icon: "📄", label: "Document" },
   };
 
   return (
