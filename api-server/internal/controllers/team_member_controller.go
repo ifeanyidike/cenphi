@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -95,6 +96,22 @@ func (c *teamMemberController) GetTeamMemberByUserID(w http.ResponseWriter, r *h
 	utils.RespondWithJSON(w, http.StatusOK, teammember)
 }
 
+func debugContextTimeout(ctx context.Context, logger *zap.Logger, location string) {
+	if deadline, ok := ctx.Deadline(); ok {
+		remaining := time.Until(deadline)
+		logger.Info("Context timeout info",
+			zap.String("location", location),
+			zap.Time("deadline", deadline),
+			zap.Duration("remaining", remaining),
+			zap.Bool("has_deadline", true))
+	} else {
+		logger.Info("Context timeout info",
+			zap.String("location", location),
+			zap.Bool("has_deadline", false),
+			zap.String("message", "No deadline set"))
+	}
+}
+
 // GetTeamMemberByFirebaseUID Gets team member data by FirebaseUID.
 // @Summary Get Team Member by by FirebaseUID.
 // @Description Fetch a team member by FirebaseUID.
@@ -107,12 +124,16 @@ func (c *teamMemberController) GetTeamMemberByUserID(w http.ResponseWriter, r *h
 // @Failure 404 {object} utils.ErrorResponse
 // @Router /team-member [get]
 func (c *teamMemberController) GetTeamMemberByFirebaseUID(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("calling GetTeamMemberByFirebaseUID")
 	uid := chi.URLParam(r, "id")
 	if uid == "" {
 		c.logger.Error("invalid user firebase uid", zap.String("user firebase uid", uid))
 		utils.RespondWithError(w, http.StatusBadRequest, "Invalid or missing ID")
 		return
 	}
+	fmt.Println("firebase uid", uid)
+
+	debugContextTimeout(r.Context(), c.logger, "controller_start")
 
 	user, err := c.userSvc.FindByUID(r.Context(), uid)
 	if err != nil {

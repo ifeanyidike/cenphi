@@ -75,17 +75,16 @@ func (r *teamMemberRepository) getTeamMemberData(
 	ctx context.Context,
 	query string,
 	arg any,
-	scanFn func(*sql.Row, *models.TeamMemberGetParams, *[]byte, *[]byte) error,
+	scanFn func(*sql.Row, *models.TeamMemberGetParams, *[]byte) error,
 	db DB,
 ) (*models.TeamMemberGetParams, error) {
 	row := db.QueryRowContext(ctx, query, arg)
 
 	var (
-		settingsJSON    []byte
 		permissionsJSON []byte
 		member          models.TeamMemberGetParams
 	)
-	if err := scanFn(row, &member, &permissionsJSON, &settingsJSON); err != nil {
+	if err := scanFn(row, &member, &permissionsJSON); err != nil {
 		return nil, err
 	}
 
@@ -102,18 +101,12 @@ func (r *teamMemberRepository) getTeamMemberData(
 }
 
 // scanByID is used in GetDataByID to scan the row.
-func scanByID(
-	row *sql.Row,
-	member *models.TeamMemberGetParams,
-	permissionsJSON *[]byte,
-	settingsJSON *[]byte,
-) error {
+func scanByID(row *sql.Row, member *models.TeamMemberGetParams, permissionsJSON *[]byte) error {
 	return row.Scan(
 		&member.WorkspaceID,
 		&member.UserID,
 		&member.Role,
 		permissionsJSON,
-		settingsJSON,
 		&member.Name,
 		&member.Email,
 		&member.EmailVerified,
@@ -127,18 +120,12 @@ func scanByID(
 
 // scanByUserID is used in GetDataByUserID to scan the row.
 // Note: This scan includes the team member's ID.
-func scanByUserID(
-	row *sql.Row,
-	member *models.TeamMemberGetParams,
-	permissionsJSON *[]byte,
-	settingsJSON *[]byte,
-) error {
+func scanByUserID(row *sql.Row, member *models.TeamMemberGetParams, permissionsJSON *[]byte) error {
 	return row.Scan(
 		&member.ID,
 		&member.WorkspaceID,
 		&member.Role,
 		permissionsJSON,
-		settingsJSON,
 		&member.Name,
 		&member.Email,
 		&member.EmailVerified,
@@ -167,6 +154,7 @@ func (r *teamMemberRepository) GetDataByID(ctx context.Context, id uuid.UUID, db
 
 // GetDataByUserID uses the helper with scanByUserID.
 func (r *teamMemberRepository) GetDataByUserID(ctx context.Context, userID uuid.UUID, db DB) (*models.TeamMemberGetParams, error) {
+
 	query := `
         SELECT
             t.id, t.workspace_id, t.role, t.permissions,

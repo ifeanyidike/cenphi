@@ -37,9 +37,10 @@ import DashboardProtectedRoute from "@/components/auth/protected_routes/Dashboar
 import GenericProtectedRoute from "@/components/auth/protected_routes/Generic";
 import OnboardingProtectedRoute from "@/components/auth/protected_routes/Onboarding";
 import BrandGuidePage from "@/pages/BrandGuidePage";
-import TestimonialPage from "@/pages/TestimonialPage";
 import AIServiceTester from "@/pages/AIServiceTester";
 import Tester from "@/pages/PageTester";
+import AIStudioPage from "@/pages/aistudio";
+import TestimonialDetailPage from "@/pages/TestimonialPage";
 
 // lazy load
 const LandingPage = lazy(() => import("@/pages/Landing"));
@@ -74,35 +75,37 @@ export const router = createBrowserRouter([
   { element: <BrandGuidePage />, path: "/brand-guide" },
   { element: <AIServiceTester />, path: "/ai-tests" },
   { element: <Tester />, path: "/tester" },
+  { element: <AIStudioPage />, path: "/studio" },
+  { element: <TestimonialDetailPage />, path: "/detail/:testimonialId" },
   {
-    element: <DashboardProtectedRoute />,
-    children: [
-      {
-        path: "/dashboard",
-        element: (
-          <ErrorBoundary
-            ErrorComponent={DashboardErrorComponent}
-            LoadingComponent={LoadingIndicator}
-            componentName="Dashboard"
-          >
-            <TestimonialsDashboard />
-          </ErrorBoundary>
-        ),
-      },
-      {
-        path: "/testimonial/detail/:id",
-        element: (
-          <ErrorBoundary
-            ErrorComponent={DashboardErrorComponent}
-            LoadingComponent={LoadingIndicator}
-            componentName="TestimonialPage"
-          >
-            <TestimonialPage />
-          </ErrorBoundary>
-        ),
-      },
-    ],
+    path: "/dashboard",
+    element: (
+      <ErrorBoundary
+        ErrorComponent={DashboardErrorComponent}
+        LoadingComponent={LoadingIndicator}
+        componentName="Dashboard"
+      >
+        <TestimonialsDashboard />
+      </ErrorBoundary>
+    ),
   },
+  // {
+  //   element: <DashboardProtectedRoute />,
+  //   children: [
+  //     {
+  //       path: "/dashboard",
+  //       element: (
+  //         <ErrorBoundary
+  //           ErrorComponent={DashboardErrorComponent}
+  //           LoadingComponent={LoadingIndicator}
+  //           componentName="Dashboard"
+  //         >
+  //           <TestimonialsDashboard />
+  //         </ErrorBoundary>
+  //       ),
+  //     },
+  //   ],
+  // },
   {
     element: <OnboardingProtectedRoute />,
     children: [

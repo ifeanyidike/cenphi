@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -106,28 +105,28 @@ func (rl *RateLimiter) Middleware(config Config) func(http.Handler) http.Handler
 				return
 			}
 
-			allowed, remaining, resetTime, err := rl.checkLimit(r, config)
-			if err != nil {
-				rl.logger.Error("Rate limit check failed", zap.Error(err))
-				// Fail open - allow request on Redis errors
-				next.ServeHTTP(w, r)
-				return
-			}
+			// allowed, remaining, resetTime, err := rl.checkLimit(r, config)
+			// if err != nil {
+			// 	rl.logger.Error("Rate limit check failed", zap.Error(err))
+			// 	// Fail open - allow request on Redis errors
+			// 	next.ServeHTTP(w, r)
+			// 	return
+			// }
 
-			// Set rate limit headers
-			w.Header().Set("X-RateLimit-Limit", strconv.Itoa(config.Limit))
-			w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(remaining))
-			w.Header().Set("X-RateLimit-Reset", strconv.FormatInt(resetTime.Unix(), 10))
+			// // Set rate limit headers
+			// w.Header().Set("X-RateLimit-Limit", strconv.Itoa(config.Limit))
+			// w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(remaining))
+			// w.Header().Set("X-RateLimit-Reset", strconv.FormatInt(resetTime.Unix(), 10))
 
-			if !allowed {
-				rl.logger.Warn("Rate limit exceeded",
-					zap.String("ip", getClientIP(r)),
-					zap.String("user_agent", r.UserAgent()))
+			// if !allowed {
+			// 	rl.logger.Warn("Rate limit exceeded",
+			// 		zap.String("ip", getClientIP(r)),
+			// 		zap.String("user_agent", r.UserAgent()))
 
-				w.Header().Set("Retry-After", strconv.FormatInt(int64(config.Window.Seconds()), 10))
-				http.Error(w, config.Message, http.StatusTooManyRequests)
-				return
-			}
+			// 	w.Header().Set("Retry-After", strconv.FormatInt(int64(config.Window.Seconds()), 10))
+			// 	http.Error(w, config.Message, http.StatusTooManyRequests)
+			// 	return
+			// }
 
 			next.ServeHTTP(w, r)
 		})

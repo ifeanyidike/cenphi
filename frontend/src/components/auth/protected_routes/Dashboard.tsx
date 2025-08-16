@@ -9,7 +9,6 @@ const DashboardProtectedRoute = observer(() => {
 
   // Check if we're coming from the onboarding page to prevent redirect loops
   const isFromOnboarding = location.state?.from?.includes("onboarding");
-
   const { member, loading: memberLoading } = useGetMember(authStore.loading);
 
   if (authStore.loading || memberLoading) {
@@ -26,7 +25,6 @@ const DashboardProtectedRoute = observer(() => {
     (!member?.workspace_name || !member.industry) &&
     !isFromOnboarding
   ) {
-    console.log("Redirecting to onboarding - incomplete profile", member);
     return (
       <Navigate
         to="/onboarding?workflow=onboarding"

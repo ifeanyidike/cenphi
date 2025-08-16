@@ -4,7 +4,9 @@ package repositories
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -18,6 +20,8 @@ type UserRepository interface {
 	Repository[models.User]
 	FindByEmail(ctx context.Context, email string, db DB) (*models.User, error)
 	FindByUID(ctx context.Context, uid string, db DB) (*models.User, error)
+	GetWorkspaceByUID(ctx context.Context, uid string, db DB) (uuid.UUID, error)
+	FindAndJoinByUID(ctx context.Context, uid string, db DB) (*models.TeamMemberGetParams, error)
 	UpdateAny(ctx context.Context, updates map[string]any, uid string, db DB) error
 }
 
@@ -154,21 +158,173 @@ func (r *userRepository) FindByEmail(ctx context.Context, firebase_uid string, d
 	return &user, nil
 }
 
+// func (r *userRepository) FindByUID(ctx context.Context, uid string, db DB) (*models.User, error) {
+// 	query :=
+// 		`
+// 		SELECT
+// 			id, firebase_uid, email, name, email_verified, last_active_at, created_at
+// 		FROM users
+// 		WHERE firebase_uid = $1
+// 		`
+// 	row := db.QueryRowContext(ctx, query, uid)
+// 	var user models.User
+
+// 	err := row.Scan(
+// 		&user.ID,
+// 		&user.FirebaseUID,
+// 		&user.Email,
+// 		&user.Name,
+// 		&user.EmailVerified,
+// 		&user.LastActiveAt,
+// 		&user.CreatedAt,
+// 	)
+// 	fmt.Println("uid", uid)
+// 	fmt.Println("found user", user)
+
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return &user, nil
+// }
+
+func (r *userRepository) GetWorkspaceByUID(ctx context.Context, uid string, db DB) (uuid.UUID, error) {
+	fmt.Println("getting workspace id by uid")
+	query := `
+        SELECT
+			u.id,
+			t.workspace_id
+        FROM users u
+		INNER JOIN team_members t ON u.id = t.user_id
+        WHERE u.firebase_uid = $1
+    `
+
+	row := db.QueryRowContext(ctx, query, uid)
+	var userID uuid.UUID
+	var workspaceID uuid.UUID
+
+	err := row.Scan(
+		&userID,
+		&workspaceID,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			fmt.Println("No rows found for Firebase UID:", uid)
+			return uuid.Nil, errors.New("user not found")
+		}
+		fmt.Printf("Scan error: %v\n", err)
+		return uuid.Nil, err
+	}
+
+	// Check if we got an empty result even without error
+	if userID == uuid.Nil {
+		fmt.Println("Got empty user result for Firebase UID:", uid)
+		return uuid.Nil, errors.New("user not found")
+	}
+	fmt.Println("workspaceID", workspaceID)
+
+	return workspaceID, nil
+}
+
+func (r *userRepository) FindAndJoinByUID(ctx context.Context, uid string, db DB) (*models.TeamMemberGetParams, error) {
+	query := `
+        SELECT
+			u.id, u.firebase_uid, u.email, u.name, u.email_verified, u.created_at,
+			w.name as workspace_name, w.id as workspace_id, w.plan as workspace_plan,
+			t.role, t.user_id, t.workspace_id
+        FROM users u
+		INNER JOIN team_members t ON u.id = t.user_id
+		INNER JOIN workspaces w ON t.workspace_id = w.id
+        WHERE u.firebase_uid = $1
+    `
+
+	row := db.QueryRowContext(ctx, query, uid)
+	var u models.TeamMemberGetParams
+
+	err := row.Scan(
+		&u.UserID,
+		&u.FirebaseUID,
+		&u.Email,
+		&u.Name,
+		&u.EmailVerified,
+		&u.CreatedAt,
+		&u.WorkspaceName,
+		&u.WorkspaceID,
+		&u.WorkspacePlan,
+		&u.Role,
+		&u.UserID,
+		&u.WorkspaceID,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			fmt.Println("No rows found for Firebase UID:", uid)
+			return nil, errors.New("user not found")
+		}
+		fmt.Printf("Scan error: %v\n", err)
+		return nil, err
+	}
+
+	// Check if we got an empty result even without error
+	if u.UserID == uuid.Nil {
+		fmt.Println("Got empty user result for Firebase UID:", uid)
+		return nil, errors.New("user not found")
+	}
+
+	return &u, nil
+}
+
 func (r *userRepository) FindByUID(ctx context.Context, uid string, db DB) (*models.User, error) {
-	query :=
-		`
-		SELECT 
-			id, email, name, email_verified, last_active_at, created_at
-		FROM users
-		WHERE firebase_uid = $1
-		`
+	query := `
+        SELECT 
+            id, firebase_uid, email, name, email_verified, last_active_at, created_at
+        FROM users
+        WHERE firebase_uid = $1
+    `
+
+	fmt.Printf("Executing query: %s with uid: %s\n", query, uid)
+
 	row := db.QueryRowContext(ctx, query, uid)
 	var user models.User
 
-	err := row.Scan(&user.ID, &user.Email, &user.Name, &user.EmailVerified, &user.LastActiveAt, &user.CreatedAt)
+	err := row.Scan(
+		&user.ID,
+		&user.FirebaseUID,
+		&user.Email,
+		&user.Name,
+		&user.EmailVerified,
+		&user.LastActiveAt,
+		&user.CreatedAt,
+	)
+
+	fmt.Printf("Scan error: %v\n", err)
+	fmt.Printf("Found user: %+v\n", user)
 
 	if err != nil {
+		if err == sql.ErrNoRows {
+			fmt.Println("No rows found for Firebase UID:", uid)
+			return nil, errors.New("user not found")
+		}
+		fmt.Printf("Scan error: %v\n", err)
 		return nil, err
 	}
+
+	// Check if we got an empty result even without error
+	if user.ID == uuid.Nil {
+		fmt.Println("Got empty user result for Firebase UID:", uid)
+		return nil, errors.New("user not found")
+	}
+
 	return &user, nil
+}
+
+func (r *userRepository) UserExistsByUID(ctx context.Context, uid string, db DB) (bool, error) {
+	query := "SELECT COUNT(*) FROM users WHERE firebase_uid = $1"
+	var count int
+	err := db.QueryRowContext(ctx, query, uid).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	fmt.Printf("Count of users with Firebase UID %s: %d\n", uid, count)
+	return count > 0, nil
 }

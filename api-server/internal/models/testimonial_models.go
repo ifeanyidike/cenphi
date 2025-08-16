@@ -24,6 +24,7 @@ type TranscriptSegment struct {
 	Speaker   string  `json:"speaker,omitempty"`
 	Words     []Word  `json:"words,omitempty"`
 }
+type TranscriptSegments []TranscriptionSegment
 
 type HighlightMoment struct {
 	StartTime           float64  `json:"start_time"`
@@ -117,14 +118,15 @@ type Testimonial struct {
 	AuthorAvatarURL *string `json:"author_avatar_url" db:"author_avatar_url"`
 
 	// Content information
-	Type               string                  `json:"type" db:"type"`
-	Format             string                  `json:"format" db:"format"`
-	Status             string                  `json:"status" db:"status"`
-	Content            *string                 `json:"content" db:"content"`
-	MediaURL           *string                 `json:"media_url" db:"media_url"`
-	TranscriptSegments *[]TranscriptionSegment `json:"transcript_segment" db:"transcript_segment"`
+	Type               string              `json:"type" db:"type"`
+	Format             string              `json:"format" db:"format"`
+	Status             string              `json:"status" db:"status"`
+	Content            *string             `json:"content" db:"content"`
+	MediaURL           *string             `json:"media_url" db:"media_url"`
+	TranscriptSegments *TranscriptSegments `json:"transcript_segment" db:"transcript_segment"`
 
 	// Collection metadata
+	SentimentScore   float32 `json:"sentiment_score" db:"sentiment_score"`
 	CollectionMethod string  `json:"collection_method" db:"collection_method"`
 	Metadata         JSONMap `json:"metadata" db:"metadata"`
 
@@ -379,4 +381,27 @@ func (a *StringArray) Scan(value any) error {
 	default:
 		return fmt.Errorf("cannot scan type %T into StringArray", value)
 	}
+}
+
+func (ts *TranscriptSegments) Scan(value any) error {
+	if value == nil {
+		*ts = TranscriptSegments{}
+		return nil
+	}
+
+	switch v := value.(type) {
+	case []byte:
+		return json.Unmarshal(v, ts)
+	case string:
+		return json.Unmarshal([]byte(v), ts)
+	default:
+		return errors.New("cannot scan into TranscriptSegments")
+	}
+}
+
+func (ts TranscriptSegments) Value() (driver.Value, error) {
+	if ts == nil {
+		return "[]", nil
+	}
+	return json.Marshal(ts)
 }

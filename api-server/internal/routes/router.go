@@ -109,10 +109,10 @@ func RegisterWorkspaceRoutes(r chi.Router, controller controllers.WorkspaceContr
 		r.Put("/{id}", controller.UpdateWorkspace)
 		r.Delete("/{id}", controller.DeleteWorkspace)
 
-		r.Route("/{workspaceID}/testimonials", func(r chi.Router) {
-			r.Get("/", controller.GetTestimonialsByWorkspaceID)
-			r.Get("/{testimonialID}", controller.GetTestimonial)
-		})
+		// r.Route("/{workspaceID}/testimonials", func(r chi.Router) {
+		// 	r.Get("/", controller.GetTestimonialsByWorkspaceID)
+		// 	// r.Get("/{testimonialID}", controller.GetTestimonial)
+		// })
 	})
 }
 
@@ -143,11 +143,11 @@ func RegisterOnboardingRoutes(r chi.Router, controller controllers.OnboardingCon
 func RegisterTestimonialRoutes(r chi.Router, controller controllers.TestimonialController, authMiddleware middleware.AuthMiddleware) {
 	r.Route("/testimonials", func(r chi.Router) {
 		r.Group(func(r chi.Router) {
-			// r.Use(authMiddleware.VerifyToken) // commented out for test
+			r.Use(authMiddleware.VerifyToken)
 
 			// Basic CRUD
 			r.Get("/{id}", controller.GetTestimonial)
-			r.Get("/workspace/{workspaceID}", controller.GetTestimonials)
+			r.Get("/", controller.GetTestimonials)
 			r.Put("/{id}", controller.UpdateTestimonial)
 			r.Delete("/{id}", controller.DeleteTestimonial)
 
@@ -209,7 +209,7 @@ func RegisterSocialRoutes(r chi.Router, controller controllers.SocialController,
 	r.Get("/social/oauth/callback", controller.HandleOAuthCallback)
 
 	// Protected social media routes
-	r.Route("/workspaces/{workspaceID}/social", func(r chi.Router) {
+	r.Route("/social/workspaces/{workspaceID}/social", func(r chi.Router) {
 		// r.Use(authMiddleware.VerifyToken) //commented out for test
 
 		// OAuth authorization endpoints
@@ -281,7 +281,7 @@ func RegisterSSETestimonialMonitorRoutes(r chi.Router, tcc controllers.SSETestim
 
 func RegisterTestimonialCollectionRoutes(r chi.Router, tcc controllers.TestimonialCollectionController, authMiddleware middleware.AuthMiddleware) {
 
-	r.Route("/workspaces/{workspaceID}/testimonials", func(r chi.Router) {
+	r.Route("/collection/workspaces/{workspaceID}/testimonials", func(r chi.Router) {
 		// Main collection endpoints - support both text and video
 		r.Post("/widget", tcc.CollectFromWidget) // JSON for text, multipart for video
 		r.Post("/form", tcc.CollectFromForm)     // JSON for text, multipart for video

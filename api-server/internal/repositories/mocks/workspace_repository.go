@@ -8,6 +8,8 @@ import (
 	models "github.com/ifeanyidike/cenphi/internal/models"
 	mock "github.com/stretchr/testify/mock"
 
+	pb "github.com/ifeanyidike/cenphi/pb"
+
 	repositories "github.com/ifeanyidike/cenphi/internal/repositories"
 
 	uuid "github.com/google/uuid"
@@ -54,36 +56,6 @@ func (_m *WorkspaceRepository) Delete(ctx context.Context, id uuid.UUID, db repo
 	return r0
 }
 
-// FindByCustomDomain provides a mock function with given fields: ctx, customDomain, db
-func (_m *WorkspaceRepository) FindByCustomDomain(ctx context.Context, customDomain string, db repositories.DB) (*models.Workspace, error) {
-	ret := _m.Called(ctx, customDomain, db)
-
-	if len(ret) == 0 {
-		panic("no return value specified for FindByCustomDomain")
-	}
-
-	var r0 *models.Workspace
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, repositories.DB) (*models.Workspace, error)); ok {
-		return rf(ctx, customDomain, db)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, repositories.DB) *models.Workspace); ok {
-		r0 = rf(ctx, customDomain, db)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*models.Workspace)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, string, repositories.DB) error); ok {
-		r1 = rf(ctx, customDomain, db)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // GetByID provides a mock function with given fields: ctx, id, db
 func (_m *WorkspaceRepository) GetByID(ctx context.Context, id uuid.UUID, db repositories.DB) (*models.Workspace, error) {
 	ret := _m.Called(ctx, id, db)
@@ -107,6 +79,66 @@ func (_m *WorkspaceRepository) GetByID(ctx context.Context, id uuid.UUID, db rep
 
 	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, repositories.DB) error); ok {
 		r1 = rf(ctx, id, db)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetModelBrandContext provides a mock function with given fields: ctx, workspaceID, db
+func (_m *WorkspaceRepository) GetModelBrandContext(ctx context.Context, workspaceID uuid.UUID, db repositories.DB) (*models.BrandContext, error) {
+	ret := _m.Called(ctx, workspaceID, db)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetModelBrandContext")
+	}
+
+	var r0 *models.BrandContext
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, repositories.DB) (*models.BrandContext, error)); ok {
+		return rf(ctx, workspaceID, db)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, repositories.DB) *models.BrandContext); ok {
+		r0 = rf(ctx, workspaceID, db)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*models.BrandContext)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, repositories.DB) error); ok {
+		r1 = rf(ctx, workspaceID, db)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetPbBrandContext provides a mock function with given fields: ctx, workspaceID, db
+func (_m *WorkspaceRepository) GetPbBrandContext(ctx context.Context, workspaceID uuid.UUID, db repositories.DB) (*pb.BrandContext, error) {
+	ret := _m.Called(ctx, workspaceID, db)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetPbBrandContext")
+	}
+
+	var r0 *pb.BrandContext
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, repositories.DB) (*pb.BrandContext, error)); ok {
+		return rf(ctx, workspaceID, db)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, repositories.DB) *pb.BrandContext); ok {
+		r0 = rf(ctx, workspaceID, db)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*pb.BrandContext)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, repositories.DB) error); ok {
+		r1 = rf(ctx, workspaceID, db)
 	} else {
 		r1 = ret.Error(1)
 	}

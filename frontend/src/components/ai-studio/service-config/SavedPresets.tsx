@@ -1,0 +1,93 @@
+// components/ai-studio/service-config/SavedPresets.tsx
+import { Bookmark, Heart, Trash2 } from "lucide-react";
+
+type Props = {
+  savedPresets: any[];
+  selectedPreset: any;
+  handleLoadPreset: (preset: any) => void;
+  defaultPreset: any;
+  onSetDefaultPreset: (serviceId: string, preset: any) => void;
+  service: any;
+  onDeletePreset: (serviceId: string, presetId: string) => void;
+};
+const SavedPresets = ({
+  savedPresets,
+  selectedPreset,
+  defaultPreset,
+  service,
+  handleLoadPreset,
+  onSetDefaultPreset,
+  onDeletePreset,
+}: Props) => {
+  return (
+    <div className="lg:col-span-1 order-2 lg:order-1">
+      <div className="bg-white rounded-lg border shadow-sm">
+        <div className="p-4 border-b">
+          <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+            <Bookmark className="h-5 w-5" />
+            Saved Presets
+          </h3>
+        </div>
+        <div className="p-4">
+          {savedPresets?.length === 0 ? (
+            <div className="text-center py-6 text-gray-500">
+              <Bookmark className="h-8 w-8 mx-auto mb-2 opacity-30" />
+              <p className="text-sm">No saved presets</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {savedPresets?.map((preset: any) => (
+                <div
+                  key={preset.id}
+                  className={`p-3 border rounded-lg cursor-pointer transition-all ${
+                    selectedPreset?.id === preset.id
+                      ? "border-blue-500 bg-blue-50"
+                      : "border-gray-200 hover:border-gray-300"
+                  }`}
+                  onClick={() => handleLoadPreset(preset)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-sm truncate">
+                        {preset.name}
+                      </h4>
+                      <p className="text-xs text-gray-500">
+                        {new Date(preset.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    {defaultPreset?.id === preset.id && (
+                      <Heart className="h-4 w-4 text-red-500 fill-current" />
+                    )}
+                  </div>
+
+                  <div className="flex gap-1 mt-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSetDefaultPreset(service.id, preset);
+                      }}
+                      className="flex-1 text-xs px-2 py-1 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
+                    >
+                      Make Default
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeletePreset(service.id, preset.id);
+                      }}
+                      className="px-2 py-1 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default SavedPresets;

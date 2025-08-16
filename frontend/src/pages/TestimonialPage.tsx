@@ -1,11 +1,13 @@
-import Testimonial from "@/components/testimonial";
+import DashboardView from "@/components/dashboard-landing/DashboardView";
+import { DashboardWrapper } from "@/components/dashboard-main/DashboardWrapper";
+import TestimonialDetail from "@/components/TestimonialDetail";
 import { observer } from "mobx-react-lite";
 
 const TestimonialPage = observer(() => {
   return (
-    // <DashboardWrapper>
-    <Testimonial />
-    // </DashboardWrapper>
+    <DashboardWrapper>
+      <TestimonialDetail />
+    </DashboardWrapper>
   );
 });
 

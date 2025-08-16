@@ -207,7 +207,7 @@ func (c *workspaceController) GetTestimonialsByWorkspaceID(w http.ResponseWriter
 	queryParams := r.URL.Query()
 	filters := models.GetFilterFromParam(queryParams)
 
-	testimonials, err := c.testimonialSvc.GetTestimonialsByWorkspace(r.Context(), id, filters)
+	testimonials, err := c.testimonialSvc.GetTestimonialsByWorkspace(r.Context(), filters)
 	if err != nil {
 		c.logger.Error("failed to get testimonial", zap.String("testimonial ID", id.String()), zap.Error(err))
 		utils.RespondWithError(w, http.StatusNotFound, err.Error())

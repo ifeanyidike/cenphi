@@ -27,7 +27,7 @@ import { workspaceHub } from "@/repo/workspace_hub";
 export const EmptyStateView = observer(() => {
   const isLoading = workspaceHub.testimonialManager.loading_testimonials;
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div className="grid grid-cols-1 lg:grid-cols-1 gap-8">
       {/* Main Testimonials Area */}
       <motion.div variants={itemVariants} className="lg:col-span-2">
         {isLoading ? (
@@ -136,53 +136,6 @@ export const EmptyStateView = observer(() => {
       </motion.div>
 
       {/* Sidebar Tools */}
-      <motion.div variants={itemVariants} className="space-y-8">
-        {/* Premium Tools Card */}
-        <AIActionsCard />
-
-        {/* Getting Started Guide */}
-        <Card className="border-0 shadow-xl overflow-hidden bg-white">
-          <CardHeader className="p-6 border-b bg-gray-50/60">
-            <CardTitle className="text-lg font-semibold flex items-center">
-              <Award className="h-5 w-5 text-amber-500 mr-2" />
-              Success Roadmap
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-            <div className="space-y-0">
-              <StepItem
-                label="Create Your First Collection"
-                description="Organize testimonials by product or service"
-                icon={Plus}
-                status="pending"
-                number={1}
-              />
-
-              <StepItem
-                label="Gather Customer Feedback"
-                description="Send personalized request templates"
-                icon={MessageSquare}
-                status="pending"
-                number={2}
-              />
-
-              <StepItem
-                label="Analyze & Showcase"
-                description="Display testimonials where they matter most"
-                icon={Brain}
-                status="pending"
-                number={3}
-              />
-            </div>
-
-            <div className="mt-6">
-              <Button className="w-full justify-center py-5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white">
-                Start Your Journey
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
     </div>
   );
 });
