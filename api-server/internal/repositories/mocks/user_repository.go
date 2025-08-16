@@ -54,6 +54,36 @@ func (_m *UserRepository) Delete(ctx context.Context, id uuid.UUID, db repositor
 	return r0
 }
 
+// FindAndJoinByUID provides a mock function with given fields: ctx, uid, db
+func (_m *UserRepository) FindAndJoinByUID(ctx context.Context, uid string, db repositories.DB) (*models.TeamMemberGetParams, error) {
+	ret := _m.Called(ctx, uid, db)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindAndJoinByUID")
+	}
+
+	var r0 *models.TeamMemberGetParams
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, repositories.DB) (*models.TeamMemberGetParams, error)); ok {
+		return rf(ctx, uid, db)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, repositories.DB) *models.TeamMemberGetParams); ok {
+		r0 = rf(ctx, uid, db)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*models.TeamMemberGetParams)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, repositories.DB) error); ok {
+		r1 = rf(ctx, uid, db)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // FindByEmail provides a mock function with given fields: ctx, email, db
 func (_m *UserRepository) FindByEmail(ctx context.Context, email string, db repositories.DB) (*models.User, error) {
 	ret := _m.Called(ctx, email, db)
@@ -137,6 +167,36 @@ func (_m *UserRepository) GetByID(ctx context.Context, id uuid.UUID, db reposito
 
 	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, repositories.DB) error); ok {
 		r1 = rf(ctx, id, db)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetWorkspaceByUID provides a mock function with given fields: ctx, uid, db
+func (_m *UserRepository) GetWorkspaceByUID(ctx context.Context, uid string, db repositories.DB) (uuid.UUID, error) {
+	ret := _m.Called(ctx, uid, db)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetWorkspaceByUID")
+	}
+
+	var r0 uuid.UUID
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, repositories.DB) (uuid.UUID, error)); ok {
+		return rf(ctx, uid, db)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, repositories.DB) uuid.UUID); ok {
+		r0 = rf(ctx, uid, db)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(uuid.UUID)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, repositories.DB) error); ok {
+		r1 = rf(ctx, uid, db)
 	} else {
 		r1 = ret.Error(1)
 	}

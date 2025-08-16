@@ -1129,6 +1129,12 @@ func (qw *AIQueueWorker) handleTestimonialSentimentAnalysis(ctx context.Context,
 		qw.logger.Error("Failed to save sentiment artifact", zap.Error(err))
 	}
 
+	if err := qw.testimonialRepo.UpdateAny(ctx, testimonialID, map[string]any{
+		"sentiment_score": result.SentimentScore,
+	}, qw.db); err != nil {
+		qw.logger.Error("Failed to update testimonial with sentiment score", zap.Error(err))
+	}
+
 	response := map[string]interface{}{
 		"sentiment_result": result,
 		"artifact_id":      artifact_id,

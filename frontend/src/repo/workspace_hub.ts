@@ -12,6 +12,8 @@ import { VideoEditorManager } from "./managers/video_editor";
 import { AudioEditorManager } from "./managers/audio_editor";
 import { TextEditorManager } from "./managers/text_editor";
 import { ImageEditorManager } from "./managers/image_editor";
+import { AIStudioManager } from "./managers/ai_studio_manager";
+import { authStateManager } from "./managers/auth_state_manager";
 
 /**
  * The WorkspaceOrchestrator class handles the orchestration of workspace-related
@@ -31,6 +33,7 @@ export class WorkspaceOrchestrator {
   audioEditorManager: AudioEditorManager;
   textEditorManager: TextEditorManager;
   imageEditorManager: ImageEditorManager;
+  aiStudioManager: AIStudioManager;
 
   /**
    * Constructs a new WorkspaceOrchestrator instance.
@@ -46,6 +49,7 @@ export class WorkspaceOrchestrator {
     this.audioEditorManager = new AudioEditorManager();
     this.textEditorManager = new TextEditorManager();
     this.imageEditorManager = new ImageEditorManager();
+    this.aiStudioManager = new AIStudioManager();
 
     makeAutoObservable(this, {
       memberManager: observable.ref,
@@ -57,6 +61,7 @@ export class WorkspaceOrchestrator {
       audioEditorManager: observable.ref,
       textEditorManager: observable.ref,
       imageEditorManager: observable.ref,
+      aiStudioManager: observable.ref,
     });
   }
 
@@ -66,13 +71,47 @@ export class WorkspaceOrchestrator {
    * @returns A promise that resolves to an object containing the token and the current user.
    * @throws Error if the user is not authenticated or token is not available.
    */
-  public async getToken() {
-    const currentUser = auth.currentUser;
-    const token = await currentUser?.getIdToken();
-    if (!currentUser?.uid || !token)
-      throw new Error("Token not found, Unauthorized!");
-    return { token, currentUser };
-  }
+  // public async getToken() {
+  //   const currentUser = auth.currentUser;
+  //   const token = await currentUser?.getIdToken();
+  //   if (!currentUser?.uid || !token)
+  //     throw new Error("Token not found, Unauthorized!");
+  //   return { token, currentUser };
+  // }
+
+  // public async getToken() {
+  //   console.log("🔐 Getting Firebase token...");
+
+  //   const currentUser = auth.currentUser;
+  //   console.log("👤 Current user exists:", !!currentUser);
+
+  //   if (!currentUser) {
+  //     throw new Error("No current user found");
+  //   }
+
+  //   // Add timeout to token retrieval
+  //   const tokenPromise = currentUser.getIdToken();
+  //   const timeoutPromise = new Promise((_, reject) =>
+  //     setTimeout(() => reject(new Error("Firebase token timeout")), 10000)
+  //   );
+
+  //   try {
+  //     const token = (await Promise.race([
+  //       tokenPromise,
+  //       timeoutPromise,
+  //     ])) as string;
+  //     console.log("✅ Firebase token retrieved");
+
+  //     if (!currentUser?.uid || !token) {
+  //       throw new Error("Token not found, Unauthorized!");
+  //     }
+
+  //     return { token, currentUser };
+  //   } catch (error) {
+  //     console.error("❌ Firebase token error:", error);
+  //     throw error;
+  //   }
+  // }
 
   /**
    * Updates workspace details using the provided partial workspace data.
@@ -82,7 +121,7 @@ export class WorkspaceOrchestrator {
    * @throws Error if the user is not authorized, the workspace does not exist, or the request fails.
    */
   async update(updates: Partial<Workspace>) {
-    const { token, currentUser } = await this.getToken();
+    const { token, currentUser } = await authStateManager.getToken();
 
     let member = this.memberManager.member;
     if (!member) {

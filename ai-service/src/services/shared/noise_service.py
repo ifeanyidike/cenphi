@@ -72,7 +72,6 @@ class NoiseService:
                 "voice_eq_boost": "1.4",        # ✅ Reduced from 2.0
                 "high_cut": "11000"             # ✅ Preserves more content
             },
-
             "low": {
                 "video_denoise": "2:1:3:2",     # ✅ Already conservative
                 "audio_nr": "8",                # ✅ Reduced from 12

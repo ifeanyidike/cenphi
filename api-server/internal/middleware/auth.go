@@ -4,10 +4,12 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	firebase "firebase.google.com/go/v4"
@@ -17,92 +19,15 @@ import (
 	"google.golang.org/api/option"
 )
 
-type contextKey string
+type UserContextKey string
 
-const userKey contextKey = "user"
+const UserKey UserContextKey = "user"
 
 type AuthMiddleware struct {
 	app     *firebase.App
 	client  *auth.Client
 	logging *zap.Logger
 }
-
-// func NewAuthMiddleware(projectID string, logger *zap.Logger) (*AuthMiddleware, error) {
-// 	credentialsFile := "cenphiio-service-account.json"
-// 	path, err := config.FindFile(credentialsFile)
-
-// 	if err != nil {
-// 		return nil, fmt.Errorf("failed to find credentials file: %w", err)
-// 	}
-
-// 	opt := option.WithCredentialsFile(path)
-// 	app, err := firebase.NewApp(context.Background(), nil, opt)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	return &AuthMiddleware{
-// 		app:     app,
-// 		logging: logger,
-// 	}, nil
-// }
-
-// func NewAuthMiddleware(projectID string, logger *zap.Logger) (*AuthMiddleware, error) {
-// 	credentialsFile := "cenphiio-service-account.json"
-// 	path, err := config.FindFile(credentialsFile)
-
-// 	if err != nil {
-// 		return nil, fmt.Errorf("failed to find credentials file: %w", err)
-// 	}
-
-// 	// Create a new cert pool
-// 	rootCAs := x509.NewCertPool()
-
-// 	// Load Google's root certificates
-// 	googleCerts, err := os.ReadFile("/app/google_roots.pem")
-// 	if err != nil {
-// 		logger.Warn("Failed to read Google root certificates", zap.Error(err))
-// 	} else {
-// 		if !rootCAs.AppendCertsFromPEM(googleCerts) {
-// 			logger.Warn("Failed to append Google certificates to pool")
-// 		} else {
-// 			logger.Info("Successfully added Google certificates")
-// 		}
-// 	}
-
-// 	// Try to add system certs as a fallback
-// 	systemPool, err := x509.SystemCertPool()
-// 	if err == nil && systemPool != nil {
-// 		// Directly use the system pool instead of trying to extract and re-add certificates
-// 		rootCAs = systemPool
-
-// 		// Then append our Google certs to the system pool
-// 		if googleCerts != nil {
-// 			rootCAs.AppendCertsFromPEM(googleCerts)
-// 		}
-// 	}
-
-// 	// Create HTTP client with our cert pool
-// 	httpClient := &http.Client{
-// 		Transport: &http.Transport{
-// 			TLSClientConfig: &tls.Config{
-// 				RootCAs: rootCAs,
-// 			},
-// 		},
-// 	}
-
-// 	opt := option.WithCredentialsFile(path)
-// 	clientOpt := option.WithHTTPClient(httpClient)
-// 	app, err := firebase.NewApp(context.Background(), nil, opt, clientOpt)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	return &AuthMiddleware{
-// 		app:     app,
-// 		logging: logger,
-// 	}, nil
-// }
 
 func NewAuthMiddleware(projectID string, logger *zap.Logger) (*AuthMiddleware, error) {
 	// Find Firebase credentials file
@@ -260,7 +185,7 @@ func NewAuthMiddleware(projectID string, logger *zap.Logger) (*AuthMiddleware, e
 // 			http.Error(w, "Failed to verify token", http.StatusUnauthorized)
 // 			return
 // 		}
-// 		ctx := context.WithValue(r.Context(), userKey, token)
+// 		ctx := context.WithValue(r.Context(), UserKey, token)
 // 		next.ServeHTTP(w, r.WithContext(ctx))
 // 	})
 // }
@@ -281,12 +206,9 @@ func (am *AuthMiddleware) VerifyToken(next http.Handler) http.Handler {
 			idToken = authHeader[7:]
 		}
 
-		// Create context with reasonable timeout
-		ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
-		defer cancel()
-
 		// Verify the token
-		token, err := am.client.VerifyIDToken(ctx, idToken)
+		token, err := am.verifyTokenWithRetry(r.Context(), idToken, 3)
+		fmt.Println("token", token)
 		if err != nil {
 			am.logging.Error("failed to verify token",
 				zap.Error(err),
@@ -296,9 +218,72 @@ func (am *AuthMiddleware) VerifyToken(next http.Handler) http.Handler {
 		}
 
 		// Add verified user ID to context
-		newCtx := context.WithValue(r.Context(), userKey, token.UID)
+		newCtx := context.WithValue(r.Context(), UserKey, token.UID)
 
 		// Continue with the next handler
 		next.ServeHTTP(w, r.WithContext(newCtx))
 	})
+}
+
+func (am *AuthMiddleware) verifyTokenWithRetry(ctx context.Context, idToken string, maxRetries int) (*auth.Token, error) {
+	var lastErr error
+
+	for attempt := 0; attempt <= maxRetries; attempt++ {
+		// Create a new context for each attempt to avoid cancellation propagation
+		attemptCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+
+		token, err := am.client.VerifyIDToken(attemptCtx, idToken)
+		cancel()
+
+		if err == nil {
+			return token, nil
+		}
+
+		lastErr = err
+
+		// Don't retry on certain types of errors (invalid token format, etc.)
+		if isNonRetryableError(err) {
+			break
+		}
+
+		if attempt < maxRetries {
+			// Exponential backoff: 500ms, 1s, 2s
+			backoff := time.Duration(500*(1<<attempt)) * time.Millisecond
+			am.logging.Warn("Token verification failed, retrying",
+				zap.Int("attempt", attempt+1),
+				zap.Duration("backoff", backoff),
+				zap.Error(err))
+
+			select {
+			case <-time.After(backoff):
+				continue
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			}
+		}
+	}
+
+	return nil, lastErr
+}
+
+func isNonRetryableError(err error) bool {
+	errStr := err.Error()
+	// Don't retry on obvious auth failures
+	return strings.Contains(errStr, "invalid") ||
+		strings.Contains(errStr, "malformed") ||
+		strings.Contains(errStr, "expired")
+}
+
+func GetUserFromContext(ctx context.Context) (string, error) {
+	val := ctx.Value(UserKey)
+	if val == nil {
+		return "", errors.New("user not found in context")
+	}
+
+	uid, ok := val.(string)
+	if !ok {
+		return "", errors.New("invalid user ID type in context")
+	}
+
+	return uid, nil
 }

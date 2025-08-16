@@ -101,21 +101,21 @@ func (c *testimonialController) GetTestimonial(w http.ResponseWriter, r *http.Re
 }
 
 func (c *testimonialController) GetTestimonials(w http.ResponseWriter, r *http.Request) {
-	workspaceID := r.Header.Get("X-Workspace-ID")
-	if workspaceID == "" {
-		utils.RespondWithError(w, http.StatusBadRequest, "Workspace ID required")
-		return
-	}
+	// workspaceID := r.Header.Get("X-Workspace-ID")
+	// if workspaceID == "" {
+	// 	utils.RespondWithError(w, http.StatusBadRequest, "Workspace ID required")
+	// 	return
+	// }
 
-	workspaceUUID, err := uuid.Parse(workspaceID)
-	if err != nil {
-		utils.RespondWithError(w, http.StatusBadRequest, err.Error())
-		return
-	}
+	// workspaceUUID, err := uuid.Parse(workspaceID)
+	// if err != nil {
+	// 	utils.RespondWithError(w, http.StatusBadRequest, err.Error())
+	// 	return
+	// }
 
 	filter := c.parseTestimonialFilter(r)
 
-	testimonials, err := c.service.GetTestimonialsByWorkspace(r.Context(), workspaceUUID, filter)
+	testimonials, err := c.service.GetTestimonialsByWorkspace(r.Context(), filter)
 	if err != nil {
 		c.logger.Error("Failed to get testimonials", zap.Error(err))
 		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())

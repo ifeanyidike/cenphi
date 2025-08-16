@@ -6,7 +6,6 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
@@ -116,7 +115,7 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 	driveRepo := repositories.NewGoogleDriveRepository(redisClient)
 
 	aiServiceManager := ai.NewAIServiceManager(cfg, cacheService, aiClient, audioExtractor, artifactsRepo, workspaceRepo, testimonialRepo, jobRepo, db, logger)
-	testimonialService := services.NewTestimonialService(testimonialRepo, storageService, db, redisClient, logger)
+	testimonialService := services.NewTestimonialService(testimonialRepo, userRepo, storageService, db, redisClient, logger)
 	userService := services.NewUserService(userRepo, db, logger)
 	teamMemberService := services.NewTeamMemberService(teamMemberRepo, db, logger)
 	onboardingService := services.NewOnboardingService(db, logger, aiServiceManager)
@@ -286,7 +285,7 @@ func (app *App) Mount() http.Handler {
 	}))
 
 	// r.Use(middleware.Timeout(240 * time.Second))
-	r.Use(middleware.Timeout(900 * time.Second))
+	// r.Use(middleware.Timeout(900 * time.Second))
 
 	routes.RegisterRoutes(r,
 		app.AuthMiddleware,

@@ -5,6 +5,8 @@ import { makeAutoObservable, runInAction } from "mobx";
 import { WorkspaceOrchestrator } from "../workspace_hub";
 import { MemberManager } from "./member";
 import { mockTestimonials } from "@/utils/mock";
+import { authStateManager } from "./auth_state_manager";
+import axios from "axios";
 
 /**
  * Manages testimonial-related operations within a workspace.
@@ -15,8 +17,9 @@ export class TestimonialManager {
   testimonial: Testimonial | null = null;
   isLoading: boolean = false;
   error: string | null = null;
+  private server_addr = import.meta.env.VITE_API_URL + "/testimonials";
 
-  loading_testimonials = true;
+  loading_testimonials = false;
 
   private workspaceOrchestrator: WorkspaceOrchestrator;
   private memberManager: MemberManager;
@@ -40,26 +43,37 @@ export class TestimonialManager {
   async getTestimonials() {
     // Start loading
     this.loading_testimonials = true;
+    console.log("In here");
 
     try {
-      const workspaceID = this.memberManager.member?.workspace_id;
-      if (!workspaceID) {
-        throw new Error("No workspace ID found");
-      }
+      // const workspaceID = this.memberManager.member?.workspace_id;
+      // console.log("getting workspace id", workspaceID);
+      // if (!workspaceID) {
+      //   throw new Error("No workspace ID found");
+      // }
 
-      const url = `${this.workspaceOrchestrator.server}/${workspaceID}/testimonials`;
-      const { token } = await this.workspaceOrchestrator.getToken();
+      // console.log("workspaceID", workspaceID);
 
-      const response = await fetch(url, {
-        method: "GET",
+      // const url = `${this.workspaceOrchestrator.server}/${workspaceID}/testimonials`;
+      const { token } = await authStateManager.getToken();
+      console.log("In here 2");
+
+      // const response = await fetch(this.server_addr, {
+      //   method: "GET",
+      //   headers: {
+      //     "Content-Type": "application/json",
+      //     Authorization: `Bearer ${token}`,
+      //   },
+      // });
+      const response = await axios.get(this.server_addr, {
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
       });
 
-      if (response.ok) {
-        const data = await response.json();
+      if (response.status === 200) {
+        // const data = await response.json();
+        const data = response.data?.response?.testimonials;
         runInAction(() => {
           this.testimonials = data;
         });
@@ -71,15 +85,14 @@ export class TestimonialManager {
       console.error("Error fetching testimonials:", error);
       throw error;
     } finally {
-      runInAction(() => {
-        this.loading_testimonials = false;
-      });
+      console.log("out here");
+      this.loading_testimonials = false;
     }
   }
 
-  setTestimonial(testimonial: Testimonial) {
-    this.testimonial = testimonial;
-  }
+  // setTestimonial(testimonial: Testimonial) {
+  //   this.testimonial = testimonial;
+  // }
 
   // async fetchTestimonial(id: string) {
   //   this.isLoading = true;
@@ -103,27 +116,35 @@ export class TestimonialManager {
   // }
 
   async fetchTestimonial(id: string) {
+    console.log("testimonialId", id);
     this.isLoading = true;
     try {
-      const workspaceID = this.memberManager.member?.workspace_id;
-      if (!id || !workspaceID) return;
+      if (!id) return;
 
-      const url = `${this.workspaceOrchestrator.server}/${workspaceID}/testimonials/${id}`;
-      const { token } = await this.workspaceOrchestrator.getToken();
+      const url = `${this.server_addr}/${id}`;
+      const { token } = await authStateManager.getToken();
 
-      const response = await fetch(url, {
-        method: "GET",
+      // const response = await fetch(url, {
+      //   method: "GET",
+      //   headers: {
+      //     "Content-Type": "application/json",
+      //     Authorization: `Bearer ${token}`,
+      //   },
+      // });
+      console.log("making request", url);
+      const response = await axios.get(url, {
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
       });
+      console.log("response", response);
 
-      if (response.ok) {
-        const data = await response.json();
+      if (response.status == 200) {
+        // const data = await response.json();
+        const data = response.data;
         console.log("data", data);
         runInAction(() => {
-          this.testimonial = data;
+          this.testimonial = data.testimonial;
           this.isLoading = false;
         });
         return data;

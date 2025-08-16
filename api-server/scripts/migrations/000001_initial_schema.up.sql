@@ -104,6 +104,7 @@ CREATE TABLE testimonials (
   author_company VARCHAR(255),
   author_title VARCHAR(255),
   author_avatar_url TEXT,
+  sentiment_score REAL DEFAULT 0.5 NOT NULL CHECK (sentiment_score >= 0.0 AND sentiment_score <= 1.0);
 
   -- Content
   type content_type NOT NULL DEFAULT 'text',

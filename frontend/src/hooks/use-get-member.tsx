@@ -35,7 +35,6 @@ const useGetMember = (authLoading: boolean) => {
         // Force a fresh fetch if coming from onboarding
         const shouldRefresh = isFromOnboarding;
         let member = shouldRefresh ? null : workspaceHub.memberManager.member;
-
         if (member && isMounted) {
           setMember(member);
           setLoading(false);

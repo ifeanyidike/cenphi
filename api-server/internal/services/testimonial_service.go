@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/ifeanyidike/cenphi/internal/middleware"
 	"github.com/ifeanyidike/cenphi/internal/models"
 	"github.com/ifeanyidike/cenphi/internal/repositories"
 	"github.com/ifeanyidike/cenphi/internal/storage"
@@ -15,34 +16,35 @@ import (
 	"go.uber.org/zap"
 )
 
-type TestimonialService interface {
-	GetTestimonialByID(ctx context.Context, id uuid.UUID) (*models.Testimonial, error)
-	GetTestimonialsByWorkspace(ctx context.Context, workspaceID uuid.UUID, filter models.TestimonialFilter) ([]models.Testimonial, error)
-	UpdateTestimonial(ctx context.Context, testimonial *models.Testimonial) error
-	DeleteTestimonial(ctx context.Context, id uuid.UUID) error
+// type TestimonialService interface {
+// 	GetTestimonialByID(ctx context.Context, id uuid.UUID) (*models.Testimonial, error)
+// 	GetTestimonialsByWorkspace(ctx context.Context, workspaceID uuid.UUID, filter models.TestimonialFilter) ([]models.Testimonial, error)
+// 	UpdateTestimonial(ctx context.Context, testimonial *models.Testimonial) error
+// 	DeleteTestimonial(ctx context.Context, id uuid.UUID) error
 
-	// Add these new methods to match the complete implementation:
-	SearchTestimonials(ctx context.Context, workspaceID uuid.UUID, query string, filter models.TestimonialFilter) ([]*models.Testimonial, error)
-	GetTestimonialStats(ctx context.Context, workspaceID uuid.UUID) (*models.TestimonialStats, error)
-	GetTestimonialsByStatus(ctx context.Context, workspaceID uuid.UUID, status string, limit int) ([]models.Testimonial, error)
-	GetTestimonialsByType(ctx context.Context, workspaceID uuid.UUID, testimonialType string, limit int) ([]models.Testimonial, error)
-	GetTestimonialsByRating(ctx context.Context, workspaceID uuid.UUID, minRating int) ([]models.Testimonial, error)
-	GetRecentTestimonials(ctx context.Context, workspaceID uuid.UUID, days int, limit int) ([]models.Testimonial, error)
-	GetTestimonialsByAuthor(ctx context.Context, workspaceID uuid.UUID, authorEmail string) ([]models.Testimonial, error)
+// 	// Add these new methods to match the complete implementation:
+// 	SearchTestimonials(ctx context.Context, workspaceID uuid.UUID, query string, filter models.TestimonialFilter) ([]*models.Testimonial, error)
+// 	GetTestimonialStats(ctx context.Context, workspaceID uuid.UUID) (*models.TestimonialStats, error)
+// 	GetTestimonialsByStatus(ctx context.Context, workspaceID uuid.UUID, status string, limit int) ([]models.Testimonial, error)
+// 	GetTestimonialsByType(ctx context.Context, workspaceID uuid.UUID, testimonialType string, limit int) ([]models.Testimonial, error)
+// 	GetTestimonialsByRating(ctx context.Context, workspaceID uuid.UUID, minRating int) ([]models.Testimonial, error)
+// 	GetRecentTestimonials(ctx context.Context, workspaceID uuid.UUID, days int, limit int) ([]models.Testimonial, error)
+// 	GetTestimonialsByAuthor(ctx context.Context, workspaceID uuid.UUID, authorEmail string) ([]models.Testimonial, error)
 
-	// Bulk operations
-	BulkUpdateStatus(ctx context.Context, testimonialIDs []uuid.UUID, status string) error
-	BulkDelete(ctx context.Context, testimonialIDs []uuid.UUID) error
+// 	// Bulk operations
+// 	BulkUpdateStatus(ctx context.Context, testimonialIDs []uuid.UUID, status string) error
+// 	BulkDelete(ctx context.Context, testimonialIDs []uuid.UUID) error
 
-	// Analytics
-	GetStatusCounts(ctx context.Context, workspaceID uuid.UUID) (map[string]int, error)
-	GetTypeCounts(ctx context.Context, workspaceID uuid.UUID) (map[string]int, error)
-	GetAverageRating(ctx context.Context, workspaceID uuid.UUID) (float64, error)
-	GetTopAuthors(ctx context.Context, workspaceID uuid.UUID, limit int) ([]models.AuthorStats, error)
-}
+// 	// Analytics
+// 	GetStatusCounts(ctx context.Context, workspaceID uuid.UUID) (map[string]int, error)
+// 	GetTypeCounts(ctx context.Context, workspaceID uuid.UUID) (map[string]int, error)
+// 	GetAverageRating(ctx context.Context, workspaceID uuid.UUID) (float64, error)
+// 	GetTopAuthors(ctx context.Context, workspaceID uuid.UUID, limit int) ([]models.AuthorStats, error)
+// }
 
-type testimonialService struct {
+type TestimonialService struct {
 	repo           repositories.TestimonialRepository
+	userRepo       repositories.UserRepository
 	storageService *storage.StorageFactory
 	db             *sql.DB
 	redis          *redis.Client
@@ -51,13 +53,15 @@ type testimonialService struct {
 
 func NewTestimonialService(
 	repo repositories.TestimonialRepository,
+	userRepo repositories.UserRepository,
 	storageService *storage.StorageFactory,
 	db *sql.DB,
 	redis *redis.Client,
 	logger *zap.Logger,
 ) TestimonialService {
-	return &testimonialService{
+	return TestimonialService{
 		repo:           repo,
+		userRepo:       userRepo,
 		storageService: storageService,
 		db:             db,
 		redis:          redis,
@@ -65,8 +69,20 @@ func NewTestimonialService(
 	}
 }
 
-func (s *testimonialService) GetTestimonialByID(ctx context.Context, id uuid.UUID) (*models.Testimonial, error) {
-	testimonial, err := s.repo.FetchByID(ctx, id, s.db)
+func (s *TestimonialService) GetTestimonialByID(ctx context.Context, id uuid.UUID) (*models.Testimonial, error) {
+	uid, err := middleware.GetUserFromContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("user is not authorized to acccess resource %w", err)
+	}
+
+	workspaceID, err := s.userRepo.GetWorkspaceByUID(ctx, uid, s.db)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get the workspace ID %w", err)
+	}
+
+	fmt.Println("workspace id after", workspaceID)
+
+	testimonial, err := s.repo.FetchByTestimonialAndWorkspaceID(ctx, id, workspaceID, s.db)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("testimonial not found")
@@ -78,8 +94,18 @@ func (s *testimonialService) GetTestimonialByID(ctx context.Context, id uuid.UUI
 	return testimonial, nil
 }
 
-func (s *testimonialService) GetTestimonialsByWorkspace(ctx context.Context, workspaceID uuid.UUID, filter models.TestimonialFilter) ([]models.Testimonial, error) {
+func (s *TestimonialService) GetTestimonialsByWorkspace(ctx context.Context, filter models.TestimonialFilter) ([]models.Testimonial, error) {
 	// Set default limit if not provided
+	uid, err := middleware.GetUserFromContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("user is not authorized to acccess resource %w", err)
+	}
+
+	workspaceID, err := s.userRepo.GetWorkspaceByUID(ctx, uid, s.db)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get the workspace ID %w", err)
+	}
+
 	if filter.Limit == 0 {
 		filter.Limit = 50
 	}
@@ -95,7 +121,7 @@ func (s *testimonialService) GetTestimonialsByWorkspace(ctx context.Context, wor
 	return testimonials, nil
 }
 
-func (s *testimonialService) UpdateTestimonial(ctx context.Context, testimonial *models.Testimonial) error {
+func (s *TestimonialService) UpdateTestimonial(ctx context.Context, testimonial *models.Testimonial) error {
 	// Validate required fields
 	if err := s.validateTestimonial(testimonial); err != nil {
 		return fmt.Errorf("validation failed: %w", err)
@@ -113,7 +139,7 @@ func (s *testimonialService) UpdateTestimonial(ctx context.Context, testimonial 
 	return nil
 }
 
-func (s *testimonialService) DeleteTestimonial(ctx context.Context, id uuid.UUID) error {
+func (s *TestimonialService) DeleteTestimonial(ctx context.Context, id uuid.UUID) error {
 	// Check if testimonial exists
 	_, err := s.GetTestimonialByID(ctx, id)
 	if err != nil {
@@ -130,7 +156,7 @@ func (s *testimonialService) DeleteTestimonial(ctx context.Context, id uuid.UUID
 	return nil
 }
 
-func (s *testimonialService) SearchTestimonials(ctx context.Context, workspaceID uuid.UUID, query string, filter models.TestimonialFilter) ([]*models.Testimonial, error) {
+func (s *TestimonialService) SearchTestimonials(ctx context.Context, workspaceID uuid.UUID, query string, filter models.TestimonialFilter) ([]*models.Testimonial, error) {
 	if query == "" {
 		return nil, fmt.Errorf("search query cannot be empty")
 	}
@@ -152,7 +178,7 @@ func (s *testimonialService) SearchTestimonials(ctx context.Context, workspaceID
 	return testimonials, nil
 }
 
-func (s *testimonialService) GetTestimonialStats(ctx context.Context, workspaceID uuid.UUID) (*models.TestimonialStats, error) {
+func (s *TestimonialService) GetTestimonialStats(ctx context.Context, workspaceID uuid.UUID) (*models.TestimonialStats, error) {
 	stats, err := s.repo.GetStats(ctx, workspaceID, s.db)
 	if err != nil {
 		s.logger.Error("Failed to get testimonial stats",
@@ -164,7 +190,7 @@ func (s *testimonialService) GetTestimonialStats(ctx context.Context, workspaceI
 	return stats, nil
 }
 
-func (s *testimonialService) GetTestimonialsByStatus(ctx context.Context, workspaceID uuid.UUID, status string, limit int) ([]models.Testimonial, error) {
+func (s *TestimonialService) GetTestimonialsByStatus(ctx context.Context, workspaceID uuid.UUID, status string, limit int) ([]models.Testimonial, error) {
 	if limit == 0 {
 		limit = 50
 	}
@@ -181,7 +207,7 @@ func (s *testimonialService) GetTestimonialsByStatus(ctx context.Context, worksp
 	return testimonials, nil
 }
 
-func (s *testimonialService) GetTestimonialsByType(ctx context.Context, workspaceID uuid.UUID, testimonialType string, limit int) ([]models.Testimonial, error) {
+func (s *TestimonialService) GetTestimonialsByType(ctx context.Context, workspaceID uuid.UUID, testimonialType string, limit int) ([]models.Testimonial, error) {
 	if limit == 0 {
 		limit = 50
 	}
@@ -198,7 +224,7 @@ func (s *testimonialService) GetTestimonialsByType(ctx context.Context, workspac
 	return testimonials, nil
 }
 
-func (s *testimonialService) GetTestimonialsByRating(ctx context.Context, workspaceID uuid.UUID, minRating int) ([]models.Testimonial, error) {
+func (s *TestimonialService) GetTestimonialsByRating(ctx context.Context, workspaceID uuid.UUID, minRating int) ([]models.Testimonial, error) {
 	if minRating < 1 || minRating > 5 {
 		return nil, fmt.Errorf("rating must be between 1 and 5")
 	}
@@ -215,7 +241,7 @@ func (s *testimonialService) GetTestimonialsByRating(ctx context.Context, worksp
 	return testimonials, nil
 }
 
-func (s *testimonialService) GetRecentTestimonials(ctx context.Context, workspaceID uuid.UUID, days int, limit int) ([]models.Testimonial, error) {
+func (s *TestimonialService) GetRecentTestimonials(ctx context.Context, workspaceID uuid.UUID, days int, limit int) ([]models.Testimonial, error) {
 	if days <= 0 {
 		days = 30
 	}
@@ -235,7 +261,7 @@ func (s *testimonialService) GetRecentTestimonials(ctx context.Context, workspac
 	return testimonials, nil
 }
 
-func (s *testimonialService) GetTestimonialsByAuthor(ctx context.Context, workspaceID uuid.UUID, authorEmail string) ([]models.Testimonial, error) {
+func (s *TestimonialService) GetTestimonialsByAuthor(ctx context.Context, workspaceID uuid.UUID, authorEmail string) ([]models.Testimonial, error) {
 	if authorEmail == "" {
 		return nil, fmt.Errorf("author email cannot be empty")
 	}
@@ -253,7 +279,7 @@ func (s *testimonialService) GetTestimonialsByAuthor(ctx context.Context, worksp
 }
 
 // Bulk operations
-func (s *testimonialService) BulkUpdateStatus(ctx context.Context, testimonialIDs []uuid.UUID, status string) error {
+func (s *TestimonialService) BulkUpdateStatus(ctx context.Context, testimonialIDs []uuid.UUID, status string) error {
 	if len(testimonialIDs) == 0 {
 		return fmt.Errorf("no testimonial IDs provided")
 	}
@@ -274,7 +300,7 @@ func (s *testimonialService) BulkUpdateStatus(ctx context.Context, testimonialID
 	return nil
 }
 
-func (s *testimonialService) BulkDelete(ctx context.Context, testimonialIDs []uuid.UUID) error {
+func (s *TestimonialService) BulkDelete(ctx context.Context, testimonialIDs []uuid.UUID) error {
 	if len(testimonialIDs) == 0 {
 		return fmt.Errorf("no testimonial IDs provided")
 	}
@@ -294,7 +320,7 @@ func (s *testimonialService) BulkDelete(ctx context.Context, testimonialIDs []uu
 }
 
 // Analytics methods
-func (s *testimonialService) GetStatusCounts(ctx context.Context, workspaceID uuid.UUID) (map[string]int, error) {
+func (s *TestimonialService) GetStatusCounts(ctx context.Context, workspaceID uuid.UUID) (map[string]int, error) {
 	counts, err := s.repo.GetCountByStatus(ctx, workspaceID, s.db)
 	if err != nil {
 		s.logger.Error("Failed to get status counts",
@@ -306,7 +332,7 @@ func (s *testimonialService) GetStatusCounts(ctx context.Context, workspaceID uu
 	return counts, nil
 }
 
-func (s *testimonialService) GetTypeCounts(ctx context.Context, workspaceID uuid.UUID) (map[string]int, error) {
+func (s *TestimonialService) GetTypeCounts(ctx context.Context, workspaceID uuid.UUID) (map[string]int, error) {
 	counts, err := s.repo.GetCountByType(ctx, workspaceID, s.db)
 	if err != nil {
 		s.logger.Error("Failed to get type counts",
@@ -318,7 +344,7 @@ func (s *testimonialService) GetTypeCounts(ctx context.Context, workspaceID uuid
 	return counts, nil
 }
 
-func (s *testimonialService) GetAverageRating(ctx context.Context, workspaceID uuid.UUID) (float64, error) {
+func (s *TestimonialService) GetAverageRating(ctx context.Context, workspaceID uuid.UUID) (float64, error) {
 	avgRating, err := s.repo.GetAverageRating(ctx, workspaceID, s.db)
 	if err != nil {
 		s.logger.Error("Failed to get average rating",
@@ -330,7 +356,7 @@ func (s *testimonialService) GetAverageRating(ctx context.Context, workspaceID u
 	return avgRating, nil
 }
 
-func (s *testimonialService) GetTopAuthors(ctx context.Context, workspaceID uuid.UUID, limit int) ([]models.AuthorStats, error) {
+func (s *TestimonialService) GetTopAuthors(ctx context.Context, workspaceID uuid.UUID, limit int) ([]models.AuthorStats, error) {
 	if limit == 0 {
 		limit = 10
 	}
@@ -347,7 +373,7 @@ func (s *testimonialService) GetTopAuthors(ctx context.Context, workspaceID uuid
 }
 
 // Helper Methods
-func (s *testimonialService) validateTestimonial(testimonial *models.Testimonial) error {
+func (s *TestimonialService) validateTestimonial(testimonial *models.Testimonial) error {
 	if testimonial.WorkspaceID == uuid.Nil {
 		return fmt.Errorf("workspace_id is required")
 	}
@@ -385,7 +411,7 @@ func (s *testimonialService) validateTestimonial(testimonial *models.Testimonial
 	return nil
 }
 
-func (s *testimonialService) validateType(testimonialType string) error {
+func (s *TestimonialService) validateType(testimonialType string) error {
 	validTypes := []string{"text", "video", "audio"}
 	for _, validType := range validTypes {
 		if testimonialType == validType {
@@ -395,7 +421,7 @@ func (s *testimonialService) validateType(testimonialType string) error {
 	return fmt.Errorf("invalid type: must be one of %v", validTypes)
 }
 
-func (s *testimonialService) validateStatus(status string) error {
+func (s *TestimonialService) validateStatus(status string) error {
 	validStatuses := []string{"draft", "published", "archived", "processing"}
 	for _, validStatus := range validStatuses {
 		if status == validStatus {
