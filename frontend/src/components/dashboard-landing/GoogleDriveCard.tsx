@@ -8,7 +8,6 @@ export const GoogleDriveCard = () => {
   const navigate = useNavigate();
 
   const handleGoogleDriveConnect = () => {
-    console.log('Google Drive card button clicked!');
     // Navigate to the Google Drive integration page
     navigate('/dashboard?tab=google-drive');
   };

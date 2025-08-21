@@ -9,7 +9,6 @@ export const LinkedInCard = () => {
   const navigate = useNavigate();
 
   const handleLinkedInConnect = () => {
-    console.log('LinkedIn card button clicked!');
     // Navigate to the LinkedIn integration page
     navigate('/dashboard?tab=linkedin');
   };

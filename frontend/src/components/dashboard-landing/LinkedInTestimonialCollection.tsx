@@ -46,7 +46,6 @@ interface UploadProgress {
 }
 
 const LinkedInTestimonialCollection = () => {
-  console.log('LinkedInTestimonialCollection component rendered');
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [testimonials, setTestimonials] = useState<LinkedInTestimonial[]>([]);
@@ -61,7 +60,6 @@ const LinkedInTestimonialCollection = () => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    console.log('LinkedInTestimonialCollection useEffect - component mounted');
     if (isConnected) {
       // Testimonials will be loaded via the service when connected
     }
@@ -106,21 +104,14 @@ const LinkedInTestimonialCollection = () => {
   }, []);
 
   const handleLinkedInConnect = async () => {
-    console.log('LinkedIn connect button clicked!');
-    console.log('Current state - isConnected:', isConnected, 'isConnecting:', isConnecting);
     setIsConnecting(true);
     setError(null);
     try {
-      console.log('Calling oauthService.connectProvider...');
       const result = await oauthService.connectProvider('linkedin');
-      console.log('Connection result:', result);
       if (result.success) {
-        console.log('Setting isConnected to true');
         setIsConnected(true);
         // Fetch testimonials after successful connection
-        console.log('Fetching testimonials...');
         const testimonialsData = await oauthService.getLinkedInTestimonials();
-        console.log('Testimonials data:', testimonialsData);
         // Add selected property to each testimonial
         const testimonialsWithSelection = testimonialsData.map((testimonial: any) => ({
           ...testimonial,
@@ -132,7 +123,6 @@ const LinkedInTestimonialCollection = () => {
       console.error('Failed to connect to LinkedIn:', error);
       setError('Failed to connect to LinkedIn. Please try again.');
     } finally {
-      console.log('Setting isConnecting to false');
       setIsConnecting(false);
     }
   };
@@ -234,19 +224,6 @@ const LinkedInTestimonialCollection = () => {
   if (!isConnected) {
     return (
       <div ref={containerRef} className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 px-4 py-12">
-        {/* Test button for debugging */}
-        <div className="absolute top-4 right-4 z-50">
-          <button
-            onClick={() => {
-              console.log('LinkedIn test button clicked!');
-              alert('LinkedIn test button works!');
-            }}
-            className="bg-red-500 text-white px-4 py-2 rounded"
-          >
-            Test Button
-          </button>
-        </div>
-        
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <motion.div
@@ -330,18 +307,10 @@ const LinkedInTestimonialCollection = () => {
               whileHover={{ scale: 1.02, y: -2 }}
               whileTap={{ scale: 0.98 }}
               onClick={(e) => {
-                console.log('LinkedIn button clicked!', e);
-                console.log('Event type:', e.type);
-                console.log('Event target:', e.target);
-                console.log('Event currentTarget:', e.currentTarget);
-                console.log('Button disabled state:', e.currentTarget.disabled);
-                console.log('Component state - isConnecting:', isConnecting);
-                alert('LinkedIn button clicked! This confirms the button is working.');
-                if (!isConnecting) {
-                  handleLinkedInConnect();
-                } else {
-                  console.log('Button is disabled, not calling handleLinkedInConnect');
+                if (isConnecting) {
+                  return;
                 }
+                handleLinkedInConnect();
               }}
               disabled={isConnecting}
               className="group relative px-12 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-2xl font-bold text-lg shadow-2xl hover:shadow-blue-500/25 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed"

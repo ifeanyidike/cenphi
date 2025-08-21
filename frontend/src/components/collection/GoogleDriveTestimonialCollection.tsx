@@ -54,7 +54,6 @@ interface UploadProgress {
 }
 
 const GoogleDriveTestimonialCollection: React.FC = () => {
-  console.log('GoogleDriveTestimonialCollection component rendered');
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [files, setFiles] = useState<DriveFile[]>([]);
@@ -72,7 +71,6 @@ const GoogleDriveTestimonialCollection: React.FC = () => {
 
 
   useEffect(() => {
-    console.log('GoogleDriveTestimonialCollection useEffect - component mounted');
     if (isConnected) {
       // Files will be loaded via the service when connected
     }
@@ -117,28 +115,20 @@ const GoogleDriveTestimonialCollection: React.FC = () => {
   }, []);
 
   const handleGoogleDriveConnect = async () => {
-    console.log('Google Drive connect button clicked!');
-    console.log('Current state - isConnected:', isConnected, 'isConnecting:', isConnecting);
     setIsConnecting(true);
     setError(null);
     try {
-      console.log('Calling oauthService.connectProvider for Google...');
       const result = await oauthService.connectProvider('google');
-      console.log('Google connection result:', result);
       if (result.success) {
-        console.log('Setting isConnected to true');
         setIsConnected(true);
         // Fetch files after successful connection
-        console.log('Fetching Google Drive files...');
         const filesData = await oauthService.getGoogleDriveFiles();
-        console.log('Google Drive files data:', filesData);
         setFiles(filesData);
       }
     } catch (error) {
       console.error('Failed to connect to Google Drive:', error);
       setError('Failed to connect to Google Drive. Please try again.');
     } finally {
-      console.log('Setting isConnecting to false');
       setIsConnecting(false);
     }
   };
@@ -249,19 +239,6 @@ const GoogleDriveTestimonialCollection: React.FC = () => {
   if (!isConnected) {
     return (
       <div ref={containerRef} className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 px-4 py-12">
-        {/* Test button for debugging */}
-        <div className="absolute top-4 right-4 z-50">
-          <button
-            onClick={() => {
-              console.log('Google Drive test button clicked!');
-              alert('Google Drive test button works!');
-            }}
-            className="bg-red-500 text-white px-4 py-2 rounded"
-          >
-            Test Button
-          </button>
-        </div>
-        
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <motion.div
@@ -345,18 +322,10 @@ const GoogleDriveTestimonialCollection: React.FC = () => {
               whileHover={{ scale: 1.02, y: -2 }}
               whileTap={{ scale: 0.98 }}
               onClick={(e) => {
-                console.log('Google Drive button clicked!', e);
-                console.log('Event type:', e.type);
-                console.log('Event target:', e.target);
-                console.log('Event currentTarget:', e.currentTarget);
-                console.log('Button disabled state:', e.currentTarget.disabled);
-                console.log('Component state - isConnecting:', isConnecting);
-                alert('Google Drive button clicked! This confirms the button is working.');
-                if (!isConnecting) {
-                  handleGoogleDriveConnect();
-                } else {
-                  console.log('Button is disabled, not calling handleGoogleDriveConnect');
+                if (isConnecting) {
+                  return;
                 }
+                handleGoogleDriveConnect();
               }}
               disabled={isConnecting}
               className="group relative px-12 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-lg shadow-2xl hover:shadow-blue-500/25 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed"

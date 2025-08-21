@@ -1,57 +1,117 @@
-# docker-compose.yaml - for common docker compose processes
+# # docker-compose.yaml - for common docker compose processes
+
+# services:
+#   frontend:
+#     build:
+#       context: ./frontend
+#       dockerfile: Dockerfile
+#     ports:
+#       - 3300:3000
+#     volumes:
+#       - ./frontend:/usr/src/app
+#     tty: true
+#     depends_on:
+#       - api-server
+#     command: ["yarn", "vite", "--host"]
+
+#   api-server:
+#     build:
+#       context: ./api-server
+#       dockerfile: Dockerfile.dev
+#     ports:
+#       - "8081:8081"
+#     env_file:
+#       - ./api-server/.env
+#       - ~/.aws:/root/.aws:ro
+#       # - /etc/ssl/certs:/etc/ssl/certs:ro
+#     depends_on:
+#       - cenphidb
+#     command: ["air", "-c", ".air.toml"]
+#     # command: ["/app/api"]
+
+#   ai-service:
+#     # image: cenphi-ai-service.slim # the slim image is for production
+#     build:
+#       context: ./ai-service
+#       dockerfile: Dockerfile.dev
+#     ports:
+#       - "50052:50052"
+#     env_file:
+#       - ./ai-service/.env
+#     volumes:
+#       - ./ai-service:/app
+#       - /app/venv
+#       - ai-model-cache:/root/.cache/huggingface
+#     environment:
+#       # Add any required environment variables
+#       - PYTHONUNBUFFERED=1
+#       - TRANSFORMERS_CACHE=/root/.cache/huggingface
+#     depends_on:
+#       - api-server
+#     # command: ["/opt/venv/bin/python", "main.py"]
+#     command: ["python", "main.py"]
+
+#   cenphidb:
+#     image: postgres:latest
+#     container_name: cenphi_postgres
+#     ports:
+#       - "5434:5432"
+#     environment:
+#       POSTGRES_USER: "${DB_USERNAME}"
+#       POSTGRES_PASSWORD: "${DB_PASSWORD}"
+#       POSTGRES_DB: "cenphidb"
+#     volumes:
+#       - dbdata:/var/lib/postgresql/data
+#       - ./init_test_db.sql:/docker-entrypoint-initdb.d/init_test_db.sql
+
+#   # cenphidb:
+#   #   image: busybox
+#   #   command: ["tail", "-f", "/dev/null"]
+
+# volumes:
+#   dbdata:
+#     name: cenphi_dbdata
+#   ai-model-cache:
+#     name: cenphi_ai_models
+
+# docker-compose.yaml - for production docker compose processes
 
 services:
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
     ports:
-      - 3300:3000
-    volumes:
-      - ./frontend:/usr/src/app
-    tty: true
+      - 3300:80 # assuming nginx or similar serves on 80
     depends_on:
       - api-server
-    command: ["yarn", "vite", "--host"]
+    # command: ["nginx", "-g", "daemon off;"] # or your production command
 
   api-server:
     build:
       context: ./api-server
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
     ports:
       - "8081:8081"
     env_file:
       - ./api-server/.env
-    volumes:
-      - ./api-server:/src
-      - ~/.aws:/root/.aws:ro
-      # - /etc/ssl/certs:/etc/ssl/certs:ro
     depends_on:
       - cenphidb
-    command: ["air", "-c", ".air.toml"]
-    # command: ["/app/api"]
+      - redis
+    # command: ["/app/api"] # or your production entrypoint
 
-  ai-service:
-    # image: cenphi-ai-service.slim # the slim image is for production
-    build:
-      context: ./ai-service
-      dockerfile: Dockerfile.dev
-    ports:
-      - "50052:50052"
-    env_file:
-      - ./ai-service/.env
-    volumes:
-      - ./ai-service:/app
-      - /app/venv
-      - ai-model-cache:/root/.cache/huggingface
-    environment:
-      # Add any required environment variables
-      - PYTHONUNBUFFERED=1
-      - TRANSFORMERS_CACHE=/root/.cache/huggingface
-    depends_on:
-      - api-server
-    # command: ["/opt/venv/bin/python", "main.py"]
-    command: ["python", "main.py"]
+  # cenphidb:
+  #   image: postgres:latest
+  #   container_name: cenphi_postgres
+  #   ports:
+  #     - "5434:5432"
+  #   environment:
+  #     POSTGRES_USER: "${DB_USERNAME}"
+  #     POSTGRES_PASSWORD: "${DB_PASSWORD}"
+  #     POSTGRES_DB: "cenphidb"
+  #   volumes:
+  #     - dbdata:/var/lib/postgresql/data
+  #     - ./init_test_db.sql:/docker-entrypoint-initdb.d/init_test_db.sql
 
   cenphidb:
     image: postgres:latest
@@ -59,19 +119,27 @@ services:
     ports:
       - "5434:5432"
     environment:
-      POSTGRES_USER: "${DB_USERNAME}"
-      POSTGRES_PASSWORD: "${DB_PASSWORD}"
+      POSTGRES_USER: "postgres.czmbxmefbzrrarhiayjh"
+      POSTGRES_PASSWORD: "ZDBdEJQd5xbKh0LA"
       POSTGRES_DB: "cenphidb"
     volumes:
       - dbdata:/var/lib/postgresql/data
       - ./init_test_db.sql:/docker-entrypoint-initdb.d/init_test_db.sql
 
-  # cenphidb:
-  #   image: busybox
-  #   command: ["tail", "-f", "/dev/null"]
+  redis:
+    image: redis:latest
+    container_name: cenphi_redis
+    ports:
+      - "6379:6379"
 
 volumes:
   dbdata:
     name: cenphi_dbdata
-  ai-model-cache:
-    name: cenphi_ai_models
+# NOTE: Update your ./api-server/.env file for local development:
+# DB_HOST=cenphidb
+# DB_PORT=5432
+# DB_USERNAME=your_db_user
+# DB_PASSWORD=your_db_password
+# DB_NAME=cenphidb
+# REDIS_HOST=redis
+# REDIS_PORT=6379
