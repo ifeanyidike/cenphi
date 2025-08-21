@@ -1,6 +1,8 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 
+
+ console.log('Firebase configuration loaded');
 const env = import.meta.env;
 const firebaseConfig = {
   apiKey: env.VITE_FIREBASE_API_KEY,
@@ -11,6 +13,9 @@ const firebaseConfig = {
   appId: env.VITE_FIREBASE_APP_ID,
   measurementId: env.VITE_FIREBASE_MEASUREMENT_ID,
 };
+
+ console.log('Firebase configuration loaded', process.env);
+  console.log('VITE.ENV', firebaseConfig.apiKey);
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
