@@ -13,7 +13,7 @@ import { itemVariants } from "@/utils/helpers";
 import { CollectionMethod, TriggerSettingKeys } from "@/types/setup";
 
 // Component imports
-import Header from "./Header";
+import Header from "@/components/testimonial/Header";
 import AiOptimizationCard from "./AiOptimizationCard";
 import MethodTabs from "./MethodTabs";
 import AddFormatDialog from "./common/AddFormatDialog";

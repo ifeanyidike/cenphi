@@ -604,7 +604,7 @@ import {
   Users,
   Cloud,
 } from "lucide-react";
-import GoogleDriveTestimonialCollection from "./GoogleDriveTestimonialCollection";
+import GoogleDriveTestimonialCollection from "@/components/dashboard-landing/GoogleDriveTestimonialCollection";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
 import { motion, AnimatePresence, useAnimation } from "framer-motion";

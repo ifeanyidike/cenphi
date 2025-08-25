@@ -25,7 +25,7 @@ var DB Database
 
 func retryConnection(dsn string, maxRetries int, delay time.Duration) (*sql.DB, error) {
 	var lastErr error
-	for i := 0; i < maxRetries; i++ {
+	for range maxRetries {
 		db, err := sql.Open("postgres", dsn)
 		if err != nil {
 			lastErr = err
@@ -56,7 +56,7 @@ func retryConnection(dsn string, maxRetries int, delay time.Duration) (*sql.DB, 
 	return nil, fmt.Errorf("failed to connect to the db after %d retries: %v", maxRetries, lastErr)
 }
 
-func InitializeDatabase(cfg *Config) (*sql.DB, *redis.Client, error) {
+func InitializeDatabase(cfg Config) (*sql.DB, *redis.Client, error) {
 	db, err := retryConnection(cfg.Database.DSN, 5, 1*time.Second)
 	if err != nil {
 		return nil, nil, err

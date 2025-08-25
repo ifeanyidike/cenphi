@@ -14,6 +14,6 @@ func NewSwaggerController() *SwaggerController {
 
 func (s *SwaggerController) SwaggerHandler(w http.ResponseWriter, r *http.Request) {
 	httpSwagger.Handler(
-		httpSwagger.URL("http://localhost:8081/api/v1/swagger/doc.json"),
+		httpSwagger.URL("http://localhost:8081/api/swagger/doc.json"),
 	).ServeHTTP(w, r)
 }

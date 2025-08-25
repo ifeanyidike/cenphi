@@ -17,212 +17,512 @@ export interface ConnectionStatus {
 }
 
 class OAuthService {
-  // private server = import.meta.env.VITE_API_URL;
+  private server: string;
 
-  // Mock data for demonstration
-  private mockProviders: OAuthProvider[] = [
-    {
-      name: "linkedin",
-      connected: false,
-      displayName: "LinkedIn",
-      icon: "linkedin",
-      color: "from-blue-600 to-blue-700"
-    },
-    {
-      name: "google",
-      connected: false,
-      displayName: "Google Drive",
-      icon: "cloud",
-      color: "from-green-600 to-green-700"
-    }
-  ];
-
-  /**
-   * Get authentication URL for a provider
-   */
-  async getAuthURL(provider: string): Promise<string> {
-    // Mock implementation - in real app, this would call the backend
-    const baseURL = window.location.origin;
-    return `${baseURL}/oauth/auth/${provider}`;
+  constructor() {
+    // Use a type assertion to handle Vite's import.meta.env
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore - Vite provides import.meta.env at runtime
+    this.server = import.meta.env.VITE_API_URL || 'http://localhost:8081';
   }
 
   /**
-   * Connect to a provider (mock implementation)
+   * Connect to a provider (real implementation)
    */
   async connectProvider(provider: string): Promise<ConnectionStatus> {
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    try {
+      // Get the OAuth URL
+      const authURL = await this.getAuthURL(provider);
+      
+      if (provider === 'google-drive' || provider === 'linkedin') {
+        // For Google Drive and LinkedIn, redirect the current window to OAuth
+        window.location.href = authURL;
+        return {
+          success: true,
+          message: `Redirecting to ${provider} OAuth...`,
+          provider: provider
+        };
+      } else {
+        // For other providers, use popup window
+        const authWindow = window.open(authURL, 'oauth', 'width=600,height=700');
+        
+        return new Promise((resolve, reject) => {
+          const checkClosed = setInterval(() => {
+            if (authWindow?.closed) {
+              clearInterval(checkClosed);
+              // Check if connection was successful by polling status
+              this.checkConnectionStatus(provider).then(resolve).catch(reject);
+            }
+          }, 1000);
 
-    // Mock successful connection
-    const mockResponse: ConnectionStatus = {
-      success: true,
-      message: `Successfully connected to ${provider}`,
-      provider,
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours from now
-    };
+          // Listen for OAuth callback message
+          const handleMessage = (event: MessageEvent) => {
+            if (event.origin !== window.location.origin) return;
+            
+            if (event.data.type === 'OAUTH_SUCCESS' && event.data.provider === provider) {
+              clearInterval(checkClosed);
+              window.removeEventListener('message', handleMessage);
+              authWindow?.close();
+              
+              resolve({
+                success: true,
+                message: `Successfully connected to ${provider}`,
+                provider,
+                expiresAt: new Date(Date.now() + 3600000) // 1 hour from now
+              });
+            } else if (event.data.type === 'OAUTH_ERROR') {
+              clearInterval(checkClosed);
+              window.removeEventListener('message', handleMessage);
+              authWindow?.close();
+              reject(new Error(event.data.error || 'OAuth failed'));
+            }
+          };
 
-    // Update mock data
-    const providerIndex = this.mockProviders.findIndex(p => p.name === provider);
-    if (providerIndex !== -1) {
-      this.mockProviders[providerIndex].connected = true;
-      this.mockProviders[providerIndex].expiresAt = mockResponse.expiresAt;
+          window.addEventListener('message', handleMessage);
+        });
+      }
+    } catch (error) {
+      console.error('Error connecting to provider:', error);
+      throw error;
     }
-
-    return mockResponse;
-  }
-
-  /**
-   * Get connected platforms
-   */
-  async getConnectedPlatforms(): Promise<OAuthProvider[]> {
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return this.mockProviders;
   }
 
   /**
    * Disconnect from a provider
    */
-  async disconnectProvider(provider: string): Promise<ConnectionStatus> {
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // Update mock data
-    const providerIndex = this.mockProviders.findIndex(p => p.name === provider);
-    if (providerIndex !== -1) {
-      this.mockProviders[providerIndex].connected = false;
-      this.mockProviders[providerIndex].expiresAt = undefined;
-    }
-
-    return {
-      success: true,
-      message: `Successfully disconnected from ${provider}`,
-      provider
-    };
-  }
-
-  /**
-   * Get LinkedIn testimonials (mock data)
-   */
-  async getLinkedInTestimonials(): Promise<any[]> {
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    return [
-      {
-        id: 1,
-        name: "Sarah Chen",
-        title: "Product Manager at Google",
-        content: "Exceptional work quality and innovative solutions. Highly recommend!",
-        rating: 5,
-        avatar: "SC",
-        relationship: "Colleague",
-        company: "Google",
-        date: "2 weeks ago",
-        skills: ["Product Strategy", "Leadership", "Innovation"]
-      },
-      {
-        id: 2,
-        name: "Michael Rodriguez",
-        title: "CTO at TechStart",
-        content: "Outstanding technical expertise and project leadership.",
-        rating: 5,
-        avatar: "MR",
-        relationship: "Client",
-        company: "TechStart",
-        date: "1 month ago",
-        skills: ["Technical Leadership", "Project Management", "Architecture"]
-      },
-      {
-        id: 3,
-        name: "Emily Watson",
-        title: "Design Director at Creative Co",
-        content: "Brilliant collaboration and creative problem-solving skills.",
-        rating: 5,
-        avatar: "EW",
-        relationship: "Colleague",
-        company: "Creative Co",
-        date: "3 weeks ago",
-        skills: ["Design Thinking", "Collaboration", "Problem Solving"]
+  async disconnectProvider(provider: string, workspaceId: string = '6fe5d4ae-3627-4103-af42-39fb40cc0a12'): Promise<void> {
+    try {
+      if (provider === 'google-drive') {
+        // For Google Drive, we need to clear the connection status locally
+        // since there's no backend disconnect endpoint implemented yet
+        console.log('Disconnecting Google Drive - clearing local connection status');
+        return;
       }
-    ];
+      
+      // For other providers, try the backend endpoint
+      const response = await fetch(`${this.server}/api/social/accounts/${provider}/disconnect`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to disconnect: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('Error disconnecting from provider:', error);
+      throw error;
+    }
   }
 
+  // ===== GOOGLE DRIVE FUNCTIONS (FOR IMPORTING TESTIMONIALS) =====
+
   /**
-   * Get Google Drive files (mock data)
+   * Get Google Drive files (real API implementation)
    */
   async getGoogleDriveFiles(): Promise<any[]> {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    return [
-      {
-        id: '1',
-        name: 'Customer Success Story - Q4.mp4',
-        type: 'video',
-        size: '45.2 MB',
-        modifiedTime: '2 hours ago',
-        webViewLink: '#',
-        downloadUrl: '#',
-        selected: false,
-        thumbnailUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjE1MCIgdmlld0JveD0iMCAwIDIwMCAxNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMTUwIiBmaWxsPSIjZjNmNGY2Ii8+Cjxwb2x5Z29uIHBvaW50cz0iNzUsNTAgMTI1LDUwIDEwMCw4NSIgZmlsbD0iIzM3NDE1MSIvPgo8L3N2Zz4K'
-      },
-      {
-        id: '2',
-        name: 'Product Review Audio.m4a',
-        type: 'audio',
-        size: '12.8 MB',
-        modifiedTime: '1 day ago',
-        webViewLink: '#',
-        downloadUrl: '#',
-        selected: false
-      },
-      {
-        id: '3',
-        name: 'Testimonial Draft.docx',
-        type: 'document',
-        size: '2.1 MB',
-        modifiedTime: '3 days ago',
-        webViewLink: '#',
-        downloadUrl: '#',
-        selected: false
-      },
-      {
-        id: '4',
-        name: 'Before-After Screenshots.png',
-        type: 'image',
-        size: '8.5 MB',
-        modifiedTime: '1 week ago',
-        webViewLink: '#',
-        downloadUrl: '#',
-        selected: false,
-        thumbnailUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjE1MCIgdmlld0JveD0iMCAwIDIwMCAxNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMTUwIiBmaWxsPSIjZjNmNGY2Ii8+CjxjaXJjbGUgY3g9IjEwMCIgY3k9Ijc1IiByPSIzMCIgZmlsbD0iIzM3NDE1MSIvPgo8L3N2Zz4K'
+    try {
+      const response = await fetch(`${this.server}/api/google/workspaces/6fe5d4ae-3627-4103-af42-39fb40cc0a12/drive/files`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Google Drive not connected. Please connect your Google Drive account first.');
+        }
+        throw new Error(`Failed to fetch files: ${response.statusText}`);
       }
-    ];
+
+      const data = await response.json();
+      return data.files || data;
+    } catch (error) {
+      console.error('Error fetching Google Drive files:', error);
+      throw error;
+    }
   }
 
   /**
-   * Import files from Google Drive
+   * Import files from Google Drive (real API implementation)
    */
-  async importGoogleDriveFiles(fileIds: string[]): Promise<any> {
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    
-    return {
-      success: true,
-      message: `Successfully imported ${fileIds.length} files`,
-      importedFiles: fileIds.length
-    };
+  async importGoogleDriveFiles(fileIds: string[], workspaceId?: string): Promise<any> {
+    try {
+      const requestBody = {
+        file_ids: fileIds,
+        importType: 'google_drive'
+      };
+      
+      console.log('Importing Google Drive files:', {
+        url: `${this.server}/api/workspaces/${workspaceId || '6fe5d4ae-3627-4103-af42-39fb40cc0a12'}/testimonials/import/google-drive`,
+        body: requestBody
+      });
+
+      const response = await fetch(`${this.server}/api/workspaces/${workspaceId || '6fe5d4ae-3627-4103-af42-39fb40cc0a12'}/testimonials/import/google-drive`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      console.log('Import response status:', response.status);
+      console.log('Import response headers:', Object.fromEntries(response.headers.entries()));
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Import error response:', errorText);
+        
+        // Handle specific error cases
+        if (response.status === 401) {
+          // Token expired or invalid - user needs to re-authenticate
+          throw new Error('Google Drive authentication expired. Please reconnect your account.');
+        }
+        
+        throw new Error(`Failed to import files: ${response.statusText} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log('Import success response:', data);
+      
+      return {
+        success: true,
+        message: `Successfully imported ${fileIds.length} files`,
+        importedFiles: fileIds.length,
+        data
+      };
+    } catch (error) {
+      console.error('Error importing Google Drive files:', error);
+      throw error;
+    }
   }
 
   /**
-   * Import testimonials from LinkedIn
+   * Get Google Drive OAuth URL
    */
-  async importLinkedInTestimonials(testimonialIds: string[]): Promise<any> {
-    await new Promise(resolve => setTimeout(resolve, 3000));
+  async getGoogleDriveAuthURL(workspaceId: string = '6fe5d4ae-3627-4103-af42-39fb40cc0a12'): Promise<string> {
+    try {
+      const response = await fetch(`${this.server}/api/google/workspaces/${workspaceId}/drive/auth`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to get Google Drive auth URL: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data.auth_url;
+    } catch (error) {
+      console.error('Error getting Google Drive auth URL:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check Google Drive connection status
+   */
+  async checkGoogleDriveConnectionStatus(workspaceId: string = '6fe5d4ae-3627-4103-af42-39fb40cc0a12'): Promise<ConnectionStatus> {
+    try {
+      const response = await fetch(`${this.server}/api/google/workspaces/${workspaceId}/drive/status`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          return {
+            success: false,
+            message: 'Google Drive authentication expired',
+            provider: 'google-drive'
+          };
+        }
+        throw new Error(`Failed to check Google Drive status: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return {
+        success: data.connected,
+        message: data.message,
+        provider: 'google-drive',
+        expiresAt: data.expiresAt ? new Date(data.expiresAt) : undefined
+      };
+    } catch (error) {
+      console.error('Error checking Google Drive connection status:', error);
+      return {
+        success: false,
+        message: 'Google Drive not connected',
+        provider: 'google-drive'
+      };
+    }
+  }
+
+  // ===== LINKEDIN FUNCTIONS (FOR PUBLISHING TESTIMONIALS) =====
+
+  /**
+   * Publish testimonial to LinkedIn (real API implementation)
+   */
+  async publishLinkedInTestimonial(testimonialData: {
+    type: 'recommendation' | 'endorsement' | 'company_testimonial';
+    recipientId: string;
+    content: string;
+    relationship?: string;
+    skills?: string[];
+    companyId?: string;
+    visibility?: 'public' | 'connections' | 'private';
+  }): Promise<any> {
+    try {
+      const response = await fetch(`${this.server}/api/social/linkedin/publish`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(testimonialData),
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('LinkedIn not connected. Please connect your LinkedIn account first.');
+        }
+        throw new Error(`Failed to publish testimonial: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        message: 'Testimonial published successfully',
+        data
+      };
+    } catch (error) {
+      console.error('Error publishing LinkedIn testimonial:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get LinkedIn connections for publishing testimonials
+   */
+  async getLinkedInConnections(): Promise<any[]> {
+    try {
+      const response = await fetch(`${this.server}/api/social/linkedin/connections`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('LinkedIn not connected. Please connect your LinkedIn account first.');
+        }
+        throw new Error(`Failed to fetch connections: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data.connections || data;
+    } catch (error) {
+      console.error('Error fetching LinkedIn connections:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get LinkedIn companies/pages for publishing testimonials
+   */
+  async getLinkedInCompanies(): Promise<any[]> {
+    try {
+      const response = await fetch(`${this.server}/api/social/linkedin/companies`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('LinkedIn not connected. Please connect your LinkedIn account first.');
+        }
+        throw new Error(`Failed to fetch companies: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data.companies || data;
+    } catch (error) {
+      console.error('Error fetching LinkedIn companies:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get LinkedIn skills for endorsements
+   */
+  async getLinkedInSkills(): Promise<any[]> {
+    try {
+      const response = await fetch(`${this.server}/api/social/linkedin/skills`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('LinkedIn not connected. Please connect your LinkedIn account first.');
+        }
+        throw new Error(`Failed to fetch skills: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data.skills || data;
+    } catch (error) {
+      console.error('Error fetching LinkedIn skills:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Draft a testimonial for LinkedIn (save without publishing)
+   */
+  async draftLinkedInTestimonial(testimonialData: {
+    type: 'recommendation' | 'endorsement' | 'company_testimonial';
+    recipientId: string;
+    content: string;
+    relationship?: string;
+    skills?: string[];
+    companyId?: string;
+    visibility?: 'public' | 'connections' | 'private';
+  }): Promise<any> {
+    try {
+      const response = await fetch(`${this.server}/api/social/linkedin/draft`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(testimonialData),
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('LinkedIn not connected. Please connect your LinkedIn account first.');
+        }
+        throw new Error(`Failed to save draft: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        message: 'Draft saved successfully',
+        data
+      };
+    } catch (error) {
+      console.error('Error saving LinkedIn draft:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get drafted testimonials
+   */
+  async getLinkedInDrafts(): Promise<any[]> {
+    try {
+      const response = await fetch(`${this.server}/api/social/linkedin/drafts`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('LinkedIn not connected. Please connect your LinkedIn account first.');
+        }
+        throw new Error(`Failed to fetch drafts: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data.drafts || data;
+    } catch (error) {
+      console.error('Error fetching LinkedIn drafts:', error);
+      throw error;
+    }
+  }
+
+  // ===== GENERIC AUTH FUNCTIONS =====
+
+  /**
+   * Override getAuthURL to handle Google Drive specifically
+   */
+  async getAuthURL(provider: string, workspaceId: string = '6fe5d4ae-3627-4103-af42-39fb40cc0a12'): Promise<string> {
+    if (provider === 'google-drive') {
+      return this.getGoogleDriveAuthURL(workspaceId);
+    }
     
-    return {
-      success: true,
-      message: `Successfully imported ${testimonialIds.length} testimonials`,
-      importedTestimonials: testimonialIds.length
-    };
+    // Use the correct backend endpoint for social platforms
+    try {
+      const response = await fetch(`${this.server}/api/workspaces/${workspaceId}/social/auth/${provider}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to get auth URL: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data.data?.auth_url || data.auth_url || data.authURL || data;
+    } catch (error) {
+      console.error('Error getting auth URL:', error);
+      throw new Error('Failed to get authentication URL');
+    }
+  }
+
+  /**
+   * Override checkConnectionStatus to handle Google Drive specifically
+   */
+  async checkConnectionStatus(provider: string, workspaceId: string = '6fe5d4ae-3627-4103-af42-39fb40cc0a12'): Promise<ConnectionStatus> {
+    if (provider === 'google-drive') {
+      return this.checkGoogleDriveConnectionStatus(workspaceId);
+    }
+    
+    // Use the correct backend endpoint for social platforms
+    try {
+      const response = await fetch(`${this.server}/api/workspaces/${workspaceId}/social/accounts`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to check connection status: ${response.statusText}`);
+      }
+
+      const responseData = await response.json();
+      const accounts = responseData.data || responseData;
+      const connectedAccount = accounts?.find((account: any) => account.platform === provider);
+
+      if (connectedAccount) {
+        return {
+          success: true,
+          message: `${provider} connected successfully`,
+          provider,
+          expiresAt: new Date(connectedAccount.expiresAt || Date.now() + 3600000)
+        };
+      } else {
+        throw new Error(`${provider} not connected`);
+      }
+    } catch (error) {
+      console.error('Error checking connection status:', error);
+      throw error;
+    }
   }
 }
 

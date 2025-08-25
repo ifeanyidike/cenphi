@@ -1,0 +1,13 @@
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args:
+  - 'buildx'
+  - 'build'
+  - '--platform=linux/amd64'
+  - '-f'
+  - 'Dockerfile.cloudrun'
+  - '-t'
+  - 'us-central1-docker.pkg.dev/cenphiio/cenphi-ai-service-repo/ai-service-grpc:${_IMAGE_TAG}'
+  - '.'
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['push', 'us-central1-docker.pkg.dev/cenphiio/cenphi-ai-service-repo/ai-service-grpc:${_IMAGE_TAG}']

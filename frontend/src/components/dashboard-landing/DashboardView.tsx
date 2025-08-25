@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { Link } from "react-router-dom";
 import {
   MessageSquare,
   Plus,
@@ -98,18 +99,13 @@ const DashboardView: React.FC = observer(() => {
             </div>
 
             <div className="flex items-center space-x-3">
-              <Button variant="outline" size="sm" className="hidden md:flex">
-                <Settings className="h-4 w-4 mr-2" />
-                Settings
-              </Button>
-              <Button variant="outline" size="sm" className="hidden md:flex">
-                <Cloud className="h-4 w-4 mr-2" />
-                Google Drive
-              </Button>
-              <Button variant="outline" size="sm" className="hidden md:flex">
-                <Linkedin className="h-4 w-4 mr-2" />
-                LinkedIn
-              </Button>
+              <Link to="/settings">
+                <Button variant="outline" size="sm" className="hidden md:flex">
+                  <Settings className="h-4 w-4 mr-2" />
+                  Settings
+                </Button>
+              </Link>
+
               <Button className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-md hover:shadow-lg transition-all duration-300">
                 <PlusCircle className="h-4 w-4 mr-2" />
                 Add Testimonial
@@ -129,20 +125,6 @@ const DashboardView: React.FC = observer(() => {
               </p>
             </div>
             <div className="flex items-center space-x-3">
-              <Button
-                variant="outline"
-                className="border-gray-300 hover:border-gray-400 text-gray-700 hover:text-gray-800"
-              >
-                <Cloud className="h-4 w-4 mr-2" />
-                Import from Drive
-              </Button>
-              <Button
-                variant="outline"
-                className="border-gray-300 hover:border-gray-400 text-gray-700 hover:text-gray-800"
-              >
-                <Linkedin className="h-4 w-4 mr-2" />
-                Import from LinkedIn
-              </Button>
               <Button
                 variant="default"
                 className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"

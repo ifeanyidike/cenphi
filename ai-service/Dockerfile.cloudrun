@@ -1,0 +1,129 @@
+# Realistic size-optimized Dockerfile with FFmpeg + OpenCV
+# Target: 800MB-1GB (realistic with FFmpeg ~100MB + OpenCV ~300MB + deps) actually still got 1.82GB
+
+# ================================================================================
+# Stage 1: Builder with practical optimization
+# ================================================================================
+ARG BUILDPLATFORM=linux/amd64
+
+FROM --platform=${BUILDPLATFORM} python:3.10-slim-bookworm AS ai-service-builder
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_PREFER_BINARY=1 \
+    PYTHONWARNINGS="ignore"
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc g++ make \
+    python3-dev \
+    pkg-config \
+    libffi-dev \
+    libjpeg-dev libpng-dev \
+    libsndfile1-dev && \
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/*
+
+# Create virtual environment
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Copy requirements
+COPY requirements-cloudrun.txt ./
+
+# Install packages with size optimization
+RUN pip install --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir -r requirements-cloudrun.txt
+
+# AGGRESSIVE cleanup of Python packages (this is where we save the most)
+RUN find /opt/venv -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true && \
+    find /opt/venv -name "*.pyc" -delete && \
+    find /opt/venv -name "*.pyo" -delete && \
+    find /opt/venv -type d -name "tests" -exec rm -rf {} + 2>/dev/null || true && \
+    find /opt/venv -type d -name "test" -exec rm -rf {} + 2>/dev/null || true && \
+    find /opt/venv -name "*.so" -exec strip {} + 2>/dev/null || true && \
+    find /opt/venv -type d -name "docs" -exec rm -rf {} + 2>/dev/null || true && \
+    find /opt/venv -type d -name "examples" -exec rm -rf {} + 2>/dev/null || true && \
+    find /opt/venv -name "*.md" -delete 2>/dev/null || true && \
+    find /opt/venv -name "LICENSE*" -delete 2>/dev/null || true && \
+    find /opt/venv -name "README*" -delete 2>/dev/null || true && \
+    find /opt/venv -type d -name "locale" -exec rm -rf {} + 2>/dev/null || true && \
+    find /opt/venv -name "*.po" -delete 2>/dev/null || true && \
+    find /opt/venv -name "*.pot" -delete 2>/dev/null || true && \
+    find /opt/venv -name "*.h" -delete 2>/dev/null || true && \
+    find /opt/venv -name "*.c" -delete 2>/dev/null || true && \
+    find /opt/venv -name "*.cpp" -delete 2>/dev/null || true
+
+# ================================================================================
+# Stage 2: Runtime with FFmpeg + OpenCV support
+# ================================================================================
+FROM --platform=${BUILDPLATFORM} python:3.10-slim-bookworm AS ai-service-runtime
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    ENV_MODE=production \
+    PYTHONPATH=/app \
+    PYTHONOPTIMIZE=2 \
+    PORT=8080 \
+    CLOUD_RUN=true \
+    USE_AI_DENOISING=false \
+    USE_AI_ENHANCEMENT=false \
+    AI_ENABLED=false \
+    SKIP_TORCH_SERVICES=true \
+    SKIP_EMOTION_ANALYSIS=true \
+    OMP_NUM_THREADS=2 \
+    OPENBLAS_NUM_THREADS=2 \
+    MKL_NUM_THREADS=2 \
+    NUMEXPR_NUM_THREADS=2 \
+    TOKENIZERS_PARALLELISM=false
+
+# Install runtime dependencies for FFmpeg + OpenCV
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libglib2.0-0 libgomp1 libopenblas0 \
+    libjpeg62-turbo libpng16-16 libtiff6 libwebp7 \
+    libavcodec59 libavformat59 libswscale6 libswresample4 \
+    libsndfile1 libasound2 \
+    libsm6 libxext6 libxrender1 libgl1-mesa-glx \
+    libssl3 libffi8 curl ca-certificates && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* \
+           /var/cache/apt/* \
+           /tmp/* \
+           /var/tmp/* \
+           /usr/share/doc/* \
+           /usr/share/man/* \
+           /usr/share/locale/* \
+           /var/log/*
+
+# Install FFmpeg (CRITICAL - keeping as requested)
+COPY --from=mwader/static-ffmpeg:7.1.1 /ffmpeg /usr/local/bin/ffmpeg
+COPY --from=mwader/static-ffmpeg:7.1.1 /ffprobe /usr/local/bin/ffprobe
+RUN chmod +x /usr/local/bin/ffmpeg /usr/local/bin/ffprobe
+
+# Copy virtual environment from ai-service-builder
+COPY --from=ai-service-builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+WORKDIR /app
+RUN mkdir -p src storage logs oci-secrets tmp
+
+# Copy application code
+ENV CACHE_BUST=2025-08-12-16:14UTC
+COPY src/ ./src/
+COPY main.py intelligence_pb2.py intelligence_pb2_grpc.py ./
+
+# Pre-compile Python bytecode for faster startup
+RUN python -m compileall -b . && \
+    find . -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+
+# Verification that critical components work
+RUN python -c "import cv2, grpc, numpy, scipy, librosa; print(f'✅ OpenCV: {cv2.__version__}')" && \
+    ffmpeg -version | head -1 && \
+    echo "✅ FFmpeg + OpenCV + Python packages verified"
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:${PORT}/health || exit 1
+
+EXPOSE 8080
+CMD ["python", "-u", "main.py"]

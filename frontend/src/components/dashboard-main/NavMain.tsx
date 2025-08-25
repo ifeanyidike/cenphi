@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/sidebar";
 import { motion } from "framer-motion";
 import { useState } from "react";
+import { useLinkedInNavigation } from "@/hooks/useLinkedInNavigation";
 
 export function NavMain({
   items,
@@ -33,6 +34,7 @@ export function NavMain({
     items.find((item) => item.isActive)?.title || null
   );
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const { handleLinkedInNavigation } = useLinkedInNavigation();
 
   return (
     <SidebarGroup>
@@ -64,6 +66,13 @@ export function NavMain({
                       }`}
                     onMouseEnter={() => setHoveredItem(item.title)}
                     onMouseLeave={() => setHoveredItem(null)}
+                    onClick={(e) => {
+                      if (item.title === "LinkedIn Ready") {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleLinkedInNavigation();
+                      }
+                    }}
                   >
                     {isActive && (
                       <motion.div
@@ -123,6 +132,12 @@ export function NavMain({
                           <a
                             href={subItem.url}
                             className="group flex items-center"
+                            onClick={(e) => {
+                              if (item.title === "LinkedIn Ready" && subItem.title.includes("LinkedIn")) {
+                                e.preventDefault();
+                                handleLinkedInNavigation();
+                              }
+                            }}
                           >
                             <span className="truncate text-sm">
                               {subItem.title}

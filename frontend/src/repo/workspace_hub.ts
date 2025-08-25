@@ -1,37 +1,5 @@
-// // stores/rootStore.ts
+// stores/rootStore.ts
 
-// import { TestimonialStore } from "./managers/testimonial";
-// import { AnalysisStore } from "./managers/AnalysisStore";
-// import { UIStore } from "./managers/UIStore";
-// import { WidgetStore } from "./managers/WidgetStore";
-// import { VideoEditorStore } from "./managers/videoEditorStore";
-// import { AudioEditorStore } from "./managers/audioEditorStore";
-// import { TextEditorStore } from "./managers/textEditorStore";
-
-// export class RootStore {
-//   testimonialStore: TestimonialStore;
-//   analysisStore: AnalysisStore;
-//   uiStore: UIStore;
-//   widgetStore: WidgetStore;
-//   videoEditorStore: VideoEditorStore;
-//   audioEditorStore: AudioEditorStore;
-//   textEditorStore: TextEditorStore;
-
-//   constructor() {
-//     this.testimonialStore = new TestimonialStore();
-//     this.analysisStore = new AnalysisStore();
-//     this.uiStore = new UIStore();
-//     this.widgetStore = new WidgetStore();
-//     this.videoEditorStore = new VideoEditorStore();
-//     this.audioEditorStore = new AudioEditorStore();
-//     this.textEditorStore = new TextEditorStore();
-//   }
-// }
-
-// // Create a single instance of the root store
-// export const rootStore = new RootStore();
-
-// repositories/WorkspaceRepository.ts
 import { auth } from "@/config/firebase";
 import { Workspace } from "@/types/workspace";
 import { makeAutoObservable, observable } from "mobx";

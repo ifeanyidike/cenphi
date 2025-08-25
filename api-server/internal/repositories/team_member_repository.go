@@ -34,7 +34,7 @@ func (r *teamMemberRepository) GetByID(ctx context.Context, id uuid.UUID, db DB)
 	query :=
 		`
         SELECT
-            workspace_id, user_id, role, permissions, settings
+            workspace_id, user_id, role, permissions
         FROM team_members
         WHERE id = $1
         `
@@ -63,14 +63,6 @@ func (r *teamMemberRepository) GetByID(ctx context.Context, id uuid.UUID, db DB)
 		}
 	} else {
 		member.Permissions = make(map[string]interface{})
-	}
-
-	if len(settingsJSON) > 0 {
-		if err := json.Unmarshal(settingsJSON, &member.Settings); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal settings JSON: %v", err)
-		}
-	} else {
-		member.Settings = make(map[string]any)
 	}
 
 	return &member, nil
@@ -104,15 +96,6 @@ func (r *teamMemberRepository) getTeamMemberData(
 		}
 	} else {
 		member.Permissions = make(map[string]any)
-	}
-
-	// Unmarshal settings JSON, if present.
-	if len(settingsJSON) > 0 {
-		if err := json.Unmarshal(settingsJSON, &member.Settings); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal settings JSON: %v", err)
-		}
-	} else {
-		member.Settings = make(map[string]any)
 	}
 
 	return &member, nil
@@ -171,7 +154,7 @@ func scanByUserID(
 func (r *teamMemberRepository) GetDataByID(ctx context.Context, id uuid.UUID, db DB) (*models.TeamMemberGetParams, error) {
 	query := `
         SELECT
-            t.workspace_id, t.user_id, t.role, t.permissions, t.settings,
+            t.workspace_id, t.user_id, t.role, t.permissions,
                    u.name, u.email, u.email_verified, u.firebase_uid,
                    w.name as workspace_name, w.plan as workspace_plan, w.website_url, w.industry
         FROM team_members t
@@ -186,7 +169,7 @@ func (r *teamMemberRepository) GetDataByID(ctx context.Context, id uuid.UUID, db
 func (r *teamMemberRepository) GetDataByUserID(ctx context.Context, userID uuid.UUID, db DB) (*models.TeamMemberGetParams, error) {
 	query := `
         SELECT
-            t.id, t.workspace_id, t.role, t.permissions, t.settings,
+            t.id, t.workspace_id, t.role, t.permissions,
                    u.name, u.email, u.email_verified, u.firebase_uid,
                    w.name as workspace_name, w.plan as workspace_plan, w.website_url, w.industry
         FROM team_members t
@@ -215,7 +198,7 @@ func (r *teamMemberRepository) Create(ctx context.Context, team_member *models.T
 func (r *teamMemberRepository) Update(ctx context.Context, team_member *models.TeamMember, id uuid.UUID, db DB) error {
 	query := `
         UPDATE team_members 
-        SET role = $2, permissions = $3, settings = $4
+        SET role = $2, permissions = $3
         WHERE id = $1
     `
 
@@ -223,7 +206,6 @@ func (r *teamMemberRepository) Update(ctx context.Context, team_member *models.T
 		id,
 		team_member.Role,
 		team_member.Permissions,
-		team_member.Settings,
 	)
 
 	return err
@@ -233,7 +215,7 @@ func (r *teamMemberRepository) GetByWorkspaceID(ctx context.Context, id uuid.UUI
 	query :=
 		`
         SELECT
-            id, workspace_id, user_id, role, permissions, settings
+            id, workspace_id, user_id, role, permissions
         FROM team_members
         WHERE workspace_id = $1
 		LIMIT $2
@@ -255,7 +237,6 @@ func (r *teamMemberRepository) GetByWorkspaceID(ctx context.Context, id uuid.UUI
 			&member.UserID,
 			&member.Role,
 			&member.Permissions,
-			&member.Settings,
 		)
 		if err != nil {
 			return nil, err

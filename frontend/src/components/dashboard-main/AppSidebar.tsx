@@ -122,61 +122,35 @@ const data = {
           title: "Review Requests",
           url: "/testimonials/requests",
         },
-        {
-          title: "Google Drive Import",
-          url: "/dashboard?tab=google-drive",
-        },
-        {
-          title: "LinkedIn Import",
-          url: "/dashboard?tab=linkedin",
-        },
       ],
     },
     {
       title: "Google Drive",
-      url: "/dashboard?tab=google-drive",
+      url: "/google-drive",
       icon: Cloud,
       items: [
         {
           title: "Import Files",
-          url: "/dashboard?tab=google-drive",
+          url: "/google-drive",
         },
         {
           title: "Connected Folders",
-          url: "/dashboard?tab=google-drive&section=folders",
+          url: "/google-drive?section=folders",
         },
         {
           title: "Sync Settings",
-          url: "/dashboard?tab=google-drive&section=settings",
+          url: "/google-drive?section=settings",
         },
         {
           title: "Processing Queue",
-          url: "/dashboard?tab=google-drive&section=queue",
+          url: "/google-drive?section=queue",
         },
       ],
     },
     {
-      title: "LinkedIn",
-      url: "/dashboard?tab=linkedin",
+      title: "LinkedIn Ready",
+      url: "/linkedin-ready",
       icon: Linkedin,
-      items: [
-        {
-          title: "Import Recommendations",
-          url: "/dashboard?tab=linkedin",
-        },
-        {
-          title: "Endorsements",
-          url: "/dashboard?tab=linkedin&section=endorsements",
-        },
-        {
-          title: "Posts & Comments",
-          url: "/dashboard?tab=linkedin&section=posts",
-        },
-        {
-          title: "Collection Settings",
-          url: "/dashboard?tab=linkedin&section=settings",
-        },
-      ],
     },
     {
       title: "AI Studio",
@@ -379,16 +353,7 @@ const data = {
       url: "/feedback",
       icon: MessagesSquare,
     },
-    {
-      name: "Google Drive",
-      url: "/dashboard?tab=google-drive",
-      icon: Cloud,
-    },
-    {
-      name: "LinkedIn",
-      url: "/dashboard?tab=linkedin",
-      icon: Linkedin,
-    },
+    
   ],
 };
 

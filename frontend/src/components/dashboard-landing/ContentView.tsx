@@ -8,9 +8,9 @@ import { motion } from "framer-motion";
 import { ReviewsSection } from "./ReviewsSection";
 import { AIActionsCard } from "./AIActionsCard";
 import { PerformanceMetricsCard } from "./PerformanceMetricsCard";
-import { GoogleDriveCard } from "./GoogleDriveCard";
-import { LinkedInCard } from "./LinkedInCard";
-import GoogleDriveTestimonialCollection from "@/components/collection/GoogleDriveTestimonialCollection";
+// import { GoogleDriveCard } from "./GoogleDriveCard";
+// import { LinkedInCard } from "./LinkedInCard";
+import GoogleDriveTestimonialCollection from "./GoogleDriveTestimonialCollection";
 import LinkedInTestimonialCollection from "./LinkedInTestimonialCollection";
 import { observer } from "mobx-react-lite";
 
@@ -59,7 +59,7 @@ export const ContentView = observer(() => {
           >
             Reviews
           </TabsTrigger>
-          <TabsTrigger
+          {/* <TabsTrigger
             value="google-drive"
             className="data-[state=active]:bg-purple-50 data-[state=active]:text-purple-700 dark:data-[state=active]:bg-gray-700"
           >
@@ -72,7 +72,7 @@ export const ContentView = observer(() => {
           >
             <Linkedin className="w-4 h-4 mr-2" />
             LinkedIn
-          </TabsTrigger>
+          </TabsTrigger> */}
           <TabsTrigger
             value="analytics"
             className="data-[state=active]:bg-purple-50 data-[state=active]:text-purple-700 dark:data-[state=active]:bg-gray-700"
@@ -111,8 +111,8 @@ export const ContentView = observer(() => {
           <div className="space-y-6">
             <AIActionsCard />
             <PerformanceMetricsCard />
-            <GoogleDriveCard />
-            <LinkedInCard />
+            {/* <GoogleDriveCard /> */}
+            {/* <LinkedInCard /> */}
             {/* <RecentActivityFeed /> */}
           </div>
         </motion.div>

@@ -18,10 +18,16 @@ import {
   ExternalLink,
   FolderOpen,
   AlertCircle,
-  Upload
+  Upload,
+  Building2,
+  Filter,
+  Calendar,
+  UserCheck,
+  Send
 } from 'lucide-react';
 import { motion, AnimatePresence } from "framer-motion";
 import { oauthService } from '@/services/oauthService';
+import LinkedInPublishModal from './LinkedInPublishModal';
 
 // Types
 interface LinkedInTestimonial {
@@ -36,6 +42,15 @@ interface LinkedInTestimonial {
   date?: string;
   skills?: string[];
   selected: boolean;
+  type?: 'testimonial' | 'recommendation' | 'endorsement' | 'company_testimonial';
+}
+
+interface LinkedInCompany {
+  id: string;
+  name: string;
+  type: string;
+  followers?: number;
+  description?: string;
 }
 
 interface UploadProgress {
@@ -45,25 +60,34 @@ interface UploadProgress {
   error?: string;
 }
 
+type DataType = 'all' | 'testimonials' | 'recommendations' | 'endorsements' | 'company_testimonials';
+type FilterType = 'all' | 'colleague' | 'client' | 'manager';
+
 const LinkedInTestimonialCollection = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [testimonials, setTestimonials] = useState<LinkedInTestimonial[]>([]);
   const [selectedTestimonials, setSelectedTestimonials] = useState<LinkedInTestimonial[]>([]);
   const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterType, setFilterType] = useState<'all' | 'colleague' | 'client' | 'manager'>('all');
+  const [filterType, setFilterType] = useState<FilterType>('all');
+  const [dataType, setDataType] = useState<DataType>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showUploadModal, setShowUploadModal] = useState(false);
-  // const [isLoading, setIsLoading] = useState(false);
+  const [showPublishModal, setShowPublishModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [companies, setCompanies] = useState<LinkedInCompany[]>([]);
+  const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
+  const [showCompanySelector, setShowCompanySelector] = useState(false);
+  const [lastSync, setLastSync] = useState<Date | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isConnected) {
-      // Testimonials will be loaded via the service when connected
+      loadLinkedInData();
     }
-  }, [isConnected]);
+  }, [isConnected, dataType, selectedCompany]);
 
   // Custom smooth scroll function with easing
   const smoothScrollTo = (element: HTMLElement, duration: number = 1500) => {
@@ -103,6 +127,65 @@ const LinkedInTestimonialCollection = () => {
     }
   }, []);
 
+  const loadLinkedInData = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      let data: LinkedInTestimonial[] = [];
+      
+      switch (dataType) {
+        case 'testimonials':
+          data = await oauthService.getLinkedInTestimonials();
+          break;
+        case 'recommendations':
+          data = await oauthService.getLinkedInRecommendations();
+          break;
+        case 'endorsements':
+          data = await oauthService.getLinkedInEndorsements();
+          break;
+        case 'company_testimonials':
+          data = await oauthService.getLinkedInCompanyTestimonials(selectedCompany || undefined);
+          break;
+        case 'all':
+        default:
+          // Load all types of data
+          const [testimonials, recommendations, endorsements, companyTestimonials] = await Promise.all([
+            oauthService.getLinkedInTestimonials(),
+            oauthService.getLinkedInRecommendations(),
+            oauthService.getLinkedInEndorsements(),
+            oauthService.getLinkedInCompanyTestimonials(selectedCompany || undefined)
+          ]);
+          data = [...testimonials, ...recommendations, ...endorsements, ...companyTestimonials];
+          break;
+      }
+
+      // Add selected property to each testimonial
+      const testimonialsWithSelection = data.map((testimonial: any) => ({
+        ...testimonial,
+        selected: false
+      }));
+      
+      setTestimonials(testimonialsWithSelection);
+      setLastSync(new Date());
+    } catch (error) {
+      console.error('Failed to load LinkedIn data:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load LinkedIn data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadCompanies = async () => {
+    try {
+      const companiesData = await oauthService.getLinkedInCompanies();
+      setCompanies(companiesData);
+    } catch (error) {
+      console.error('Failed to load companies:', error);
+      // Don't show error for companies as it's optional
+    }
+  };
+
   const handleLinkedInConnect = async () => {
     setIsConnecting(true);
     setError(null);
@@ -110,18 +193,14 @@ const LinkedInTestimonialCollection = () => {
       const result = await oauthService.connectProvider('linkedin');
       if (result.success) {
         setIsConnected(true);
-        // Fetch testimonials after successful connection
-        const testimonialsData = await oauthService.getLinkedInTestimonials();
-        // Add selected property to each testimonial
-        const testimonialsWithSelection = testimonialsData.map((testimonial: any) => ({
-          ...testimonial,
-          selected: false
-        }));
-        setTestimonials(testimonialsWithSelection);
+        // Load companies after successful connection
+        await loadCompanies();
+        // Load testimonials after successful connection
+        await loadLinkedInData();
       }
     } catch (error) {
       console.error('Failed to connect to LinkedIn:', error);
-      setError('Failed to connect to LinkedIn. Please try again.');
+      setError(error instanceof Error ? error.message : 'Failed to connect to LinkedIn. Please try again.');
     } finally {
       setIsConnecting(false);
     }
@@ -133,8 +212,17 @@ const LinkedInTestimonialCollection = () => {
       setIsConnected(false);
       setTestimonials([]);
       setSelectedTestimonials([]);
+      setCompanies([]);
+      setSelectedCompany(null);
+      setLastSync(null);
     } catch (error) {
       console.error('Failed to disconnect from LinkedIn:', error);
+    }
+  };
+
+  const handleRefresh = async () => {
+    if (isConnected) {
+      await loadLinkedInData();
     }
   };
 
@@ -190,6 +278,10 @@ const LinkedInTestimonialCollection = () => {
           progress: 100,
           status: 'complete' as const
         })));
+        
+        // Clear selected testimonials after successful import
+        setSelectedTestimonials([]);
+        setTestimonials(prev => prev.map(t => ({ ...t, selected: false })));
       }
     } catch (error) {
       console.error('Failed to import testimonials:', error);
@@ -197,20 +289,56 @@ const LinkedInTestimonialCollection = () => {
       setUploadProgress(prev => prev.map(p => ({
         ...p,
         status: 'error' as const,
-        error: 'Import failed'
+        error: error instanceof Error ? error.message : 'Import failed'
       })));
     }
   };
 
   const getFilteredTestimonials = () => {
-    return testimonials.filter(testimonial => {
-      const matchesSearch = testimonial.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           testimonial.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           (testimonial.company && testimonial.company.toLowerCase().includes(searchTerm.toLowerCase()));
-      const matchesFilter = filterType === 'all' || testimonial.relationship.toLowerCase() === filterType;
-      return matchesSearch && matchesFilter;
-    });
+    let filtered = testimonials;
+
+    // Filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter(testimonial =>
+        testimonial.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        testimonial.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        testimonial.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        testimonial.title.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Filter by relationship type
+    if (filterType !== 'all') {
+      filtered = filtered.filter(testimonial =>
+        testimonial.relationship.toLowerCase() === filterType.toLowerCase()
+      );
+    }
+
+    return filtered;
   };
+
+  const getDataTypeLabel = (type: DataType) => {
+    switch (type) {
+      case 'testimonials': return 'Testimonials';
+      case 'recommendations': return 'Recommendations';
+      case 'endorsements': return 'Endorsements';
+      case 'company_testimonials': return 'Company Reviews';
+      case 'all': return 'All Content';
+      default: return 'All Content';
+    }
+  };
+
+  const getFilterTypeLabel = (type: FilterType) => {
+    switch (type) {
+      case 'colleague': return 'Colleagues';
+      case 'client': return 'Clients';
+      case 'manager': return 'Managers';
+      case 'all': return 'All Relationships';
+      default: return 'All Relationships';
+    }
+  };
+
+  const filteredTestimonials = getFilteredTestimonials();
 
   const getRelationshipColor = (relationship: string) => {
     switch (relationship.toLowerCase()) {
@@ -346,6 +474,7 @@ const LinkedInTestimonialCollection = () => {
           </motion.div>
         </div>
       </div>
+
     );
   }
 
@@ -402,11 +531,46 @@ const LinkedInTestimonialCollection = () => {
                 />
               </div>
 
+              {/* Data Type Selector */}
+              <div className="relative">
+                <select
+                  value={dataType}
+                  onChange={(e) => setDataType(e.target.value as DataType)}
+                  className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-colors text-gray-900"
+                >
+                  <option value="all">All Content</option>
+                  <option value="testimonials">Testimonials</option>
+                  <option value="recommendations">Recommendations</option>
+                  <option value="endorsements">Endorsements</option>
+                  <option value="company_testimonials">Company Reviews</option>
+                </select>
+                <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              </div>
+
+              {/* Company Selector (only show for company testimonials) */}
+              {dataType === 'company_testimonials' && companies.length > 0 && (
+                <div className="relative">
+                  <select
+                    value={selectedCompany || ''}
+                    onChange={(e) => setSelectedCompany(e.target.value || null)}
+                    className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-colors text-gray-900"
+                  >
+                    <option value="">All Companies</option>
+                    {companies.map((company) => (
+                      <option key={company.id} value={company.id}>
+                        {company.name}
+                      </option>
+                    ))}
+                  </select>
+                  <Building2 className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                </div>
+              )}
+
               {/* Filter */}
               <div className="relative">
                 <select
                   value={filterType}
-                  onChange={(e) => setFilterType(e.target.value as any)}
+                  onChange={(e) => setFilterType(e.target.value as FilterType)}
                   className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-colors text-gray-900"
                 >
                   <option value="all">All Relationships</option>
@@ -418,31 +582,58 @@ const LinkedInTestimonialCollection = () => {
               </div>
             </div>
 
-            <div className="flex items-center space-x-4">
-              {/* View Mode */}
-              <div className="flex bg-gray-100 rounded-lg p-1">
+                          <div className="flex items-center space-x-4">
+                {/* Last Sync Indicator */}
+                {lastSync && (
+                  <div className="flex items-center space-x-2 text-sm text-gray-500">
+                    <Calendar className="w-4 h-4" />
+                    <span>Last sync: {lastSync.toLocaleTimeString()}</span>
+                  </div>
+                )}
+
+                {/* Refresh Button */}
                 <button
-                  onClick={() => setViewMode('grid')}
-                  className={`p-2 rounded ${viewMode === 'grid' ? 'bg-white shadow-sm' : ''}`}
+                  onClick={handleRefresh}
+                  disabled={isLoading}
+                  className="flex items-center space-x-2 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Grid className="w-4 h-4 text-gray-600" />
+                  <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                  <span>Refresh</span>
                 </button>
+
+                {/* Publish Button */}
                 <button
-                  onClick={() => setViewMode('list')}
-                  className={`p-2 rounded ${viewMode === 'list' ? 'bg-white shadow-sm' : ''}`}
+                  onClick={() => setShowPublishModal(true)}
+                  className="flex items-center space-x-2 text-sm font-medium text-green-600 hover:text-green-700 transition-colors"
                 >
-                  <List className="w-4 h-4 text-gray-600" />
+                  <Send className="w-4 h-4" />
+                  <span>Publish</span>
+                </button>
+
+                {/* View Mode */}
+                <div className="flex bg-gray-100 rounded-lg p-1">
+                  <button
+                    onClick={() => setViewMode('grid')}
+                    className={`p-2 rounded ${viewMode === 'grid' ? 'bg-white shadow-sm' : ''}`}
+                  >
+                    <Grid className="w-4 h-4 text-gray-600" />
+                  </button>
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={`p-2 rounded ${viewMode === 'list' ? 'bg-white shadow-sm' : ''}`}
+                  >
+                    <List className="w-4 h-4 text-gray-600" />
+                  </button>
+                </div>
+
+                {/* Select All */}
+                <button
+                  onClick={handleSelectAll}
+                  className="text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
+                >
+                  {filteredTestimonials.every(t => t.selected) ? 'Deselect All' : 'Select All'}
                 </button>
               </div>
-
-              {/* Select All */}
-              <button
-                onClick={handleSelectAll}
-                className="text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
-              >
-                {getFilteredTestimonials().every(t => t.selected) ? 'Deselect All' : 'Select All'}
-              </button>
-            </div>
           </div>
 
           {/* Selected Testimonials Summary */}
@@ -484,13 +675,79 @@ const LinkedInTestimonialCollection = () => {
           )}
         </motion.div>
 
+        {/* Error Display */}
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6"
+          >
+            <div className="flex items-center space-x-3">
+              <AlertCircle className="w-5 h-5 text-red-500" />
+              <div>
+                <h3 className="text-sm font-medium text-red-800">Error Loading Data</h3>
+                <p className="text-sm text-red-600 mt-1">{error}</p>
+              </div>
+              <button
+                onClick={() => setError(null)}
+                className="ml-auto text-red-400 hover:text-red-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Data Summary */}
+        {!isLoading && filteredTestimonials.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white/80 backdrop-blur-xl rounded-2xl p-4 mb-6 border border-gray-200 shadow-lg"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <UserCheck className="w-5 h-5 text-blue-600" />
+                  <span className="text-sm font-medium text-gray-700">
+                    {getDataTypeLabel(dataType)}
+                  </span>
+                </div>
+                <div className="w-px h-4 bg-gray-300" />
+                <span className="text-sm text-gray-600">
+                  {filteredTestimonials.length} item{filteredTestimonials.length !== 1 ? 's' : ''} found
+                </span>
+                {selectedCompany && (
+                  <>
+                    <div className="w-px h-4 bg-gray-300" />
+                    <div className="flex items-center space-x-2">
+                      <Building2 className="w-4 h-4 text-gray-500" />
+                      <span className="text-sm text-gray-600">
+                        {companies.find(c => c.id === selectedCompany)?.name}
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
+              <div className="flex items-center space-x-4 text-sm text-gray-500">
+                <span>Filtered by: {getFilterTypeLabel(filterType)}</span>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {/* Testimonials Grid/List */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
         >
-          {getFilteredTestimonials().length === 0 ? (
+          {isLoading ? (
+            <div className="text-center py-12">
+              <RefreshCw className="w-16 h-16 text-blue-400 animate-spin mx-auto mb-4" />
+              <p className="text-gray-500">Loading LinkedIn data...</p>
+            </div>
+          ) : filteredTestimonials.length === 0 ? (
             <div className="text-center py-12">
               <FolderOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-700 mb-2">No testimonials found</h3>
@@ -498,7 +755,7 @@ const LinkedInTestimonialCollection = () => {
             </div>
           ) : viewMode === 'grid' ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {getFilteredTestimonials().map((testimonial) => (
+              {filteredTestimonials.map((testimonial) => (
                 <motion.div
                   key={testimonial.id}
                   whileHover={{ scale: 1.02, y: -2 }}
@@ -529,9 +786,25 @@ const LinkedInTestimonialCollection = () => {
 
                   {/* Testimonial Info */}
                   <div>
-                    <h3 className="font-medium text-gray-900 mb-1 truncate" title={testimonial.name}>
-                      {testimonial.name}
-                    </h3>
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-medium text-gray-900 truncate" title={testimonial.name}>
+                        {testimonial.name}
+                      </h3>
+                      {/* Content Type Badge */}
+                      {testimonial.type && (
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          testimonial.type === 'testimonial' ? 'bg-blue-100 text-blue-700' :
+                          testimonial.type === 'recommendation' ? 'bg-green-100 text-green-700' :
+                          testimonial.type === 'endorsement' ? 'bg-purple-100 text-purple-700' :
+                          'bg-orange-100 text-orange-700'
+                        }`}>
+                          {testimonial.type === 'testimonial' ? 'Testimonial' :
+                           testimonial.type === 'recommendation' ? 'Recommendation' :
+                           testimonial.type === 'endorsement' ? 'Endorsement' :
+                           'Company Review'}
+                        </span>
+                      )}
+                    </div>
                     <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
                       <span className="truncate">{testimonial.title}</span>
                       {testimonial.company && (
@@ -613,7 +886,7 @@ const LinkedInTestimonialCollection = () => {
                 <div className="col-span-3">Content</div>
                 <div className="col-span-2">Date</div>
               </div>
-              {getFilteredTestimonials().map((testimonial) => (
+              {filteredTestimonials.map((testimonial) => (
                 <motion.div
                   key={testimonial.id}
                   whileHover={{ backgroundColor: 'rgba(59, 130, 246, 0.05)' }}
@@ -738,6 +1011,16 @@ const LinkedInTestimonialCollection = () => {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Publish Modal */}
+        <LinkedInPublishModal
+          isOpen={showPublishModal}
+          onClose={() => setShowPublishModal(false)}
+          onSuccess={() => {
+            // Refresh data after successful publish
+            loadLinkedInData();
+          }}
+        />
       </div>
     </div>
   );

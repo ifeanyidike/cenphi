@@ -1,91 +1,18 @@
-# # docker-compose.yaml - for common docker compose processes
-
-# services:
-#   frontend:
-#     build:
-#       context: ./frontend
-#       dockerfile: Dockerfile
-#     ports:
-#       - 3300:3000
-#     volumes:
-#       - ./frontend:/usr/src/app
-#     tty: true
-#     depends_on:
-#       - api-server
-#     command: ["yarn", "vite", "--host"]
-
-#   api-server:
-#     build:
-#       context: ./api-server
-#       dockerfile: Dockerfile.dev
-#     ports:
-#       - "8081:8081"
-#     env_file:
-#       - ./api-server/.env
-#       - ~/.aws:/root/.aws:ro
-#       # - /etc/ssl/certs:/etc/ssl/certs:ro
-#     depends_on:
-#       - cenphidb
-#     command: ["air", "-c", ".air.toml"]
-#     # command: ["/app/api"]
-
-#   ai-service:
-#     # image: cenphi-ai-service.slim # the slim image is for production
-#     build:
-#       context: ./ai-service
-#       dockerfile: Dockerfile.dev
-#     ports:
-#       - "50052:50052"
-#     env_file:
-#       - ./ai-service/.env
-#     volumes:
-#       - ./ai-service:/app
-#       - /app/venv
-#       - ai-model-cache:/root/.cache/huggingface
-#     environment:
-#       # Add any required environment variables
-#       - PYTHONUNBUFFERED=1
-#       - TRANSFORMERS_CACHE=/root/.cache/huggingface
-#     depends_on:
-#       - api-server
-#     # command: ["/opt/venv/bin/python", "main.py"]
-#     command: ["python", "main.py"]
-
-#   cenphidb:
-#     image: postgres:latest
-#     container_name: cenphi_postgres
-#     ports:
-#       - "5434:5432"
-#     environment:
-#       POSTGRES_USER: "${DB_USERNAME}"
-#       POSTGRES_PASSWORD: "${DB_PASSWORD}"
-#       POSTGRES_DB: "cenphidb"
-#     volumes:
-#       - dbdata:/var/lib/postgresql/data
-#       - ./init_test_db.sql:/docker-entrypoint-initdb.d/init_test_db.sql
-
-#   # cenphidb:
-#   #   image: busybox
-#   #   command: ["tail", "-f", "/dev/null"]
-
-# volumes:
-#   dbdata:
-#     name: cenphi_dbdata
-#   ai-model-cache:
-#     name: cenphi_ai_models
-
-# docker-compose.yaml - for production docker compose processes
-
+# docker-compose.yaml - for development environment
 services:
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile.dev
     ports:
-      - 3300:80 # assuming nginx or similar serves on 80
+      - "3000:3000"
     depends_on:
       - api-server
-    # command: ["nginx", "-g", "daemon off;"] # or your production command
+    environment:
+      - VITE_API_URL=http://localhost:8081
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
 
   api-server:
     build:
@@ -95,51 +22,272 @@ services:
       - "8081:8081"
     env_file:
       - ./api-server/.env
+    volumes:
+      - ./api-server:/src
+      - ~/.aws:/root/.aws:ro
+      # - ~/.ssh:/app/oci-secrets  # Commented out if not needed
+    environment:
+      - OCI_GO_SDK_DEBUG=info
+      - DB_USERNAME=cenphi_user
+      - DB_PASSWORD=cenphi_password
+      - DB_HOST=cenphidb
+      - DB_PORT=5432
+      - DB_NAME=cenphidb
+      - DB_SSL_MODE=disable
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=redispassword
     depends_on:
-      - cenphidb
-      - redis
-    # command: ["/app/api"] # or your production entrypoint
+      cenphidb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
-  # cenphidb:
-  #   image: postgres:latest
-  #   container_name: cenphi_postgres
+    # command: ["air", "-c", ".air.toml"]
+    command: >
+      sh -c "if [ -f /app/oci-secrets/private_rsa ]; then 
+               chmod 600 /app/oci-secrets/private_rsa && 
+               echo 'OCI key permissions set'; 
+             else 
+               echo 'OCI key not found, continuing without it'; 
+             fi && 
+             echo 'Starting server...' && 
+             /app/api"
+    # command: ["/app/api"]
+
+  # ai-service:
+  #   build:
+  #     context: ./ai-service
+  #     dockerfile: Dockerfile.cloudrun
   #   ports:
-  #     - "5434:5432"
-  #   environment:
-  #     POSTGRES_USER: "${DB_USERNAME}"
-  #     POSTGRES_PASSWORD: "${DB_PASSWORD}"
-  #     POSTGRES_DB: "cenphidb"
+  #     # - "50052:50052"
+  #     - "8080:8080"
+  #   env_file:
+  #     - ./ai-service/.env
   #   volumes:
-  #     - dbdata:/var/lib/postgresql/data
-  #     - ./init_test_db.sql:/docker-entrypoint-initdb.d/init_test_db.sql
+  #     # Model cache
+  #     - ai-model-cache:/models
+  #     # Storage and logs
+  #     - ./ai-service/storage:/app/storage
+  #     - ./ai-service/logs:/app/logs
+  #     # SSH keys for OCI
+  #     - ~/.ssh:/app/oci-secrets
+  #     # Mount source code for development
+  #     - ./ai-service/src:/app/src
+  #     # Mount pyproject.toml for Poetry
+  #     # - ./ai-service/pyproject.toml:/app/pyproject.toml:ro
+  #     # Keep Poetry's virtual environment intact
+  #     - ai-service-venv:/app/.venv
+  #     # Mount main files
+  #     - ./ai-service/main.py:/app/main.py:ro
+  #     - ./ai-service/intelligence_pb2.py:/app/intelligence_pb2.py:ro
+  #     - ./ai-service/intelligence_pb2_grpc.py:/app/intelligence_pb2_grpc.py:ro
+
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         memory: 6G # Increase memory limit significantly
+  #         cpus: "4" # Limit CPU to prevent resource contention
+  #       reservations:
+  #         memory: 2G # Reserve minimum memory
+  #         cpus: "2" # Reserve minimum CPU
+
+  #   # ============================================================================
+  #   # 🚨 SWAP AND MEMORY OPTIMIZATION
+  #   # ============================================================================
+  #   ulimits:
+  #     memlock:
+  #       soft: -1
+  #       hard: -1
+  #     stack:
+  #       soft: 67108864
+  #       hard: 67108864
+
+  #   environment:
+  #     # ============================================================================
+  #     # SERVICE MODE CONFIGURATION - SWITCH BETWEEN LOCAL AND RUNPOD
+  #     # ============================================================================
+
+  #     # Set to 'false' to test your actual implementations locally
+  #     # Set to 'true' to test with RunPod (even in development)
+  #     - USE_RUNPOD=false
+
+  #     # RunPod configuration (only used when USE_RUNPOD=true)
+  #     - RUNPOD_ENDPOINT=${RUNPOD_ENDPOINT:-http://localhost:8000}
+  #     - RUNPOD_API_KEY=${RUNPOD_API_KEY:-}
+
+  #     # ============================================================================
+  #     # CORE CONFIGURATIONS
+  #     # ============================================================================
+  #     - ENV_MODE=development
+  #     - ENVIRONMENT=development
+  #     - PYTHONUNBUFFERED=1
+  #     - PYTHONDONTWRITEBYTECODE=1
+  #     - PORT=50052
+  #     - HTTP_PORT=8000
+  #     - GRPC_MAX_WORKERS=10
+  #     - MAX_WORKERS=4
+  #     - GRPC_MAX_CONCURRENT_RPCS=100
+  #     - LOG_LEVEL=INFO
+
+  #     # ============================================================================
+  #     # MODEL AND CACHE SETTINGS
+  #     # ============================================================================
+  #     - HF_HOME=/models/huggingface
+  #     - CACHE_ENABLED=true
+  #     - DOWNLOAD_MODELS=true
+  #     # - POETRY_VIRTUALENVS_IN_PROJECT=true
+  #     - NLTK_DATA=/models/nltk_data
+  #     - WHISPER_CACHE=/models/whisper
+
+  #     # ============================================================================
+  #     # REDIS CONFIGURATION
+  #     # ============================================================================
+  #     - REDIS_HOST=redis
+  #     - REDIS_PORT=6379
+  #     - REDIS_DB=0
+  #     - REDIS_PASSWORD=redispassword
+
+  #     # ============================================================================
+  #     # OPTIMIZATION SETTINGS
+  #     # ============================================================================
+  #     - TOKENIZERS_PARALLELISM=false
+  #     - PYTORCH_JIT=0
+  #     - HF_HUB_DOWNLOAD_TIMEOUT=1200
+  #     - HF_HUB_DOWNLOAD_RETRIES=5
+  #     - REQUESTS_TIMEOUT=300
+
+  #   healthcheck:
+  #     test:
+  #       # [
+  #       #   "CMD",
+  #       #   "python",
+  #       #   "-c",
+  #       #   "import grpc, mediapipe, torch, cv2, intelligence_pb2; print('✅ All dependencies healthy')",
+  #       # ]
+  #       ["CMD", "curl", "-f", "http://localhost:8000/health"]
+  #     interval: 30s
+  #     timeout: 30s
+  #     retries: 3
+  #     start_period: 120s
+
+  #   depends_on:
+  #     redis:
+  #       condition: service_healthy
+
+  #   # Development command with proper startup
+  #   # command: >
+  #   #   sh -c "chmod 600 /app/oci-secrets/private_rsa 2>/dev/null || true &&
+  #   #          echo 'Starting AI service...' &&
+  #   #          poetry install --no-root &&
+  #   #          poetry run python main.py"
+
+  #   command: ["python", "main.py"]
+
+  #   restart: unless-stopped
+
+  # grpc-tester:
+  #   image: fullstorydev/grpcurl:latest
+  #   command: ["tail", "-f", "/dev/null"]
+  #   depends_on:
+  #     - ai-service
+  #   profiles:
+  #     - testing
+  #   volumes:
+  #     - ./ai-service:/workspace
+  #   working_dir: /workspace
+
+  # rabbitmq:
+  #   image: rabbitmq:3.12-management-alpine
+  #   container_name: cenphi_rabbitmq
+  #   ports:
+  #     - "5672:5672" # AMQP port
+  #     - "15672:15672" # Management UI port
+  #   environment:
+  #     # Create custom user instead of using default guest
+  #     - RABBITMQ_DEFAULT_USER=cenphi_user
+  #     - RABBITMQ_DEFAULT_PASS=cenphi_password
+  #     - RABBITMQ_DEFAULT_VHOST=/
+  #     - RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=-rabbit heartbeat 60
+  #   volumes:
+  #     - rabbitmq-data:/var/lib/rabbitmq
+  #     - rabbitmq-logs:/var/log/rabbitmq
+  #   healthcheck:
+  #     test: rabbitmq-diagnostics -q ping
+  #     interval: 15s
+  #     timeout: 10s
+  #     retries: 5
+  #     start_period: 60s
+  #   restart: unless-stopped
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: cenphi_redis
+    ports:
+      - "6379:6379"
+    command: >
+      redis-server 
+      --requirepass redispassword 
+      --appendonly yes 
+      --appendfsync everysec
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "redispassword", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
 
   cenphidb:
-    image: postgres:latest
+    image: postgres:15-alpine
     container_name: cenphi_postgres
     ports:
       - "5434:5432"
     environment:
-      POSTGRES_USER: "postgres.czmbxmefbzrrarhiayjh"
-      POSTGRES_PASSWORD: "ZDBdEJQd5xbKh0LA"
+      POSTGRES_USER: "cenphi_user"
+      POSTGRES_PASSWORD: "cenphi_password"
       POSTGRES_DB: "cenphidb"
     volumes:
       - dbdata:/var/lib/postgresql/data
       - ./init_test_db.sql:/docker-entrypoint-initdb.d/init_test_db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cenphi_user -d cenphidb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
 
-  redis:
-    image: redis:latest
-    container_name: cenphi_redis
-    ports:
-      - "6379:6379"
+  # # Optional LocalAI service, start with: docker-compose --profile localai up
+  # localai:
+  #   image: localai/localai:latest-aio-cpu
+  #   platform: linux/amd64
+  #   ports:
+  #     - "8080:8080"
+  #   environment:
+  #     - MODELS_PATH=/models
+  #     - CUDA_DEVICE=
+  #   volumes:
+  #     - ./localai-models:/models:cached
+  #   # profiles:
+  #   #   - localai
 
 volumes:
   dbdata:
     name: cenphi_dbdata
-# NOTE: Update your ./api-server/.env file for local development:
-# DB_HOST=cenphidb
-# DB_PORT=5432
-# DB_USERNAME=your_db_user
-# DB_PASSWORD=your_db_password
-# DB_NAME=cenphidb
-# REDIS_HOST=redis
-# REDIS_PORT=6379
+  ai-model-cache:
+    name: cenphi_ai_models
+    driver: local
+  ai-storage:
+    name: cenphi_ai_storage
+  redis-data:
+    name: cenphi_redis_data
+  # rabbitmq-data:
+  #   name: cenphi_rabbitmq_data
+  # rabbitmq-logs:
+  #   name: cenphi_rabbitmq_logs
+  ai-service-venv:

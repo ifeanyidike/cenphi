@@ -22,6 +22,8 @@ import MobileTransferPage from "@/pages/collection/MobileTransferPage";
 import ThankYouPage from "@/pages/collection/ThankYouPage";
 import WhyCenphi from "@/pages/WhyCenphi";
 import AuthFlow from "@/pages/authflow";
+import OAuthSuccess from "@/pages/OAuthSuccess";
+import GoogleDrivePage from "@/pages/GoogleDrivePage";
 
 import { useParams } from "react-router-dom";
 
@@ -41,9 +43,16 @@ import GenericProtectedRoute from "@/components/auth/protected_routes/Generic";
 import OnboardingProtectedRoute from "@/components/auth/protected_routes/Onboarding";
 import { ViewPendingReview } from "@/pages/ViewPendingDetail";
 import Sentiment from "@/pages/Sentiment";
-import TestimonialCollectionSettingsPage from "@/pages/TestimonialCollectionSettingsPage";
+// import TestimonialCollectionSettingsPage from "@/pages/TestimonialCollectionSettingsPage";
 import BrandGuidePage from "@/pages/BrandGuidePage";
 import TestimonialPage from "@/pages/TestimonialPage";
+import AIServiceTester from "@/pages/AIServiceTester";
+import Tester from "@/pages/PageTester";
+import SettingsPageWrapper from "@/pages/SettingsPageWrapper";
+import GoogleDrivePageWrapper from "@/pages/GoogleDrivePageWrapper";
+import LinkedInShareTest from "@/pages/LinkedInShareTest";
+import LinkedInReadyPageWrapper from "@/pages/LinkedInReadyPageWrapper";
+import TestConnectionStatus from "@/pages/TestConnectionStatus";
 
 // lazy load
 const LandingPage = lazy(() => import("@/pages/Landing"));
@@ -75,27 +84,25 @@ export const router = createBrowserRouter([
     path: "/",
     element: <LandingPage />,
   },
-  {
-    path: "/collection-settings",
-    element: <TestimonialCollectionSettingsPage />,
-  },
-
   { element: <BrandGuidePage />, path: "/brand-guide" },
+  { element: <AIServiceTester />, path: "/ai-tests" },
+  { element: <Tester />, path: "/tester" },
+  { element: <TestConnectionStatus />, path: "/test-connection" },
   {
     element: <DashboardProtectedRoute />,
     children: [
-      {
-        path: "/dashboard",
-        element: (
-          <ErrorBoundary
-            ErrorComponent={DashboardErrorComponent}
-            LoadingComponent={LoadingIndicator}
-            componentName="Dashboard"
-          >
-            <TestimonialsDashboard />
-          </ErrorBoundary>
-        ),
-      },
+      // {
+      //   path: "/dashboard",
+      //   element: (
+      //     <ErrorBoundary
+      //       ErrorComponent={DashboardErrorComponent}
+      //       LoadingComponent={LoadingIndicator}
+      //       componentName="Dashboard"
+      //     >
+      //       <TestimonialsDashboard />
+      //     </ErrorBoundary>
+      //   ),
+      // },
       {
         path: "/testimonial/detail/:id",
         element: (
@@ -135,6 +142,7 @@ export const router = createBrowserRouter([
         path: "/authflow",
         element: <AuthFlow />,
       },
+
       {
         path: "/checkout",
         element: (
@@ -154,6 +162,63 @@ export const router = createBrowserRouter([
     path: "/about",
     element: <WhyCenphi />,
   },
+  // {
+  //   element: <DashboardProtectedRoute />,
+  //   children: [
+  //     {
+  //       path: "/dashboard",
+  //       element: (
+  //         <ErrorBoundary
+  //           ErrorComponent={DashboardErrorComponent}
+  //           LoadingComponent={LoadingIndicator}
+  //           componentName="Dashboard"
+  //         >
+  //           <TestimonialsDashboard />
+  //         </ErrorBoundary>
+  //       ),
+  //     },
+  //     {
+  //       path: "/settings",
+  //       element: (
+  //         <ErrorBoundary
+  //           ErrorComponent={DashboardErrorComponent}
+  //           LoadingComponent={LoadingIndicator}
+  //           componentName="Settings"
+  //         >
+  //           <SettingsPageWrapper />
+  //         </ErrorBoundary>
+  //       ),
+  //     },
+  //     {
+  //       path: "/google-drive",
+  //       element: (
+  //         <ErrorBoundary
+  //           ErrorComponent={DashboardErrorComponent}
+  //           LoadingComponent={LoadingIndicator}
+  //           componentName="GoogleDrive"
+  //         >
+  //           <GoogleDrivePageWrapper />
+  //         </ErrorBoundary>
+  //       ),
+  //     },
+  //   ],
+  // },
+
+   {
+   path: "/dashboard",
+    element:    <TestimonialsDashboard />
+  },
+
+ {
+   path: "/settings",
+    element:   <SettingsPageWrapper />,
+  },
+
+ {
+    path: "/google-drive",
+    element:  <GoogleDrivePageWrapper />,
+  },
+
   {
     path: "/pending_detail",
     element: <ViewPendingReview />,
@@ -208,6 +273,19 @@ element:   <Sentiment/>
   },
 
   {
+    path: "/oauth/success",
+    element: <OAuthSuccess />,
+  },
+  {
+    path: "/linkedin-test",
+    element: <LinkedInShareTest />,
+  },
+  {
+    path: "/linkedin-ready",
+    element: <LinkedInReadyPageWrapper />,
+  },
+
+  {
     // Parent route for the testimonial collection process.
     path: "/collection",
     element: <TestimonialCollectionLayout />,
@@ -220,7 +298,7 @@ element:   <Sentiment/>
       {
         // Dynamic route: the ":type" segment must be "video", "audio", or "text".
         path: ":type",
-        loader: ({ params }) => {
+        loader: ({ params }: { params: { type?: string } }) => {
           const allowedTypes = ["video", "audio", "text"];
           if (!params.type || !allowedTypes.includes(params.type)) {
             throw new Response("Not Found", { status: 404 });

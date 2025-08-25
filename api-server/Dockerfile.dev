@@ -1,5 +1,6 @@
 # Base image with Go and Air preinstalled
 FROM golang:1.24-alpine
+ENV CGO_ENABLED=0
 
 # Set the working directory 
 WORKDIR /app
@@ -14,6 +15,8 @@ RUN go mod download && \
 COPY . .
 
 EXPOSE 8081
+
+# ENTRYPOINT ["/app/scripts/docker-entrypoint-dev.sh"]
 
 # Command to run Air
 CMD ["air", "-c", ".air.toml"]

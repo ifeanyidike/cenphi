@@ -14,7 +14,7 @@ const firebaseConfig = {
   measurementId: env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
- console.log('Firebase configuration loaded', process.env);
+
   console.log('VITE.ENV', firebaseConfig.apiKey);
 
 const app = initializeApp(firebaseConfig);

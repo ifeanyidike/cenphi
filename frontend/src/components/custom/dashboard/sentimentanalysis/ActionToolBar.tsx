@@ -54,8 +54,9 @@
 // }
 
 
-import { Check, X, Award, Calendar, Star, Flag, Share2 } from 'lucide-react';
+import { Check, X, Award, Calendar, Star, Flag, Share2, Linkedin } from 'lucide-react';
 import { Testimonial } from '@/types/testimonial';
+import LinkedInShareButton from '@/components/testimonial/LinkedInShareButton';
 
 interface ActionToolbarProps {
   testimonial: Testimonial;
@@ -154,6 +155,31 @@ export function ActionToolbar({ testimonial, isDarkMode, onStatusChange }: Actio
           <Share2 size={16} />
           Share
         </button>
+        
+        <LinkedInShareButton
+          testimonial={{
+            id: testimonial.id,
+            author_name: testimonial.customer_profile?.name,
+            author_company: testimonial.customer_profile?.company,
+            author_title: testimonial.customer_profile?.title,
+            content: testimonial.content,
+            media_url: testimonial.media_url,
+            type: testimonial.type,
+            format: testimonial.format,
+            rating: testimonial.rating,
+            tags: testimonial.tags
+          }}
+          variant="ghost"
+          size="sm"
+          showText={false}
+          className={`px-3 py-2 rounded text-sm ${
+            isDarkMode ? "text-blue-400 hover:bg-slate-700" : "text-blue-600 hover:bg-slate-200"
+          } transition-colors`}
+          onSuccess={() => {
+            // Optionally update the testimonial or show success message
+            console.log('Testimonial shared to LinkedIn successfully!');
+          }}
+        />
       </div>
     </div>
   );

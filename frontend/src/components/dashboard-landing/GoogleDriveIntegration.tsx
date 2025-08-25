@@ -30,6 +30,8 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { oauthService } from '@/services/oauthService';
+import { connectionStatusService } from '@/services/connectionStatusService';
 
 // Types
 interface DriveFile {
@@ -113,10 +115,35 @@ const GoogleDriveIntegration: React.FC = () => {
   ];
 
   useEffect(() => {
+    checkConnectionStatus();
+  }, []);
+
+  useEffect(() => {
     if (isConnected) {
-      setFiles(mockFiles);
+      loadGoogleDriveFiles();
     }
   }, [isConnected]);
+
+  const loadGoogleDriveFiles = async () => {
+    try {
+      const driveFiles = await oauthService.getGoogleDriveFiles();
+      setFiles(driveFiles);
+    } catch (error) {
+      console.error('Failed to load Google Drive files:', error);
+      // Fallback to mock files for demo purposes
+      setFiles(mockFiles);
+    }
+  };
+
+  const checkConnectionStatus = async () => {
+    try {
+      const status = await connectionStatusService.getConnectionStatus('google_drive');
+      setIsConnected(status.isConnected);
+    } catch (error) {
+      console.error('Error checking Google Drive connection status:', error);
+      setIsConnected(false);
+    }
+  };
 
   // Custom smooth scroll function with easing
   const smoothScrollTo = (element: HTMLElement, duration: number = 1500) => {
@@ -158,10 +185,27 @@ const GoogleDriveIntegration: React.FC = () => {
 
   const handleGoogleDriveConnect = async () => {
     setIsConnecting(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setIsConnected(true);
-    setIsConnecting(false);
+    try {
+      const result = await oauthService.connectProvider('google-drive');
+      if (result.success) {
+        setIsConnected(true);
+        
+        // Update connection status
+        connectionStatusService.updateConnectionStatus('google_drive', {
+          isConnected: true,
+          provider: 'google_drive',
+          accountEmail: 'Connected',
+          lastSync: new Date(),
+        });
+        
+        // Redirect back to dashboard after successful connection
+        window.location.href = '/dashboard';
+      }
+    } catch (error) {
+      console.error('Failed to connect to Google Drive:', error);
+    } finally {
+      setIsConnecting(false);
+    }
   };
 
   const handleDisconnect = () => {

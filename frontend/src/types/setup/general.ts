@@ -108,49 +108,6 @@ export type BusinessEventType =
   | "service_completed" // After a service is delivered
   | "support_interaction"; // After customer support interaction
 
-// export interface EnhancedTriggerOption {
-//   id: string;
-//   name: string;
-//   description?: string;
-//   enabled: boolean;
-//   businessEvent: BusinessEventType;
-//   userSegment: UserSegmentType[];
-//   delay: string;
-//   delayUnit: DelayUnit;
-//   frequency:
-//     | "once"
-//     | "every_time"
-//     | "daily_limit"
-//     | "weekly_limit"
-//     | "monthly_limit";
-//   frequencyLimit?: number;
-//   priority: "low" | "medium" | "high";
-//   // Add JSON schema for data the trigger expects
-//   dataSchema?: Record<string, unknown>;
-//   // Conditions for displaying the trigger (all must be true)
-//   conditions?: Array<{
-//     field: string; // Data point to evaluate
-//     operator:
-//       | "=="
-//       | "!="
-//       | ">"
-//       | "<"
-//       | ">="
-//       | "<="
-//       | "contains"
-//       | "starts_with"
-//       | "ends_with";
-//     value: string | number | boolean | null;
-//   }>;
-//   // Example data mapping for the trigger
-//   expectedData?: {
-//     example: Record<string, unknown>;
-//     required: string[];
-//     optional: string[];
-//   };
-//   // Analytics tags
-//   tags?: string[];
-// }
 export interface MessageTemplate {
   id: string;
   workspace_id: string;

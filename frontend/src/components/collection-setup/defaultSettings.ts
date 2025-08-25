@@ -1,5 +1,5 @@
 // src/components/collection-setup/defaultSettings.ts
-import { CollectionSettings, SocialPlatformName } from "@/types/setup";
+import { CollectionSettings } from "@/types/setup";
 
 export const defaultChatMessageTemplates: {
   id: string;

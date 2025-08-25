@@ -42,14 +42,25 @@ export class TestimonialManager {
     this.loading_testimonials = true;
 
     try {
+      // First ensure member data is loaded
+      if (!this.memberManager.member) {
+        console.log('TestimonialManager: No member data, trying to load user...');
+        await this.memberManager.getUser();
+      }
+
       const workspaceID = this.memberManager.member?.workspace_id;
+      console.log('TestimonialManager: Workspace ID:', workspaceID);
+      
       if (!workspaceID) {
         console.warn("No workspace ID found, skipping testimonial fetch");
         return null;
       }
 
       const url = `${this.workspaceOrchestrator.server}/${workspaceID}/testimonials`;
+      console.log('TestimonialManager: API URL:', url);
+      
       const { token } = await this.workspaceOrchestrator.getToken();
+      console.log('TestimonialManager: Got token:', !!token);
 
       const response = await fetch(url, {
         method: "GET",
@@ -59,15 +70,41 @@ export class TestimonialManager {
         },
       });
 
+      console.log('TestimonialManager: Response status:', response.status);
+      console.log('TestimonialManager: Response ok:', response.ok);
+
       if (response.ok) {
         const data = await response.json();
+        console.log('TestimonialManager: API response:', data);
+        
+        // Check if data is wrapped in a response object
+        let testimonials = data;
+        if (data && typeof data === 'object') {
+          // If data has a 'response' property, use that
+          if (data.response && data.response.testimonials) {
+            testimonials = data.response.testimonials;
+          }
+          // If data has a 'testimonials' property, use that
+          else if (data.testimonials) {
+            testimonials = data.testimonials;
+          }
+          // If data is an array, use it directly
+          else if (Array.isArray(data)) {
+            testimonials = data;
+          }
+        }
+        
+        console.log('TestimonialManager: Processed testimonials:', testimonials);
+        
         runInAction(() => {
-          this.testimonials = data;
+          this.testimonials = testimonials;
         });
-        return data;
+        return testimonials;
       }
 
-      console.error("Could not get testimonials");
+      console.error("Could not get testimonials - Response not ok");
+      const errorText = await response.text();
+      console.error("Error response:", errorText);
       return null;
     } catch (error) {
       console.error("Error fetching testimonials:", error);

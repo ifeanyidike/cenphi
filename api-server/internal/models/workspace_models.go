@@ -27,29 +27,37 @@ const (
 	PlanEnterprise Plan = "enterprise"
 )
 
-type BrandingSettings struct {
-	PrimaryColor string `json:"primary_color" validate:"required"`
-	LogoURL      string `json:"logo_url" validate:"required,url"`
-}
-
-type IntegrationSettings struct {
-	GoogleAnalyticsID string `json:"google_analytics_id" validate:"omitempty,url"`
-	SlackWebhookURL   string `json:"slack_webhook_url" validate:"omitempty,url"`
+type BrandContext struct {
+	WorkspaceID      uuid.UUID `json:"workspace_id" db:"workspace_id"`
+	AboutInfo        string    `json:"about_info" db:"about_info"`
+	Keywords         []string  `json:"keywords" db:"keywords"`
+	Tone             string    `json:"tone" db:"tone"`
+	BrandColors      JSONMap   `json:"brand_colors" db:"brand_colors"`
+	ColorSlice       []string  `json:"color_slice" db:"color_slice"`
+	BrandFonts       JSONMap   `json:"brand_fonts" db:"brand_fonts"`
+	LogoURL          string    `json:"logo_url" db:"logo_url"`
+	Values           []string  `json:"values" db:"values"`
+	Tagline          string    `json:"tagline" db:"tagline"`
+	TargetAudience   string    `json:"target_audience" db:"target_audience"`
+	MissionStatement string    `json:"mission_statement" db:"mission_statement"`
+	BusinessModel    string    `json:"business_model" db:"business_model"`
+	CompanySize      string    `json:"company_size" db:"company_size"`
+	ExtractedData    JSONMap   `json:"extracted_data" db:"extracted_data"`
+	CreatedAt        time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at" db:"updated_at"`
 }
 
 type Workspace struct {
-	ID                  uuid.UUID            `json:"id" db:"id"`
-	Name                string               `json:"name" db:"name" validate:"omitempty,min=3,max=255"`
-	WebsiteURL          string               `json:"website_url,omitempty" db:"website_url" validate:"omitempty,url"`
-	Industry            string               `json:"industry" db:"industry" validate:"omitempty,min=3,max=100"`
-	Plan                Plan                 `json:"plan" db:"plan" validate:"required,oneof=essentials growth accelerate transform enterprise"`
-	CustomDomain        string               `json:"custom_domain,omitempty" db:"custom_domain" validate:"omitempty,hostname_rfc1123"`
-	Settings            map[string]any       `json:"settings,omitempty" db:"settings"`
-	BrandingSettings    *BrandingSettings    `json:"branding_settings,omitempty" db:"branding_settings"`
-	AnalyticsSettings   map[string]any       `json:"analytics_settings,omitempty" db:"analytics_settings"`
-	IntegrationSettings *IntegrationSettings `json:"integration_settings,omitempty" db:"integration_settings"`
-	CreatedAt           time.Time            `json:"created_at" db:"created_at"`
-	UpdatedAt           time.Time            `json:"updated_at" db:"updated_at"`
+	ID                uuid.UUID       `json:"id" db:"id"`
+	Name              string          `json:"name" db:"name" validate:"omitempty,min=3,max=255"`
+	WebsiteURL        string          `json:"website_url,omitempty" db:"website_url" validate:"omitempty,url"`
+	Industry          string          `json:"industry" db:"industry" validate:"omitempty,min=3,max=100"`
+	Plan              Plan            `json:"plan" db:"plan" validate:"required,oneof=essentials growth accelerate transform enterprise"`
+	Settings          JSONMap         `json:"settings,omitempty" db:"settings"`
+	BrandContext      json.RawMessage `json:"brand_context,omitempty" db:"brand_context"`
+	TotalTestimonials int             `json:"total_testimonials" db:"total_testimonials"`
+	CreatedAt         time.Time       `json:"created_at" db:"created_at"`
+	UpdatedAt         time.Time       `json:"updated_at" db:"updated_at"`
 }
 
 func PrepareURL(url string) string {
@@ -97,18 +105,12 @@ func ValidateWorkspace(updates map[string]any) error {
 				}
 			}
 		case "branding_settings":
-			if settings, ok := value.(*BrandingSettings); ok && settings != nil {
+			if settings, ok := value.(*BrandContext); ok && settings != nil {
 				if err := validate.Struct(settings); err != nil {
 					return fmt.Errorf("%w: invalid branding settings: %w", apperrors.ErrValidationFailed, err)
 				}
 			}
 
-		case "integration_settings":
-			if settings, ok := value.(*IntegrationSettings); ok && settings != nil {
-				if err := validate.Struct(settings); err != nil {
-					return fmt.Errorf("%w: invalid integration settings: %w", apperrors.ErrValidationFailed, err)
-				}
-			}
 		}
 	}
 
@@ -123,27 +125,11 @@ func (w *Workspace) MarshalSettings() (string, error) {
 	return string(data), err
 }
 
-func (w *Workspace) MarshalBrandingSettings() (string, error) {
-	if w.BrandingSettings == nil {
+func (w *Workspace) MarshalBrandContext() (string, error) {
+	if w.BrandContext == nil {
 		return "{}", nil
 	}
-	data, err := json.Marshal(w.BrandingSettings)
-	return string(data), err
-}
-
-func (w *Workspace) MarshalAnalyticsSettings() (string, error) {
-	if w.AnalyticsSettings == nil {
-		return "{}", nil
-	}
-	data, err := json.Marshal(w.AnalyticsSettings)
-	return string(data), err
-}
-
-func (w *Workspace) MarshalIntegrationSettings() (string, error) {
-	if w.IntegrationSettings == nil {
-		return "{}", nil
-	}
-	data, err := json.Marshal(w.IntegrationSettings)
+	data, err := json.Marshal(w.BrandContext)
 	return string(data), err
 }
 
@@ -152,14 +138,6 @@ func (w *Workspace) UnmarshalSettings(data string) error {
 	return json.Unmarshal([]byte(data), &w.Settings)
 }
 
-func (w *Workspace) UnmarshalBrandingSettings(data string) error {
-	return json.Unmarshal([]byte(data), &w.BrandingSettings)
-}
-
-func (w *Workspace) UnmarshalAnalyticsSettings(data string) error {
-	return json.Unmarshal([]byte(data), &w.AnalyticsSettings)
-}
-
-func (w *Workspace) UnmarshalIntegrationSettings(data string) error {
-	return json.Unmarshal([]byte(data), &w.IntegrationSettings)
+func (w *Workspace) UnmarshalBrandContext(data string) error {
+	return json.Unmarshal([]byte(data), &w.BrandContext)
 }

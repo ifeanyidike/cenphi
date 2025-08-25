@@ -5,11 +5,10 @@ on:
     branches: [master, main]
     paths:
       - "api-server/**"
-      - "ai-service/**"
+      - "redis-config/**"
       - ".github/workflows/**"
       - "scripts/**"
       - "docker-compose.prod.yaml"
-      - "protobuf/**"
 
 jobs:
   prepare:
@@ -17,21 +16,52 @@ jobs:
     outputs:
       cache_key: ${{ steps.generate_cache_key.outputs.cache_key }}
       api_changed: ${{ steps.check_changes.outputs.api_changed }}
-      ai_changed: ${{ steps.check_changes.outputs.ai_changed }}
+      redis_changed: ${{ steps.check_changes.outputs.redis_changed }}
+      deploy_type: ${{ steps.check_changes.outputs.deploy_type }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0 # Fetch all history to ensure proper change detection
+          fetch-depth: 0
 
       - name: Check which services changed
         id: check_changes
         run: |
           # Check if API server files changed
-          git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q "^api-server/" && echo "api_changed=true" >> $GITHUB_OUTPUT || echo "api_changed=false" >> $GITHUB_OUTPUT
+          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E "^(api-server/|docker-compose\.prod\.yaml)"; then
+            echo "api_changed=true" >> $GITHUB_OUTPUT
+            echo "🔄 API Server changes detected"
+          else
+            echo "api_changed=false" >> $GITHUB_OUTPUT
+            echo "✅ No API Server changes"
+          fi
 
-          # Check if AI service files changed
-          git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q "^ai-service/" && echo "ai_changed=true" >> $GITHUB_OUTPUT || echo "ai_changed=false" >> $GITHUB_OUTPUT
+          # Check if Redis configuration changed
+          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E "^(redis-config/|scripts/redis-deploy\.sh)"; then
+            echo "redis_changed=true" >> $GITHUB_OUTPUT
+            echo "🔄 Redis configuration changes detected"
+          else
+            echo "redis_changed=false" >> $GITHUB_OUTPUT
+            echo "✅ No Redis configuration changes"
+          fi
+
+          # Determine deployment type
+          API_CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E "^api-server/" >/dev/null && echo "true" || echo "false")
+          REDIS_CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E "^(redis-config/|scripts/redis-deploy\.sh)" >/dev/null && echo "true" || echo "false")
+
+          if [[ "$API_CHANGED" == "true" && "$REDIS_CHANGED" == "true" ]]; then
+            echo "deploy_type=full" >> $GITHUB_OUTPUT
+            echo "📦 Full deployment (API + Redis)"
+          elif [[ "$API_CHANGED" == "true" ]]; then
+            echo "deploy_type=api" >> $GITHUB_OUTPUT
+            echo "🚀 API-only deployment"
+          elif [[ "$REDIS_CHANGED" == "true" ]]; then
+            echo "deploy_type=redis" >> $GITHUB_OUTPUT
+            echo "💾 Redis-only deployment"
+          else
+            echo "deploy_type=none" >> $GITHUB_OUTPUT
+            echo "⏭️ No deployment needed"
+          fi
 
           # Print the changes for debugging
           echo "Changes detected:"
@@ -40,37 +70,30 @@ jobs:
       - name: Generate unique cache keys
         id: generate_cache_key
         run: |
-          # Generate a unique cache key based on file changes
-          API_HASH=$(git rev-parse HEAD:api-server || echo "nohash")
-          AI_HASH=$(git rev-parse HEAD:ai-service || echo "nohash")
-          echo "cache_key=api-${API_HASH}-ai-${AI_HASH}" >> $GITHUB_OUTPUT
-          echo "Generated cache key: api-${API_HASH}-ai-${AI_HASH}"
+          API_HASH=$(git rev-parse HEAD:api-server 2>/dev/null || echo "nohash")
+          REDIS_HASH=$(git rev-parse HEAD:redis-config 2>/dev/null || echo "nohash")
+          echo "cache_key=api-${API_HASH}-redis-${REDIS_HASH}" >> $GITHUB_OUTPUT
+          echo "Generated cache key: api-${API_HASH}-redis-${REDIS_HASH}"
 
       - name: Verify required files
         run: |
+          # Ensure required directories exist
+          mkdir -p api-server/scripts redis-config scripts
+
           # Check if google_roots.pem exists
           if [ ! -f "api-server/google_roots.pem" ]; then
-            echo "WARNING: google_roots.pem not found in api-server directory"
-            
-            # Create a placeholder file to prevent build failures
-            mkdir -p api-server
+            echo "Creating placeholder google_roots.pem file"
             echo "# Placeholder Google root certificates" > api-server/google_roots.pem
-            echo "Created placeholder google_roots.pem file"
-          else
-            echo "google_roots.pem found in api-server directory"
           fi
 
-          # Check entrypoint script
+          # Check API entrypoint script
           if [ ! -f "api-server/scripts/docker-entrypoint.sh" ]; then
-          echo "WARNING: docker-entrypoint.sh not found"
-          mkdir -p api-server/scripts
-          cat > api-server/scripts/docker-entrypoint.sh << 'ENDOFFILE'
+            echo "Creating placeholder docker-entrypoint.sh file"
+            cat > api-server/scripts/docker-entrypoint.sh << 'ENDOFFILE'
           #!/bin/sh
-          # Simple entrypoint script
           exec "$@"
           ENDOFFILE
-          chmod +x api-server/scripts/docker-entrypoint.sh
-          echo "Created placeholder docker-entrypoint.sh file"
+            chmod +x api-server/scripts/docker-entrypoint.sh
           fi
 
   test_api:
@@ -90,6 +113,15 @@ jobs:
           --health-cmd "pg_isready -U ifeanyidike" 
           --health-interval 10s 
           --health-timeout 5s 
+          --health-retries 5
+      redis:
+        image: redis:7.2-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
           --health-retries 5
     steps:
       - name: Checkout Code
@@ -111,100 +143,33 @@ jobs:
           DB_HOST=127.0.0.1
           DB_PORT=5434
           DB_NAME=cenphidb_test
+          REDIS_HOST=127.0.0.1
+          REDIS_PORT=6379
+          REDIS_PASSWORD=
           ENDOFFILE
 
-      - name: Wait for PostgreSQL to be ready
+      - name: Wait for services to be ready
         run: |
           for i in {1..30}; do
-            if nc -z localhost 5434; then
-              echo "Postgres is up!"
+            if nc -z localhost 5434 && nc -z localhost 6379; then
+              echo "All services are up!"
               exit 0
             fi
-            echo "Waiting for Postgres..."
+            echo "Waiting for services..."
             sleep 2
           done
-          echo "Postgres did not start in time."
+          echo "Services did not start in time."
           exit 1
 
       - name: Set up Go for API Server
         uses: actions/setup-go@v2
         with:
-          go-version: "1.23.1"
+          go-version: "1.24"
 
       - name: Test API Server
         run: |
           cd api-server
           go test ./...
-
-  test_ai:
-    needs: prepare
-    if: ${{ needs.prepare.outputs.ai_changed == 'true' }}
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:13
-        ports:
-          - 5434:5432
-        env:
-          POSTGRES_USER: ifeanyidike
-          POSTGRES_PASSWORD: test_password
-          POSTGRES_DB: cenphidb_test
-        options: >-
-          --health-cmd "pg_isready -U ifeanyidike" 
-          --health-interval 10s 
-          --health-timeout 5s 
-          --health-retries 5
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-
-      - name: Cache Python packages
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Create .env.test file
-        run: |
-          cat > .env.test << 'ENDOFFILE'
-          DB_USERNAME=ifeanyidike
-          DB_PASSWORD=test_password
-          DB_HOST=127.0.0.1
-          DB_PORT=5434
-          DB_NAME=cenphidb_test
-          ENDOFFILE
-
-      - name: Wait for PostgreSQL to be ready
-        run: |
-          for i in {1..30}; do
-            if nc -z localhost 5434; then
-              echo "Postgres is up!"
-              exit 0
-            fi
-            echo "Waiting for Postgres..."
-            sleep 2
-          done
-          echo "Postgres did not start in time."
-          exit 1
-
-      - name: Set up Python for AI Service
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.12"
-
-      - name: Install dependencies for AI Service
-        run: |
-          cd ai-service
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pytest
-
-      - name: Test AI Service
-        run: |
-          cd ai-service
-          python -m pytest
 
   build_api:
     needs: [prepare, test_api]
@@ -218,32 +183,17 @@ jobs:
 
       - name: Verify critical files for API Server
         run: |
-          # Ensure google_roots.pem exists
+          mkdir -p api-server/scripts
+
           if [ ! -f "api-server/google_roots.pem" ]; then
-            echo "ERROR: google_roots.pem missing from api-server directory! Creating dummy file."
-            mkdir -p api-server
             echo "# Placeholder Google root certificates file" > api-server/google_roots.pem
           fi
 
-          # Ensure docker-entrypoint.sh exists
           if [ ! -f "api-server/scripts/docker-entrypoint.sh" ]; then
-            echo "ERROR: docker-entrypoint.sh missing! Creating dummy file."
-            mkdir -p api-server/scripts
             echo "#!/bin/sh" > api-server/scripts/docker-entrypoint.sh
             echo "exec \"\$@\"" >> api-server/scripts/docker-entrypoint.sh
             chmod +x api-server/scripts/docker-entrypoint.sh
           fi
-
-      - name: Create .env files
-        run: |
-          cat > ./api-server/.env << 'ENDOFFILE'
-          DB_USERNAME=ifeanyidike
-          DB_PASSWORD=test_password
-          DB_HOST=cenphidb
-          DB_PORT=5432
-          DB_NAME=cenphidb
-          # Add other necessary API server variables
-          ENDOFFILE
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
@@ -256,12 +206,6 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-          logout: false
-
-      - name: Verify Docker login
-        run: |
-          echo "Checking Docker login status..."
-          docker info
 
       - name: Build and push API image
         uses: docker/build-push-action@v4
@@ -274,144 +218,70 @@ jobs:
             lorddickson/api-server:${{ github.sha }}
           no-cache: true
           build-args: |
+            VERSION=${{ github.sha }}
             BUILDKIT_INLINE_CACHE=1
             CACHE_BUSTER=${{ github.sha }}
 
-      - name: Verify Docker image
+      - name: Verify API Docker image
         run: |
-          # Wait for Docker Hub to register the image
           sleep 10
-
-          # Check that both tags exist
           docker pull lorddickson/api-server:latest
           docker pull lorddickson/api-server:${{ github.sha }}
 
-          # Get image IDs to verify they are the same image (just different tags)
           LATEST_ID=$(docker inspect --format='{{.Id}}' lorddickson/api-server:latest)
           SHA_ID=$(docker inspect --format='{{.Id}}' lorddickson/api-server:${{ github.sha }})
 
-          echo "Latest image ID: $LATEST_ID"
-          echo "SHA image ID: $SHA_ID"
+          echo "Latest API image ID: $LATEST_ID"
+          echo "SHA API image ID: $SHA_ID"
 
           if [ "$LATEST_ID" = "$SHA_ID" ]; then
-            echo "✅ Image verification successful - latest and SHA tags point to the same image"
+            echo "✅ API image verification successful"
           else
-            echo "⚠️ Warning: latest and SHA tags point to different images"
+            echo "⚠️ Warning: API image tags point to different images"
           fi
 
-  build_ai:
-    needs: [prepare, test_ai]
-    if: ${{ needs.prepare.outputs.ai_changed == 'true' && (needs.test_ai.result == 'success' || needs.test_ai.result == 'skipped') }}
+  deploy_redis:
+    needs: [prepare]
+    if: ${{ needs.prepare.outputs.redis_changed == 'true' || needs.prepare.outputs.deploy_type == 'full' }}
     runs-on: ubuntu-latest
+    env:
+      REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+      REDIS_MAX_MEMORY: ${{ secrets.REDIS_MAX_MEMORY }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
+
+      - name: Upload Redis deployment files
+        uses: appleboy/scp-action@v0.1.4
         with:
-          fetch-depth: 0
+          host: ${{ secrets.REDIS_SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          source: "scripts/redis-deploy.sh"
+          target: "/home/opc"
+          strip_components: 1
+          overwrite: true
 
-      - name: Create .env files
-        run: |
-          mkdir -p ./ai-service
-          cat > ./ai-service/.env << 'ENDOFFILE'
-          # Add necessary AI service variables here
-          PYTHONUNBUFFERED=1
-          TRANSFORMERS_CACHE=/root/.cache/huggingface
-          # Add other necessary AI service variables
-          ENDOFFILE
-
-      - name: Verify AI Service Files
-        run: |
-          echo "Checking for main.py in ai-service directory..."
-          if [ ! -f "./ai-service/main.py" ]; then
-            echo "WARNING: main.py not found in ai-service directory!"
-            echo "Creating a placeholder main.py file..."
-            mkdir -p ./ai-service
-            cat > ./ai-service/main.py << 'ENDOFFILE'
-          import os
-          import sys
-          import logging
-          import time
-
-          # Set up logging
-          logging.basicConfig(
-              level=logging.INFO,
-              format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-          )
-          logger = logging.getLogger(__name__)
-
-          def main():
-              logger.info("AI Service starting...")
-              logger.info(f"Python version: {sys.version}")
-              logger.info(f"Working directory: {os.getcwd()}")
-              logger.info(f"Directory contents: {os.listdir('.')}")
-              
-              # Placeholder for actual service code
-              logger.info("Service initialized, running main loop")
-              while True:
-                  time.sleep(60)
-                  logger.info("AI Service heartbeat")
-
-          if __name__ == "__main__":
-              main()
-          ENDOFFILE
-            echo "Created placeholder main.py file."
-          else
-            echo "main.py found in ai-service directory."
-          fi
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v2
+      - name: Deploy Redis
+        uses: appleboy/ssh-action@v0.1.5
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-          logout: false
+          host: ${{ secrets.REDIS_SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          envs: REDIS_PASSWORD,REDIS_MAX_MEMORY
+          script: |
+            cd /home/opc
 
-      - name: Verify Docker login
-        run: |
-          echo "Checking Docker login status..."
-          docker info
+            # Make script executable
+            chmod +x redis-deploy.sh
+            sed -i 's/\r$//' redis-deploy.sh
 
-      - name: Build and push AI image
-        uses: docker/build-push-action@v4
-        with:
-          context: ./ai-service
-          file: ./ai-service/Dockerfile
-          push: true
-          tags: |
-            lorddickson/ai-service:latest
-            lorddickson/ai-service:${{ github.sha }}
-          no-cache: true
-          build-args: |
-            BUILDKIT_INLINE_CACHE=1
-            CACHE_BUSTER=${{ github.sha }}
+            # Run Redis deployment with environment variables
+            REDIS_PASSWORD="$REDIS_PASSWORD" REDIS_MAX_MEMORY="${REDIS_MAX_MEMORY:-800mb}" ./redis-deploy.sh
 
-      - name: Verify Docker image
-        run: |
-          # Wait for Docker Hub to register the image
-          sleep 10
-
-          # Check that both tags exist
-          docker pull lorddickson/ai-service:latest
-          docker pull lorddickson/ai-service:${{ github.sha }}
-
-          # Get image IDs to verify they are the same image (just different tags)
-          LATEST_ID=$(docker inspect --format='{{.Id}}' lorddickson/ai-service:latest)
-          SHA_ID=$(docker inspect --format='{{.Id}}' lorddickson/ai-service:${{ github.sha }})
-
-          echo "Latest image ID: $LATEST_ID"
-          echo "SHA image ID: $SHA_ID"
-
-          if [ "$LATEST_ID" = "$SHA_ID" ]; then
-            echo "✅ Image verification successful - latest and SHA tags point to the same image"
-          else
-            echo "⚠️ Warning: latest and SHA tags point to different images"
-          fi
+            echo "✅ Redis deployment completed!"
 
   deploy_api:
     needs: [prepare, build_api]
@@ -424,11 +294,22 @@ jobs:
       DB_PORT: ${{ secrets.DB_PORT }}
       REDIS_HOST: ${{ secrets.REDIS_HOST }}
       REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
-      REDIS_PORT: ${{ secrets.REDIS_PORT }}
-      AWS_KEY: ${{ secrets.AWS_KEY }}
-      AWS_REGION: ${{ secrets.AWS_REGION }}
-      AWS_SECRET: ${{ secrets.AWS_SECRET }}
-      AWS_BUCKET_NAME: ${{ secrets.AWS_BUCKET_NAME }}
+      REDIS_PORT: 6379
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      ASSEMBLYAI_API_KEY: ${{ secrets.ASSEMBLYAI_API_KEY }}
+      OCI_PRIVATE_KEY_CONTENT: ${{ secrets.OCI_PRIVATE_KEY_CONTENT }}
+      OCI_BUCKET: ${{ secrets.OCI_BUCKET }}
+      OCI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
+      OCI_NAMESPACE: ${{ secrets.OCI_NAMESPACE }}
+      OCI_REGION: ${{ secrets.OCI_REGION }}
+      OCI_TENANCY_OCID: ${{ secrets.OCI_TENANCY_OCID }}
+      OCI_USER_OCID: ${{ secrets.OCI_USER_OCID }}
+      GOOGLE_DRIVE_CLIENT_ID: ${{ secrets.GOOGLE_DRIVE_CLIENT_ID }}
+      GOOGLE_DRIVE_CLIENT_SECRET: ${{ secrets.GOOGLE_DRIVE_CLIENT_SECRET }}
+      LINKEDIN_CLIENT_ID: ${{ secrets.LINKEDIN_CLIENT_ID }}
+      LINKEDIN_CLIENT_SECRET: ${{ secrets.LINKEDIN_CLIENT_SECRET }}
+      BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
       FIREBASE_KEY_JSON: ${{ secrets.FIREBASE_KEY_JSON }}
       FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
       GITHUB_SHA: ${{ github.sha }}
@@ -436,18 +317,10 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Verify script exists
-        run: |
-          ls -la scripts/
-          if [ ! -f "scripts/api-deploy.sh" ]; then
-            echo "ERROR: scripts/api-deploy.sh does not exist in the repository!"
-            exit 1
-          fi
-
-      - name: Upload Docker Compose files to API Service
+      - name: Upload Docker Compose files to API Server
         uses: appleboy/scp-action@v0.1.4
         with:
-          host: ${{ secrets.AI_SSH_HOST }}
+          host: ${{ secrets.API_SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
@@ -455,7 +328,7 @@ jobs:
           target: "/home/opc/app"
           overwrite: true
 
-      - name: Upload deploy.sh to API Server
+      - name: Upload API deploy script
         uses: appleboy/scp-action@v0.1.4
         with:
           host: ${{ secrets.API_SSH_HOST }}
@@ -474,9 +347,10 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          envs: DB_USERNAME,DB_PASSWORD,DB_HOST,DB_PORT,REDIS_HOST,REDIS_PASSWORD,REDIS_PORT,AWS_KEY,AWS_REGION,AWS_SECRET,AWS_BUCKET_NAME,FIREBASE_KEY_JSON,FIREBASE_PROJECT_ID,GITHUB_SHA
+          envs: DB_USERNAME,DB_PASSWORD,DB_HOST,DB_PORT,REDIS_HOST,REDIS_PASSWORD,REDIS_PORT,OPENAI_API_KEY,ANTHROPIC_API_KEY,ASSEMBLYAI_API_KEY,OCI_PRIVATE_KEY_CONTENT,OCI_BUCKET,OCI_FINGERPRINT,OCI_NAMESPACE,OCI_REGION,OCI_TENANCY_OCID,OCI_USER_OCID,GOOGLE_DRIVE_CLIENT_ID,GOOGLE_DRIVE_CLIENT_SECRET,LINKEDIN_CLIENT_ID,LINKEDIN_CLIENT_SECRET,BREVO_API_KEY,FIREBASE_KEY_JSON,FIREBASE_PROJECT_ID,GITHUB_SHA
           script: |
             cd /home/opc
+
             # Fix any potential line ending issues
             sed -i 's/\r$//' api-deploy.sh
 
@@ -486,159 +360,105 @@ jobs:
             # Ensure app directory exists
             mkdir -p /home/opc/app
 
-            # Verify Docker Compose files exist
+            # Verify Docker Compose file exists
             if [ ! -f "/home/opc/app/docker-compose.prod.yaml" ]; then
                 echo "ERROR: docker-compose.prod.yaml not found in /home/opc/app"
-                echo "Creating a simple docker-compose.prod.yaml file..."
-
-                # Create a basic docker-compose.prod.yaml file
-                cat > /home/opc/app/docker-compose.prod.yaml << 'ENDOFFILE'
-                services:
-                    api-server:
-                        image: lorddickson/api-server:latest
-                        ports:
-                            - "8081:8081"
-                        volumes:
-                            - ./api-server/.env:/app/.env
-                            - ~/.aws:/root/.aws:ro
-                            - /etc/ssl/certs:/etc/ssl/certs:ro
-                        restart: always
-                        environment:
-                            - GO_ENV=production
-                        command: ["/app/api"]
-                        healthcheck:
-                          test:
-                            ["CMD", "wget", "-q", "--spider", "http://localhost:8081/api/v1/health"]
-                          interval: 10s
-                          timeout: 5s
-                          retries: 3
-                          start_period: 5s
-            ENDOFFILE
-
-                echo "Created basic Docker Compose files"
+                exit 1
             fi
 
-            # Use specific SHA-tagged image instead of latest
-            docker pull lorddickson/api-server:$GITHUB_SHA || echo "Falling back to latest image"
+            # Test Redis connectivity first
+            echo "Testing Redis connectivity..."
+            if ! nc -zv $REDIS_HOST $REDIS_PORT; then
+              echo "ERROR: Cannot connect to Redis at $REDIS_HOST:$REDIS_PORT"
+              echo "Please ensure Redis is running and firewall allows connections"
+              exit 1
+            fi
+
+            # Use specific SHA-tagged image
+            docker pull lorddickson/api-server:$GITHUB_SHA || {
+              echo "Failed to pull SHA image, falling back to latest"
+              docker pull lorddickson/api-server:latest
+            }
 
             # Run deploy script with environment variables
-            DB_USERNAME=$DB_USERNAME DB_PASSWORD=$DB_PASSWORD DB_HOST=$DB_HOST DB_PORT=$DB_PORT DB_NAME=$DB_NAME REDIS_HOST=$REDIS_HOST REDIS_PASSWORD=$REDIS_PASSWORD REDIS_PORT=$REDIS_PORT AWS_KEY=$AWS_KEY AWS_REGION=$AWS_REGION AWS_SECRET=$AWS_SECRET AWS_BUCKET_NAME=$AWS_BUCKET_NAME FIREBASE_KEY_JSON=$FIREBASE_KEY_JSON FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID GITHUB_SHA=$GITHUB_SHA ./api-deploy.sh
+            DB_USERNAME=$DB_USERNAME \
+            DB_PASSWORD=$DB_PASSWORD \
+            DB_HOST=$DB_HOST \
+            DB_PORT=$DB_PORT \
+            REDIS_HOST=$REDIS_HOST \
+            REDIS_PASSWORD=$REDIS_PASSWORD \
+            REDIS_PORT=$REDIS_PORT \
+            OPENAI_API_KEY=$OPENAI_API_KEY \
+            ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY \
+            ASSEMBLYAI_API_KEY=$ASSEMBLYAI_API_KEY \
+            OCI_PRIVATE_KEY_CONTENT="$OCI_PRIVATE_KEY_CONTENT" \
+            OCI_BUCKET=$OCI_BUCKET \
+            OCI_FINGERPRINT=$OCI_FINGERPRINT \
+            OCI_NAMESPACE=$OCI_NAMESPACE \
+            OCI_REGION=$OCI_REGION \
+            OCI_TENANCY_OCID=$OCI_TENANCY_OCID \
+            OCI_USER_OCID=$OCI_USER_OCID \
+            GOOGLE_DRIVE_CLIENT_ID=$GOOGLE_DRIVE_CLIENT_ID \
+            GOOGLE_DRIVE_CLIENT_SECRET=$GOOGLE_DRIVE_CLIENT_SECRET \
+            LINKEDIN_CLIENT_ID=$LINKEDIN_CLIENT_ID \
+            LINKEDIN_CLIENT_SECRET=$LINKEDIN_CLIENT_SECRET \
+            BREVO_API_KEY=$BREVO_API_KEY \
+            FIREBASE_KEY_JSON="$FIREBASE_KEY_JSON" \
+            FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID \
+            GITHUB_SHA=$GITHUB_SHA \
+            ./api-deploy.sh
 
-            # More robust health check
+            # Health check
             echo "Performing API health check..."
             MAX_RETRIES=5
             RETRY_COUNT=0
 
             until [ $RETRY_COUNT -ge $MAX_RETRIES ]
             do
-              HEALTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8081/api/v1/health || echo "failed")
-
+              HEALTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8081/api/health || echo "failed")
+              
               if [ "$HEALTH_STATUS" = "200" ]; then
-                echo "API is healthy!"
+                echo "✅ API is healthy!"
                 break
               fi
-
+              
               RETRY_COUNT=$((RETRY_COUNT+1))
               echo "Health check attempt $RETRY_COUNT failed (status: $HEALTH_STATUS), retrying in 10 seconds..."
               sleep 10
             done
 
             if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
-              echo "API health check failed after $MAX_RETRIES attempts. Container logs:"
-              docker logs $(docker ps -a | grep api-server | awk '{print $1}')
+              echo "❌ API health check failed after $MAX_RETRIES attempts"
+              docker logs --tail 50 $(docker ps -a | grep api-server | awk '{print $1}') || echo "Could not get container logs"
               exit 1
             fi
 
-  deploy_ai:
-    needs: [prepare, build_ai]
-    if: ${{ needs.prepare.outputs.ai_changed == 'true' }}
-    runs-on: ubuntu-latest
-    env:
-      GITHUB_SHA: ${{ github.sha }}
-      HF_TOKEN: ${{ secrets.HF_TOKEN }}
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
+            echo "🎉 API deployment completed successfully!"
 
-      - name: Verify script exists
+  notify_deployment:
+    needs: [prepare, deploy_redis, deploy_api]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deployment Summary
         run: |
-          ls -la scripts/
-          if [ ! -f "scripts/ai-deploy.sh" ]; then
-            echo "ERROR: scripts/ai-deploy.sh does not exist in the repository!"
-            exit 1
+          echo "🚀 Deployment Summary for commit ${{ github.sha }}"
+          echo "Deploy Type: ${{ needs.prepare.outputs.deploy_type }}"
+          echo "API Changed: ${{ needs.prepare.outputs.api_changed }}"
+          echo "Redis Changed: ${{ needs.prepare.outputs.redis_changed }}"
+
+          if [[ "${{ needs.deploy_redis.result }}" == "success" ]]; then
+            echo "✅ Redis deployment: SUCCESS"
+          elif [[ "${{ needs.deploy_redis.result }}" == "skipped" ]]; then
+            echo "⏭️ Redis deployment: SKIPPED"
+          else
+            echo "❌ Redis deployment: FAILED"
           fi
 
-      - name: Upload Docker Compose files to AI Service
-        uses: appleboy/scp-action@v0.1.4
-        with:
-          host: ${{ secrets.AI_SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          source: "./docker-compose.prod.yaml"
-          target: "/home/opc/app"
-          overwrite: true
-
-      - name: Upload improved deploy script to AI Service
-        uses: appleboy/scp-action@v0.1.4
-        with:
-          host: ${{ secrets.AI_SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          source: "scripts/ai-deploy.sh"
-          target: "/home/opc"
-          strip_components: 1
-          overwrite: true
-
-      - name: SSH Deploy to AI Service
-        uses: appleboy/ssh-action@v0.1.5
-        with:
-          host: ${{ secrets.AI_SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          envs: HF_TOKEN,GITHUB_SHA
-          script: |
-            cd /home/opc
-
-            # Fix any potential line ending issues
-            sed -i 's/\r$//' ai-deploy.sh
-
-            # Make deploy script executable
-            chmod +x ai-deploy.sh
-
-            echo "App directory structure:"
-            mkdir -p /home/opc/app
-
-            # Verify Docker Compose files exist
-            if [ ! -f "/home/opc/app/docker-compose.prod.yaml" ]; then
-                echo "ERROR: docker-compose.prod.yaml not found in /home/opc/app"
-                echo "Creating a simple docker-compose.prod.yaml file..."
-
-                # Create a basic docker-compose.prod.yaml file
-                cat > /home/opc/app/docker-compose.prod.yaml << 'ENDOFFILE'
-                services:
-                    ai-service:
-                        image: lorddickson/ai-service:latest
-                        ports:
-                            - "50052:50052"
-                        volumes:
-                            - ai-model-cache:/root/.cache/huggingface
-                        environment:
-                            - PYTHONUNBUFFERED=1
-                            - TRANSFORMERS_CACHE=/root/.cache/huggingface
-                            - PYTHON_ENV=production
-                        command: ["/opt/venv/bin/python", "main.py"]
-                volumes:
-                    ai-model-cache:
-            ENDOFFILE
-
-                echo "Created basic Docker Compose files"
-            fi
-
-            # Pull both tags to ensure we have the latest
-            docker pull lorddickson/ai-service:$GITHUB_SHA || echo "Will use the tag in deploy script"
-
-            # Run deploy script with environment variables
-            HF_TOKEN=$HF_TOKEN GITHUB_SHA=$GITHUB_SHA ./ai-deploy.sh
+          if [[ "${{ needs.deploy_api.result }}" == "success" ]]; then
+            echo "✅ API deployment: SUCCESS"
+          elif [[ "${{ needs.deploy_api.result }}" == "skipped" ]]; then
+            echo "⏭️ API deployment: SKIPPED"
+          else
+            echo "❌ API deployment: FAILED"
+          fi

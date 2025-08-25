@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -48,7 +47,7 @@ func NewWorkspaceController(service services.WorkspaceService, testimonialSvc se
 // @Failure 404 {object} utils.ErrorResponse
 // @Router /workspaces [get]
 func (c *workspaceController) GetWorkspace(w http.ResponseWriter, r *http.Request) {
-	// id, err := uuid.Parse(r.URL.Query().Get("id"))
+	// id, err := uuid.Parse(r.URL.Query().Get("id")). using params for now
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		utils.RespondWithError(w, http.StatusBadRequest, apperrors.ErrInvalidWorkspaceID.Error())
@@ -59,7 +58,7 @@ func (c *workspaceController) GetWorkspace(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	workspace, err := c.service.GetWorkspace(r.Context(), id)
+	workspace, err := c.service.GetWorkspaceByID(r.Context(), id)
 	if err != nil {
 		c.logger.Error("failed to get workspace", zap.String("WorkspaceID", id.String()), zap.Error(err))
 		utils.RespondWithError(w, http.StatusNotFound, err.Error())
@@ -127,8 +126,7 @@ func (c *workspaceController) UpdateWorkspace(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// var workspace *models.Workspace
-	var workspace map[string]any
+	var workspace *models.Workspace
 	if id == uuid.Nil {
 		utils.RespondWithError(w, http.StatusBadRequest, apperrors.ErrInvalidWorkspaceID.Error())
 		return
@@ -140,20 +138,20 @@ func (c *workspaceController) UpdateWorkspace(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	if websiteURL, ok := workspace["website_url"].(string); ok {
-		workspace["website_url"] = models.PrepareURL(websiteURL)
-	}
+	// if websiteURL, ok := workspace["website_url"].(string); ok {
+	// 	workspace["website_url"] = models.PrepareURL(websiteURL)
+	// }
 
-	if err := models.ValidateWorkspace(workspace); err != nil {
-		c.logger.Error("validation failed", zap.Error(err))
-		utils.RespondWithError(w, http.StatusBadRequest, fmt.Sprintf("Validation failed: %v", err))
-		return
-	}
+	// if err := models.ValidateWorkspace(workspace); err != nil {
+	// 	c.logger.Error("validation failed", zap.Error(err))
+	// 	utils.RespondWithError(w, http.StatusBadRequest, fmt.Sprintf("Validation failed: %v", err))
+	// 	return
+	// }
 
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
-	if err := c.service.UpdateWorkspace(ctx, id, workspace); err != nil {
+	if err := c.service.UpdateWorkspace(ctx, workspace); err != nil {
 		c.logger.Error("failed to update workspace", zap.String("workspaceID", id.String()), zap.Error(err))
 		switch {
 		case errors.Is(err, apperrors.ErrWorkspaceNotFound):
@@ -209,7 +207,7 @@ func (c *workspaceController) GetTestimonialsByWorkspaceID(w http.ResponseWriter
 	queryParams := r.URL.Query()
 	filters := models.GetFilterFromParam(queryParams)
 
-	testimonials, err := c.testimonialSvc.FetchByWorkspaceID(r.Context(), id, filters)
+	testimonials, err := c.testimonialSvc.GetTestimonialsByWorkspace(r.Context(), id, filters)
 	if err != nil {
 		c.logger.Error("failed to get testimonial", zap.String("testimonial ID", id.String()), zap.Error(err))
 		utils.RespondWithError(w, http.StatusNotFound, err.Error())
@@ -228,7 +226,7 @@ func (c *workspaceController) GetTestimonial(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	testimonials, err := c.testimonialSvc.FetchByID(r.Context(), id)
+	testimonials, err := c.testimonialSvc.GetTestimonialByID(r.Context(), id)
 	if err != nil {
 		c.logger.Error("failed to get testimonial", zap.String("testimonial ID", id.String()), zap.Error(err))
 		utils.RespondWithError(w, http.StatusNotFound, err.Error())

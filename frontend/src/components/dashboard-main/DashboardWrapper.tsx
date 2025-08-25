@@ -18,8 +18,30 @@ import {
 import { observer } from "mobx-react-lite";
 import { PropsWithChildren } from "react";
 import { containerVariants } from "../dashboard-landing/constants";
+import { useLocation } from "react-router-dom";
 
-export const DashboardWrapper = observer(({ children }: PropsWithChildren) => {
+interface DashboardWrapperProps extends PropsWithChildren {
+  title?: string;
+}
+
+export const DashboardWrapper = observer(({ children, title }: DashboardWrapperProps) => {
+  const location = useLocation();
+  
+  // Determine the page title based on the current route
+  const getPageTitle = () => {
+    if (title) return title;
+    
+    switch (location.pathname) {
+      case '/dashboard':
+        return 'Dashboard';
+      case '/settings':
+        return 'Settings';
+      case '/google-drive':
+        return 'Google Drive';
+      default:
+        return 'Dashboard';
+    }
+  };
   return (
     <SidebarProvider className="flex w-screen">
       <AppSidebar />
@@ -31,13 +53,13 @@ export const DashboardWrapper = observer(({ children }: PropsWithChildren) => {
               <Breadcrumb>
                 <BreadcrumbList>
                   <BreadcrumbItem className="hidden md:block">
-                    <BreadcrumbLink href="#">
-                      Building Your Application
+                    <BreadcrumbLink href="/dashboard">
+                      Dashboard
                     </BreadcrumbLink>
                   </BreadcrumbItem>
                   <BreadcrumbSeparator className="hidden md:block" />
                   <BreadcrumbItem>
-                    <BreadcrumbPage>Home</BreadcrumbPage>
+                    <BreadcrumbPage>{getPageTitle()}</BreadcrumbPage>
                   </BreadcrumbItem>
                 </BreadcrumbList>
               </Breadcrumb>

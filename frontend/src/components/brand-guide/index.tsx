@@ -36,9 +36,7 @@ import { BrandGuide as BrandGuideType, ColorMode } from "@/types/setup";
 import { containerVariants, itemVariants } from "./constants";
 import Colors from "./Colors";
 import Typography from "./Typography";
-import Testimonials from "./Testimonials";
-import VoiceAndTone from "./VoiceAndTone";
-import Preview from "./Preview";
+// import Testimonials from "./Testimonials";
 import DeveloperCode from "./DeveloperCode";
 import TabListElement from "./TabList";
 
@@ -63,7 +61,7 @@ const BrandGuide: React.FC<BrandGuideProps> = observer(
 
     const [copySuccess, setCopySuccess] = useState<Record<string, boolean>>({});
     const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
-    const [showAIDialog, setShowAIDialog] = useState<boolean>(false);
+    const [, setShowAIDialog] = useState<boolean>(false);
 
     const [customCss, setCustomCss] = useState<string>("");
 
@@ -95,41 +93,6 @@ const BrandGuide: React.FC<BrandGuideProps> = observer(
       if (brandData.typography.headingFont) completed++;
       if (brandData.typography.bodyFont) completed++;
       total += 2;
-
-      // Check testimonial styles
-      if (brandData.testimonials?.style) completed++;
-      total += 1;
-
-      // Check voice & tone
-      if (brandData.voice.values.length > 0) completed++;
-      if (brandData.voice.ctas.length > 0) completed++;
-      if ((brandData.voice.channels?.email?.requestTemplate?.length || 0) > 20)
-        completed++;
-      if ((brandData.voice.channels.email?.thankYouTemplate.length || 0) > 20)
-        completed++;
-      // if (
-      //   (brandData.voice.channels.social?.platforms.facebook.requestTemplate
-      //     ?.length || 0) > 20
-      // )
-      //   completed++;
-
-      // if (brandData.voice.channels.social.thankYouTemplate.length > 20)
-      //   completed++;
-      if ((brandData.voice.channels.website?.requestTemplate?.length || 0) > 20)
-        completed++;
-      if (
-        (brandData.voice.channels.website?.thankYouTemplate?.length || 0) > 20
-      )
-        completed++;
-      total += 8;
-
-      if ((brandData.voice.channels.email?.signature?.text?.length || 0) > 10)
-        completed++;
-      if ((brandData.voice.channels.email?.sender?.name?.length || 0) > 10)
-        completed++;
-      if ((brandData.voice.channels.email?.sender?.email?.length || 0) > 10)
-        completed++;
-      total += 3;
 
       setCompletionPercent(Math.round((completed / total) * 100));
     };
@@ -406,25 +369,25 @@ const BrandGuide: React.FC<BrandGuideProps> = observer(
               </TabsContent>
 
               {/* Testimonials */}
-              <TabsContent value="testimonials" className="space-y-6">
+              {/* <TabsContent value="testimonials" className="space-y-6">
                 <Testimonials
                   colorMode={colorMode}
                   setColorMode={setColorMode}
                 />
-              </TabsContent>
+              </TabsContent> */}
 
               {/* Voice & Tone */}
-              <TabsContent value="voice" className="space-y-6">
+              {/* <TabsContent value="voice" className="space-y-6">
                 <VoiceAndTone
                   showAIDialog={showAIDialog}
                   setShowAIDialog={setShowAIDialog}
                 />
-              </TabsContent>
+              </TabsContent> */}
 
               {/* Preview */}
-              <TabsContent value="preview" className="space-y-6">
+              {/* <TabsContent value="preview" className="space-y-6">
                 <Preview colorMode={colorMode} setColorMode={setColorMode} />
-              </TabsContent>
+              </TabsContent> */}
 
               {/* Developer Code */}
               <TabsContent value="code" className="space-y-6">
