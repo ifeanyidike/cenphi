@@ -265,3 +265,4 @@ When contributing to this feature:
 - Framer Motion (for animations)
 - Lucide React (for icons)
 - Tailwind CSS (for styling)
+
