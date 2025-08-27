@@ -18,7 +18,6 @@ import {
 interface IntegrationsSettingsProps {
   googleDriveConnected: boolean;
   linkedInConnected: boolean;
-  isLoading: boolean;
   isGoogleDriveConnecting: boolean;
   isLinkedInConnecting: boolean;
   onGoogleDriveConnect: () => void;
@@ -30,7 +29,6 @@ interface IntegrationsSettingsProps {
 const IntegrationsSettings: React.FC<IntegrationsSettingsProps> = ({
   googleDriveConnected,
   linkedInConnected,
-  isLoading,
   isGoogleDriveConnecting,
   isLinkedInConnecting,
   onGoogleDriveConnect,

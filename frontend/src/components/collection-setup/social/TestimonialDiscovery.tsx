@@ -366,7 +366,7 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
     const testimonial = testimonials.find((t) => t.id === id);
     if (testimonial) {
       setSelectedTestimonial(testimonial);
-      setCustomMessage(settings.permissionMessage);
+      setCustomMessage(settings.permissionMessage || "");
       setIsPermissionModalOpen(true);
     }
   };
@@ -526,7 +526,7 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
     if (selectedTestimonialIds.length === filteredTestimonials.length) {
       setSelectedTestimonialIds([]);
     } else {
-      setSelectedTestimonialIds(filteredTestimonials.map((t) => t.id));
+      setSelectedTestimonialIds(filteredTestimonials.map((t: Testimonial) => t.id));
     }
   };
 
@@ -2309,7 +2309,7 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
         ) : viewMode === "grid" ? (
           // Grid view
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredTestimonials.map((testimonial) =>
+            {filteredTestimonials.map((testimonial: Testimonial) =>
               renderTestimonialCard(testimonial)
             )}
           </div>
@@ -2366,7 +2366,7 @@ const TestimonialDiscovery: React.FC<TestimonialDiscoveryProps> = ({
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredTestimonials.map((testimonial) =>
+                    {filteredTestimonials.map((testimonial: Testimonial) =>
                       renderTestimonialRow(testimonial)
                     )}
                   </tbody>

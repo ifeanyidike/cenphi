@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Folder, File, Download, Eye, Search, RefreshCw, Check, Upload, Cloud, ArrowLeft } from 'lucide-react';
+import { Folder, File, Eye, Search, RefreshCw, Check, Upload, Cloud, ArrowLeft } from 'lucide-react';
 import { oauthService } from '@/services/oauthService';
 import { connectionStatusService } from '@/services/connectionStatusService';
 
@@ -44,7 +44,7 @@ const GoogleDriveFileBrowser: React.FC = () => {
     }
   };
 
-  const fetchFiles = async (query?: string) => {
+  const fetchFiles = async () => {
     setLoading(true);
     setError(null);
     
@@ -62,7 +62,7 @@ const GoogleDriveFileBrowser: React.FC = () => {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    fetchFiles(searchQuery);
+    fetchFiles();
   };
 
   const getFileIcon = (mimeType?: string) => {
@@ -98,11 +98,7 @@ const GoogleDriveFileBrowser: React.FC = () => {
     return new Date(dateString).toLocaleDateString();
   };
 
-  const handleFileClick = (file: DriveFile) => {
-    if (file.webViewLink) {
-      window.open(file.webViewLink, '_blank');
-    }
-  };
+
 
   const handleFileSelect = (fileId: string) => {
     if (!fileId) return; // Don't process empty file IDs

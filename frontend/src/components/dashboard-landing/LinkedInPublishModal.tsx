@@ -4,8 +4,7 @@ import {
   Send, 
   Save, 
   User, 
-  Building2, 
-  Star, 
+  Building2,  
   Award, 
   MessageSquare,
   ChevronDown,
@@ -394,17 +393,17 @@ const LinkedInPublishModal: React.FC<PublishModalProps> = ({ isOpen, onClose, on
                               </div>
                               <div>
                                 <div className="font-medium">{item.name}</div>
-                                <div className="text-sm text-gray-500">{item.description}</div>
+                                <div className="text-sm text-gray-500">{(item as LinkedInCompany).description}</div>
                               </div>
                             </>
                           ) : (
                             <>
                               <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-medium">
-                                {item.avatar}
+                                {(item as LinkedInConnection).avatar}
                               </div>
                               <div>
                                 <div className="font-medium">{item.name}</div>
-                                <div className="text-sm text-gray-500">{item.title}</div>
+                                <div className="text-sm text-gray-500">{(item as LinkedInConnection).title}</div>
                               </div>
                             </>
                           )}

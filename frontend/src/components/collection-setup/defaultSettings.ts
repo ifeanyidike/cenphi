@@ -1,6 +1,9 @@
 // src/components/collection-setup/defaultSettings.ts
 import { CollectionSettings } from "@/types/setup";
 
+// Define SocialPlatformName type locally since it's not exported from setup types
+type SocialPlatformName = "instagram" | "twitter" | "facebook" | "linkedin" | "tiktok" | "youtube";
+
 export const defaultChatMessageTemplates: {
   id: string;
   name: string;
@@ -118,131 +121,84 @@ export const defaultSettings: CollectionSettings = {
   },
   email: {
     enabled: false,
-    formats: [
-      { type: "video", enabled: true },
-      { type: "audio", enabled: false },
-      { type: "text", enabled: true },
-      { type: "image", enabled: false },
-    ],
-    signatureTemplate: "minimal",
-    senderType: "company",
-    triggers: [],
-    templates: [
-      {
-        id: "template-1",
-        name: "Simple Template",
-        thumbnail: "/email-templates/standard.jpg",
-        description: "",
-        active: true,
-        subject: "We'd love your feedback on your recent purchase",
-        content:
-          "Hello {{customerName}},\n\nThank you for choosing our product. We'd love to hear about your experience.\n\nClick the button below to share your thoughts.\n\n{{buttonLink}}\n\nYour feedback helps us improve and helps others make informed decisions.\n\nThank you,\n{{companyName}}",
-      },
-      {
-        id: "template-2",
-        name: "Follow-Up Template",
-        thumbnail: "/email-templates/minimalist.jpg",
-        description: "",
-        active: false,
-        subject: "Quick feedback request",
-        content:
-          "Hi {{customerName}},\n\nHow was your experience with {{productName}}?\n\n{{buttonLink}}\n\nThanks,\n{{companyName}}",
-      },
-      {
-        id: "template-3",
-        name: "Media-Rich Template",
-        thumbnail: "/email-templates/minimalist.jpg",
-        description: "",
-        active: false,
-        subject: "Quick feedback request",
-        content:
-          "Hi {{customerName}},\n\nHow was your experience with {{productName}}?\n\n{{buttonLink}}\n\nThanks,\n{{companyName}}",
-      },
-      {
-        id: "template-4",
-        name: "Incentive Template",
-        description: "",
-        thumbnail: "/email-templates/minimalist.jpg",
-        active: false,
-        subject: "Quick feedback request",
-        content:
-          "Hi {{customerName}},\n\nHow was your experience with {{productName}}?\n\n{{buttonLink}}\n\nThanks,\n{{companyName}}",
-      },
-    ],
-    senderName: "Customer Success Team",
-    senderEmail: "feedback@company.com",
-    replyToEmail: "support@company.com",
-    schedule: {
-      followUpEnabled: true,
-      followUpDelay: 3,
-      followUpDelayUnit: "days",
-      maxFollowUps: 2,
+    sender: {
+      name: "Customer Success Team",
+      email: "feedback@company.com",
+    },
+    signature: {
+      text: "Best regards,\n{{companyName}} Team",
+      includeCompanyLogo: true,
+      includeSocialLinks: true,
+      template: "minimal",
+    },
+    templates: {
+      request: "Hi {{customerName}},\n\nThank you for choosing our product. We'd love to hear about your experience.\n\nClick the button below to share your thoughts.\n\n{{buttonLink}}\n\nYour feedback helps us improve and helps others make informed decisions.\n\nThank you,\n{{companyName}}",
+      thankYou: "Thank you for your feedback, {{customerName}}! We appreciate your input and look forward to serving you better.",
+      followup: "Hi {{customerName}},\n\nWe noticed you haven't shared your feedback yet. Would you mind taking a moment to tell us about your experience?\n\n{{buttonLink}}\n\nThanks,\n{{companyName}}",
+    },
+    settings: {
+      delay: 3,
+      autoSend: true,
+      requireReply: false,
     },
   },
   chat: {
     enabled: false,
+    platforms: {
+      intercom: false,
+      zendesk: false,
+      drift: false,
+      crisp: false,
+      tawkto: false,
+    },
+    triggers: {
+      sentiment: false,
+      purchase: false,
+      chat_end: false,
+      support_resolved: false,
+      duration: false,
+    },
     formats: [
       { type: "video", enabled: false },
       { type: "audio", enabled: false },
       { type: "text", enabled: true },
       { type: "image", enabled: false },
     ],
-    messageTemplate: defaultChatMessageTemplates[0],
-    triggers: [],
-    connectedPlatforms: {
-      intercom: false,
-      zendesk: false,
-      crisp: false,
-      drift: false,
+    templates: {
+      request: "Would you like to share your experience with us? It will only take a minute and helps us improve our service.",
+      thankYou: "Thank you for your feedback! We appreciate you taking the time to share your experience.",
+      followup: "Hi there! We'd love to hear about your experience today. Would you mind sharing a quick testimonial?",
     },
-    promptMessage:
-      "How would you rate your experience with our support team today?",
-    timeout: "30",
-    allowAgentTrigger: true,
+    settings: {
+      delay: 30,
+      autoTrigger: true,
+      requireRating: false,
+      minRating: 3,
+    },
   },
   social: {
     enabled: false,
-    platforms: [
-      { name: "instagram", enabled: true, connected: false, accounts: [] },
-      { name: "twitter", enabled: true, connected: false, accounts: [] },
-      { name: "facebook", enabled: false, connected: false, accounts: [] },
-    ],
-    formats: [
-      { type: "video", enabled: true },
-      { type: "audio", enabled: false },
-      { type: "text", enabled: true },
-      { type: "image", enabled: true },
-    ],
-    hashtag: "#lovethistool",
-    mention: "@ourcompany",
-    autoImport: true,
-    autoRequest: false,
-    approvalWorkflow: "manual",
-    filtering: {
-      negativeSentiment: true,
-      competitorMentions: true,
-      inappropriate: true,
+    platforms: {
+      twitter: true,
+      facebook: false,
+      linkedin: false,
+      instagram: true,
     },
-    permissionMessage:
-      "Hi {{username}}, we love your post about our product! Would you allow us to feature it on our website?",
-    sendPermissionAuto: true,
-    trackResponseStatus: true,
-    autoExpire: true,
-    sendFollowUp: false,
-    campaigns: [
-      // {
-      //   id: "campaign-1",
-      //   name: "Product Launch Campaign",
-      //   hashtag: "#newproductlaunch",
-      //   status: "active",
-      //   startDate: "2023-10-01",
-      //   endDate: "2023-11-01",
-      //   platforms: ["instagram", "twitter"],
-      //   target: 100,
-      //   collected: 37,
-      //   icon: "star",
-      // },
-    ],
+    triggers: {
+      positiveSentiment: true,
+      engagement: false,
+      mention: true,
+    },
+    templates: {
+      request: "Hi {{username}}, we love your post about our product! Would you allow us to feature it on our website?",
+      thankYou: "Thank you {{username}} for allowing us to feature your amazing feedback!",
+      followup: "Hi {{username}}, just following up on our request to feature your post. Let us know if you have any questions!",
+    },
+    settings: {
+      autoReply: true,
+      requireApproval: true,
+      characterLimit: 280,
+    },
   },
   custom: {
     enabled: false,
@@ -252,29 +208,21 @@ export const defaultSettings: CollectionSettings = {
       { type: "text", enabled: true },
       { type: "image", enabled: true },
     ],
-    customDomain: "",
-    subdomain: "feedback",
-    useCustomDomain: false,
     pageTitle: "Share Your Feedback",
-    pageDescription: "Tell us about your experience with our product",
-    themeSettings: {
-      primaryColor: "#3B82F6",
-      secondaryColor: "#6366F1",
-      backgroundColor: "#FFFFFF",
-      textColor: "#111827",
-      fontFamily: "Inter, sans-serif",
-      borderRadius: 8,
-      showLogo: true,
-      heroType: "gradient",
-      heroImage: "",
-      layout: {},
-    },
-    analytics: {},
-    companyName: "",
-    authentication: {
-      required: false,
-      method: "email",
-      providers: [],
+    headline: "Share Your Feedback",
+    formIntro: "Tell us about your experience with our product",
+    ctaButton: "Submit Feedback",
+    successTitle: "Thank You!",
+    successMessage: "Your feedback has been submitted successfully.",
+    customDomain: "",
+    customSlug: "feedback",
+    settings: {
+      showRating: true,
+      requireRating: false,
+      showCompany: true,
+      requireCompany: false,
+      showEmail: true,
+      requireEmail: true,
     },
   },
   "google-drive": {

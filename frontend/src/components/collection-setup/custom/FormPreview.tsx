@@ -32,7 +32,7 @@ import {
 import { cn } from "@/lib/utils";
 
 // Import component for drag-and-drop functionality
-import { CollectionSettings, CustomSettings } from "@/types/setup";
+import { CollectionSettings, CustomSettings, CustomFormField } from "@/types/setup";
 import { itemVariants, standardFieldOptions } from "./constants";
 import { observer } from "mobx-react-lite";
 
@@ -54,7 +54,7 @@ const FormPreview: FC<FormPreviewProps> = ({ previewRef, settings }) => {
     return (
       fieldId === "name" ||
       fieldId === "email" ||
-      getCustomFormFields().some((f) => f.name === fieldId)
+      getCustomFormFields().some((f: CustomFormField) => f.name === fieldId)
     );
   };
   return (
@@ -312,7 +312,7 @@ const FormPreview: FC<FormPreviewProps> = ({ previewRef, settings }) => {
                             {(field.id === "name" ||
                               field.id === "email" ||
                               getCustomFormFields().find(
-                                (f) => f.name === field.id
+                                (f: CustomFormField) => f.name === field.id
                               )?.required) && (
                               <span className="text-red-500">*</span>
                             )}
@@ -347,12 +347,12 @@ const FormPreview: FC<FormPreviewProps> = ({ previewRef, settings }) => {
                     {/* Custom Fields */}
                     {getCustomFormFields()
                       .filter(
-                        (field) =>
+                        (field: CustomFormField) =>
                           !standardFieldOptions.some(
                             (std) => std.id === field.name
                           )
                       )
-                      .map((field) => (
+                      .map((field: CustomFormField) => (
                         <div key={field.name} className="space-y-2">
                           <Label
                             className={cn(

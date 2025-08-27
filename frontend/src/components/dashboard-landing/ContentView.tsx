@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Sparkles, Cloud, Linkedin } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";

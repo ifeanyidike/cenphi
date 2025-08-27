@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Linkedin, Share2 } from 'lucide-react';
+import { Linkedin } from 'lucide-react';
 import LinkedInShareModal from './LinkedInShareModal';
 
 interface Testimonial {

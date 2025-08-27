@@ -842,8 +842,8 @@ export const mockTestimonials: Testimonial[] = [
   },
 ];
 
-export // Discovery mode info
-const discoveryModes = [
+// Discovery mode info
+export const discoveryModes = [
   {
     id: "auto" as DiscoveryMode,
     name: "Auto Approval",

@@ -1,18 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 
-// Types
-interface Testimonial {
-  id: string;
-  content: string;
-  author_name: string;
-  author_email: string;
-  author_title?: string;
-  author_company?: string;
-  rating?: number;
-  video_url?: string;
-  status: string;
-  created_at: string;
-}
+
 
 interface OAuthStatus {
   google_drive: {
@@ -74,11 +62,11 @@ const PageTester: React.FC = () => {
       setSseMessages((prev) => [...prev, `Job Update: ${event.data}`]);
     });
 
-    eventSource.addEventListener("heartbeat", (event) => {
+    eventSource.addEventListener("heartbeat", () => {
       setSseMessages((prev) => [...prev, `${label} Heartbeat`]);
     });
 
-    eventSource.onerror = (error) => {
+    eventSource.onerror = () => {
       setSseMessages((prev) => [
         ...prev,
         `${label} SSE Error: Connection failed`,

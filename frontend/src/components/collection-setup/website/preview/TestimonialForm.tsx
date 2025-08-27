@@ -40,7 +40,7 @@ import EnhancedVideoRecorder from "@/components/collection/VideoRecorder";
 import EnhancedAudioRecorder from "@/components/collection/AudioRecorder";
 import ImageUploader from "@/components/collection/ImageUploader";
 import RatingSelector from "@/components/collection/RatingSelector";
-import SuccessMessage from "../SuccessMessage";
+import SuccessMessage from "./SuccessMessage";
 import { observer } from "mobx-react-lite";
 
 interface TestimonialFormProps {

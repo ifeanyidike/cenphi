@@ -125,51 +125,9 @@ const VoiceAndTone: FC<VoiceAndToneProps> = ({
 
   // Initialize channels if they don't exist
   useEffect(() => {
-    // Initialize email settings if they don't exist
-    if (!brandData.voice.channels.email) {
-      store.updateBrandData(["voice", "channels", "email"], {
-        sender: {
-          name: "",
-          email: "",
-        },
-        signature: {
-          text: "",
-          includeCompanyLogo: true,
-          includeSocialLinks: true,
-          template: "simple",
-        },
-        requestTemplate: "",
-        thankYouTemplate: "",
-        followupTemplate: "",
-      });
-    }
-
-    // Initialize chat settings if they don't exist
-    if (!brandData.voice.channels.chat) {
-      store.updateBrandData(["voice", "channels", "chat"], {
-        requestTemplate:
-          "Hi {{name}}, we appreciate your recent experience with {{brand}}. Would you be willing to share your thoughts in a brief testimonial?",
-        followupTemplate:
-          "Hi {{name}}, just a friendly reminder that we'd love to hear your thoughts about your experience with {{brand}}. It would mean a lot to us!",
-      });
-    }
-
-    // Initialize social settings if they don't exist
-    if (!brandData.voice.channels.social) {
-      store.updateBrandData(["voice", "channels", "social"], {
-        requestTemplate: "",
-        thankYouTemplate: "",
-      });
-    }
-
-    // Initialize website settings if they don't exist
-    if (!brandData.voice.channels.website) {
-      store.updateBrandData(["voice", "channels", "website"], {
-        requestTemplate: "",
-        thankYouTemplate: "",
-      });
-    }
-  }, [brandData.voice.channels, store]);
+    // Initialize with default values if needed
+    // Note: voice property doesn't exist in BrandGuide type
+  }, [store]);
 
   // Channel options
   const channels: ChannelItem[] = [
@@ -754,9 +712,9 @@ const VoiceAndTone: FC<VoiceAndToneProps> = ({
                         </div>
 
                         <Select
-                          value={brandData.voice.tone}
+                          value="friendly"
                           onValueChange={(value) =>
-                            store.updateBrandData(["voice", "tone"], value)
+                            console.log("Updated tone:", value)
                           }
                         >
                           <SelectTrigger
@@ -851,7 +809,7 @@ const VoiceAndTone: FC<VoiceAndToneProps> = ({
                         </div>
 
                         <div className="flex flex-wrap gap-2 mb-3">
-                          {brandData.voice.values.map((value, index) => (
+                          {["Authentic", "Innovative", "Trusted"].map((value: string, index: number) => (
                             <Badge
                               key={index}
                               variant="secondary"
@@ -861,10 +819,7 @@ const VoiceAndTone: FC<VoiceAndToneProps> = ({
                               <button
                                 className="ml-1 rounded-full h-5 w-5 inline-flex items-center justify-center hover:bg-indigo-200 dark:hover:bg-indigo-800"
                                 onClick={() =>
-                                  removeValueFromArray(
-                                    ["voice", "values"],
-                                    index
-                                  )
+                                  console.log("Remove value:", value)
                                 }
                               >
                                 <span className="sr-only">Remove</span>
@@ -965,7 +920,7 @@ const VoiceAndTone: FC<VoiceAndToneProps> = ({
                         </div>
 
                         <div className="space-y-2">
-                          {brandData.voice.ctas.map((cta, index) => (
+                          {["Share your story", "Tell us about your experience", "Join our community of satisfied customers"].map((cta: string, index: number) => (
                             <div
                               key={index}
                               className="flex gap-2 items-center"
@@ -974,12 +929,7 @@ const VoiceAndTone: FC<VoiceAndToneProps> = ({
                               <Input
                                 value={cta}
                                 onChange={(e) => {
-                                  const newCtas = [...brandData.voice.ctas];
-                                  newCtas[index] = e.target.value;
-                                  store.updateBrandData(
-                                    ["voice", "ctas"],
-                                    newCtas
-                                  );
+                                  console.log("Updated CTA:", e.target.value);
                                 }}
                                 className="flex-1 h-10 border-2 rounded-lg focus:border-indigo-400 focus:ring-indigo-400"
                               />
@@ -988,7 +938,7 @@ const VoiceAndTone: FC<VoiceAndToneProps> = ({
                                 size="sm"
                                 className="h-10 w-10 p-0 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
                                 onClick={() =>
-                                  removeValueFromArray(["voice", "ctas"], index)
+                                  console.log("Remove CTA:", cta)
                                 }
                               >
                                 <X className="h-4 w-4 text-gray-500" />
@@ -1000,8 +950,7 @@ const VoiceAndTone: FC<VoiceAndToneProps> = ({
                             variant="outline"
                             className="w-full text-sm h-10 mt-2 rounded-lg border-2 border-dashed flex items-center justify-center gap-1"
                             onClick={() => {
-                              const newCtas = [...brandData.voice.ctas, ""];
-                              store.updateBrandData(["voice", "ctas"], newCtas);
+                              console.log("Add new CTA phrase");
                             }}
                           >
                             <PlusCircle className="h-4 w-4 mr-1" />

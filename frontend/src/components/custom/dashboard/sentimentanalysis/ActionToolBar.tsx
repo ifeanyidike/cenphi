@@ -54,7 +54,7 @@
 // }
 
 
-import { Check, X, Award, Calendar, Star, Flag, Share2, Linkedin } from 'lucide-react';
+import { Check, X, Award, Calendar, Star, Flag, Share2 } from 'lucide-react';
 import { Testimonial } from '@/types/testimonial';
 import LinkedInShareButton from '@/components/testimonial/LinkedInShareButton';
 
@@ -164,7 +164,7 @@ export function ActionToolbar({ testimonial, isDarkMode, onStatusChange }: Actio
             author_title: testimonial.customer_profile?.title,
             content: testimonial.content,
             media_url: testimonial.media_url,
-            type: testimonial.type,
+            type: testimonial.testimonial_type,
             format: testimonial.format,
             rating: testimonial.rating,
             tags: testimonial.tags

@@ -90,7 +90,7 @@ class OAuthService {
   /**
    * Disconnect from a provider
    */
-  async disconnectProvider(provider: string, workspaceId: string = '6fe5d4ae-3627-4103-af42-39fb40cc0a12'): Promise<void> {
+  async disconnectProvider(provider: string): Promise<void> {
     try {
       if (provider === 'google-drive') {
         // For Google Drive, we need to clear the connection status locally

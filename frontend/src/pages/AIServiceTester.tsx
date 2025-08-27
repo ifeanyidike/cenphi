@@ -2709,7 +2709,6 @@ import {
   BarChart3,
   Settings,
   Activity,
-  Globe,
   RefreshCw,
   Trash2,
   ChevronDown,
@@ -2723,26 +2722,19 @@ import {
   Network,
   Timer,
   TrendingUp,
-  Users,
   Star,
-  Zap,
   Sparkles,
   Mic,
   MessageSquare,
   Image,
-  Music,
   Scissors,
-  Palette,
   Brain,
   Target,
   Volume2,
   Copy,
-  ExternalLink,
-  Code,
   Type,
   Languages,
   Maximize2,
-  Minimize2,
 } from "lucide-react";
 
 const API_BASE_URL = "http://localhost:8081/api";
@@ -4737,7 +4729,7 @@ const AITestingDashboard: React.FC = () => {
 
   // Status indicator
   const getStatusIndicator = useCallback(
-    (serviceId: string): JSX.Element | null => {
+    (serviceId: string): React.ReactElement | null => {
       if (loading[serviceId]) {
         return <Clock className="w-4 h-4 text-amber-500 animate-spin" />;
       }

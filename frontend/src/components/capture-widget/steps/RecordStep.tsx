@@ -177,7 +177,7 @@ const RecordStep: React.FC = () => {
     mediaStream,
     videoRef,
     error: recorderError,
-    isInitialized,
+
   } = useMediaRecorder(mediaType, userCameraChoice, {
     onDataAvailable: handleDataAvailable,
     onStop: handleRecordingFinished,

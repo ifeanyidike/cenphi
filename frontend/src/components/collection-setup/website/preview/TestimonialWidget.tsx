@@ -266,7 +266,7 @@ const TestimonialWidget: React.FC<TestimonialWidgetProps> = observer(
 
       if (activeTrigger.businessEvent === ("page_visit" as BusinessEventType)) {
         const delayMs =
-          parseInt(activeTrigger.delay) *
+          parseInt(activeTrigger.delay || "0") *
           (activeTrigger.delayUnit === "seconds"
             ? 1000
             : activeTrigger.delayUnit === "minutes"
@@ -1225,7 +1225,7 @@ const TestimonialWidget: React.FC<TestimonialWidgetProps> = observer(
                             isTyping={isTyping}
                             setIsTyping={setIsTyping}
                             value={testimonialText}
-                            onChange={(e) => setTestimonialText(e.target.value)}
+                            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setTestimonialText(e.target.value)}
                             placeholder="Share your thoughts here..."
                             minLength={
                               (incentives?.enabled &&
@@ -1338,7 +1338,7 @@ const TestimonialWidget: React.FC<TestimonialWidgetProps> = observer(
                     label="Full Name"
                     placeholder="John Smith"
                     value={userName}
-                    onChange={(e) => handleFieldChange("name", e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFieldChange("name", e.target.value)}
                     required={true}
                     error={formErrors.name}
                     currentStyle={currentStyle}
@@ -1350,7 +1350,7 @@ const TestimonialWidget: React.FC<TestimonialWidgetProps> = observer(
                     label="Email"
                     placeholder="john@example.com"
                     value={userEmail}
-                    onChange={(e) => handleFieldChange("email", e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFieldChange("email", e.target.value)}
                     required={true}
                     error={formErrors.email}
                     currentStyle={currentStyle}
@@ -1363,7 +1363,7 @@ const TestimonialWidget: React.FC<TestimonialWidgetProps> = observer(
                       label="Company"
                       placeholder="Acme Inc."
                       value={userCompany}
-                      onChange={(e) =>
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                         handleFieldChange("company", e.target.value)
                       }
                       required={
@@ -1392,7 +1392,7 @@ const TestimonialWidget: React.FC<TestimonialWidgetProps> = observer(
                         label={formatFieldLabel(field)}
                         placeholder={`Enter your ${formatFieldLabel(field).toLowerCase()}`}
                         value={userFields[field] || ""}
-                        onChange={(e) =>
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                           handleFieldChange(field, e.target.value)
                         }
                         required={true}
@@ -1467,7 +1467,7 @@ const TestimonialWidget: React.FC<TestimonialWidgetProps> = observer(
                                   label={formatFieldLabel(field)}
                                   placeholder={`Enter your ${formatFieldLabel(field).toLowerCase()}`}
                                   value={userFields[field] || ""}
-                                  onChange={(e) =>
+                                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                                     handleFieldChange(field, e.target.value)
                                   }
                                   required={false}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { CheckCircle, ArrowRight, Eye } from "lucide-react";
+import { CheckCircle, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { connectionStatusService } from "@/services/connectionStatusService";
 
@@ -10,7 +10,6 @@ const OAuthSuccess = () => {
   const [countdown, setCountdown] = useState(3);
   
   const platform = searchParams.get("platform");
-  const workspaceId = searchParams.get("workspace_id");
 
   useEffect(() => {
     // Update connection status when OAuth is successful

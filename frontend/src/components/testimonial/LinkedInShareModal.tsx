@@ -7,16 +7,12 @@ import {
   Image,
   Video,
   FileText,
-  Star,
-  User,
-  Building2,
   Eye,
   Users as UsersIcon,
   Lock,
   Loader2,
   CheckCircle,
   AlertCircle,
-  Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence } from "framer-motion";
 import { linkedInShareService } from '@/services/linkedInShareService';

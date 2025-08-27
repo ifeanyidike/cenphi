@@ -1,37 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+
 import { 
-  Linkedin, 
   Share2, 
   Star, 
-  User, 
-  Building, 
   Calendar,
-  Filter,
   Search,
-  ExternalLink,
   AlertCircle,
-  CheckCircle
 } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { workspaceHub } from '@/repo/workspace_hub';
-import { Testimonial } from '@/types/testimonial';
 import { connectionStatusService } from '@/services/connectionStatusService';
 
 const LinkedInReadyPage: React.FC = observer(() => {
   const [selectedTestimonials, setSelectedTestimonials] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [linkedInConnected, setLinkedInConnected] = useState(false);
-  const [isCheckingConnection, setIsCheckingConnection] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedModal, setSelectedModal] = useState<Testimonial | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  
 
   // Get testimonials from the workspace hub
   const { testimonialManager } = workspaceHub;
@@ -52,7 +42,6 @@ const LinkedInReadyPage: React.FC = observer(() => {
         // Check LinkedIn connection status
         const linkedInStatus = await connectionStatusService.getConnectionStatus('linkedin');
         setLinkedInConnected(linkedInStatus.isConnected);
-        setIsCheckingConnection(false);
       } catch (error) {
         console.error('Error loading data:', error);
       } finally {

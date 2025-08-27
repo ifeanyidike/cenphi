@@ -5,8 +5,28 @@ import { Label } from "@/components/ui/label";
 import { Cloud, Settings, RefreshCw, CheckCircle, AlertCircle, FileVideo, FileAudio, FileText, Image, ChevronRight } from "lucide-react";
 import { connectionStatusService } from "@/services/connectionStatusService";
 
+// Define types first
+type FormatType = "video" | "audio" | "document" | "image";
+
+interface FormatSetting {
+  type: FormatType;
+  enabled: boolean;
+}
+
+interface ConnectionSettings {
+  isConnected: boolean;
+  accountEmail: string;
+  autoSync: boolean;
+  syncInterval: number;
+}
+
+interface GoogleDriveSettingsState {
+  connection: ConnectionSettings;
+  formats: FormatSetting[];
+}
+
 // Mock settings data for demo
-const mockSettings = {
+const mockSettings: GoogleDriveSettingsState = {
   connection: {
     isConnected: true,
     accountEmail: "john.doe@company.com",
@@ -55,14 +75,14 @@ const GoogleDriveSettings = () => {
     }
   };
 
-  const formatLabels = {
+  const formatLabels: Record<FormatType, string> = {
     video: "Video Files",
     audio: "Audio Files", 
     document: "Documents",
     image: "Images",
   };
 
-  const formatIcons = {
+  const formatIcons: Record<FormatType, React.ComponentType<any>> = {
     video: FileVideo,
     audio: FileAudio,
     document: FileText,
@@ -76,25 +96,6 @@ const GoogleDriveSettings = () => {
     60: "1 hour",
     1440: "Daily"
   };
-
-  interface ConnectionSettings {
-    isConnected: boolean;
-    accountEmail: string;
-    autoSync: boolean;
-    syncInterval: number;
-  }
-
-  type FormatType = "video" | "audio" | "document" | "image";
-
-  interface FormatSetting {
-    type: FormatType;
-    enabled: boolean;
-  }
-
-  interface GoogleDriveSettingsState {
-    connection: ConnectionSettings;
-    formats: FormatSetting[];
-  }
 
   const onFormatToggle = (formatType: FormatType) => {
     setIsLoading(true);
@@ -111,7 +112,7 @@ const GoogleDriveSettings = () => {
     }, 300);
   };
 
-  const onNestedSettingsChange = (parentField, field, value) => {
+  const onNestedSettingsChange = (parentField: keyof GoogleDriveSettingsState, field: string, value: any) => {
     setSettings(prev => ({
       ...prev,
       [parentField]: {
@@ -221,7 +222,7 @@ const GoogleDriveSettings = () => {
                         </div>
                         <Switch
                           checked={format.enabled}
-                          onCheckedChange={() => onFormatToggle(format.type)}
+                          onCheckedChange={() => onFormatToggle(format.type as FormatType)}
                           className="data-[state=checked]:bg-blue-600"
                         />
                       </div>
