@@ -9,7 +9,7 @@ import { connectionStatusService } from '@/services/connectionStatusService';
 const SettingsPage: React.FC = () => {
   const [googleDriveConnected, setGoogleDriveConnected] = useState(false);
   const [linkedInConnected, setLinkedInConnected] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  // const [isLoading, setIsLoading] = useState(true);
   const [isGoogleDriveConnecting, setIsGoogleDriveConnecting] = useState(false);
   const [isLinkedInConnecting, setIsLinkedInConnecting] = useState(false);
   const [disconnectMessage, setDisconnectMessage] = useState<string | null>(null);
@@ -27,7 +27,7 @@ const SettingsPage: React.FC = () => {
   useEffect(() => {
     const checkConnectionStatus = async () => {
       try {
-        setIsLoading(true);
+        // setIsLoading(true);
         
         // Check Google Drive connection status using connectionStatusService
         const googleDriveStatus = await connectionStatusService.getConnectionStatus('google_drive');
@@ -49,7 +49,7 @@ const SettingsPage: React.FC = () => {
         setGoogleDriveConnected(false);
         setLinkedInConnected(false);
       } finally {
-        setIsLoading(false);
+        // setIsLoading(false);
       }
     };
 
@@ -265,7 +265,6 @@ const SettingsPage: React.FC = () => {
           <IntegrationsSettings 
             googleDriveConnected={googleDriveConnected}
             linkedInConnected={linkedInConnected}
-            isLoading={isLoading}
             isGoogleDriveConnecting={isGoogleDriveConnecting}
             isLinkedInConnecting={isLinkedInConnecting}
             onGoogleDriveConnect={handleGoogleDriveConnect}

@@ -218,14 +218,14 @@ const VoiceAndTone: FC<VoiceAndToneProps> = ({
   };
 
   // Remove a value from an array in the brand data
-  const removeValueFromArray = (path: string[], index: number) => {
-    const currentArray = path.reduce((obj, key) => obj[key], brandData as any);
-    if (Array.isArray(currentArray)) {
-      const newArray = [...currentArray];
-      newArray.splice(index, 1);
-      store.updateBrandData(path, newArray);
-    }
-  };
+  // const removeValueFromArray = (path: string[], index: number) => {
+  //   const currentArray = path.reduce((obj, key) => obj[key], brandData as any);
+  //   if (Array.isArray(currentArray)) {
+  //     const newArray = [...currentArray];
+  //     newArray.splice(index, 1);
+  //     store.updateBrandData(path, newArray);
+  //   }
+  // };
 
   // Simulate AI generation of brand voice suggestions
   const generateAIBrandVoice = () => {

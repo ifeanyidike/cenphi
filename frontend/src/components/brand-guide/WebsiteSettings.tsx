@@ -49,7 +49,7 @@ type WidgetStyleType = "modal" | "sidebar" | "inline";
 
 const WebsiteSettings: FC = () => {
   const store = brandGuideStore;
-  const { brandData } = store;
+  // const { brandData } = store;
 
   const [widgetPosition, setWidgetPosition] =
     useState<WidgetPositionType>("bottom-right");

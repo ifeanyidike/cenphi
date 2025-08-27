@@ -43,11 +43,11 @@ const mockSettings: GoogleDriveSettingsState = {
 
 const GoogleDriveSettings = () => {
   const [settings, setSettings] = useState(mockSettings);
-  const [isLoading, setIsLoading] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState({
-    isConnected: false,
-    accountEmail: '',
-  });
+  // const [isLoading, setIsLoading] = useState(false);
+  // const [connectionStatus, setConnectionStatus] = useState({
+  //   isConnected: false,
+  //   accountEmail: '',
+  // });
 
   useEffect(() => {
     checkConnectionStatus();
@@ -56,10 +56,10 @@ const GoogleDriveSettings = () => {
   const checkConnectionStatus = async () => {
     try {
       const status = await connectionStatusService.getConnectionStatus('google_drive');
-      setConnectionStatus({
-        isConnected: status.isConnected,
-        accountEmail: status.accountEmail || '',
-      });
+      // setConnectionStatus({
+      //   isConnected: status.isConnected,
+      //   accountEmail: status.accountEmail || '',
+      // });
       
       // Update settings with real connection status
       setSettings(prev => ({
@@ -98,7 +98,7 @@ const GoogleDriveSettings = () => {
   };
 
   const onFormatToggle = (formatType: FormatType) => {
-    setIsLoading(true);
+    // setIsLoading(true);
     setTimeout(() => {
       setSettings((prev: GoogleDriveSettingsState) => ({
         ...prev,
@@ -108,7 +108,7 @@ const GoogleDriveSettings = () => {
             : format
         )
       }));
-      setIsLoading(false);
+      // setIsLoading(false);
     }, 300);
   };
 
