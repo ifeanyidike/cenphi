@@ -112,7 +112,7 @@ const pageTemplates: PageTemplate[] = [
     ],
     popular: true,
     previewBackground: "bg-gradient-to-br from-indigo-50 to-blue-100",
-    supportedFormats: ["video", "audio", "text"],
+    supportedFormats: ["video", "text"],
   },
   {
     id: "testimonial-wall",
@@ -140,7 +140,7 @@ const pageTemplates: PageTemplate[] = [
     ],
     popular: true,
     previewBackground: "bg-gradient-to-br from-purple-50 to-indigo-100",
-    supportedFormats: ["video", "audio", "text"],
+    supportedFormats: ["video", "text"],
   },
   {
     id: "minimal-focus",
@@ -168,7 +168,7 @@ const pageTemplates: PageTemplate[] = [
     ],
     popular: true,
     previewBackground: "bg-gradient-to-br from-zinc-900 to-slate-800",
-    supportedFormats: ["video", "audio", "text"],
+    supportedFormats: ["video", "text"],
   },
   {
     id: "interactive-gallery",
@@ -183,7 +183,7 @@ const pageTemplates: PageTemplate[] = [
     ],
     popular: true,
     previewBackground: "bg-gradient-to-br from-blue-50 to-cyan-100",
-    supportedFormats: ["video", "audio", "text"],
+    supportedFormats: ["video", "text"],
   },
   {
     id: "video-showcase",
@@ -213,7 +213,7 @@ const pageTemplates: PageTemplate[] = [
     ],
     popular: false,
     previewBackground: "bg-gradient-to-br from-emerald-50 to-teal-100",
-    supportedFormats: ["video", "audio", "text"],
+    supportedFormats: ["video", "text"],
   },
 ];
 
@@ -233,7 +233,7 @@ const testimonialFormats = [
     color: "from-blue-500 to-indigo-600",
   },
   {
-    id: "audio" as TestimonialFormat,
+    // audio removed
     icon: <AudioLines className="h-6 w-6" />,
     label: "Audio Testimonials",
     description: "Collect voice testimonials for customers who prefer audio",
@@ -260,7 +260,7 @@ interface TestimonialSample {
   rating: number;
   content: string;
   date: string;
-  type: "video" | "audio" | "text";
+  type: "video" | "text";
   verified: boolean;
 }
 
@@ -288,7 +288,7 @@ const testimonialSamples: TestimonialSample[] = [
     content:
       "Intuitive interface and powerful features. We've seen a 40% improvement in team collaboration since implementing this solution.",
     date: "1 week ago",
-    type: "audio",
+    // type: "audio",
     verified: true,
   },
   {
@@ -360,7 +360,7 @@ const TemplatePreview: React.FC<{ templateId: string; device?: string }> = ({
             )}
           />
         );
-      case "audio":
+      // case "audio":
         return (
           <AudioLines
             className={cn(
@@ -386,7 +386,7 @@ const TemplatePreview: React.FC<{ templateId: string; device?: string }> = ({
     switch (format) {
       case "video":
         return isDark ? "bg-blue-900/30" : "bg-blue-50";
-      case "audio":
+      // case "audio":
         return isDark ? "bg-amber-900/30" : "bg-amber-50";
       case "text":
         return isDark ? "bg-emerald-900/30" : "bg-emerald-50";
@@ -457,7 +457,7 @@ const TemplatePreview: React.FC<{ templateId: string; device?: string }> = ({
                           recordMode === format
                             ? format === "video"
                               ? "bg-blue-100 ring-2 ring-blue-300"
-                              : format === "audio"
+                              
                                 ? "bg-amber-100 ring-2 ring-amber-300"
                                 : "bg-emerald-100 ring-2 ring-emerald-300"
                             : "bg-gray-100"
@@ -468,7 +468,7 @@ const TemplatePreview: React.FC<{ templateId: string; device?: string }> = ({
                             className={`w-7 h-7 ${recordMode === format ? "text-blue-500" : "text-gray-500"}`}
                           />
                         )}
-                        {format === "audio" && (
+                        {false && (
                           <AudioLines
                             className={`w-7 h-7 ${recordMode === format ? "text-amber-500" : "text-gray-500"}`}
                           />
@@ -487,9 +487,9 @@ const TemplatePreview: React.FC<{ templateId: string; device?: string }> = ({
                 </div>
 
                 {/* Video/Audio Recording Preview */}
-                {(recordMode === "video" || recordMode === "audio") && (
+                {(recordMode === "video") && (
                   <div
-                    className={`mb-6 rounded-xl overflow-hidden shadow ${recordMode === "audio" ? "h-32 bg-gray-50" : "aspect-video bg-gray-100"}`}
+                    className={`mb-6 rounded-xl overflow-hidden shadow aspect-video bg-gray-100`}
                   >
                     {isRecording ? (
                       <div className="w-full h-full flex items-center justify-center bg-gray-900 relative">
@@ -692,7 +692,7 @@ const TemplatePreview: React.FC<{ templateId: string; device?: string }> = ({
                       </div>
                     )}
 
-                    {testimonial.type === "audio" && (
+                    {false && (
                       <div className="mt-3 p-3 bg-gray-50 rounded-lg">
                         <div className="flex items-center gap-3">
                           <button className="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center text-white">
@@ -828,7 +828,7 @@ const TemplatePreview: React.FC<{ templateId: string; device?: string }> = ({
                         recordMode === format
                           ? format === "video"
                             ? "border-blue-500 bg-blue-50"
-                            : format === "audio"
+                            
                               ? "border-amber-500 bg-amber-50"
                               : "border-emerald-500 bg-emerald-50"
                           : "border-gray-200 hover:border-gray-300"
@@ -840,7 +840,7 @@ const TemplatePreview: React.FC<{ templateId: string; device?: string }> = ({
                           className={`w-6 h-6 mb-2 ${recordMode === format ? "text-blue-600" : "text-gray-500"}`}
                         />
                       )}
-                      {format === "audio" && (
+                      {false && (
                         <AudioLines
                           className={`w-6 h-6 mb-2 ${recordMode === format ? "text-amber-600" : "text-gray-500"}`}
                         />
@@ -954,7 +954,7 @@ const TemplatePreview: React.FC<{ templateId: string; device?: string }> = ({
                         recordMode === format
                           ? format === "video"
                             ? "bg-blue-600 text-white"
-                            : format === "audio"
+                            
                               ? "bg-amber-600 text-white"
                               : "bg-emerald-600 text-white"
                           : "bg-white/10 text-white hover:bg-white/20"
@@ -962,7 +962,7 @@ const TemplatePreview: React.FC<{ templateId: string; device?: string }> = ({
                       onClick={() => setRecordMode(format)}
                     >
                       {format === "video" && <Video className="w-4 h-4" />}
-                      {format === "audio" && <AudioLines className="w-4 h-4" />}
+                      
                       {format === "text" && (
                         <MessageSquare className="w-4 h-4" />
                       )}
@@ -1330,7 +1330,7 @@ const TemplatePreview: React.FC<{ templateId: string; device?: string }> = ({
                               recordMode === format
                                 ? format === "video"
                                   ? "bg-blue-50 border-2 border-blue-500"
-                                  : format === "audio"
+                                  
                                     ? "bg-amber-50 border-2 border-amber-500"
                                     : "bg-emerald-50 border-2 border-emerald-500"
                                 : "bg-gray-50 border border-gray-200"
@@ -1342,7 +1342,7 @@ const TemplatePreview: React.FC<{ templateId: string; device?: string }> = ({
                                 className={`w-5 h-5 ${recordMode === format ? "text-blue-600" : "text-gray-500"}`}
                               />
                             )}
-                            {format === "audio" && (
+                            {false && (
                               <AudioLines
                                 className={`w-5 h-5 ${recordMode === format ? "text-amber-600" : "text-gray-500"}`}
                               />
@@ -1374,7 +1374,7 @@ const TemplatePreview: React.FC<{ templateId: string; device?: string }> = ({
                         </div>
                       )}
 
-                      {recordMode === "audio" && (
+                      {false && (
                         <div className="h-24 bg-gray-100 rounded-lg flex items-center justify-center">
                           <button className="p-5 rounded-full bg-amber-500 text-white">
                             <AudioLines className="w-6 h-6" />
@@ -1834,7 +1834,7 @@ const TemplatePreview: React.FC<{ templateId: string; device?: string }> = ({
                 </div>
               )}
 
-              {template?.supportedFormats.includes("audio") && (
+              {false && (
                 <div className="flex flex-col items-center">
                   <div
                     className={cn(
@@ -2380,7 +2380,7 @@ const TestimonialTemplateSelector: React.FC<TemplateSelectionProps> = ({
                     const formatColor =
                       format === "video"
                         ? "bg-blue-100 text-blue-700"
-                        : format === "audio"
+                        
                           ? "bg-amber-100 text-amber-700"
                           : "bg-emerald-100 text-emerald-700";
                     return (

@@ -96,9 +96,9 @@ function TestimonialCollection() {
             totalSteps={GUIDED_PROMPTS.length}
           />
           <FileUpload
-            type={type as "video" | "audio"}
+            type={"video"}
             onComplete={collectionStore.handleComplete}
-            maxSize={type === "video" ? 500 * 1024 * 1024 : 100 * 1024 * 1024}
+            maxSize={500 * 1024 * 1024}
           />
           {renderChangeType()}
         </motion.div>
@@ -169,11 +169,7 @@ function TestimonialCollection() {
       //   </Button>
       // </div>
       <ChangeRenderType
-      type={
-        ["audio", "video", "text"].includes(state.type as string)
-          ? (state.type as "audio" | "video" | "text")
-          : null
-      }
+      type={state.type === "video" || state.type === "text" ? state.type : null}
         isComplete={state.currentPromptIndex === GUIDED_PROMPTS.length - 1}
         onNext={() => collectionStore.handleNext(progress)}
       />

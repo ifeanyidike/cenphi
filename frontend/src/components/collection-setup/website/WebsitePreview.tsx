@@ -449,31 +449,6 @@ const WebsitePreview: React.FC<WebsitePreviewProps> = ({
                   Click to record video
                 </p>
               </div>
-            ) : selectedFormat === "audio" ? (
-              <div
-                className={cn(
-                  "border rounded-lg p-6 flex flex-col items-center justify-center min-h-32",
-                  isDarkTheme
-                    ? "bg-gray-800 border-gray-700"
-                    : "bg-gray-50 border-gray-200"
-                )}
-                style={{ borderRadius: `${borderRadius - 2}px` }}
-              >
-                <Mic
-                  className={cn(
-                    "h-12 w-12 mb-3",
-                    isDarkTheme ? "text-gray-200" : "text-gray-600"
-                  )}
-                />
-                <p
-                  className={cn(
-                    "text-sm font-medium",
-                    isDarkTheme ? "text-gray-300" : "text-gray-500"
-                  )}
-                >
-                  Click to record audio
-                </p>
-              </div>
             ) : (
               <div
                 className={cn(
