@@ -7,7 +7,6 @@ import {
   MAX_RECORDING_DURATION,
 } from "@/components/collection/constants";
 import DisplayQuestion from "@/components/collection/DisplayQuestion";
-import AudioRecorder from "@/components/collection/AudioRecorder";
 import ChangeRenderType from "@/components/collection/ChangeRenderType";
 
 const AudioTestimonialRecorder = () => {
@@ -33,12 +32,9 @@ const AudioTestimonialRecorder = () => {
         <div className="bg-white rounded-xl shadow-lg p-6 mt-4 mb-8">
           <DisplayQuestion />
 
-          <AudioRecorder
-            onRecordingComplete={collectionStore.handleCompleteRecordingSection}
-            maxDuration={MAX_RECORDING_DURATION / (GUIDED_PROMPTS.length || 1)}
-            onContinue={() => {}}
-            onSubmit={() => {}}
-          />
+          <div className="text-sm text-gray-500 text-center">
+            Audio recording is no longer available. Please use Upload or switch to Video/Text.
+          </div>
         </div>
 
         <ChangeRenderType

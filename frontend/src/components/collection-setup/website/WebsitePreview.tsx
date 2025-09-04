@@ -8,7 +8,6 @@ import {
   MessageCircle,
   PlayCircle,
   Camera,
-  Mic,
   FileText,
   Star,
   CheckCircle2,
@@ -79,12 +78,6 @@ const testimonialFormats = [
     label: "Take a Photo",
     color: "bg-amber-100 text-amber-600",
     value: "image",
-  },
-  {
-    icon: <Mic className="h-5 w-5" />,
-    label: "Record Audio",
-    color: "bg-blue-100 text-blue-600",
-    value: "audio",
   },
   {
     icon: <PlayCircle className="h-5 w-5" />,

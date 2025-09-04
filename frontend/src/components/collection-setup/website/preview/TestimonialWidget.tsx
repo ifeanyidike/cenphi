@@ -7,7 +7,6 @@ import {
   Star,
   MessageSquare,
   Video,
-  Mic,
   Camera,
   Info,
   Gift,
@@ -25,7 +24,6 @@ import { cn } from "@/lib/utils";
 
 // Import media recording components
 import VideoRecorder from "@/components/collection/VideoRecorder";
-import AudioRecorder from "@/components/collection/AudioRecorder";
 import ImageUploader from "@/components/collection/ImageUploader";
 
 // Types
@@ -950,9 +948,6 @@ const TestimonialWidget: React.FC<TestimonialWidgetProps> = observer(
                       case "video":
                         FormatIcon = Video;
                         break;
-                      case "audio":
-                        FormatIcon = Mic;
-                        break;
                       case "image":
                         FormatIcon = Camera;
                         break;
@@ -1257,16 +1252,6 @@ const TestimonialWidget: React.FC<TestimonialWidgetProps> = observer(
                         )}
                       />
                     )}
-                    {selectedFormat === "audio" && (
-                      <Mic
-                        className={cn(
-                          "h-12 w-12 mb-2",
-                          currentStyle.stylePreset === "gradient"
-                            ? "text-white/70"
-                            : "text-gray-400"
-                        )}
-                      />
-                    )}
                     {selectedFormat === "image" && (
                       <Camera
                         className={cn(
@@ -1286,8 +1271,6 @@ const TestimonialWidget: React.FC<TestimonialWidgetProps> = observer(
                     >
                       {selectedFormat === "video" &&
                         "Record a video testimonial to share your experience"}
-                      {selectedFormat === "audio" &&
-                        "Record your voice to share your feedback"}
                       {selectedFormat === "image" &&
                         "Upload a photo to accompany your testimonial"}
                     </p>
@@ -1299,15 +1282,12 @@ const TestimonialWidget: React.FC<TestimonialWidgetProps> = observer(
                       icon={
                         selectedFormat === "video" ? (
                           <Video className="h-4 w-4" />
-                        ) : selectedFormat === "audio" ? (
-                          <Mic className="h-4 w-4" />
                         ) : (
                           <Upload className="h-4 w-4" />
                         )
                       }
                     >
                       {selectedFormat === "video" && "Start Recording"}
-                      {selectedFormat === "audio" && "Start Recording"}
                       {selectedFormat === "image" && "Upload Photo"}
                     </Button>
                   </Card>
@@ -1722,7 +1702,6 @@ const TestimonialWidget: React.FC<TestimonialWidgetProps> = observer(
                   className={cn("text-2xl font-bold", currentStyle.textColor)}
                 >
                   {selectedFormat === "video" && "Record Your Video"}
-                  {selectedFormat === "audio" && "Record Your Audio"}
                   {selectedFormat === "image" && "Upload Your Photo"}
                 </h2>
 
@@ -1747,17 +1726,7 @@ const TestimonialWidget: React.FC<TestimonialWidgetProps> = observer(
                     </div>
                   )}
 
-                  {selectedFormat === "audio" && (
-                    <div className="w-full">
-                      <AudioRecorder
-                        onRecordingComplete={handleMediaRecording}
-                        forceMobileView
-                        onContinue={() => {}}
-                          onSubmit={() => {}}
-                        primaryColor={currentStyle.primaryColor}
-                      />
-                    </div>
-                  )}
+                  
 
                   {selectedFormat === "image" && (
                     <div className="w-full">
@@ -2008,14 +1977,6 @@ const TestimonialWidget: React.FC<TestimonialWidgetProps> = observer(
                             />
                           )}
 
-                          {selectedFormat === "audio" && mediaPreviewUrl && (
-                            <audio
-                              src={mediaPreviewUrl}
-                              controls
-                              className="w-full"
-                            />
-                          )}
-
                           {selectedFormat === "image" && mediaPreviewUrl && (
                             <img
                               src={mediaPreviewUrl}
@@ -2030,17 +1991,6 @@ const TestimonialWidget: React.FC<TestimonialWidgetProps> = observer(
                               <div className="text-center py-4">
                                 {selectedFormat === "video" && (
                                   <Video
-                                    className={cn(
-                                      "h-8 w-8 mx-auto mb-3",
-                                      currentStyle.stylePreset === "gradient"
-                                        ? "text-white/70"
-                                        : "text-gray-400"
-                                    )}
-                                  />
-                                )}
-
-                                {selectedFormat === "audio" && (
-                                  <Mic
                                     className={cn(
                                       "h-8 w-8 mx-auto mb-3",
                                       currentStyle.stylePreset === "gradient"

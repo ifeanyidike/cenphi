@@ -54,7 +54,6 @@ export const defaultSettings: CollectionSettings = {
     enabled: true,
     formats: [
       { type: "video", enabled: true },
-      { type: "audio", enabled: true },
       { type: "text", enabled: true },
       { type: "image", enabled: false },
     ],
@@ -160,7 +159,6 @@ export const defaultSettings: CollectionSettings = {
     },
     formats: [
       { type: "video", enabled: false },
-      { type: "audio", enabled: false },
       { type: "text", enabled: true },
       { type: "image", enabled: false },
     ],
@@ -204,7 +202,6 @@ export const defaultSettings: CollectionSettings = {
     enabled: false,
     formats: [
       { type: "video", enabled: true },
-      { type: "audio", enabled: true },
       { type: "text", enabled: true },
       { type: "image", enabled: true },
     ],
@@ -229,7 +226,6 @@ export const defaultSettings: CollectionSettings = {
     enabled: false,
     formats: [
       { type: "video", enabled: true },
-      { type: "audio", enabled: true },
       { type: "document", enabled: true },
       { type: "image", enabled: true },
     ],
@@ -243,7 +239,7 @@ export const defaultSettings: CollectionSettings = {
     folders: {
       selectedFolders: [],
       includeSubfolders: true,
-      fileTypes: ["video", "audio", "document", "image"],
+      fileTypes: ["video", "document", "image"],
       maxFileSize: 100,
     },
     processing: {
@@ -263,7 +259,6 @@ export const defaultSettings: CollectionSettings = {
     formats: [
       { type: "text", enabled: true },
       { type: "video", enabled: false },
-      { type: "audio", enabled: false },
       { type: "image", enabled: false },
     ],
     connection: {

@@ -750,7 +750,7 @@ const WidgetDrawer: React.FC<WidgetDrawerProps> = observer(
                       {testimonial?.format === "text" ||
                       testimonial?.format === "image"
                         ? testimonial?.content || ""
-                        : testimonial?.format === "audio" ||
+                        :
                             testimonial?.format === "video"
                           ? testimonial.transcript
                           : "The product quality is excellent and the value for money is exceptional. The team went above and beyond to ensure I had everything I needed."}

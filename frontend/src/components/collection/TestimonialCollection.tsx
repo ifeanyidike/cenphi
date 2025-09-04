@@ -1,7 +1,6 @@
 import { motion, AnimatePresence, useMotionValue } from "framer-motion";
 import TestimonialTypeSelection from "./TestimonialTypeSelection";
 import VideoRecorder from "./VideoRecorder";
-import AudioRecorder from "./AudioRecorder";
 import { AIFeedback } from "./AIFeedback";
 import MediaSelectionModal from "./MediaSelectionModal";
 import FileUpload from "./FileUpload";
@@ -229,12 +228,9 @@ function TestimonialCollection() {
         <div className="bg-white rounded-xl shadow-lg p-6 mt-4 mb-8">
           {renderDisplayQuestion()}
 
-          <AudioRecorder
-            onRecordingComplete={collectionStore.handleComplete}
-            maxDuration={MAX_RECORDING_DURATION / (GUIDED_PROMPTS.length || 1)}
-            onContinue={() => {}}
-            onSubmit={() => {}}
-          />
+          <div className="text-sm text-gray-500 text-center">
+            Audio recording is no longer available. Please use Upload or switch to Video/Text.
+          </div>
         </div>
 
         {renderChangeType()}

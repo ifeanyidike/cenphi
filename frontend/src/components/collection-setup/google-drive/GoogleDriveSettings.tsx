@@ -2,11 +2,11 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Cloud, Settings, RefreshCw, CheckCircle, AlertCircle, FileVideo, FileAudio, FileText, Image, ChevronRight } from "lucide-react";
+import { Cloud, Settings, RefreshCw, CheckCircle, AlertCircle, FileVideo, FileText, Image, ChevronRight } from "lucide-react";
 import { connectionStatusService } from "@/services/connectionStatusService";
 
 // Define types first
-type FormatType = "video" | "audio" | "document" | "image";
+type FormatType = "video" | "document" | "image";
 
 interface FormatSetting {
   type: FormatType;
@@ -35,7 +35,6 @@ const mockSettings: GoogleDriveSettingsState = {
   },
   formats: [
     { type: "video", enabled: true },
-    { type: "audio", enabled: true },
     { type: "document", enabled: false },
     { type: "image", enabled: true }
   ]
@@ -77,14 +76,12 @@ const GoogleDriveSettings = () => {
 
   const formatLabels: Record<FormatType, string> = {
     video: "Video Files",
-    audio: "Audio Files", 
     document: "Documents",
     image: "Images",
   };
 
   const formatIcons: Record<FormatType, React.ComponentType<any>> = {
     video: FileVideo,
-    audio: FileAudio,
     document: FileText,
     image: Image,
   };

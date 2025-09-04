@@ -17,7 +17,6 @@ import { Progress } from "@/components/ui/progress";
 import {
   MessageSquare,
   Camera,
-  Mic,
   Video,
   Star,
   ChevronLeft,
@@ -37,7 +36,6 @@ import {
   BrandGuide,
 } from "@/types/setup";
 import EnhancedVideoRecorder from "@/components/collection/VideoRecorder";
-import EnhancedAudioRecorder from "@/components/collection/AudioRecorder";
 import ImageUploader from "@/components/collection/ImageUploader";
 import RatingSelector from "@/components/collection/RatingSelector";
 import SuccessMessage from "./SuccessMessage";
@@ -91,7 +89,6 @@ type FormStep = "format" | "content" | "details" | "review" | "success";
 const formatIcons = {
   text: MessageSquare,
   image: Camera,
-  audio: Mic,
   video: Video,
   document: FileText,
 };
@@ -343,9 +340,7 @@ const TestimonialForm: React.FC<TestimonialFormProps> = observer(
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {format.type === "text" && "Share your thoughts in writing"}
-                    {format.type === "video" &&
-                      "Record a short video testimonial"}
-                    {format.type === "audio" && "Record your voice testimonial"}
+                    {format.type === "video" && "Record a short video testimonial"}
                     {format.type === "image" && "Upload a photo with text"}
                   </div>
                 </div>
@@ -476,18 +471,8 @@ const TestimonialForm: React.FC<TestimonialFormProps> = observer(
           )}
 
           {selectedFormat === "audio" && (
-            <div className="space-y-4">
-              <EnhancedAudioRecorder
-                forceMobileView
-                onContinue={() => {}}
-                onSubmit={() => {}}  
-                onRecordingComplete={handleMediaSubmission}
-                maxDuration={120}
-                currentQuestion={questions[currentQuestion]}
-                primaryColor={brandData.colors.primary}
-                companyName={brandData.name}
-                companyLogo={brandData.logo.main || ""}
-              />
+            <div className="space-y-4 text-center text-sm text-gray-500">
+              Audio recording is no longer available. Please choose Video, Image, or Text.
             </div>
           )}
 
@@ -641,11 +626,6 @@ const TestimonialForm: React.FC<TestimonialFormProps> = observer(
                   />
                 ) : selectedFormat === "video" ? (
                   <Video
-                    className="h-5 w-5"
-                    style={{ color: brandData?.colors?.primary }}
-                  />
-                ) : selectedFormat === "audio" ? (
-                  <Mic
                     className="h-5 w-5"
                     style={{ color: brandData?.colors?.primary }}
                   />

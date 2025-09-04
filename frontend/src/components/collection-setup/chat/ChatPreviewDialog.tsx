@@ -136,7 +136,7 @@ interface ChatMessage {
   isTyping?: boolean;
 }
 
-type TestimonialFormatType = "video" | "audio" | "text" | "image";
+type TestimonialFormatType = "video" | "text" | "image";
 
 interface ConversationScenario {
   id: string;
@@ -1320,7 +1320,7 @@ const ChatPreviewDialog: React.FC<ChatPreviewDialogProps> = ({
 
         <div className="grid grid-cols-2 gap-2">
           {enabledFormats
-            .filter((format) => ["video", "audio", "text", "image"].includes(format.type))
+            .filter((format) => ["video", "text", "image"].includes(format.type))
             .map((format) => (
               <button
                 key={format.type}

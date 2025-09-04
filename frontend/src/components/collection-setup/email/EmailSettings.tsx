@@ -11,7 +11,6 @@ import {
   Clock,
   FileText,
   Video,
-  Mic,
   Image as ImageIcon,
   ExternalLink,
 } from "lucide-react";
@@ -64,7 +63,7 @@ const itemVariants = {
 
 interface EmailSettingsProps {
   settings: CollectionSettings["email"];
-  onFormatToggle: (formatType: "video" | "audio" | "text" | "image") => void;
+  onFormatToggle: (formatType: "video" | "text" | "image") => void;
   onSettingsChange: (
     field: keyof CollectionSettings["email"],
     value: any
@@ -89,7 +88,6 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({
   // Calculate enabled formats - using default formats since EmailSettings doesn't have formats
   const enabledFormats = [
     { type: "video" as const, enabled: true },
-    { type: "audio" as const, enabled: false },
     { type: "text" as const, enabled: true },
     { type: "image" as const, enabled: false },
   ].filter((format) => format.enabled);
@@ -183,11 +181,10 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
                 { type: "video" as const, enabled: true },
-                { type: "audio" as const, enabled: false },
                 { type: "text" as const, enabled: true },
                 { type: "image" as const, enabled: false },
               ]
-                .filter((format) => ["video", "audio", "text", "image"].includes(format.type))
+                .filter((format) => ["video", "text", "image"].includes(format.type))
                 .map((format) => {
                 const isEnabled = format.enabled;
                 let Icon;
@@ -197,9 +194,6 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({
                     break;
                   case "video":
                     Icon = Video;
-                    break;
-                  case "audio":
-                    Icon = Mic;
                     break;
                   case "image":
                     Icon = ImageIcon;
@@ -216,7 +210,7 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({
                         ? "border-blue-200 bg-blue-50"
                         : "border-gray-200 hover:border-gray-300"
                     }`}
-                    onClick={() => onFormatToggle(format.type as "video" | "audio" | "text" | "image")}
+                    onClick={() => onFormatToggle(format.type as "video" | "text" | "image")}
                   >
                     <div
                       className={`w-12 h-12 rounded-full flex items-center justify-center ${

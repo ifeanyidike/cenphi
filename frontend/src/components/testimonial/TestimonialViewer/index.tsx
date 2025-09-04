@@ -3,7 +3,6 @@
 import React from "react";
 import { observer } from "mobx-react-lite";
 import { workspaceHub } from "../../../repo/workspace_hub";
-import AudioTestimonial from "./AudioTestimonial";
 import TextTestimonial from "./TextTestimonial";
 import ImageTestimonial from "../image";
 import VideoTestimonialView from "./VideoTestimonialView";
@@ -25,8 +24,6 @@ const TestimonialViewer: React.FC = observer(() => {
       case "video":
         // return <VideoTestimonial testimonial={testimonial} />;
         return <VideoTestimonialView testimonial={testimonial} />;
-      case "audio":
-        return <AudioTestimonial testimonial={testimonial} />;
       case "text":
         return <TextTestimonial testimonial={testimonial} />;
       case "image":

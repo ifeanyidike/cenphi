@@ -615,7 +615,7 @@ import MediaSelectionModal from "./MediaSelectionModal";
 import { useNavigate } from "react-router-dom";
 
 // ---------- Types & Data ----------
-export type TestimonialType = "video" | "audio" | "text" | "google-drive";
+export type TestimonialType = "video" | "text" | "google-drive";
 export type TestimonialStatus = "pending" | "selected" | "confirmed";
 
 export interface TestimonialOption {
@@ -647,20 +647,6 @@ const testimonialOptions: TestimonialOption[] = [
     ],
     popularity: 85,
     reachMetric: "High Trust",
-  },
-  {
-    id: "audio",
-    icon: Mic,
-    label: "Voice Review",
-    description:
-      "Share your insights in an authentic voice. Perfect for deep, thoughtful, and natural feedback.",
-    requirements: [""],
-    estimatedTime: "1-2 mins",
-    benefits: [
-      
-    ],
-    popularity: 75,
-    reachMetric: "Proven Reliability",
   },
   {
     id: "text",

@@ -1,5 +1,5 @@
 // types.ts
-export type TestimonialType = "video" | "audio" | "text" | "google-drive";
+export type TestimonialType = "video" | "text" | "google-drive";
 
 export interface GuidedPrompt {
   id: string;
@@ -52,12 +52,6 @@ export const PROMPT_TIPS = {
     "Feel free to pause and restart if needed",
     "Include specific examples when possible",
     "Natural lighting and clear audio help convey your message",
-  ],
-  audio: [
-    "Find a quiet space for recording",
-    "Speak clearly and at a natural pace",
-    "Use specific examples to illustrate your points",
-    "Take your time - you can always pause or restart",
   ],
   text: [
     "Be specific and use examples",

@@ -8,7 +8,7 @@ import Button from "../ui/Button";
 import Icon from "../ui/Icon";
 import { TestimonialStep, ConnectionStatus } from "../types";
 import { formatTime, generateSessionId } from "../utils/formatting";
-import { setupAudioVisualization } from "../utils/media";
+// import { setupAudioVisualization } from "../utils/media";
 import { useThemeVariables } from "../hooks/useThemeVariables";
 
 interface SessionState {
@@ -45,9 +45,7 @@ const RecordStep: React.FC = () => {
     useState<ConnectionStatus>("disconnected");
 
   // Audio visualization
-  const [visualizerBars, setVisualizerBars] = useState<number[]>(
-    Array(30).fill(10)
-  );
+  // Audio visualizer state removed
   const visualizerRef = useRef<{
     start: () => void;
     stop: () => void;
@@ -234,31 +232,8 @@ const RecordStep: React.FC = () => {
     wsClient,
   ]);
 
-  // Set up audio visualizer
-  useEffect(() => {
-    if (mediaType === "audio" && mediaStream && isRecording) {
-      console.log("🎵 Setting up audio visualizer");
-
-      const visualizer = setupAudioVisualization(mediaStream, (dataArray) => {
-        const newBars = Array(30)
-          .fill(0)
-          .map((_, i) => {
-            const index = Math.floor(i * (dataArray.length / 30));
-            const height = (dataArray[index] / 255) * 100;
-            return Math.max(4, height);
-          });
-        setVisualizerBars(newBars);
-      });
-
-      visualizerRef.current = visualizer;
-      visualizer.start();
-
-      return () => {
-        console.log("🧹 Cleaning up audio visualizer");
-        visualizer.stop();
-      };
-    }
-  }, [mediaType, mediaStream, isRecording]);
+  // Audio visualizer removed (audio mode not supported)
+  useEffect(() => {}, [mediaType, mediaStream, isRecording]);
 
   // Data available handler
   function handleDataAvailable(chunk: Blob) {
@@ -448,12 +423,7 @@ const RecordStep: React.FC = () => {
       : 0;
 
   // Determine recorder class
-  const recorderClass =
-    mediaType === "video"
-      ? userCameraChoice === "portrait"
-        ? "portrait"
-        : ""
-      : "audio";
+  const recorderClass = mediaType === "video" && userCameraChoice === "portrait" ? "portrait" : "";
 
   // Render error state
   if (recorderError) {
@@ -538,18 +508,7 @@ const RecordStep: React.FC = () => {
           </div>
         </div>
 
-        {/* Audio visualizer */}
-        {mediaType === "audio" && (
-          <div className="tw-visualizer">
-            {visualizerBars.map((height, i) => (
-              <div
-                key={i}
-                className="tw-visualizer-bar"
-                style={{ height: `${height}%` }}
-              />
-            ))}
-          </div>
-        )}
+        {/* Audio visualizer removed */}
 
         {/* Recording indicator */}
         {isRecording && (

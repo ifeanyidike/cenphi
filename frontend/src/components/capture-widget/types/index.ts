@@ -57,7 +57,7 @@ export interface AuthorInfo {
 }
 
 // Media types supported by the widget
-export type MediaType = "video" | "audio" | "text";
+export type MediaType = "video" | "text";
 
 // Camera orientation options
 export type CameraOrientation = "portrait" | "landscape";

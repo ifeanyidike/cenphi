@@ -56,22 +56,18 @@ func (gdc *googleDriveController) GetAuthURL(w http.ResponseWriter, r *http.Requ
 	}
 
 	// Get user ID from context (set by auth middleware)
-	userClaims, ok := r.Context().Value("user").(map[string]any)
-	if !ok {
-		gdc.logger.Warn("User not authenticated")
-		// utils.RespondWithError(w, http.StatusUnauthorized, "User not authenticated")
-		// return
+	uidStr, ok := r.Context().Value("user").(string)
+	if !ok || uidStr == "" {
+		utils.RespondWithError(w, http.StatusUnauthorized, "User not authenticated")
+		return
 	}
-	gdc.logger.Warn("User claims information", zap.Any("user claims", userClaims))
 
-	// userID, err := uuid.Parse(userClaims["uid"].(string))
-	// if err != nil {
-	// 	utils.RespondWithError(w, http.StatusBadRequest, "Invalid user ID")
-	// 	return
-	// }
-
-	// Use a consistent user ID for testing
-	userID, _ := uuid.Parse("6fe5d4ae-3627-4103-af42-39fb40cc0a12")
+	userID, err := uuid.Parse(uidStr)
+	if err != nil {
+		gdc.logger.Error("Invalid user ID from context", zap.Error(err))
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid user ID")
+		return
+	}
 
 	authURL, err := gdc.driveService.GetAuthURL(workspaceID, userID)
 	if err != nil {
@@ -183,25 +179,22 @@ func (gdc *googleDriveController) HandleOAuthCallback(w http.ResponseWriter, r *
 
 func (gdc *googleDriveController) ListFiles(w http.ResponseWriter, r *http.Request) {
 	workspaceIDStr := chi.URLParam(r, "workspaceID")
-	
+
 	// Get user ID from context (set by auth middleware)
-	userClaims, ok := r.Context().Value("user").(map[string]any)
-	var userID uuid.UUID
-	var workspaceID uuid.UUID
-	var err error
-	
-	if !ok {
-		gdc.logger.Warn("User not authenticated, using default user ID for testing")
-		// For development/testing, use a default user ID
-		userID, _ = uuid.Parse("6fe5d4ae-3627-4103-af42-39fb40cc0a12")
-	} else {
-		userID, err = uuid.Parse(userClaims["uid"].(string))
-		if err != nil {
-			gdc.logger.Error("Invalid user ID from claims", zap.Error(err))
-			utils.RespondWithError(w, http.StatusBadRequest, "Invalid user ID")
-			return
-		}
+	uidStr, ok := r.Context().Value("user").(string)
+	if !ok || uidStr == "" {
+		utils.RespondWithError(w, http.StatusUnauthorized, "User not authenticated")
+		return
 	}
+
+	userID, err := uuid.Parse(uidStr)
+	if err != nil {
+		gdc.logger.Error("Invalid user ID from context", zap.Error(err))
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid user ID")
+		return
+	}
+
+	var workspaceID uuid.UUID
 
 	log.Println("workspace: ", workspaceIDStr, "user: ", userID.String())
 	workspaceID, err = uuid.Parse(workspaceIDStr)
@@ -258,25 +251,22 @@ func (gdc *googleDriveController) ListFiles(w http.ResponseWriter, r *http.Reque
 // ListTestimonialFiles lists files suitable for testimonials
 func (gdc *googleDriveController) ListTestimonialFiles(w http.ResponseWriter, r *http.Request) {
 	workspaceIDStr := chi.URLParam(r, "workspaceID")
-	
+
 	// Get user ID from context (set by auth middleware)
-	userClaims, ok := r.Context().Value("user").(map[string]any)
-	var userID uuid.UUID
-	var workspaceID uuid.UUID
-	var err error
-	
-	if !ok {
-		gdc.logger.Warn("User not authenticated, using default user ID for testing")
-		// For development/testing, use a default user ID
-		userID, _ = uuid.Parse("6fe5d4ae-3627-4103-af42-39fb40cc0a12")
-	} else {
-		userID, err = uuid.Parse(userClaims["uid"].(string))
-		if err != nil {
-			gdc.logger.Error("Invalid user ID from claims", zap.Error(err))
-			utils.RespondWithError(w, http.StatusBadRequest, "Invalid user ID")
-			return
-		}
+	uidStr, ok := r.Context().Value("user").(string)
+	if !ok || uidStr == "" {
+		utils.RespondWithError(w, http.StatusUnauthorized, "User not authenticated")
+		return
 	}
+
+	userID, err := uuid.Parse(uidStr)
+	if err != nil {
+		gdc.logger.Error("Invalid user ID from context", zap.Error(err))
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid user ID")
+		return
+	}
+
+	var workspaceID uuid.UUID
 
 	log.Println("workspace: ", workspaceIDStr, "user: ", userID.String())
 	workspaceID, err = uuid.Parse(workspaceIDStr)
@@ -346,7 +336,20 @@ func (gdc *googleDriveController) getAuthenticatedService(r *http.Request) (*oau
 // CheckConnectionStatus checks if the user has a valid Google Drive connection
 func (gdc *googleDriveController) CheckConnectionStatus(w http.ResponseWriter, r *http.Request) {
 	workspaceIDStr := chi.URLParam(r, "workspaceID")
-	userID, _ := uuid.Parse("6fe5d4ae-3627-4103-af42-39fb40cc0a12")
+
+	// Get user ID from context (set by auth middleware)
+	uidStr, ok := r.Context().Value("user").(string)
+	if !ok || uidStr == "" {
+		utils.RespondWithError(w, http.StatusUnauthorized, "User not authenticated")
+		return
+	}
+
+	userID, err := uuid.Parse(uidStr)
+	if err != nil {
+		gdc.logger.Error("Invalid user ID from context", zap.Error(err))
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid user ID")
+		return
+	}
 
 	workspaceID, err := uuid.Parse(workspaceIDStr)
 	if err != nil {

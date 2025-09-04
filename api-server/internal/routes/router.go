@@ -306,6 +306,7 @@ func RegisterGoogleDriveRoutes(r chi.Router, controller controllers.GoogleDriveC
 
 		// OAuth management
 		r.Route("/workspaces/{workspaceID}/drive", func(r chi.Router) {
+			r.Use(authMiddleware.VerifyToken)
 			r.Get("/auth", controller.GetAuthURL)
 			r.Get("/status", controller.CheckConnectionStatus)
 			r.Get("/files", controller.ListFiles)

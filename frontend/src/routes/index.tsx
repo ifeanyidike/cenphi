@@ -16,7 +16,6 @@ import TestimonialCollectionLayout from "@/layouts/TestimonialCollectionLayout";
 import TestimonialTypeSelection from "@/pages/collection/TypeSelection";
 import TestimonialUploads from "@/pages/collection/TestimonialUploads";
 import VideoTestimonialRecorder from "@/pages/collection/VideoTestimonialRecorder";
-import AudioTestimonialRecorder from "@/pages/collection/AudioTestimonialRecorder";
 import TextTestimonialCollection from "@/pages/collection/TextTestimonialCollection";
 import MobileTransferPage from "@/pages/collection/MobileTransferPage";
 import ThankYouPage from "@/pages/collection/ThankYouPage";
@@ -66,12 +65,10 @@ const NotFoundPage = lazy(() => import("@/pages/NotFoundPage"));
 const DynamicRecorder = () => {
   // const { type } = useParams<{ type: "video" | "audio" | "text" }>();
   const { type } = useParams() as {
-    type?: "video" | "audio" | "image" | "text";
+    type?: "video" | "image" | "text";
   };
   if (type === "video") {
     return <VideoTestimonialRecorder />;
-  } else if (type === "audio") {
-    return <AudioTestimonialRecorder />;
   } else {
     // Although the loader should prevent an invalid type from reaching here,
     // we return NotFoundPage as a fallback.
@@ -296,10 +293,10 @@ element:   <Sentiment/>
         element: <TestimonialTypeSelection />,
       },
       {
-        // Dynamic route: the ":type" segment must be "video", "audio", or "text".
+        // Dynamic route: the ":type" segment must be "video" or "text".
         path: ":type",
         loader: ({ params }: { params: { type?: string } }) => {
-          const allowedTypes = ["video", "audio", "text"];
+          const allowedTypes = ["video", "text"];
           if (!params.type || !allowedTypes.includes(params.type)) {
             throw new Response("Not Found", { status: 404 });
           }

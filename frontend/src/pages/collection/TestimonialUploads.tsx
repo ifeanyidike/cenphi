@@ -36,18 +36,14 @@ const TestimonialUploads = observer(() => {
           totalSteps={GUIDED_PROMPTS.length}
         />
         <FileUpload
-          type={(state.type || type) as "video" | "audio"}
+          type={"video"}
           onComplete={collectionStore.handleComplete}
           maxSize={
-            state.type === "video" ? 500 * 1024 * 1024 : 100 * 1024 * 1024
+            500 * 1024 * 1024
           }
         />
         <ChangeRenderType
-          type={
-            ["audio", "video", "text"].includes(state.type as string)
-              ? (state.type as "audio" | "video" | "text")
-              : null
-          }
+          type={state.type === "video" || state.type === "text" ? state.type : null}
           isComplete={state.currentPromptIndex === GUIDED_PROMPTS.length - 1}
         />
       </motion.div>

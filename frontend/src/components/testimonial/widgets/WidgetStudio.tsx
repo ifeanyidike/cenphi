@@ -31,7 +31,7 @@ interface WidgetTemplate {
   popular: boolean;
   premium: boolean;
   defaultCustomizations: Partial<WidgetCustomization>;
-  compatibleWith: Array<"text" | "video" | "audio" | "image" | "document">;
+  compatibleWith: Array<"text" | "video" | "image" | "document">;
   presets: WidgetPreset[];
 }
 
@@ -149,7 +149,7 @@ const EnhancedWidgetStudio: React.FC<WidgetStudioProps> = ({
         component: SpotlightWidget,
         popular: true,
         premium: true,
-        compatibleWith: ["text", "video", "audio", "image", "document"],
+        compatibleWith: ["text", "video", "image", "document"],
         defaultCustomizations: {
           theme: "premium",
           darkMode: false,
@@ -237,7 +237,7 @@ const EnhancedWidgetStudio: React.FC<WidgetStudioProps> = ({
         component: CarouselWidget,
         popular: true,
         premium: true,
-        compatibleWith: ["text", "video", "audio", "image", "document"],
+        compatibleWith: ["text", "video", "image", "document"],
         defaultCustomizations: {
           theme: "modern",
           darkMode: false,
@@ -322,7 +322,7 @@ const EnhancedWidgetStudio: React.FC<WidgetStudioProps> = ({
         component: MinimalCardWidget,
         popular: false,
         premium: false,
-        compatibleWith: ["text", "audio", "image", "document"],
+        compatibleWith: ["text", "image", "document"],
         defaultCustomizations: {
           theme: "modern",
           darkMode: false,
