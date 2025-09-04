@@ -1322,11 +1322,9 @@ const TemplatePreview: React.FC<{ templateId: string; device?: string }> = ({
                             whileTap={{ scale: 0.98 }}
                             className={`flex-1 py-3 px-4 rounded-lg flex flex-col items-center gap-2 ${
                               recordMode === format
-                                ? format === "video"
-                                  ? "bg-blue-50 border-2 border-blue-500"
-                                  
-                                    ? "bg-amber-50 border-2 border-amber-500"
-                                    : "bg-emerald-50 border-2 border-emerald-500"
+                                ? (format === "video"
+                                    ? "bg-blue-50 border-2 border-blue-500"
+                                    : "bg-emerald-50 border-2 border-emerald-500")
                                 : "bg-gray-50 border border-gray-200"
                             }`}
                             onClick={() => setRecordMode(format)}
@@ -2374,9 +2372,7 @@ const TestimonialTemplateSelector: React.FC<TemplateSelectionProps> = ({
                     const formatColor =
                       format === "video"
                         ? "bg-blue-100 text-blue-700"
-                        
-                          ? "bg-amber-100 text-amber-700"
-                          : "bg-emerald-100 text-emerald-700";
+                        : "bg-emerald-100 text-emerald-700";
                     return (
                       <Badge
                         key={format}
