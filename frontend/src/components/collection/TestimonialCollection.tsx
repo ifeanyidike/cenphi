@@ -255,8 +255,7 @@ function TestimonialCollection() {
     // }
     if (
       !state.type ||
-      (state.type === "video" && !collectionStore.selectedOption) ||
-      (state.type === "audio" && !collectionStore.selectedOption)
+      (state.type === "video" && !collectionStore.selectedOption)
     ) {
       return <TestimonialTypeSelection />;
     }
@@ -270,14 +269,11 @@ function TestimonialCollection() {
     }
 
     if (state.type === "video" && !collectionStore.selectedOption) return;
-    if (state.type === "audio" && !collectionStore.selectedOption) return;
 
     if (state.type === "video" && collectionStore.selectedOption === "record") {
       return renderVideoTestimonial();
     }
-    if (state.type === "audio" && collectionStore.selectedOption === "record") {
-      return renderAudioTestimonial();
-    }
+    
     if (state.type === "text") {
       return renderTextTestimonial();
     }

@@ -856,7 +856,7 @@ const OptionCard: React.FC<OptionCardProps> = ({
           className="w-full h-full p-4 sm:p-6 lg:p-8 text-left focus:outline-none"
         >
           <div className="absolute top-4 right-4 flex items-center space-x-3">
-            {option.id === "video" || option.id === "audio" ? (
+            {option.id === "video" ? (
               <motion.div
                 whileHover={{ scale: 1.1 }}
                 className="px-4 py-1 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm font-medium"

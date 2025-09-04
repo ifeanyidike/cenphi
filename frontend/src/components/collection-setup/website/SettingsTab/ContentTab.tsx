@@ -1722,12 +1722,6 @@ const formatInfo: Record<
     description: "Authentic video recordings from customers",
     color: "blue",
   },
-  audio: {
-    icon: Mic,
-    name: "Audio Testimonials",
-    description: "Voice recordings sharing experiences",
-    color: "purple",
-  },
   image: {
     icon: Image,
     name: "Image Testimonials",
@@ -1921,8 +1915,7 @@ const FormatDetails: React.FC<{
           </div>
         );
 
-      case "audio":
-        return null; // No specific settings for audio
+      // audio removed
 
       case "text":
         return (

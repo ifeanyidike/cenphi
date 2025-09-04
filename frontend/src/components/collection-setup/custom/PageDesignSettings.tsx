@@ -233,14 +233,6 @@ const testimonialFormats = [
     color: "from-blue-500 to-indigo-600",
   },
   {
-    // audio removed
-    icon: <AudioLines className="h-6 w-6" />,
-    label: "Audio Testimonials",
-    description: "Collect voice testimonials for customers who prefer audio",
-    benefits: ["Easy to create", "Lower commitment", "Voice authenticity"],
-    color: "from-amber-500 to-orange-600",
-  },
-  {
     id: "text" as TestimonialFormat,
     icon: <MessageSquare className="h-6 w-6" />,
     label: "Text Testimonials",
