@@ -1661,7 +1661,6 @@ import {
   FileText,
   Video,
   Image,
-  Mic,
   Eye,
   Settings,
   MessageSquare,

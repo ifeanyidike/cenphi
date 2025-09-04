@@ -280,7 +280,7 @@ const testimonialSamples: TestimonialSample[] = [
     content:
       "Intuitive interface and powerful features. We've seen a 40% improvement in team collaboration since implementing this solution.",
     date: "1 week ago",
-    // type: "audio",
+    type: "text",
     verified: true,
   },
   {

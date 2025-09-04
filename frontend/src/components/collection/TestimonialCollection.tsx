@@ -206,33 +206,33 @@ function TestimonialCollection() {
     );
   }
 
-  function renderAudioTestimonial() {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        style={{ minHeight: "90vh" }}
-        className="max-w-screen-xl mx-auto flex flex-col justify-center"
-      >
-        <TestimonialProgress
-          progress={progress}
-          currentStep={state.currentPromptIndex}
-          totalSteps={GUIDED_PROMPTS.length}
-        />
+  // function renderAudioTestimonial() {
+  //   return (
+  //     <motion.div
+  //       initial={{ opacity: 0, y: 20 }}
+  //       animate={{ opacity: 1, y: 0 }}
+  //       exit={{ opacity: 0, y: -20 }}
+  //       style={{ minHeight: "90vh" }}
+  //       className="max-w-screen-xl mx-auto flex flex-col justify-center"
+  //     >
+  //       <TestimonialProgress
+  //         progress={progress}
+  //         currentStep={state.currentPromptIndex}
+  //         totalSteps={GUIDED_PROMPTS.length}
+  //       />
 
-        <div className="bg-white rounded-xl shadow-lg p-6 mt-4 mb-8">
-          {renderDisplayQuestion()}
+  //       <div className="bg-white rounded-xl shadow-lg p-6 mt-4 mb-8">
+  //         {renderDisplayQuestion()}
 
-          <div className="text-sm text-gray-500 text-center">
-            Audio recording is no longer available. Please use Upload or switch to Video/Text.
-          </div>
-        </div>
+  //         <div className="text-sm text-gray-500 text-center">
+  //           Audio recording is no longer available. Please use Upload or switch to Video/Text.
+  //         </div>
+  //       </div>
 
-        {renderChangeType()}
-      </motion.div>
-    );
-  }
+  //       {renderChangeType()}
+  //     </motion.div>
+  //   );
+  // }
 
   function renderTextTestimonial() {
     return (

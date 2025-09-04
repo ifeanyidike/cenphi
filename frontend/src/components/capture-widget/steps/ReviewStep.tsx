@@ -377,7 +377,7 @@ const ReviewStep: React.FC = () => {
     dispatch,
   ]);
 
-  const isVideo = mediaType === "video";
+  // const isVideo = mediaType === "video";
 
   // Render error state
   if (mediaState.hasError) {
