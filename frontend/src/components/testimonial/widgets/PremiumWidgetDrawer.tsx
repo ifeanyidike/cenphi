@@ -543,8 +543,7 @@ const WidgetGallery: React.FC<WidgetGalleryProps> = ({
               >
                 {testimonial.format === "video"
                   ? "Create video testimonial widgets"
-                  :
-                    : "Create testimonial widgets"}
+                  : "Create testimonial widgets"}
               </p>
             </div>
           </div>
