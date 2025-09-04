@@ -455,11 +455,9 @@ const TemplatePreview: React.FC<{ templateId: string; device?: string }> = ({
                         className={cn(
                           "w-16 h-16 rounded-full flex items-center justify-center mb-2 transition-transform",
                           recordMode === format
-                            ? format === "video"
-                              ? "bg-blue-100 ring-2 ring-blue-300"
-                              
-                                ? "bg-amber-100 ring-2 ring-amber-300"
-                                : "bg-emerald-100 ring-2 ring-emerald-300"
+                            ? (format === "video"
+                                ? "bg-blue-100 ring-2 ring-blue-300"
+                                : "bg-emerald-100 ring-2 ring-emerald-300")
                             : "bg-gray-100"
                         )}
                       >
@@ -826,11 +824,9 @@ const TemplatePreview: React.FC<{ templateId: string; device?: string }> = ({
                       whileTap={{ scale: 0.98 }}
                       className={`flex flex-col items-center p-4 rounded-lg border-2 transition-all ${
                         recordMode === format
-                          ? format === "video"
-                            ? "border-blue-500 bg-blue-50"
-                            
-                              ? "border-amber-500 bg-amber-50"
-                              : "border-emerald-500 bg-emerald-50"
+                          ? (format === "video"
+                              ? "border-blue-500 bg-blue-50"
+                              : "border-emerald-500 bg-emerald-50")
                           : "border-gray-200 hover:border-gray-300"
                       }`}
                       onClick={() => setRecordMode(format)}
@@ -952,11 +948,9 @@ const TemplatePreview: React.FC<{ templateId: string; device?: string }> = ({
                       whileTap={{ scale: 0.98 }}
                       className={`px-5 py-2.5 rounded-lg flex items-center gap-2 font-medium ${
                         recordMode === format
-                          ? format === "video"
-                            ? "bg-blue-600 text-white"
-                            
-                              ? "bg-amber-600 text-white"
-                              : "bg-emerald-600 text-white"
+                          ? (format === "video"
+                              ? "bg-blue-600 text-white"
+                              : "bg-emerald-600 text-white")
                           : "bg-white/10 text-white hover:bg-white/20"
                       }`}
                       onClick={() => setRecordMode(format)}
