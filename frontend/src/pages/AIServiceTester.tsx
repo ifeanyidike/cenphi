@@ -2709,7 +2709,6 @@ import {
   BarChart3,
   Settings,
   Activity,
-  Globe,
   RefreshCw,
   Trash2,
   ChevronDown,
@@ -2723,26 +2722,19 @@ import {
   Network,
   Timer,
   TrendingUp,
-  Users,
   Star,
-  Zap,
   Sparkles,
   Mic,
   MessageSquare,
   Image,
-  Music,
   Scissors,
-  Palette,
   Brain,
   Target,
   Volume2,
   Copy,
-  ExternalLink,
-  Code,
   Type,
   Languages,
   Maximize2,
-  Minimize2,
 } from "lucide-react";
 
 const API_BASE_URL = "http://localhost:8081/api";
@@ -3990,90 +3982,90 @@ const AITestingDashboard: React.FC = () => {
     ELEVEN_LABS_VOICES[Math.floor(Math.random() * ELEVEN_LABS_VOICES.length)];
 
   // Initialize streaming connection for a specific service
-  const initializeStreamingConnection = useCallback((serviceId: string) => {
-    // Close existing connection if any
-    if (streamingConnectionsRef.current[serviceId]) {
-      streamingConnectionsRef.current[serviceId].close();
-    }
+  // const initializeStreamingConnection = useCallback((serviceId: string) => {
+  //   // Close existing connection if any
+  //   if (streamingConnectionsRef.current[serviceId]) {
+  //     streamingConnectionsRef.current[serviceId].close();
+  //   }
 
-    const streamingEventSource = new EventSource(
-      `${API_BASE_URL}/${serviceId}`
-    );
-    streamingConnectionsRef.current[serviceId] = streamingEventSource;
+  //   const streamingEventSource = new EventSource(
+  //     `${API_BASE_URL}/${serviceId}`
+  //   );
+  //   streamingConnectionsRef.current[serviceId] = streamingEventSource;
 
-    streamingEventSource.onopen = () => {
-      console.log(`✅ Streaming connection established for ${serviceId}`);
-    };
+  //   streamingEventSource.onopen = () => {
+  //     console.log(`✅ Streaming connection established for ${serviceId}`);
+  //   };
 
-    streamingEventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        console.log(`📨 Streaming data received for ${serviceId}:`, data);
+  //   streamingEventSource.onmessage = (event) => {
+  //     try {
+  //     const data = JSON.parse(event.data);
+  //     console.log(`📨 Streaming data received for ${serviceId}:`, data);
 
-        if (data.type === "chunk") {
-          setStreamingResults((prev) => ({
-            ...prev,
-            [serviceId]: {
-              content: (prev[serviceId]?.content || "") + data.content,
-              isComplete: false,
-              isStreaming: true,
-              type: data.content_type || "text",
-            },
-          }));
-        } else if (data.type === "complete") {
-          setStreamingResults((prev) => ({
-            ...prev,
-            [serviceId]: {
-              ...prev[serviceId],
-              isComplete: true,
-              isStreaming: false,
-            },
-          }));
+  //     if (data.type === "chunk") {
+  //       setStreamingResults((prev) => ({
+  //         ...prev,
+  //         [serviceId]: {
+  //           content: (prev[serviceId]?.content || "") + data.content,
+  //           isComplete: false,
+  //           isStreaming: true,
+  //           type: data.content_type || "text",
+  //         },
+  //       }));
+  //     } else if (data.type === "complete") {
+  //       setStreamingResults((prev) => ({
+  //         ...prev,
+  //         [serviceId]: {
+  //           ...prev[serviceId],
+  //           isComplete: true,
+  //           isStreaming: false,
+  //         },
+  //       }));
 
-          // Also set as result for consistency
-          setResults((prev) => ({
-            ...prev,
-            [serviceId]: {
-              success: true,
-              data: (prev[serviceId] as any)?.content || data.content,
-              timestamp: new Date().toISOString(),
-              duration: data.duration_ms,
-            },
-          }));
-        } else if (data.type === "error") {
-          setErrors((prev) => ({
-            ...prev,
-            [serviceId]: data.error || "Streaming error occurred",
-          }));
+  //       // Also set as result for consistency
+  //       setResults((prev) => ({
+  //         ...prev,
+  //         [serviceId]: {
+  //           success: true,
+  //           data: (prev[serviceId] as any)?.content || data.content,
+  //           timestamp: new Date().toISOString(),
+  //           duration: data.duration_ms,
+  //         },
+  //       }));
+  //     } else if (data.type === "error") {
+  //       setErrors((prev) => ({
+  //         ...prev,
+  //         [serviceId]: data.error || "Streaming error occurred",
+  //       }));
 
-          setStreamingResults((prev) => ({
-            ...prev,
-            [serviceId]: {
-              ...prev[serviceId],
-              isComplete: true,
-              isStreaming: false,
-            },
-          }));
-        }
-      } catch (error) {
-        console.error(`Error parsing streaming data for ${serviceId}:`, error);
-      }
-    };
+  //       setStreamingResults((prev) => ({
+  //         ...prev,
+  //         [serviceId]: {
+  //           ...prev[serviceId],
+  //           isComplete: true,
+  //           isStreaming: false,
+  //         },
+  //       }));
+  //     }
+  //     } catch (error) {
+  //       console.error(`Error parsing streaming data for ${serviceId}:`, error);
+  //     }
+  //   };
 
-    streamingEventSource.onerror = (error) => {
-      console.error(`❌ Streaming connection error for ${serviceId}:`, error);
-      setStreamingResults((prev) => ({
-        ...prev,
-        [serviceId]: {
-          ...prev[serviceId],
-          isComplete: true,
-          isStreaming: false,
-        },
-      }));
-    };
+  //   streamingEventSource.onerror = (error) => {
+  //     console.error(`❌ Streaming connection error for ${serviceId}:`, error);
+  //     setStreamingResults((prev) => ({
+  //       ...prev,
+  //       [serviceId]: {
+  //         ...prev[serviceId],
+  //         isComplete: true,
+  //         isStreaming: false,
+  //       },
+  //     }));
+  //   };
 
-    return streamingEventSource;
-  }, []);
+  //   return streamingEventSource;
+  // }, []);
 
   // Initialize SSE connection
   const initializeSSE = useCallback(() => {
@@ -4357,7 +4349,7 @@ const AITestingDashboard: React.FC = () => {
       }
 
       // Default test data matching protocol buffers exactly
-      const randomVoice = getRandomVoice();
+      // const randomVoice = getRandomVoice();
 
       const testData: Record<string, any> = {
         "brand-context": {
@@ -4576,7 +4568,7 @@ const AITestingDashboard: React.FC = () => {
   const callAPI = useCallback(
     async (service: Service, customData?: any): Promise<void> => {
       const serviceId = service.id;
-      const startTime = Date.now();
+      // const startTime = Date.now();
 
       setLoading((prev) => ({ ...prev, [serviceId]: true }));
       setErrors((prev) => ({ ...prev, [serviceId]: "" }));
@@ -4737,7 +4729,7 @@ const AITestingDashboard: React.FC = () => {
 
   // Status indicator
   const getStatusIndicator = useCallback(
-    (serviceId: string): JSX.Element | null => {
+    (serviceId: string): React.ReactElement | null => {
       if (loading[serviceId]) {
         return <Clock className="w-4 h-4 text-amber-500 animate-spin" />;
       }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { observer } from "mobx-react-lite";
 import { motion, AnimatePresence } from "framer-motion";
 import { workspaceHub } from "../../../../repo/workspace_hub";
@@ -9,7 +9,7 @@ import { aspectRatioHandler } from "../../../../services/aspect-ratio-handler";
 type CropPreset = {
   id: string;
   name: string;
-  icon: JSX.Element;
+  icon: React.ReactNode;
   crop: VideoCrop;
 };
 

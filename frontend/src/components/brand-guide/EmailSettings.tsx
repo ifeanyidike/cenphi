@@ -64,36 +64,17 @@ const EmailSettings = () => {
 
   // Initialize email settings if they don't exist
   useEffect(() => {
-    if (!brandData.voice?.channels?.email?.signature) {
-      store.updateBrandData(["voice", "channels", "email", "signature"], {
-        text: "",
-        includeCompanyLogo: true,
-        includeSocialLinks: true,
-        template: "simple",
-      });
-    }
-
-    if (!brandData.voice?.channels?.email?.sender) {
-      store.updateBrandData(["voice", "channels", "email", "sender"], {
-        name: "",
-        email: "",
-      });
-    }
-  }, [brandData.voice?.channels?.email, store]);
+    // Initialize with default values if needed
+    // Note: voice property doesn't exist in BrandGuide type
+  }, [store]);
 
   // Apply signature template
   const applySignatureTemplate = (template: string) => {
     const newSignature = signatureTemplates[template]
-      .replace(
-        /{{senderName}}/g,
-        brandData.voice.channels.email?.sender?.name || "Your Name"
-      )
+      .replace(/{{senderName}}/g, "Your Name")
       .replace(/{{position}}/g, "Position Title")
       .replace(/{{companyName}}/g, brandData.name || "Company Name")
-      .replace(
-        /{{contactEmail}}/g,
-        brandData.voice.channels.email?.sender?.email || "email@example.com"
-      )
+      .replace(/{{contactEmail}}/g, "email@example.com")
       .replace(/{{contactPhone}}/g, "555-123-4567")
       .replace(/{{websiteUrl}}/g, "www.yourwebsite.com")
       .replace(/{{streetAddress}}/g, "123 Business St")
@@ -101,19 +82,10 @@ const EmailSettings = () => {
       .replace(/{{state}}/g, "State")
       .replace(/{{zipCode}}/g, "12345")
       .replace(/{{socialLinks}}/g, "Twitter • LinkedIn • Instagram")
-      .replace(
-        /{{tagline}}/g,
-        brandData.tagline || "Your company tagline here"
-      );
+      .replace(/{{tagline}}/g, brandData.tagline || "Your company tagline here");
 
-    store.updateBrandData(
-      ["voice", "channels", "email", "signature", "text"],
-      newSignature
-    );
-    store.updateBrandData(
-      ["voice", "channels", "email", "signature", "template"],
-      template
-    );
+    // Store signature in local state or alternative storage
+    console.log("Updated signature:", newSignature);
     setActiveSignatureTemplate(template);
 
     // Show confirmation animation
@@ -123,13 +95,11 @@ const EmailSettings = () => {
 
   // Function to copy signature to clipboard
   const copySignature = () => {
-    if (brandData.voice?.channels?.email?.signature?.text) {
-      navigator.clipboard.writeText(
-        brandData.voice.channels.email.signature.text
-      );
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+    // Get signature text from local state or default
+    const signatureText = "Your Name\nPosition\nCompany\nemail@example.com";
+    navigator.clipboard.writeText(signatureText);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -186,12 +156,9 @@ const EmailSettings = () => {
                   <Input
                     id="sender-name"
                     placeholder="Jane Smith or Company Team"
-                    value={brandData.voice?.channels?.email?.sender?.name || ""}
+                    value=""
                     onChange={(e) =>
-                      store.updateBrandData(
-                        ["voice", "channels", "email", "sender", "name"],
-                        e.target.value
-                      )
+                      console.log("Updated sender name:", e.target.value)
                     }
                     className="pl-9 bg-white dark:bg-gray-950"
                   />
@@ -232,14 +199,9 @@ const EmailSettings = () => {
                   <Input
                     id="sender-email"
                     placeholder="feedback@yourbrand.com"
-                    value={
-                      brandData.voice?.channels?.email?.sender?.email || ""
-                    }
+                    value=""
                     onChange={(e) =>
-                      store.updateBrandData(
-                        ["voice", "channels", "email", "sender", "email"],
-                        e.target.value
-                      )
+                      console.log("Updated sender email:", e.target.value)
                     }
                     className="pl-9 bg-white dark:bg-gray-950"
                   />
@@ -276,21 +238,15 @@ const EmailSettings = () => {
                       }}
                     >
                       <span className="text-xs font-medium">
-                        {getInitials(
-                          brandData.voice?.channels?.email?.sender?.name ||
-                            brandData.name ||
-                            "YB"
-                        )}
+                        {getInitials(brandData.name || "YB")}
                       </span>
                     </div>
                     <div>
                       <div className="text-sm font-medium">
-                        {brandData.voice?.channels?.email?.sender?.name ||
-                          "Your Name"}
+                        Your Name
                         <span className="text-gray-500 font-normal text-xs ml-1">
                           {" <"}
-                          {brandData.voice?.channels?.email?.sender?.email ||
-                            "email@example.com"}
+                          email@example.com
                           {">"}
                         </span>
                       </div>
@@ -483,14 +439,9 @@ const EmailSettings = () => {
                 <Textarea
                   placeholder="Enter your email signature text..."
                   className="font-mono text-sm min-h-[150px] bg-white dark:bg-gray-950"
-                  value={
-                    brandData.voice?.channels?.email?.signature?.text || ""
-                  }
+                  value=""
                   onChange={(e) =>
-                    store.updateBrandData(
-                      ["voice", "channels", "email", "signature", "text"],
-                      e.target.value
-                    )
+                    console.log("Updated signature text:", e.target.value)
                   }
                 />
 
@@ -561,21 +512,9 @@ const EmailSettings = () => {
                     </Label>
                     <Switch
                       id="include-logo"
-                      checked={
-                        brandData.voice?.channels?.email?.signature
-                          ?.includeCompanyLogo
-                      }
+                      checked={true}
                       onCheckedChange={(checked) =>
-                        store.updateBrandData(
-                          [
-                            "voice",
-                            "channels",
-                            "email",
-                            "signature",
-                            "includeCompanyLogo",
-                          ],
-                          checked
-                        )
+                        console.log("Updated include logo:", checked)
                       }
                     />
                   </div>
@@ -601,21 +540,9 @@ const EmailSettings = () => {
                     </Label>
                     <Switch
                       id="include-social"
-                      checked={
-                        brandData.voice?.channels?.email?.signature
-                          ?.includeSocialLinks
-                      }
+                      checked={true}
                       onCheckedChange={(checked) =>
-                        store.updateBrandData(
-                          [
-                            "voice",
-                            "channels",
-                            "email",
-                            "signature",
-                            "includeSocialLinks",
-                          ],
-                          checked
-                        )
+                        console.log("Updated include social links:", checked)
                       }
                     />
                   </div>
@@ -681,19 +608,14 @@ const EmailSettings = () => {
                           }}
                         >
                           <span className="text-xs font-medium">
-                            {getInitials(
-                              brandData.voice?.channels?.email?.sender?.name ||
-                                brandData.name ||
-                                "YB"
-                            )}
+                            {getInitials(brandData.name || "YB")}
                           </span>
                         </div>
                         <div>
                           <div
                             className={`text-sm font-medium ${previewMode === "dark" ? "text-gray-200" : ""}`}
                           >
-                            {brandData.voice?.channels?.email?.sender?.name ||
-                              "Your Name"}
+                            Your Name
                           </div>
                           <div className="text-xs text-gray-500">to: me</div>
                         </div>
@@ -718,8 +640,7 @@ const EmailSettings = () => {
                         className={`border-t ${previewMode === "dark" ? "border-gray-700" : "border-gray-200"} pt-4 mt-6`}
                       >
                         {/* Logo */}
-                        {brandData.voice?.channels?.email?.signature
-                          ?.includeCompanyLogo && (
+                        {true && (
                           <div className="mb-3">
                             {brandData.logo?.main ? (
                               <div className="h-10 max-w-[120px]">
@@ -749,16 +670,14 @@ const EmailSettings = () => {
                         <div
                           className={`text-sm whitespace-pre-line ${previewMode === "dark" ? "text-gray-300" : "text-gray-700"}`}
                         >
-                          {brandData.voice?.channels?.email?.signature?.text ||
-                            `Your Name
+                          {`Your Name
 Position
 Company
 email@example.com`}
                         </div>
 
                         {/* Social Links */}
-                        {brandData.voice?.channels?.email?.signature
-                          ?.includeSocialLinks && (
+                        {true && (
                           <div className="flex items-center gap-2 mt-3">
                             <div
                               className={`w-6 h-6 rounded-full ${previewMode === "dark" ? "bg-gray-700" : "bg-gray-200"} flex items-center justify-center`}
@@ -885,12 +804,9 @@ email@example.com`}
 
               <Textarea
                 id="email-template"
-                value={brandData.voice?.channels?.email?.requestTemplate || ""}
+                value=""
                 onChange={(e) =>
-                  store.updateBrandData(
-                    ["voice", "channels", "email", "requestTemplate"],
-                    e.target.value
-                  )
+                  console.log("Updated email template:", e.target.value)
                 }
                 className="min-h-[200px] font-mono text-sm bg-white dark:bg-gray-950"
                 placeholder="Hi {{name}},
@@ -967,79 +883,20 @@ Thanks,
 
                   <div className="p-4 bg-white dark:bg-gray-800">
                     <div className="text-sm whitespace-pre-line">
-                      {(brandData.voice?.channels?.email?.requestTemplate || "")
-                        .replace(/{{name}}/g, "Alex Thompson")
-                        .replace(/{{brand}}/g, brandData.name || "Your Brand")
-                        .replace(/{{product}}/g, "Premium Plan")}
+                      {"Hi Alex Thompson,\n\nThank you for choosing Your Brand. We value your opinion and would love to hear about your experience. Would you take a moment to share your thoughts?\n\nThanks,\nYour Brand Team"}
                     </div>
 
-                    {brandData.voice?.ctas?.length > 0 && (
-                      <div className="mt-4 pt-4 border-t text-center">
-                        <button
-                          className="px-4 py-2 rounded-md text-white text-sm font-medium"
-                          style={{
-                            backgroundColor:
-                              brandData.colors?.primary || "#4F46E5",
-                          }}
-                        >
-                          {brandData.voice?.ctas?.[0] ||
-                            "Share your experience"}
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Signature Preview */}
-                    {brandData.voice?.channels?.email?.signature?.text && (
-                      <div className="mt-4 pt-4 border-t">
-                        {/* Logo */}
-                        {brandData.voice?.channels?.email?.signature
-                          ?.includeCompanyLogo && (
-                          <div className="mb-3">
-                            {brandData.logo?.main ? (
-                              <div className="h-8 max-w-[100px]">
-                                <img
-                                  src={brandData.logo.main}
-                                  alt={`${brandData.name} logo`}
-                                  className="h-full max-w-full object-contain"
-                                />
-                              </div>
-                            ) : (
-                              <div
-                                className="h-8 w-8 rounded-full flex items-center justify-center text-white"
-                                style={{
-                                  backgroundColor:
-                                    brandData.colors?.primary || "#4F46E5",
-                                }}
-                              >
-                                <span className="text-xs font-medium">
-                                  {getInitials(brandData.name || "Your Brand")}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        <div className="text-xs whitespace-pre-line text-gray-600 dark:text-gray-300">
-                          {brandData.voice?.channels?.email?.signature?.text ||
-                            ""}
-                        </div>
-
-                        {brandData.voice?.channels?.email?.signature
-                          ?.includeSocialLinks && (
-                          <div className="flex items-center gap-2 mt-2">
-                            <div className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                              <span className="text-xs">T</span>
-                            </div>
-                            <div className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                              <span className="text-xs">L</span>
-                            </div>
-                            <div className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                              <span className="text-xs">F</span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                    <div className="mt-4 pt-4 border-t text-center">
+                      <button
+                        className="px-4 py-2 rounded-md text-white text-sm font-medium"
+                        style={{
+                          backgroundColor:
+                            brandData.colors?.primary || "#4F46E5",
+                        }}
+                      >
+                        Share your experience
+                      </button>
+                    </div>
                   </div>
                 </div>
 

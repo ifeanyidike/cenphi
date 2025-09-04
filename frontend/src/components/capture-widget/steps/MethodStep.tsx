@@ -49,15 +49,7 @@ const MethodStep: React.FC = () => {
           </div>
         </div>
 
-        <div className="tw-method" onClick={() => handleMethodSelect("audio")}>
-          <div className={methodIconClass} style={getBrandBackground()}>
-            <Icon name="mic" />
-          </div>
-          <div className="tw-method-title">Audio</div>
-          <div className="tw-method-desc">
-            Record or upload an audio testimonial
-          </div>
-        </div>
+        {/* Audio method removed */}
 
         <div className="tw-method" onClick={() => handleMethodSelect("text")}>
           <div className={methodIconClass} style={getBrandBackground()}>

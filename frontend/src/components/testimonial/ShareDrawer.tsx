@@ -310,7 +310,18 @@ const ShareDrawer: React.FC<ShareDrawerProps> = observer(
 
       setIsPrimaryLoading(true);
 
-      // Simulate share action
+      // Handle LinkedIn sharing
+      if (selectedPlatform === SharingPlatform.LINKEDIN) {
+        // Open LinkedIn share modal
+        setIsPrimaryLoading(false);
+        // We'll handle this through the LinkedIn share button component
+        // For now, just show a message
+        alert('LinkedIn sharing is now available! Use the LinkedIn button in the testimonial actions.');
+        onClose();
+        return;
+      }
+
+      // Simulate share action for other platforms
       setTimeout(() => {
         // Update testimonial shares count
         if (testimonial && workspaceHub.testimonialManager.testimonial) {

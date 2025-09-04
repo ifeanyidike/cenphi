@@ -16,7 +16,11 @@ class CollectionStore {
   showOptionsModal = false;
   selectedOption: "record" | "upload" | "mobile" | null = null;
   sessionId = Math.random().toString(36).slice(2, 9);
-  data: Blob[] | string | null = null;
+  data: Blob[] = [];
+
+  // Add company info for dynamic branding
+  companyName: string = "";
+  companyLogoUrl: string = "";
 
   constructor() {
     makeAutoObservable(this);
@@ -78,9 +82,7 @@ class CollectionStore {
   }
 
   public async handleCompleteRecordingSection(blob: Blob) {
-    if (typeof this.data === "string") return;
-
-    this.data = [...(this.data || []), blob];
+    this.data = [...this.data, blob];
   }
   public changeType() {
     this.state.type = null;

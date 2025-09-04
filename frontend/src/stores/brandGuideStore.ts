@@ -391,34 +391,11 @@ class BrandGuideStore {
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
       // In a real implementation, you would call an AI API here
-      // Example AI-enhanced voice suggestions
+      // Example AI-enhanced suggestions
       runInAction(() => {
-        this.brandData.voice = {
-          ...this.brandData.voice,
-          tone: "conversational",
-          values: ["Authentic", "Trustworthy", "Innovative"],
-          examples: [
-            "Our customers are at the heart of everything we do.",
-            "We're committed to delivering exceptional experiences.",
-            "Join thousands of satisfied customers who trust our solutions.",
-          ],
-          ctas: [
-            "Share your story",
-            "Tell us about your experience",
-            "How did we do?",
-          ],
-          channels: {
-            ...this.brandData.voice.channels,
-            email: {
-              ...(this.brandData?.voice?.channels?.email || {}),
-              requestTemplate:
-                "Hi {{name}},\n\nWe hope you're enjoying your experience with {{brand}}! We would love to hear your thoughts. Would you mind taking a moment to share your feedback?\n\nBest,\n{{brand}} Team",
-              thankYouTemplate:
-                "Thank you for your feedback, {{name}}! We appreciate your input and look forward to serving you better.",
-            },
-          },
-        };
-
+        // Mock AI suggestions - in real implementation, this would update actual BrandGuide properties
+        console.log('AI suggestions generated for brand guide');
+        
         this.isDirty = true;
         this.isSaved = false;
         this.aiGenerating = false;

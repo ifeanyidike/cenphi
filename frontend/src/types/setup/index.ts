@@ -4,15 +4,22 @@ import { EmailSettings } from "./email";
 import { SocialSettings } from "./social";
 import { EnhancedTriggerOption } from "./triggers";
 import { WebsiteSettings } from "./website";
+import { GoogleDriveSettings } from "./google-drive";
+import { LinkedInSettings } from "./linkedin";
 
 export * from "./chat";
+export * from "./custom";
 export * from "./email";
 export * from "./general";
 export * from "./triggers";
 export * from "./website";
 export * from "./social";
-export * from "./custom";
 export * from "./brand-guide";
+export * from "./google-drive";
+export * from "./linkedin";
+
+// Re-export specific types for better compatibility
+export type { CustomSettings, CustomForm, CustomFormField } from "./custom";
 
 export interface CollectionSettings {
   website: WebsiteSettings;
@@ -20,6 +27,8 @@ export interface CollectionSettings {
   email: EmailSettings;
   social: SocialSettings;
   custom: CustomSettings;
+  "google-drive": GoogleDriveSettings;
+  linkedin: LinkedInSettings;
 }
 
 export type CollectionMethod = keyof CollectionSettings;

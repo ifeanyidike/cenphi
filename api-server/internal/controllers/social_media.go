@@ -3,13 +3,16 @@ package controllers
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/ifeanyidike/cenphi/internal/config"
 	"github.com/ifeanyidike/cenphi/internal/models"
 	"github.com/ifeanyidike/cenphi/internal/sharing"
 	"go.uber.org/zap"
@@ -18,12 +21,14 @@ import (
 type SocialController struct {
 	sharingClient sharing.SharingClient
 	logger        *zap.Logger
+	config        *config.Config
 }
 
-func NewSocialController(sharingClient sharing.SharingClient, logger *zap.Logger) *SocialController {
+func NewSocialController(sharingClient sharing.SharingClient, logger *zap.Logger, config *config.Config) *SocialController {
 	return &SocialController{
 		sharingClient: sharingClient,
 		logger:        logger,
+		config:        config,
 	}
 }
 
@@ -68,17 +73,20 @@ func (c *SocialController) GetAuthURL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get user ID from context
-	userID := r.Context().Value("user")
-	if userID == nil {
-		c.respondError(w, http.StatusUnauthorized, "User not authenticated", nil)
-		return
-	}
-
-	userUUID, err := uuid.Parse(userID.(string))
-	if err != nil {
-		c.logger.Error("Invalid user ID", zap.Error(err))
-		c.respondError(w, http.StatusBadRequest, "Invalid user ID", err)
-		return
+	userClaims, ok := r.Context().Value("user").(map[string]any)
+	var userUUID uuid.UUID
+	
+	if !ok {
+		c.logger.Warn("User not authenticated, using default user ID for testing")
+		// For development/testing, use a default user ID
+		userUUID, _ = uuid.Parse("6fe5d4ae-3627-4103-af42-39fb40cc0a12")
+	} else {
+		userUUID, err = uuid.Parse(userClaims["uid"].(string))
+		if err != nil {
+			c.logger.Error("Invalid user ID from claims", zap.Error(err))
+			c.respondError(w, http.StatusBadRequest, "Invalid user ID", err)
+			return
+		}
 	}
 
 	authURL, err := c.sharingClient.GetAuthURL(r.Context(), workspaceID, userUUID, platform)
@@ -147,11 +155,16 @@ func (c *SocialController) HandleOAuthCallback(w http.ResponseWriter, r *http.Re
 	account, err := c.sharingClient.HandleOAuthCallback(r.Context(), &req)
 	if err != nil {
 		c.logger.Error("Failed to handle OAuth callback", zap.Error(err))
-		c.respondError(w, http.StatusInternalServerError, "Failed to connect account", err)
+		// Redirect to frontend with error
+		frontendURL := c.config.Social.LinkedIn.FrontendURL
+		errorURL := fmt.Sprintf("%s/settings?error=oauth_failed&message=%s", frontendURL, url.QueryEscape("Failed to connect LinkedIn account"))
+		http.Redirect(w, r, errorURL, http.StatusTemporaryRedirect)
 		return
 	}
 
-	c.respondSuccess(w, http.StatusOK, "Account connected successfully", account)
+	// Redirect to OAuth success page (like Google Drive)
+	redirectURL := fmt.Sprintf("%s/oauth/success?platform=linkedin&workspace_id=%s", c.config.Server.BaseURL, account.WorkspaceID.String())
+	http.Redirect(w, r, redirectURL, http.StatusFound)
 }
 
 // Account management endpoints

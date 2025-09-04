@@ -43,7 +43,7 @@ export interface WidgetTemplate {
   image?: string;
   premium: boolean;
   bestFor: string[];
-  compatibleWith: Array<"text" | "video" | "audio" | "image">;
+  compatibleWith: Array<"text" | "video" | "image" | "document">;
   defaultCustomizations: Partial<WidgetCustomization>;
   component: React.FC<WidgetProps>;
 }
@@ -155,7 +155,7 @@ const WidgetDrawer: React.FC<WidgetDrawerProps> = ({
           "https://images.unsplash.com/photo-1557200134-90327ee9fafa?w=500&auto=format&fit=crop&q=60",
         premium: true,
         bestFor: ["Landing Pages", "Featured Sections", "Hero Areas"],
-        compatibleWith: ["text", "video", "audio", "image"],
+        compatibleWith: ["text", "video", "image", "document"],
         component: SpotlightWidget,
         defaultCustomizations: {
           theme: "premium",
@@ -177,7 +177,7 @@ const WidgetDrawer: React.FC<WidgetDrawerProps> = ({
           "https://images.unsplash.com/photo-1581291518857-4e27b48ff24e?w=500&auto=format&fit=crop&q=60",
         premium: true,
         bestFor: ["Multiple Testimonials", "Homepage", "Social Proof"],
-        compatibleWith: ["text", "video", "audio", "image"],
+        compatibleWith: ["text", "video", "image", "document"],
         component: CarouselWidget,
         defaultCustomizations: {
           theme: "modern",
@@ -200,7 +200,7 @@ const WidgetDrawer: React.FC<WidgetDrawerProps> = ({
           "https://images.unsplash.com/photo-1576613109753-27804de2cba8?w=500&auto=format&fit=crop&q=60",
         premium: false,
         bestFor: ["Websites", "Blog Posts", "Sidebars"],
-        compatibleWith: ["text", "audio", "image"],
+        compatibleWith: ["text", "image", "document"],
         component: MinimalCardWidget,
         defaultCustomizations: {
           theme: "minimal",
@@ -543,9 +543,7 @@ const WidgetGallery: React.FC<WidgetGalleryProps> = ({
               >
                 {testimonial.format === "video"
                   ? "Create video testimonial widgets"
-                  : testimonial.format === "audio"
-                    ? "Create audio testimonial widgets"
-                    : "Create testimonial widgets"}
+                  : "Create testimonial widgets"}
               </p>
             </div>
           </div>

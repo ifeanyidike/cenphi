@@ -89,21 +89,21 @@ export const ReviewsSection = observer(
     ];
 
     // Filter reviews based on activeFilters and tab
-    const filteredReviews = recentTestimonials.filter((review: Testimonial) => {
+    const filteredReviews = recentTestimonials.filter((testimonial: Testimonial) => {
       // First filter by tab
       if (activeTab !== "all") {
         switch (activeTab) {
           case "new":
-            if (review.status !== "pending_review") return false;
+            if (testimonial.status !== "pending") return false;
             break;
           case "featured":
-            if (review.status !== "featured") return false;
+            if (testimonial.status !== "featured") return false;
             break;
           case "verified":
-            if (!review.verified_at) return false;
+            if (!testimonial.verified_at) return false;
             break;
           case "media":
-            if (review.format === "text") return false;
+            if (testimonial.format === "text") return false;
             break;
         }
       }
@@ -115,31 +115,31 @@ export const ReviewsSection = observer(
       if (searchQuery) {
         const searchLower = searchQuery.toLowerCase();
         if (
-          !review.customer_profile?.name
+          !testimonial.customer_profile?.name
             ?.toLowerCase()
             ?.includes(searchLower) &&
-          !review.content?.toLowerCase()?.includes(searchLower)
+          !testimonial.content?.toLowerCase()?.includes(searchLower)
         ) {
           return false;
         }
       }
 
       const statusMatch = activeFilters.some(
-        (filter) => filter === review.status
+        (filter) => filter === testimonial.status
       );
       const ratingMatch = activeFilters.some(
-        (filter) => filter === review.rating?.toString()
+        (filter) => filter === testimonial.rating?.toString()
       );
       const mediaMatch = activeFilters.some(
-        (filter) => filter === review.format
+        (filter) => filter === testimonial.format
       );
       const platformMatch = activeFilters.some(
-        (filter) => filter === review.collection_method
+        (filter) => filter === testimonial.collection_method
       );
 
       const timeMatch = activeFilters.some((filter) => {
         const now = new Date();
-        const reviewDate = new Date(review.created_at);
+        const reviewDate = new Date(testimonial.created_at);
         const diffTime = now.getTime() - reviewDate.getTime();
         const diffDays = diffTime / (1000 * 60 * 60 * 24);
 
@@ -148,13 +148,13 @@ export const ReviewsSection = observer(
             // Compare date strings (ignoring time) to see if it's the same day.
             return now.toDateString() === reviewDate.toDateString();
           case "Week":
-            // Check if the review was created within the last 7 days.
+            // Check if the testimonial was created within the last 7 days.
             return diffDays < 7;
           case "Month":
-            // Check if the review was created within the last 30 days.
+            // Check if the testimonial was created within the last 30 days.
             return diffDays < 30;
           case "Year":
-            // Check if the review was created within the last 365 days.
+            // Check if the testimonial was created within the last 365 days.
             return diffDays < 365;
           default:
             return false;
@@ -329,8 +329,8 @@ export const ReviewsSection = observer(
                       : "md:grid-cols-2"
                   } gap-4`}
                 >
-                  {filteredReviews.map((review: Testimonial) => (
-                    <ReviewCard key={review.id} review={review!} />
+                  {filteredReviews.map((testimonial: Testimonial) => (
+                    <ReviewCard key={testimonial.id} testimonial={testimonial!} />
                   ))}
                 </motion.div>
               ) : (
@@ -341,8 +341,8 @@ export const ReviewsSection = observer(
                   exit={{ opacity: 0 }}
                   className="space-y-3"
                 >
-                  {filteredReviews.map((review: Testimonial) => (
-                    <ReviewListItem key={review.id} review={review!} />
+                  {filteredReviews.map((testimonial: Testimonial) => (
+                    <ReviewListItem key={testimonial.id} testimonial={testimonial!} />
                   ))}
                 </motion.div>
               )}

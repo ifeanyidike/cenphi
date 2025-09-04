@@ -4,6 +4,9 @@ import { createBrowserRouter } from "react-router-dom";
 import { Login } from "@/pages/Login";
 import { Signup } from "@/pages/SignUp";
 import ResetPasswordPage from "@/pages/ResetPassword";
+import Pending from "@/pages/Pending";
+import Approved from "@/pages/Approved";
+import Rejected from "@/pages/Rejected";
 
 import EmailPage from "@/pages/EmailPage";
 import AllReviewsPage from "@/pages/AllReviewsPage";
@@ -13,12 +16,13 @@ import TestimonialCollectionLayout from "@/layouts/TestimonialCollectionLayout";
 import TestimonialTypeSelection from "@/pages/collection/TypeSelection";
 import TestimonialUploads from "@/pages/collection/TestimonialUploads";
 import VideoTestimonialRecorder from "@/pages/collection/VideoTestimonialRecorder";
-import AudioTestimonialRecorder from "@/pages/collection/AudioTestimonialRecorder";
 import TextTestimonialCollection from "@/pages/collection/TextTestimonialCollection";
 import MobileTransferPage from "@/pages/collection/MobileTransferPage";
 import ThankYouPage from "@/pages/collection/ThankYouPage";
 import WhyCenphi from "@/pages/WhyCenphi";
 import AuthFlow from "@/pages/authflow";
+import OAuthSuccess from "@/pages/OAuthSuccess";
+
 
 import { useParams } from "react-router-dom";
 
@@ -36,10 +40,18 @@ import OnboardingError from "@/components/onboarding/OnboardingError";
 import DashboardProtectedRoute from "@/components/auth/protected_routes/Dashboard";
 import GenericProtectedRoute from "@/components/auth/protected_routes/Generic";
 import OnboardingProtectedRoute from "@/components/auth/protected_routes/Onboarding";
+import { ViewPendingReview } from "@/pages/ViewPendingDetail";
+import Sentiment from "@/pages/Sentiment";
+// import TestimonialCollectionSettingsPage from "@/pages/TestimonialCollectionSettingsPage";
 import BrandGuidePage from "@/pages/BrandGuidePage";
 import TestimonialPage from "@/pages/TestimonialPage";
 import AIServiceTester from "@/pages/AIServiceTester";
 import Tester from "@/pages/PageTester";
+import SettingsPageWrapper from "@/pages/SettingsPageWrapper";
+import GoogleDrivePageWrapper from "@/pages/GoogleDrivePageWrapper";
+import LinkedInShareTest from "@/pages/LinkedInShareTest";
+import LinkedInReadyPageWrapper from "@/pages/LinkedInReadyPageWrapper";
+import TestConnectionStatus from "@/pages/TestConnectionStatus";
 
 // lazy load
 const LandingPage = lazy(() => import("@/pages/Landing"));
@@ -53,12 +65,10 @@ const NotFoundPage = lazy(() => import("@/pages/NotFoundPage"));
 const DynamicRecorder = () => {
   // const { type } = useParams<{ type: "video" | "audio" | "text" }>();
   const { type } = useParams() as {
-    type?: "video" | "audio" | "image" | "text";
+    type?: "video" | "image" | "text";
   };
   if (type === "video") {
     return <VideoTestimonialRecorder />;
-  } else if (type === "audio") {
-    return <AudioTestimonialRecorder />;
   } else {
     // Although the loader should prevent an invalid type from reaching here,
     // we return NotFoundPage as a fallback.
@@ -74,21 +84,22 @@ export const router = createBrowserRouter([
   { element: <BrandGuidePage />, path: "/brand-guide" },
   { element: <AIServiceTester />, path: "/ai-tests" },
   { element: <Tester />, path: "/tester" },
+  { element: <TestConnectionStatus />, path: "/test-connection" },
   {
     element: <DashboardProtectedRoute />,
     children: [
-      {
-        path: "/dashboard",
-        element: (
-          <ErrorBoundary
-            ErrorComponent={DashboardErrorComponent}
-            LoadingComponent={LoadingIndicator}
-            componentName="Dashboard"
-          >
-            <TestimonialsDashboard />
-          </ErrorBoundary>
-        ),
-      },
+      // {
+      //   path: "/dashboard",
+      //   element: (
+      //     <ErrorBoundary
+      //       ErrorComponent={DashboardErrorComponent}
+      //       LoadingComponent={LoadingIndicator}
+      //       componentName="Dashboard"
+      //     >
+      //       <TestimonialsDashboard />
+      //     </ErrorBoundary>
+      //   ),
+      // },
       {
         path: "/testimonial/detail/:id",
         element: (
@@ -128,6 +139,7 @@ export const router = createBrowserRouter([
         path: "/authflow",
         element: <AuthFlow />,
       },
+
       {
         path: "/checkout",
         element: (
@@ -144,8 +156,88 @@ export const router = createBrowserRouter([
   },
 
   {
-    path: "/why-Cenphi",
+    path: "/about",
     element: <WhyCenphi />,
+  },
+  // {
+  //   element: <DashboardProtectedRoute />,
+  //   children: [
+  //     {
+  //       path: "/dashboard",
+  //       element: (
+  //         <ErrorBoundary
+  //           ErrorComponent={DashboardErrorComponent}
+  //           LoadingComponent={LoadingIndicator}
+  //           componentName="Dashboard"
+  //         >
+  //           <TestimonialsDashboard />
+  //         </ErrorBoundary>
+  //       ),
+  //     },
+  //     {
+  //       path: "/settings",
+  //       element: (
+  //         <ErrorBoundary
+  //           ErrorComponent={DashboardErrorComponent}
+  //           LoadingComponent={LoadingIndicator}
+  //           componentName="Settings"
+  //         >
+  //           <SettingsPageWrapper />
+  //         </ErrorBoundary>
+  //       ),
+  //     },
+  //     {
+  //       path: "/google-drive",
+  //       element: (
+  //         <ErrorBoundary
+  //           ErrorComponent={DashboardErrorComponent}
+  //           LoadingComponent={LoadingIndicator}
+  //           componentName="GoogleDrive"
+  //         >
+  //           <GoogleDrivePageWrapper />
+  //         </ErrorBoundary>
+  //       ),
+  //     },
+  //   ],
+  // },
+
+   {
+   path: "/dashboard",
+    element:    <TestimonialsDashboard />
+  },
+
+ {
+   path: "/settings",
+    element:   <SettingsPageWrapper />,
+  },
+
+ {
+    path: "/google-drive",
+    element:  <GoogleDrivePageWrapper />,
+  },
+
+  {
+    path: "/pending_detail",
+    element: <ViewPendingReview />,
+  },
+
+  {
+    path: "/pending",
+    element: <Pending />,
+  },
+
+  {
+    path: "/sentiment",
+element:   <Sentiment/>
+  },
+  {
+    path: "/rejected",
+    element: <Rejected />,
+  },
+
+  {
+    path: "/approved",
+    element: <Approved />,
   },
   {
     path: "/pricing",
@@ -156,12 +248,12 @@ export const router = createBrowserRouter([
     element: <EmailPage />,
   },
   {
-    path: "/reviewpage",
+    path: "/review",
     element: <ReviewPage />,
   },
 
   {
-    path: "/all-reviewpage",
+    path: "/reviews",
     element: <AllReviewsPage />,
   },
   {
@@ -178,6 +270,19 @@ export const router = createBrowserRouter([
   },
 
   {
+    path: "/oauth/success",
+    element: <OAuthSuccess />,
+  },
+  {
+    path: "/linkedin-test",
+    element: <LinkedInShareTest />,
+  },
+  {
+    path: "/linkedin-ready",
+    element: <LinkedInReadyPageWrapper />,
+  },
+
+  {
     // Parent route for the testimonial collection process.
     path: "/collection",
     element: <TestimonialCollectionLayout />,
@@ -188,10 +293,10 @@ export const router = createBrowserRouter([
         element: <TestimonialTypeSelection />,
       },
       {
-        // Dynamic route: the ":type" segment must be "video", "audio", or "text".
+        // Dynamic route: the ":type" segment must be "video" or "text".
         path: ":type",
-        loader: ({ params }) => {
-          const allowedTypes = ["video", "audio", "text"];
+        loader: ({ params }: { params: { type?: string } }) => {
+          const allowedTypes = ["video", "text"];
           if (!params.type || !allowedTypes.includes(params.type)) {
             throw new Response("Not Found", { status: 404 });
           }

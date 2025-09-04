@@ -1,7 +1,6 @@
 import { motion, AnimatePresence, useMotionValue } from "framer-motion";
 import TestimonialTypeSelection from "./TestimonialTypeSelection";
 import VideoRecorder from "./VideoRecorder";
-import AudioRecorder from "./AudioRecorder";
 import { AIFeedback } from "./AIFeedback";
 import MediaSelectionModal from "./MediaSelectionModal";
 import FileUpload from "./FileUpload";
@@ -97,9 +96,9 @@ function TestimonialCollection() {
             totalSteps={GUIDED_PROMPTS.length}
           />
           <FileUpload
-            type={type as "video" | "audio"}
+            type={"video"}
             onComplete={collectionStore.handleComplete}
-            maxSize={type === "video" ? 500 * 1024 * 1024 : 100 * 1024 * 1024}
+            maxSize={500 * 1024 * 1024}
           />
           {renderChangeType()}
         </motion.div>
@@ -170,7 +169,7 @@ function TestimonialCollection() {
       //   </Button>
       // </div>
       <ChangeRenderType
-        type={state.type}
+      type={state.type === "video" || state.type === "text" ? state.type : null}
         isComplete={state.currentPromptIndex === GUIDED_PROMPTS.length - 1}
         onNext={() => collectionStore.handleNext(progress)}
       />
@@ -207,34 +206,33 @@ function TestimonialCollection() {
     );
   }
 
-  function renderAudioTestimonial() {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        style={{ minHeight: "90vh" }}
-        className="max-w-screen-xl mx-auto flex flex-col justify-center"
-      >
-        <TestimonialProgress
-          progress={progress}
-          currentStep={state.currentPromptIndex}
-          totalSteps={GUIDED_PROMPTS.length}
-        />
+  // function renderAudioTestimonial() {
+  //   return (
+  //     <motion.div
+  //       initial={{ opacity: 0, y: 20 }}
+  //       animate={{ opacity: 1, y: 0 }}
+  //       exit={{ opacity: 0, y: -20 }}
+  //       style={{ minHeight: "90vh" }}
+  //       className="max-w-screen-xl mx-auto flex flex-col justify-center"
+  //     >
+  //       <TestimonialProgress
+  //         progress={progress}
+  //         currentStep={state.currentPromptIndex}
+  //         totalSteps={GUIDED_PROMPTS.length}
+  //       />
 
-        <div className="bg-white rounded-xl shadow-lg p-6 mt-4 mb-8">
-          {renderDisplayQuestion()}
+  //       <div className="bg-white rounded-xl shadow-lg p-6 mt-4 mb-8">
+  //         {renderDisplayQuestion()}
 
-          <AudioRecorder
-            onRecordingComplete={collectionStore.handleComplete}
-            maxDuration={MAX_RECORDING_DURATION / (GUIDED_PROMPTS.length || 1)}
-          />
-        </div>
+  //         <div className="text-sm text-gray-500 text-center">
+  //           Audio recording is no longer available. Please use Upload or switch to Video/Text.
+  //         </div>
+  //       </div>
 
-        {renderChangeType()}
-      </motion.div>
-    );
-  }
+  //       {renderChangeType()}
+  //     </motion.div>
+  //   );
+  // }
 
   function renderTextTestimonial() {
     return (
@@ -257,8 +255,7 @@ function TestimonialCollection() {
     // }
     if (
       !state.type ||
-      (state.type === "video" && !collectionStore.selectedOption) ||
-      (state.type === "audio" && !collectionStore.selectedOption)
+      (state.type === "video" && !collectionStore.selectedOption)
     ) {
       return <TestimonialTypeSelection />;
     }
@@ -272,14 +269,11 @@ function TestimonialCollection() {
     }
 
     if (state.type === "video" && !collectionStore.selectedOption) return;
-    if (state.type === "audio" && !collectionStore.selectedOption) return;
 
     if (state.type === "video" && collectionStore.selectedOption === "record") {
       return renderVideoTestimonial();
     }
-    if (state.type === "audio" && collectionStore.selectedOption === "record") {
-      return renderAudioTestimonial();
-    }
+    
     if (state.type === "text") {
       return renderTextTestimonial();
     }

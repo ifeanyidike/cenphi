@@ -53,7 +53,7 @@ type App struct {
 	// BrandContextController *controllers.BrandContextController
 	// WebsocketController    *controllers.WebsocketController
 	AITestController                controllers.AITestController
-	SocialController                controllers.SocialController
+	SocialController                *controllers.SocialController
 	TestimonialRequestController    controllers.TestimonialRequestController
 	TestimonialCollectionController controllers.TestimonialCollectionController
 	GoogleDriveController           controllers.GoogleDriveController
@@ -170,7 +170,7 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 	testimonialController := controllers.NewTestimonialController(testimonialService, logger)
 	workspaceController := controllers.NewWorkspaceController(workspaceService, testimonialService, logger)
 
-	socialController := controllers.NewSocialController(sharingService, logger)
+	socialController := controllers.NewSocialController(sharingService, logger, &cfg)
 
 	aiTestController := controllers.NewAITestController(aiServiceManager, queueService, logger, cacheService)
 
@@ -226,7 +226,7 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 		StorageService:                  *storageService,
 		QueueWorkers:                    queueWorkers,
 		// WSHub:                  wsHub,
-		SocialController: *socialController,
+		SocialController: socialController,
 		RateLimiter:      rateLimiter,
 		ctx:              ctx,
 		cancel:           cancel,

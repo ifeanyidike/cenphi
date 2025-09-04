@@ -297,6 +297,9 @@ func (am *AuthMiddleware) VerifyToken(next http.Handler) http.Handler {
 
 		// Add verified user ID to context
 		newCtx := context.WithValue(r.Context(), userKey, token.UID)
+		// Also store under common string keys for cross-package access
+		newCtx = context.WithValue(newCtx, "user", token.UID)
+		newCtx = context.WithValue(newCtx, "user_id", token.UID)
 
 		// Continue with the next handler
 		next.ServeHTTP(w, r.WithContext(newCtx))

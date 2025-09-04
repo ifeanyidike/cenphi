@@ -1,10 +1,27 @@
+import React from "react";
 import { ReviewCard } from "./ReviewCard";
-import { Review } from "@/types/types";
+import { Testimonial } from "@/types/testimonial";
 
-export const ReviewCardView = ({ reviews }: { reviews: Review[] }) => (
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-    {reviews.map((review) => (
-      <ReviewCard key={review.id} review={review} />
-    ))}
-  </div>
-);
+
+interface ReviewCardViewProps {
+  testimonials: Testimonial[];
+  onReviewAction?: (id: string, action: 'approve' | 'reject' | 'feature' | 'archive') => void;
+}
+
+export const ReviewCardView: React.FC<ReviewCardViewProps> = ({ 
+  testimonials=[],
+  onReviewAction
+}) => {
+ 
+  return (
+    <div className="flex gap-2 justify-center items-center">
+      {testimonials.map((testimonial) => (
+        <ReviewCard 
+          key={testimonial.id} 
+          testimonial={testimonial} 
+          onAction={onReviewAction}
+        />
+      ))}
+    </div>
+  );
+};

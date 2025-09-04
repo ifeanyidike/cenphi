@@ -8,7 +8,7 @@ import {
     ArrowRight 
 } from 'lucide-react';
 
-const MissionSection = ({ approachRef }: { approachRef: React.RefObject<HTMLDivElement> }) => {
+const MissionSection = ({ approachRef }: {approachRef: React.RefObject<HTMLDivElement | null>; }) => {
   const featureVariants = {
     hidden: { opacity: 0, y: 50, scale: 0.95 },
     visible: (custom: number) => ({

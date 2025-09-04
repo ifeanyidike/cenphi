@@ -91,86 +91,8 @@ export const defaultBrandData: BrandGuide = {
     border: true,
     ratingStyle: "stars",
   },
-  voice: {
-    tone: "professional",
-    values: ["Trustworthy", "Helpful", "Expert"],
-    ctas: ["Share your experience", "Leave a review", "Tell us what you think"],
-    examples: [],
-    channels: {
-      email: {
-        requestTemplate:
-          "Hi {{name}},\n\nWe hope you're enjoying your experience with {{brand}}! We would love to hear your thoughts. Would you mind taking a moment to share your feedback?\n\nBest,\n{{brand}} Team",
-        thankYouTemplate:
-          "Thank you for your feedback, {{name}}! We appreciate your input and look forward to serving you better.",
-        sender: {
-          name: "{{brand}} Team",
-          email: "feedback@{{brand}}.com",
-        },
-        signature: {
-          templateId: "minimal",
-          text: "Best,\n{{brand}} Team",
-        },
-      },
-      social: {
-        platforms: {
-          facebook: {
-            requestTemplate:
-              "Hey {{name}}, we value your opinion! Share your experience with us using #{{brandHashtag}} or tag us @{{brandHandle}}.",
-            thankYouTemplate:
-              "Thanks for sharing your experience, @{{name}}! We appreciate your support. #CustomerAppreciation",
-            followupTemplate:
-              "Thanks for sharing your experience, @{{name}}! We appreciate your support. #CustomerAppreciation",
-          },
-          linkedin: {
-            requestTemplate:
-              "Hey {{name}}, we value your opinion! Share your experience with us using #{{brandHashtag}} or tag us @{{brandHandle}}.",
-            thankYouTemplate:
-              "Thanks for sharing your experience, @{{name}}! We appreciate your support. #CustomerAppreciation",
-            followupTemplate:
-              "Thanks for sharing your experience, @{{name}}! We appreciate your support. #CustomerAppreciation",
-          },
-          instagram: {
-            requestTemplate:
-              "Hey {{name}}, we value your opinion! Share your experience with us using #{{brandHashtag}} or tag us @{{brandHandle}}.",
-            thankYouTemplate:
-              "Thanks for sharing your experience, @{{name}}! We appreciate your support. #CustomerAppreciation",
-            followupTemplate:
-              "Thanks for sharing your experience, @{{name}}! We appreciate your support. #CustomerAppreciation",
-          },
-          tiktok: {
-            requestTemplate:
-              "Hey {{name}}, we value your opinion! Share your experience with us using #{{brandHashtag}} or tag us @{{brandHandle}}.",
-            thankYouTemplate:
-              "Thanks for sharing your experience, @{{name}}! We appreciate your support. #CustomerAppreciation",
-            followupTemplate:
-              "Thanks for sharing your experience, @{{name}}! We appreciate your support. #CustomerAppreciation",
-          },
-          twitter: {
-            requestTemplate:
-              "Hey {{name}}, we value your opinion! Share your experience with us using #{{brandHashtag}} or tag us @{{brandHandle}}.",
-            thankYouTemplate:
-              "Thanks for sharing your experience, @{{name}}! We appreciate your support. #CustomerAppreciation",
-            followupTemplate:
-              "Thanks for sharing your experience, @{{name}}! We appreciate your support. #CustomerAppreciation",
-          },
-          youtube: {
-            requestTemplate:
-              "Hey {{name}}, we value your opinion! Share your experience with us using #{{brandHashtag}} or tag us @{{brandHandle}}.",
-            thankYouTemplate:
-              "Thanks for sharing your experience, @{{name}}! We appreciate your support. #CustomerAppreciation",
-            followupTemplate:
-              "Thanks for sharing your experience, @{{name}}! We appreciate your support. #CustomerAppreciation",
-          },
-        },
-      },
-      website: {
-        requestTemplate:
-          "We'd love to hear from you! Please share your thoughts about {{brand}}.",
-        thankYouTemplate:
-          "Thank you for your testimonial! Your feedback helps us improve our services.",
-      },
-    },
-  },
+  // Note: voice property removed as it doesn't exist in BrandGuide type
+  // Voice settings should be managed separately or added to BrandGuide type definition
   ui: {
     radius: 8,
     animation: true,

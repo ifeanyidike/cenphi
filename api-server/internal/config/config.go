@@ -144,6 +144,7 @@ type LinkedInOAuthConfig struct {
 	ClientSecret string
 	RedirectURI  string
 	Scopes       string
+	FrontendURL  string
 }
 
 type LinkedInAPIConfig struct {
@@ -288,6 +289,7 @@ func NewConfig() Config {
 					ClientSecret: os.Getenv("LINKEDIN_CLIENT_SECRET"),
 					RedirectURI:  getEnvWithDefault("LINKEDIN_REDIRECT_URI", "http://localhost:8081/api/social/oauth/callback"),
 					Scopes:       getEnvWithDefault("LINKEDIN_SCOPES", "profile,w_member_social"),
+					FrontendURL:  getEnvWithDefault("FRONTEND_URL", "http://localhost:3001"),
 				},
 				LinkedInAPI: LinkedInAPIConfig{
 					BaseURL:           getEnvWithDefault("LINKEDIN_API_BASE_URL", "https://api.linkedin.com"),

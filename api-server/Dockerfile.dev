@@ -10,7 +10,7 @@ RUN apk add --no-cache ffmpeg && \
 
 COPY go.mod go.sum ./
 RUN go mod download && \
-rm -rf /go/pkg/mod/cache
+    rm -rf /go/pkg/mod/cache
 
 COPY . .
 

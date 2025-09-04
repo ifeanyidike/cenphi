@@ -21,7 +21,7 @@ func RegisterRoutes(
 	teamMemberController controllers.TeamMemberController,
 	onboardingController controllers.OnboardingController,
 	testimonialController controllers.TestimonialController,
-	socialController controllers.SocialController,
+	socialController *controllers.SocialController,
 	aiTestController controllers.AITestController,
 
 	testimonialRequestController controllers.TestimonialRequestController,
@@ -204,7 +204,7 @@ func RegisterAITestRoutes(r chi.Router, controller controllers.AITestController,
 	})
 }
 
-func RegisterSocialRoutes(r chi.Router, controller controllers.SocialController, authMiddleware middleware.AuthMiddleware) {
+func RegisterSocialRoutes(r chi.Router, controller *controllers.SocialController, authMiddleware middleware.AuthMiddleware) {
 	// Public OAuth callback endpoint (no auth required)
 	r.Get("/social/oauth/callback", controller.HandleOAuthCallback)
 
@@ -304,16 +304,13 @@ func RegisterGoogleDriveRoutes(r chi.Router, controller controllers.GoogleDriveC
 		// Public OAuth callback (no auth required)
 		r.Get("/oauth/callback", controller.HandleOAuthCallback)
 
-		// Protected routes
-		r.Group(func(r chi.Router) {
-			// r.Use(authMiddleware.VerifyToken)
-
-			// OAuth management
-			r.Route("/workspaces/{workspaceID}/drive", func(r chi.Router) {
-				r.Get("/auth", controller.GetAuthURL)
-				r.Get("/files", controller.ListFiles)
-				r.Get("/testimonial-files", controller.ListTestimonialFiles)
-			})
+		// OAuth management
+		r.Route("/workspaces/{workspaceID}/drive", func(r chi.Router) {
+			r.Use(authMiddleware.VerifyToken)
+			r.Get("/auth", controller.GetAuthURL)
+			r.Get("/status", controller.CheckConnectionStatus)
+			r.Get("/files", controller.ListFiles)
+			r.Get("/testimonial-files", controller.ListTestimonialFiles)
 		})
 	})
 }

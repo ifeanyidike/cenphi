@@ -1,6 +1,6 @@
 import { JSONObject } from "../helper";
 
-export type TestimonialFormat = "video" | "audio" | "text" | "image";
+export type TestimonialFormat = "video" | "text" | "image" | "document";
 
 export interface FormatOption {
   type: TestimonialFormat;

@@ -17,7 +17,7 @@ interface PerformanceDropdownPortalProps {
   useHighPerformanceMode: boolean;
   qualityPreset: string;
   isDarkMode: boolean;
-  buttonRef: React.RefObject<HTMLButtonElement>;
+  buttonRef: React.RefObject<HTMLButtonElement | null>;
 }
 
 interface DropdownPosition {

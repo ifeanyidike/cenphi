@@ -1,4 +1,4 @@
-import React from 'react';
+
 import ReviewInvitationFooter from '@/components/custom/dashboard/ReviewInvitationFooter';
 import { StarIcon } from 'lucide-react';
 

@@ -8,7 +8,7 @@ import { runInAction } from "mobx";
 interface ControlsProps {
   showControls: boolean;
   isDraggingProgress: boolean;
-  videoRef: React.RefObject<HTMLVideoElement>;
+  videoRef: React.RefObject<HTMLVideoElement | null>;
   bufferedTime: number;
   showVolumeSlider: boolean;
   showSpeedOptions: boolean;
@@ -17,7 +17,7 @@ interface ControlsProps {
   controlsTimeout: number | null;
   showControlsTemporarily: () => void;
   setShowVolumeSlider: (show: boolean) => void;
-  containerRef: React.RefObject<HTMLDivElement>;
+  containerRef: React.RefObject<HTMLDivElement | null>;
   isFullscreen: boolean;
 }
 

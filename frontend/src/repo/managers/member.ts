@@ -1,5 +1,4 @@
 // repositories/managers/memberManager.ts
-
 import { MemberDataParams } from "@/types/member";
 import { makeAutoObservable, runInAction } from "mobx";
 import { WorkspaceOrchestrator } from "../workspace_hub";
@@ -39,7 +38,6 @@ export class MemberManager {
           Authorization: `Bearer ${token}`,
         },
       });
-
       if (response.ok) {
         const member = (await response.json()) as MemberDataParams;
         console.log("member", member);
@@ -49,7 +47,6 @@ export class MemberManager {
         });
         return member;
       }
-
       console.log("response", await response.json());
       throw new Error("could not get user");
     } catch (error) {

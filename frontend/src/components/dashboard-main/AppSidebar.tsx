@@ -26,6 +26,8 @@ import {
   MessagesSquare,
   Film,
   Trophy,
+  Cloud,
+  Linkedin,
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -98,15 +100,15 @@ const data = {
         },
         {
           title: "Pending Reviews",
-          url: "/testimonials/pending",
+          url: "/pending",
         },
         {
-          title: "Published",
-          url: "/testimonials/published",
+          title: "Approved",
+          url: "/approved",
         },
         {
-          title: "Flagged Content",
-          url: "/testimonials/flagged",
+          title: "Rejected Content",
+          url: "/rejected",
         },
         {
           title: "Video Testimonials",
@@ -123,13 +125,41 @@ const data = {
       ],
     },
     {
+      title: "Google Drive",
+      url: "/google-drive",
+      icon: Cloud,
+      items: [
+        {
+          title: "Import Files",
+          url: "/google-drive",
+        },
+        {
+          title: "Connected Folders",
+          url: "/google-drive?section=folders",
+        },
+        {
+          title: "Sync Settings",
+          url: "/google-drive?section=settings",
+        },
+        {
+          title: "Processing Queue",
+          url: "/google-drive?section=queue",
+        },
+      ],
+    },
+    {
+      title: "LinkedIn Ready",
+      url: "/linkedin-ready",
+      icon: Linkedin,
+    },
+    {
       title: "AI Studio",
       url: "/ai",
       icon: Brain,
       items: [
         {
           title: "Sentiment Analysis",
-          url: "/ai/sentiment",
+          url: "/sentiment",
         },
         {
           title: "Content Enhancement",
@@ -323,6 +353,7 @@ const data = {
       url: "/feedback",
       icon: MessagesSquare,
     },
+    
   ],
 };
 

@@ -1,16 +1,13 @@
-import { observer } from "mobx-react-lite";
+// import { observer } from "mobx-react-lite";
 import { collectionStore } from "@/stores/collectionStore";
 import { AnimatePresence, motion, useMotionValue } from "framer-motion";
 import TestimonialProgress from "@/components/collection/TestimonialProgress";
-import {
-  GUIDED_PROMPTS,
-  MAX_RECORDING_DURATION,
-} from "@/components/collection/constants";
+import { GUIDED_PROMPTS } from "@/components/collection/constants";
 import DisplayQuestion from "@/components/collection/DisplayQuestion";
-import AudioRecorder from "@/components/collection/AudioRecorder";
 import ChangeRenderType from "@/components/collection/ChangeRenderType";
 
-const AudioTestimonialRecorder = observer(() => {
+const AudioTestimonialRecorder = () => {
+  console.log('currentPromptIndex:', collectionStore.state.currentPromptIndex);
   const state = collectionStore.state;
   const progress = useMotionValue(0);
 
@@ -32,20 +29,23 @@ const AudioTestimonialRecorder = observer(() => {
         <div className="bg-white rounded-xl shadow-lg p-6 mt-4 mb-8">
           <DisplayQuestion />
 
-          <AudioRecorder
-            onRecordingComplete={collectionStore.handleCompleteRecordingSection}
-            maxDuration={MAX_RECORDING_DURATION / (GUIDED_PROMPTS.length || 1)}
-          />
+          <div className="text-sm text-gray-500 text-center">
+            Audio recording is no longer available. Please use Upload or switch to Video/Text.
+          </div>
         </div>
 
         <ChangeRenderType
-          type={state.type}
+          type={
+            ["audio", "video", "text"].includes(state.type as string)
+              ? (state.type as "audio" | "video" | "text")
+              : null
+          }
           isComplete={state.currentPromptIndex === GUIDED_PROMPTS.length - 1}
           onNext={() => collectionStore.handleNext(progress)}
         />
       </motion.div>
     </AnimatePresence>
   );
-});
+};
 
 export default AudioTestimonialRecorder;

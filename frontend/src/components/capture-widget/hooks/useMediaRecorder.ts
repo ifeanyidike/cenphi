@@ -19,7 +19,7 @@ interface UseMediaRecorderReturn {
   isPaused: boolean;
   recordingTime: number;
   mediaStream: MediaStream | null;
-  videoRef: React.RefObject<HTMLVideoElement>;
+  videoRef: React.RefObject<HTMLVideoElement | null>;
   error: string | null;
   recordedChunks: Blob[];
   isInitialized: boolean;

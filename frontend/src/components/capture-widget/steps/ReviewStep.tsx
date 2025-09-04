@@ -77,7 +77,7 @@ const ReviewStep: React.FC = () => {
           throw new Error("All recorded chunks have zero size");
         }
 
-        const mimeType = mediaType === "video" ? "video/webm" : "audio/webm";
+        const mimeType = "video/webm";
         blob = createMediaBlobFromChunks(recordedChunks, mimeType);
         sourceType = "recorded";
       } else if (uploadedMediaFile) {
@@ -309,7 +309,7 @@ const ReviewStep: React.FC = () => {
       const formData = new FormData();
 
       // Add media file
-      const filename = `testimonial.${mediaType === "video" ? "webm" : "webm"}`;
+      const filename = `testimonial.webm`;
       formData.append("file", mediaState.blob, filename);
 
       // Add metadata
@@ -377,7 +377,7 @@ const ReviewStep: React.FC = () => {
     dispatch,
   ]);
 
-  const isVideo = mediaType === "video";
+  // const isVideo = mediaType === "video";
 
   // Render error state
   if (mediaState.hasError) {
@@ -423,37 +423,22 @@ const ReviewStep: React.FC = () => {
         className="tw-label"
         style={{ fontSize: "19px", marginBottom: "20px", fontWeight: 600 }}
       >
-        Review your {isVideo ? "video" : "audio"}
+        Review your video
       </h3>
 
       <div className="tw-player">
-        {isVideo ? (
-          <video
-            ref={mediaRef as React.RefObject<HTMLVideoElement>}
-            className={`tw-player-video ${userCameraChoice === "portrait" ? "portrait" : ""}`}
-            src={mediaState.url}
-            onTimeUpdate={handleTimeUpdate}
-            onLoadedMetadata={handleLoadedMetadata}
-            onCanPlay={handleCanPlay}
-            onError={handleError}
-            onEnded={handleEnded}
-            preload="metadata"
-            playsInline
-          />
-        ) : (
-          <div className="tw-player-audio">
-            <audio
-              ref={mediaRef as React.RefObject<HTMLAudioElement>}
-              src={mediaState.url}
-              onTimeUpdate={handleTimeUpdate}
-              onLoadedMetadata={handleLoadedMetadata}
-              onCanPlay={handleCanPlay}
-              onError={handleError}
-              onEnded={handleEnded}
-              preload="metadata"
-            />
-          </div>
-        )}
+        <video
+          ref={mediaRef as React.RefObject<HTMLVideoElement>}
+          className={`tw-player-video ${userCameraChoice === "portrait" ? "portrait" : ""}`}
+          src={mediaState.url}
+          onTimeUpdate={handleTimeUpdate}
+          onLoadedMetadata={handleLoadedMetadata}
+          onCanPlay={handleCanPlay}
+          onError={handleError}
+          onEnded={handleEnded}
+          preload="metadata"
+          playsInline
+        />
 
         {!mediaState.isLoaded && (
           <div className="tw-player-loading">
