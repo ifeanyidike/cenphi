@@ -70,7 +70,6 @@ func main() {
 	// Health check before starting workers
 	if err := queueService.HealthCheck(); err != nil {
 		logger.Warn("RabbitMQ health check failed", zap.Error(err))
-		// Continue anyway - workers will retry
 	} else {
 		logger.Info("RabbitMQ health check passed")
 	}
