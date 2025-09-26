@@ -39,3 +39,4 @@ localai-models
 localai-models/**
 requests.http
 cloudrun-service.yaml
+scripts/test-redis.sh
