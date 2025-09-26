@@ -45,10 +45,6 @@ func main() {
 		log.Fatalf("Failed to initialize database and redis: %v", err)
 	}
 
-	// initialize AI
-	// aiClient := ai.NewClient(logger, cfg) // Same call, but now resilient!
-	// defer aiClient.Close()
-
 	defer db.Close()
 	defer redisClient.Close()
 
