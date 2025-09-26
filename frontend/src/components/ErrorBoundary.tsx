@@ -8,7 +8,7 @@ interface ErrorBoundaryProps {
     resetError?: () => void;
   }>;
   LoadingComponent?: React.ComponentType;
-  componentName?: string; // For logging/analytics purposes
+  componentName?: string;
 }
 
 interface ErrorBoundaryState {
