@@ -1,50 +1,80 @@
 // components/ai-studio/Constants.tsx
-import { AI_SERVICES } from "./definitions";
-import { VoiceOption } from "./types";
-
-// export const categories = [
-//   { id: "all", label: "All Services" },
-//   { id: "video", label: "Video" },
-//   { id: "audio", label: "Audio" },
-//   { id: "content", label: "Content" },
-//   { id: "optimization", label: "Optimization" },
-// ];
-
-export const categories = [
-  { id: "all", label: "All", count: AI_SERVICES.length },
-  {
-    id: "video",
-    label: "Video",
-    count: AI_SERVICES.filter((s) => s.category === "video").length,
-  },
-  {
-    id: "audio",
-    label: "Audio",
-    count: AI_SERVICES.filter((s) => s.category === "audio").length,
-  },
-  {
-    id: "content",
-    label: "Content",
-    count: AI_SERVICES.filter((s) => s.category === "content").length,
-  },
-  {
-    id: "optimization",
-    label: "Optimization",
-    count: AI_SERVICES.filter((s) => s.category === "optimization").length,
-  },
-];
+import { VoiceOption } from "@/types/ai-service";
 
 // Configuration Data
+// constants/backgroundMusicOptions.ts
 export const backgroundMusicOptions = [
-  { id: "ambient-corporate", name: "Ambient Corporate" },
-  { id: "upbeat-modern", name: "Upbeat Modern" },
-  { id: "inspiring-piano", name: "Inspiring Piano" },
-  { id: "tech-minimal", name: "Tech Minimal" },
-  { id: "emotional-strings", name: "Emotional Strings" },
+  {
+    id: "corporate",
+    name: "Corporate Success",
+    genre: "corporate",
+    url: "https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3",
+    previewUrl:
+      "https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3",
+    filename: "corporate_background.mp3",
+    description: "Corporate Success - Pixabay",
+    duration: "2:27",
+    mood: "Professional & Confident",
+    bpm: 120,
+  },
+  {
+    id: "upbeat",
+    name: "Inspiring Energy",
+    genre: "upbeat",
+    url: "https://cdn.pixabay.com/download/audio/2025/07/08/audio_805ea6ff82.mp3",
+    previewUrl:
+      "https://cdn.pixabay.com/download/audio/2025/07/08/audio_805ea6ff82.mp3",
+    filename: "upbeat_background.mp3",
+    description: "Inspiring Energy - Pixabay",
+    duration: "3:01",
+    mood: "Energetic & Motivating",
+    bpm: 130,
+  },
+  {
+    id: "calm",
+    name: "Peaceful Ambient",
+    genre: "calm",
+    url: "https://cdn.pixabay.com/download/audio/2025/07/10/audio_873bdee113.mp3",
+    previewUrl:
+      "https://cdn.pixabay.com/download/audio/2025/07/10/audio_873bdee113.mp3",
+    filename: "calm_background.mp3",
+    description: "Peaceful Ambient - Pixabay",
+    duration: "2:36",
+    mood: "Relaxing & Thoughtful",
+    bpm: 80,
+  },
+  {
+    id: "professional",
+    name: "Business Innovation",
+    genre: "corporate", // Using corporate genre for similar styling
+    url: "https://cdn.pixabay.com/download/audio/2025/07/01/audio_b4ba06b5f2.mp3",
+    previewUrl:
+      "https://cdn.pixabay.com/download/audio/2025/07/01/audio_b4ba06b5f2.mp3",
+    filename: "professional_background.mp3",
+    description: "Business Innovation - Pixabay",
+    duration: "0:37",
+    mood: "Innovative & Strategic",
+    bpm: 110,
+  },
+  {
+    id: "social",
+    name: "Modern Social",
+    genre: "upbeat", // Using upbeat genre for similar styling
+    url: "https://cdn.pixabay.com/download/audio/2025/05/12/audio_6383868169.mp3",
+    previewUrl:
+      "https://cdn.pixabay.com/download/audio/2025/05/12/audio_6383868169.mp3",
+    filename: "social_background.mp3",
+    description: "Modern Social - Pixabay",
+    duration: "1:49",
+    mood: "Social & Engaging",
+    bpm: 125,
+  },
 ];
 
+// Type definition for TypeScript usage
+
 export const platforms = [
-  { id: "instagram_reel", name: "Instagram Reel", aspect: "9:16", icon: "📱" },
+  { id: "instagram_reels", name: "Instagram Reel", aspect: "9:16", icon: "📱" },
   { id: "instagram_feed", name: "Instagram Feed", aspect: "1:1", icon: "📷" },
   { id: "facebook_post", name: "Facebook Post", aspect: "16:9", icon: "📘" },
   { id: "tiktok", name: "TikTok", aspect: "9:16", icon: "🎵" },

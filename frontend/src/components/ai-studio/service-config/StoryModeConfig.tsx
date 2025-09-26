@@ -8,374 +8,325 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  CheckCircle,
-  CheckSquare,
-  Image,
-  Music,
-  Play,
   Video,
-  VolumeX,
-  Wand2,
+  Play,
+  Square,
+  Type,
+  Image as ImageIcon,
+  FileText,
 } from "lucide-react";
-import { backgroundMusicOptions } from "../constants";
+import BackgroundMusicSelector from "./BackgroundMusicSelector";
+import BrandingSelector from "./BrandingSelector";
+import { useEffect, useState } from "react";
+import HighlightSegmentModal from "./HighlightSegmentModal";
+import HighlightSegment from "./HighlightSegment";
+import { observer } from "mobx-react-lite";
 
 type Props = {
   updateConfig: (key: string, value: any) => void;
   config: any;
+  selectedTestimonials: string[];
 };
 
 const StoryModeConfig = ({ updateConfig, config }: Props) => {
+  const [highlightPreviewModal, setHighlightPreviewModal] =
+    useState<boolean>(false);
+  useEffect(() => {
+    console.log("config", config);
+  }, [config]);
+
   return (
-    <div className="space-y-12">
+    <div className="space-y-6">
+      <HighlightSegment
+        setHighlightPreviewModal={setHighlightPreviewModal}
+        selectedSegments={config.segments}
+        clearSegments={() => updateConfig("segments", [])}
+      />
       {/* Story Configuration */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-8 border border-blue-100">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 flex items-center justify-center">
-            <Video className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <h3 className=" font-bold text-gray-900">Story Configuration</h3>
-            <p className="text-sm text-gray-600">
-              Configure how your story video will be constructed
-            </p>
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-50 bg-gray-50/50">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center">
+              <Video className="h-4 w-4 text-white" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900">
+                Story Configuration
+              </h3>
+              <p className="text-xs text-gray-500">
+                Configure story generation settings
+              </p>
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="space-y-3">
-            <div>
-              <Label className="text-base font-semibold text-gray-900 mb-3 block">
-                Highlight Detection Type
+        <div className="p-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-gray-600 uppercase tracking-wide">
+                Output Format
               </Label>
               <Select
-                value={config.highlightType}
-                onValueChange={(value) => updateConfig("highlightType", value)}
+                value={config.outputFormat || "mp4"}
+                onValueChange={(value) => updateConfig("outputFormat", value)}
               >
-                <SelectTrigger className="h-10 text-base">
+                <SelectTrigger className="h-10 text-sm border-gray-200 focus:border-gray-400">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {[
-                    {
-                      value: "General",
-                      label: "General Highlights",
-                      desc: "Overall compelling moments",
-                    },
-                    {
-                      value: "Emotional",
-                      label: "Emotional Highlights",
-                      desc: "Strong emotional impact moments",
-                    },
-                    {
-                      value: "Results",
-                      label: "Results & Metrics",
-                      desc: "Quantifiable outcomes",
-                    },
-                    {
-                      value: "Problem",
-                      label: "Problem/Solution",
-                      desc: "Challenge and resolution stories",
-                    },
-                    {
-                      value: "Recommendation",
-                      label: "Recommendations",
-                      desc: "Strong endorsements",
-                    },
-                  ].map((type) => (
-                    <SelectItem key={type.value} value={type.value}>
-                      <div className="py-1">
-                        <div className="font-semibold">{type.label}</div>
-                        <div className="text-sm text-gray-500">{type.desc}</div>
+                  <SelectItem value="mp4">
+                    <div className="py-1">
+                      <div className="font-medium text-sm">MP4</div>
+                      <div className="text-xs text-gray-500">
+                        Universal compatibility
                       </div>
-                    </SelectItem>
-                  ))}
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="mov">
+                    <div className="py-1">
+                      <div className="font-medium text-sm">MOV</div>
+                      <div className="text-xs text-gray-500">
+                        High quality for editing
+                      </div>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="webm">
+                    <div className="py-1">
+                      <div className="font-medium text-sm">WebM</div>
+                      <div className="text-xs text-gray-500">Web optimized</div>
+                    </div>
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            <div>
-              <Label className="text-base font-semibold text-gray-900 mb-1 block">
-                Transition Style
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-gray-600 uppercase tracking-wide flex items-center gap-1">
+                <FileText className="h-3 w-3" />
+                Story Generation Prompt
               </Label>
-              <div className="grid grid-cols-2 gap-3">
+              <Textarea
+                placeholder="Custom instructions for intro/outro generation (optional)"
+                value={config.prompt || ""}
+                onChange={(e) => updateConfig("prompt", e.target.value)}
+                rows={3}
+                className="text-sm border-gray-200 focus:border-gray-400 placeholder:text-gray-400 resize-none"
+              />
+              <p className="text-xs text-gray-500">
+                Provide custom instructions for intro/outro generation or leave
+                empty for defaults
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Intro Configuration */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-50 bg-gray-50/50">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center">
+              <Play className="h-4 w-4 text-white" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900">
+                Intro Setup
+              </h3>
+              <p className="text-xs text-gray-500">
+                Configure opening sequence
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-gray-600 uppercase tracking-wide">
+                Intro Type
+              </Label>
+              <div className="grid grid-cols-3 gap-2">
                 {[
-                  {
-                    value: "Fade",
-                    label: "Smooth Fade",
-                    desc: "Gentle transitions",
-                  },
-                  {
-                    value: "Cut",
-                    label: "Quick Cut",
-                    desc: "Sharp cuts",
-                  },
-                  {
-                    value: "Slide",
-                    label: "Slide",
-                    desc: "Sliding motion",
-                  },
-                  {
-                    value: "Zoom",
-                    label: "Zoom Effect",
-                    desc: "Dynamic zoom",
-                  },
-                ].map((style) => (
+                  { value: "none", label: "None", icon: "🚫" },
+                  { value: "text", label: "Text", icon: "📝" },
+                  { value: "image", label: "Image", icon: "🖼️" },
+                ].map((type) => (
                   <button
-                    key={style.value}
-                    className={`p-3 text-left rounded-xl border-2 transition-all ${
-                      config.transitionStyle === style.value
-                        ? "border-blue-500 bg-blue-50"
-                        : "border-gray-200 hover:border-gray-300"
+                    key={type.value}
+                    className={`p-3 text-center rounded-lg border transition-all ${
+                      config.introType === type.value
+                        ? "border-gray-900 bg-gray-50 text-gray-900"
+                        : "border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50/50"
                     }`}
-                    onClick={() => updateConfig("transitionStyle", style.value)}
+                    onClick={() => updateConfig("introType", type.value)}
                   >
-                    <div className="font-medium text-sm">{style.label}</div>
-                    <div className="text-xs text-gray-500">{style.desc}</div>
+                    <div className="text-base mb-1">{type.icon}</div>
+                    <div className="text-xs font-medium">{type.label}</div>
                   </button>
                 ))}
               </div>
             </div>
-          </div>
 
-          <div className="space-y-4">
-            {[
-              {
-                key: "addIntro",
-                label: "Add Intro Sequence",
-                desc: "Custom introduction with your branding",
-                icon: Play,
-              },
-              {
-                key: "addOutro",
-                label: "Add Outro Sequence",
-                desc: "Professional closing with call-to-action",
-                icon: CheckSquare,
-              },
-              {
-                key: "removeNoise",
-                label: "Audio Enhancement",
-                desc: "Clean and professional audio",
-                icon: VolumeX,
-              },
-              {
-                key: "addLogo",
-                label: "Logo Overlay",
-                desc: "Brand logo throughout the video",
-                icon: Image,
-              },
-            ].map((option) => {
-              const IconComponent = option.icon;
-              return (
-                <div
-                  key={option.key}
-                  className="flex items-center justify-between p-3 bg-white rounded-xl border border-gray-200 hover:border-blue-300 transition-all"
+            <AnimatePresence>
+              {config.introType === "text" && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="space-y-2"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-gray-100 to-gray-200 flex items-center justify-center">
-                      <IconComponent className="h-5 w-5 text-gray-600" />
-                    </div>
-                    <div>
-                      <Label className="text-sm font-semibold text-gray-900">
-                        {option.label}
-                      </Label>
-                      <p className="text-xs text-gray-600">{option.desc}</p>
-                    </div>
-                  </div>
-                  <Switch
-                    checked={config[option.key]}
-                    onCheckedChange={(checked) =>
-                      updateConfig(option.key, checked)
-                    }
-                    className="data-[state=checked]:bg-blue-600"
+                  <Label className="text-xs font-medium text-gray-600 uppercase tracking-wide flex items-center gap-1">
+                    <Type className="h-3 w-3" />
+                    Intro Text
+                  </Label>
+                  <Textarea
+                    placeholder="Enter your intro text..."
+                    value={config.introText || ""}
+                    onChange={(e) => updateConfig("introText", e.target.value)}
+                    rows={3}
+                    className="text-sm border-gray-200 focus:border-gray-400 placeholder:text-gray-400 resize-none"
                   />
-                </div>
-              );
-            })}
+                </motion.div>
+              )}
+
+              {config.introType === "image" && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="space-y-2"
+                >
+                  <Label className="text-xs font-medium text-gray-600 uppercase tracking-wide flex items-center gap-1">
+                    <ImageIcon className="h-3 w-3" />
+                    Image URL
+                  </Label>
+                  <Input
+                    placeholder="https://example.com/intro-image.jpg"
+                    value={config.introImageUrl || ""}
+                    onChange={(e) =>
+                      updateConfig("introImageUrl", e.target.value)
+                    }
+                    className="h-10 text-sm border-gray-200 focus:border-gray-400 placeholder:text-gray-400"
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </div>
 
-      {/* Intro/Outro Configuration */}
-      {(config.addIntro || config.addOutro) && (
-        <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-6 border border-purple-100">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 flex items-center justify-center">
-              <Wand2 className="h-5 w-5 text-white" />
+      {/* Outro Configuration */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-50 bg-gray-50/50">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center">
+              <Square className="h-4 w-4 text-white" />
             </div>
             <div>
-              <h3 className=" font-bold text-gray-900">Intro & Outro Setup</h3>
-              <p className="text-sm text-gray-600">
-                Customize your video's opening and closing sequences
+              <h3 className="text-sm font-semibold text-gray-900">
+                Outro Setup
+              </h3>
+              <p className="text-xs text-gray-500">
+                Configure closing sequence
               </p>
             </div>
           </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {config.addIntro && (
-              <div className="space-y-6">
-                <h4 className="text-sm font-semibold text-purple-900">
-                  Intro Configuration
-                </h4>
-                <div className="space-y-4">
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700 mb-2 block">
-                      Intro Background Image
-                    </Label>
-                    <Input
-                      placeholder="https://example.com/intro-background.jpg"
-                      value={config.introImageUrl || ""}
-                      onChange={(e) =>
-                        updateConfig("introImageUrl", e.target.value)
-                      }
-                      className="h-12"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700 mb-2 block">
-                      Voice Over Script
-                    </Label>
-                    <Textarea
-                      placeholder="Enter the script for intro voice over..."
-                      value={config.introVoicePrompt || ""}
-                      onChange={(e) =>
-                        updateConfig("introVoicePrompt", e.target.value)
-                      }
-                      rows={3}
-                      className="resize-none"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {config.addOutro && (
-              <div className="space-y-6">
-                <h4 className="text-sm font-semibold text-purple-900">
-                  Outro Configuration
-                </h4>
-                <div className="space-y-4">
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700 mb-2 block">
-                      Outro Background Image
-                    </Label>
-                    <Input
-                      placeholder="https://example.com/outro-background.jpg"
-                      value={config.outroImageUrl || ""}
-                      onChange={(e) =>
-                        updateConfig("outroImageUrl", e.target.value)
-                      }
-                      className="h-12"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700 mb-2 block">
-                      Voice Over Script
-                    </Label>
-                    <Textarea
-                      placeholder="Enter the script for outro voice over..."
-                      value={config.outroVoicePrompt || ""}
-                      onChange={(e) =>
-                        updateConfig("outroVoicePrompt", e.target.value)
-                      }
-                      rows={3}
-                      className="resize-none"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Background Music */}
-      <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6 border border-green-100">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 flex items-center justify-center">
-            <Music className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <h3 className="font-bold text-gray-900">Background Music</h3>
-            <p className="text-sm text-gray-600">
-              Add atmospheric music to enhance your story
-            </p>
-          </div>
         </div>
 
-        <div className="space-y-4">
-          <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-gray-200">
-            <Label className="text-sm font-semibold text-gray-900">
-              Enable Background Music
-            </Label>
-            <Switch
-              checked={config.backgroundMusic}
-              onCheckedChange={(checked) =>
-                updateConfig("backgroundMusic", checked)
-              }
-              className="data-[state=checked]:bg-green-600"
-            />
-          </div>
+        <div className="p-6">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-gray-600 uppercase tracking-wide">
+                Outro Type
+              </Label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { value: "none", label: "None", icon: "🚫" },
+                  { value: "text", label: "Text", icon: "📝" },
+                  { value: "image", label: "Image", icon: "🖼️" },
+                ].map((type) => (
+                  <button
+                    key={type.value}
+                    className={`p-3 text-center rounded-lg border transition-all ${
+                      config.outroType === type.value
+                        ? "border-gray-900 bg-gray-50 text-gray-900"
+                        : "border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50/50"
+                    }`}
+                    onClick={() => updateConfig("outroType", type.value)}
+                  >
+                    <div className="text-base mb-1">{type.icon}</div>
+                    <div className="text-xs font-medium">{type.label}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
 
-          <AnimatePresence>
-            {config.backgroundMusic && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                className="space-y-4"
-              >
-                <div>
-                  <Label className="text-sm font-semibold text-gray-900 mb-3 block">
-                    Choose Music Track
+            <AnimatePresence>
+              {config.outroType === "text" && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="space-y-2"
+                >
+                  <Label className="text-xs font-medium text-gray-600 uppercase tracking-wide flex items-center gap-1">
+                    <Type className="h-3 w-3" />
+                    Outro Text
                   </Label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {backgroundMusicOptions.map((music) => (
-                      <button
-                        key={music.id}
-                        className={`p-4 text-left rounded-xl border-2 transition-all ${
-                          config.selectedMusic === music.id
-                            ? "border-green-500 bg-green-50"
-                            : "border-gray-200 hover:border-gray-300"
-                        }`}
-                        onClick={() => updateConfig("selectedMusic", music.id)}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium text-sm">
-                            {music.name}
-                          </span>
-                          {config.selectedMusic === music.id && (
-                            <CheckCircle className="h-5 w-5 text-green-600" />
-                          )}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                  <Textarea
+                    placeholder="Enter your outro text..."
+                    value={config.outroText || ""}
+                    onChange={(e) => updateConfig("outroText", e.target.value)}
+                    rows={3}
+                    className="text-sm border-gray-200 focus:border-gray-400 placeholder:text-gray-400 resize-none"
+                  />
+                </motion.div>
+              )}
 
-                <div>
-                  <Label className="text-sm font-medium text-gray-700 mb-2 block">
-                    Or Use Custom Music URL
+              {config.outroType === "image" && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="space-y-2"
+                >
+                  <Label className="text-xs font-medium text-gray-600 uppercase tracking-wide flex items-center gap-1">
+                    <ImageIcon className="h-3 w-3" />
+                    Image URL
                   </Label>
                   <Input
-                    placeholder="https://example.com/custom-music.mp3"
-                    value={config.customMusicUrl || ""}
+                    placeholder="https://example.com/outro-image.jpg"
+                    value={config.outroImageUrl || ""}
                     onChange={(e) =>
-                      updateConfig("customMusicUrl", e.target.value)
+                      updateConfig("outroImageUrl", e.target.value)
                     }
-                    className="h-12"
+                    className="h-10 text-sm border-gray-200 focus:border-gray-400 placeholder:text-gray-400"
                   />
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       </div>
+
+      {/* Brand Identity */}
+      <BrandingSelector config={config} updateConfig={updateConfig} />
+
+      {/* Background Music */}
+      <BackgroundMusicSelector config={config} updateConfig={updateConfig} />
+
+      <HighlightSegmentModal
+        isOpen={highlightPreviewModal}
+        onClose={() => setHighlightPreviewModal(false)}
+        highlightSegments={config.segments}
+        updateConfig={updateConfig}
+        minSelection={1}
+      />
     </div>
   );
 };
 
-export default StoryModeConfig;
+export default observer(StoryModeConfig);

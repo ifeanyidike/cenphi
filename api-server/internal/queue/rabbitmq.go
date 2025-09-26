@@ -296,7 +296,7 @@ func (q *RabbitMQService) executeJobAsync(ctx context.Context, msg Message, hand
 
 	// q.SetJobStatus(context.Background(), msg.ID, "completed", 100, map[string]interface{}{
 	// 	"message":          "Job completed successfully",
-	// 	"duration_seconds": duration.Seconds(),
+	// 	"duration": duration.Seconds(),
 	// 	"completed_at":     time.Now().Unix(),
 	// })
 	currentStatus, err := q.GetJobStatus(context.Background(), msg.ID)
@@ -304,9 +304,9 @@ func (q *RabbitMQService) executeJobAsync(ctx context.Context, msg Message, hand
 		q.logger.Error("Failed to get current job status", zap.Error(err))
 		// Fallback to generic completion if we can't get current status
 		q.SetJobStatus(context.Background(), msg.ID, "completed", 100, map[string]interface{}{
-			"message":          "Job completed successfully",
-			"duration_seconds": duration.Seconds(),
-			"completed_at":     time.Now().Unix(),
+			"message":      "Job completed successfully",
+			"duration":     duration.Seconds(),
+			"completed_at": time.Now().Unix(),
 		})
 		return
 	}
@@ -315,7 +315,7 @@ func (q *RabbitMQService) executeJobAsync(ctx context.Context, msg Message, hand
 	if currentStatus.Result != nil {
 		if resultMap, ok := currentStatus.Result.(map[string]interface{}); ok {
 			// Add completion metadata to existing results
-			resultMap["duration_seconds"] = duration.Seconds()
+			resultMap["duration"] = duration.Seconds()
 			resultMap["completed_at"] = time.Now().Unix()
 			if resultMap["message"] == nil || resultMap["message"] == "" {
 				resultMap["message"] = "Job completed successfully"
@@ -324,18 +324,18 @@ func (q *RabbitMQService) executeJobAsync(ctx context.Context, msg Message, hand
 		} else {
 			// Handler result is not a map, wrap it
 			finalResult = map[string]interface{}{
-				"data":             currentStatus.Result,
-				"message":          "Job completed successfully",
-				"duration_seconds": duration.Seconds(),
-				"completed_at":     time.Now().Unix(),
+				"data":         currentStatus.Result,
+				"message":      "Job completed successfully",
+				"duration":     duration.Seconds(),
+				"completed_at": time.Now().Unix(),
 			}
 		}
 	} else {
 		// No handler results, use generic completion
 		finalResult = map[string]interface{}{
-			"message":          "Job completed successfully",
-			"duration_seconds": duration.Seconds(),
-			"completed_at":     time.Now().Unix(),
+			"message":      "Job completed successfully",
+			"duration":     duration.Seconds(),
+			"completed_at": time.Now().Unix(),
 		}
 	}
 

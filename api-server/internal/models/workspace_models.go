@@ -60,6 +60,11 @@ type Workspace struct {
 	UpdatedAt         time.Time       `json:"updated_at" db:"updated_at"`
 }
 
+type GetWorkspaceDataParam struct {
+	Workspace
+	Testimonials []Testimonial
+}
+
 func PrepareURL(url string) string {
 	// If the URL doesn't have a scheme, add https://
 	if url != "" && !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {

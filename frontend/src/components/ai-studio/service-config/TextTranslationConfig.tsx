@@ -1,157 +1,205 @@
 // components/ai-studio/service-config/TextTranslationConfig.tsx
-import { CheckCircle, Languages, Settings } from "lucide-react";
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { Languages, X } from "lucide-react";
+import ModalPortal from "@/utils/ModalPortal";
+import { TRANSLATION_LANGUAGES } from "../definitions";
+import { ServiceType, TextTranslationConfig } from "@/types/ai-service";
+import { observer } from "mobx-react-lite";
 
-type Props = {
-  updateConfig: (key: string, value: any) => void;
-  config: any;
-};
-const TextTranslationConfig = ({ updateConfig, config }: Props) => {
+// Target languages for translation
+// const LANGUAGES = [
+//   { code: "es", name: "Spanish", flag: "🇪🇸" },
+//   { code: "fr", name: "French", flag: "🇫🇷" },
+//   { code: "de", name: "German", flag: "🇩🇪" },
+//   { code: "it", name: "Italian", flag: "🇮🇹" },
+//   { code: "pt", name: "Portuguese", flag: "🇵🇹" },
+//   { code: "zh", name: "Chinese", flag: "🇨🇳" },
+//   { code: "ja", name: "Japanese", flag: "🇯🇵" },
+//   { code: "ko", name: "Korean", flag: "🇰🇷" },
+//   { code: "ru", name: "Russian", flag: "🇷🇺" },
+//   { code: "ar", name: "Arabic", flag: "🇸🇦" },
+//   { code: "nl", name: "Dutch", flag: "🇳🇱" },
+//   { code: "sv", name: "Swedish", flag: "🇸🇪" },
+// ];
+
+const TranslationModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  onTranslate: (serviceId: ServiceType, config: TextTranslationConfig) => void;
+  selectedTestimonials: string[];
+}> = ({ isOpen, onClose, onTranslate, selectedTestimonials }) => {
+  const [selectedLanguage, setSelectedLanguage] = useState<string>();
+  const [customPrompt, setCustomPrompt] = useState<string>("");
+  const [searchTerm, setSearchTerm] = useState<string>("");
+
+  const filteredLanguages = TRANSLATION_LANGUAGES.filter((lang) =>
+    lang.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // const toggleLanguage = (langCode: string) => {
+  //   setSelectedLanguages((prev) =>
+  //     prev.includes(langCode)
+  //       ? prev.filter((code) => code !== langCode)
+  //       : [...prev, langCode]
+  //   );
+  // };
+
+  const toggleLanguage = (langCode: string) => {
+    setSelectedLanguage((prev) => (prev === langCode ? "" : langCode));
+  };
+
+  const handleTranslate = () => {
+    if (selectedLanguage) {
+      onTranslate("translation", {
+        target_lang: selectedLanguage,
+        prompt: customPrompt.trim() || null,
+      });
+      onClose();
+    }
+  };
+
+  const getLanguageData = (code: string) =>
+    TRANSLATION_LANGUAGES.find((l) => l.code === code);
+
   return (
-    <div className="space-y-12">
-      {/* Language Selection */}
-      <div className="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-2xl p-8 border border-teal-100">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-teal-600 to-cyan-600 flex items-center justify-center">
-            <Languages className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <h3 className="text-xl font-bold text-gray-900">
-              Language Selection
-            </h3>
-            <p className="text-sm text-gray-600">
-              Choose target languages for translation
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {[
-            "Spanish",
-            "French",
-            "German",
-            "Italian",
-            "Portuguese",
-            "Chinese",
-            "Japanese",
-            "Korean",
-            "Russian",
-            "Arabic",
-            "Hindi",
-            "Dutch",
-          ].map((lang) => (
-            <button
-              key={lang}
-              className={`p-4 text-center rounded-xl border-2 transition-all ${
-                config.targetLanguages?.includes(lang)
-                  ? "border-teal-500 bg-teal-50"
-                  : "border-gray-200 hover:border-gray-300"
-              }`}
-              onClick={() => {
-                const current = config.targetLanguages || [];
-                if (current.includes(lang)) {
-                  updateConfig(
-                    "targetLanguages",
-                    current.filter((l: string) => l !== lang)
-                  );
-                } else {
-                  updateConfig("targetLanguages", [...current, lang]);
-                }
-              }}
-            >
-              <div className="font-medium text-sm">{lang}</div>
-              {config.targetLanguages?.includes(lang) && (
-                <CheckCircle className="h-4 w-4 text-teal-600 mx-auto mt-2" />
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Translation Settings */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-8 border border-blue-100">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 flex items-center justify-center">
-            <Settings className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <h3 className="text-xl font-bold text-gray-900">
-              Translation Settings
-            </h3>
-            <p className="text-sm text-gray-600">
-              Configure translation quality and style
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="space-y-6">
-            <div>
-              <label className="text-base font-semibold text-gray-900 mb-3 block">
-                Formality Level
-              </label>
-              <select
-                value={config.formalityLevel}
-                onChange={(e) => updateConfig("formalityLevel", e.target.value)}
-                className="w-full h-12 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+    <ModalPortal isOpen={isOpen}>
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          className="bg-white rounded-xl shadow-xl max-w-3xl w-full mx-4 my-8 max-h-[calc(100vh-4rem)] overflow-hidden"
+        >
+          <div className="px-6 py-4 border-b border-gray-50 bg-gray-50/50">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center">
+                  <Languages className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    Translate Content
+                  </h2>
+                  <p className="text-xs text-gray-500">
+                    Translate {selectedTestimonials.length} testimonial
+                    {selectedTestimonials.length > 1 ? "s" : ""} to multiple
+                    languages
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
               >
-                <option value="formal">
-                  Formal - Professional and respectful
-                </option>
-                <option value="neutral">Neutral - Balanced approach</option>
-                <option value="informal">Informal - Casual and friendly</option>
-              </select>
+                <X className="h-4 w-4 text-gray-500" />
+              </button>
             </div>
           </div>
 
-          <div className="space-y-4">
-            {[
-              {
-                key: "preserveTone",
-                label: "Preserve Tone",
-                desc: "Maintain the original emotional tone",
-              },
-              {
-                key: "culturalAdaptation",
-                label: "Cultural Adaptation",
-                desc: "Adapt content for cultural context",
-              },
-              {
-                key: "includeOriginal",
-                label: "Include Original",
-                desc: "Show original text alongside translation",
-              },
-              {
-                key: "localization",
-                label: "Localization",
-                desc: "Adapt for local markets and customs",
-              },
-            ].map((option) => (
-              <div
-                key={option.key}
-                className="flex items-center justify-between p-5 bg-white rounded-xl border border-gray-200 hover:border-blue-300 transition-all"
-              >
-                <div>
-                  <label className="text-base font-semibold text-gray-900">
-                    {option.label}
-                  </label>
-                  <p className="text-sm text-gray-600">{option.desc}</p>
+          <div className="p-6 overflow-y-auto flex-1">
+            {/* Search */}
+            <div className="mb-6">
+              <input
+                type="text"
+                placeholder="Search languages..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-gray-400 text-sm placeholder:text-gray-400"
+              />
+            </div>
+
+            {/* Selected Languages Summary */}
+            {/* {selectedLanguages.length > 0 && (
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-100">
+                <div className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-2">
+                  Selected Languages ({selectedLanguages.length}):
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={config[option.key]}
-                    onChange={(e) => updateConfig(option.key, e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
+                <div className="flex flex-wrap gap-2">
+                  {selectedLanguages.map((code) => {
+                    const lang = TRANSLATION_LANGUAGES.find(
+                      (l) => l.code === code
+                    );
+                    return (
+                      <span
+                        key={code}
+                        className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium"
+                      >
+                        <span>{lang?.flag}</span>
+                        <span>{lang?.name}</span>
+                      </span>
+                    );
+                  })}
+                </div>
               </div>
-            ))}
+            )} */}
+
+            {selectedLanguage && (
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-100">
+                <div className="flex flex-wrap gap-2">
+                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">
+                    <span>{getLanguageData(selectedLanguage)?.flag}</span>
+                    <span>{getLanguageData(selectedLanguage)?.name}</span>
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Languages Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-6">
+              {filteredLanguages.map((lang) => (
+                <button
+                  key={lang.code}
+                  onClick={() => toggleLanguage(lang.code)}
+                  className={`p-3 text-center rounded-lg border transition-all ${
+                    selectedLanguage === lang.code
+                      ? "border-gray-900 bg-gray-50"
+                      : "border-gray-200 hover:border-gray-300 hover:bg-gray-50/50"
+                  }`}
+                >
+                  <div className="text-xl mb-1">{lang.flag}</div>
+                  <div className="text-xs font-medium text-gray-900">
+                    {lang.name}
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* Custom Prompt */}
+            <div className="mb-6">
+              <label className="text-xs font-medium text-gray-600 uppercase tracking-wide block mb-2">
+                Translation Instructions (Optional)
+              </label>
+              <textarea
+                value={customPrompt}
+                onChange={(e) => setCustomPrompt(e.target.value)}
+                placeholder="Add specific translation requirements, cultural adaptations, or style preferences..."
+                rows={3}
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-gray-400 text-sm placeholder:text-gray-400 resize-none"
+              />
+            </div>
           </div>
-        </div>
+
+          <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex justify-end gap-3">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors text-sm font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleTranslate}
+              disabled={!selectedLanguage}
+              className="px-6 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2 text-sm font-medium"
+            >
+              <Languages className="h-4 w-4" />
+              Translate ({selectedLanguage})
+            </button>
+          </div>
+        </motion.div>
       </div>
-    </div>
+    </ModalPortal>
   );
 };
 
-export default TextTranslationConfig;
+export default observer(TranslationModal);

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Search,
   Grid,
@@ -7,7 +8,6 @@ import {
   Star,
   Play,
   FileText,
-  Sparkles,
   Calendar,
   User,
   Building2,
@@ -22,17 +22,12 @@ import {
 import { workspaceHub } from "@/repo/workspace_hub";
 import { Testimonial } from "@/types/testimonial";
 import { Link } from "react-router-dom";
-import { TestimonialStateManager } from "@/utils/TestimonialStateManager";
 import { observer } from "mobx-react-lite";
 
 interface TestimonialCardProps {
   testimonial: Testimonial;
   isSelected: boolean;
   onToggleSelect: (id: string) => void;
-}
-
-interface TestimonialListProps {
-  onNavigateToAIStudio: (selectedIds: string[]) => void;
 }
 
 const TestimonialCard = ({
@@ -87,13 +82,6 @@ const TestimonialCard = ({
     if (testimonial.media_url) {
       setShowVideoModal(true);
     }
-  };
-
-  const handleViewDetails = (
-    e: React.MouseEvent<HTMLButtonElement, MouseEvent>
-  ) => {
-    e.stopPropagation();
-    console.log(`Navigate to testimonial details: ${testimonial.id}`);
   };
 
   return (
@@ -264,6 +252,7 @@ const TestimonialCard = ({
 };
 
 const TestimonialList = () => {
+  const navigate = useNavigate();
   const [selectedTestimonials, setSelectedTestimonials] = useState<string[]>(
     []
   );
@@ -311,7 +300,11 @@ const TestimonialList = () => {
   };
 
   const handleProcessWithAI = () => {
-    TestimonialStateManager.navigateToAIStudio(selectedTestimonials);
+    const urlPath = selectedTestimonials.length > 0
+      ? `/studio?testimonials=${selectedTestimonials.join(",")}`
+      : "/studio";
+
+    navigate(urlPath);
   };
 
   if (isLoading) {
@@ -326,7 +319,7 @@ const TestimonialList = () => {
   }
 
   return (
-    <div className="bg-white min-h-screen">
+    <div className=" sticky top-0">
       {/* Header */}
       <div className="border-b border-gray-200 py-3">
         <div className="max-w-screen-xl mx-auto">
@@ -511,7 +504,7 @@ const VideoModal: React.FC<{
 
   return (
     <div
-      className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black/80 z-[999] flex items-center justify-center p-4"
       onClick={onClose}
     >
       <div

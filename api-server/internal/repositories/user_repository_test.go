@@ -92,7 +92,7 @@ func TestUserRepository(t *testing.T) {
 			"updated_at":     time.Now(),
 		}
 
-		err = repo.UpdateAny(context.Background(), updates, user.FirebaseUID, db)
+		err = repo.UpdateAnyByUid(context.Background(), updates, user.FirebaseUID, db)
 		require.NoError(t, err)
 
 		// Verify the update.

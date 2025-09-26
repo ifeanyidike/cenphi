@@ -58,6 +58,7 @@ class MediaEnhancementServicer(intelligence_pb2_grpc.MediaEnhancementServiceServ
                 brand_color=request.brand_color,
                 custom_enhancements=request.custom_enhancements or None,
                 testimonial_id=request.testimonial_id or None,
+                remove_noise=request.remove_noise or True
             )
             
             if result.get("error"):
@@ -125,7 +126,7 @@ class NarrationServicer(intelligence_pb2_grpc.NarrationServiceServicer):
             # Convert result to protobuf response
             response = intelligence_pb2.NarrationResponse()
             response.audio_url = result.get("audio_url", "")
-            response.audio_duration_seconds = result.get("audio_duration_seconds", 0.0)
+            response.duration = result.get("duration", 0.0)
             response.voice_provider = result.get("voice_provider", "unknown")
             response.quality_score = result.get("quality_score", 0.0)
             response.processed_text = result.get("processed_text", request.text)
@@ -150,49 +151,86 @@ class SmartClippingServicer(intelligence_pb2_grpc.SmartClippingServiceServicer):
         try:
             if job_checker.handle_cancellation(job_id, context):
                 return intelligence_pb2.NarrationResponse(success=False)
-            logger.info(f"Smart clipping request for: {request.media_url}")
+            logger.info(f"🎬 Smart clipping for: {request.media_url}")
+
+            # Check if viral mode is enabled (we'll add this to protobuf)
+            enable_viral_mode = getattr(request, 'enable_viral_mode', False)
+            enhanced_moments = request.highlight_moments
+
+            if enable_viral_mode:
+                logger.info("🚀 Viral mode enabled - analyzing viral potential...")
+
+                # Step 1: Run viral analysis to identify the best moments
+                from src.services.viral_analyzer.viral_detector import ViralContentDetector
+                viral_detector = ViralContentDetector()
+
+                # Get transcript from highlight moments if available
+                transcript = ""
+                if request.highlight_moments:
+                    transcript = " ".join([moment.text for moment in request.highlight_moments])
+
+                viral_analysis = viral_detector.analyze_viral_potential(
+                    media_url=request.media_url,
+                    transcript=transcript,
+                    brand_context=None,  # Could be passed from request if needed
+                    target_platforms=["tiktok", "instagram_reels", "youtube_shorts"]
+                )
+
+                # Step 2: Enhance highlight moments with viral insights
+                enhanced_moments = []
+
+                # Use existing highlight moments but prioritize by viral score
+                if request.highlight_moments:
+                    for moment in request.highlight_moments:
+                        # Find matching viral moments to enhance this highlight
+                        viral_boost = 0.0
+                        for viral_moment in viral_analysis.viral_moments:
+                            if (moment.start_time <= viral_moment.end_time and
+                                moment.end_time >= viral_moment.start_time):
+                                viral_boost = max(viral_boost, viral_moment.viral_score)
+
+                        # Boost importance score based on viral potential
+                        enhanced_importance = min(1.0, moment.importance_score + (viral_boost * 0.3))
+                        moment.importance_score = enhanced_importance
+                        enhanced_moments.append(moment)
+
+                    logger.info(f"🎯 Enhanced {len(enhanced_moments)} moments with viral insights")
+
+                # Step 3: Add high-scoring viral moments as additional clips
+                for viral_moment in viral_analysis.viral_moments[:3]:  # Top 3 viral moments
+                    if viral_moment.viral_score > 0.7:  # High viral potential
+                        # Check if this viral moment overlaps with existing highlights
+                        overlaps = any(
+                            moment.start_time <= viral_moment.end_time and
+                            moment.end_time >= viral_moment.start_time
+                            for moment in enhanced_moments
+                        ) if enhanced_moments else False
+
+                        if not overlaps:
+                            # Create new highlight moment from viral analysis
+                            viral_highlight = intelligence_pb2.HighlightMoment()
+                            viral_highlight.start_time = viral_moment.start_time
+                            viral_highlight.end_time = viral_moment.end_time
+                            viral_highlight.text = viral_moment.suggested_caption[:100]
+                            viral_highlight.importance_score = viral_moment.viral_score
+                            viral_highlight.highlight_type = "viral_moment"
+                            viral_highlight.suggested_title = f"Viral Moment ({viral_moment.viral_score:.1f})"
+                            enhanced_moments.append(viral_highlight)
+
+                            logger.info(f"🚀 Added viral moment ({viral_moment.viral_score:.2f} score) at {viral_moment.start_time}s")
 
             from src.services.clip.clipper import SmartClipper
             clipper = SmartClipper()
 
-        
-            result = clipper.generate_clips(
+            response = clipper.generate_clips(
                 testimonial_id=request.testimonial_id,
                 media_url=request.media_url,
-                highlight_moments=request.highlight_moments,
+                highlight_moments=enhanced_moments,
                 branding=request.branding,
                 background_music=request.background_music if request.background_music else None,
                 music_volume=request.music_volume if request.music_volume else 'low',
             )
             
-            if result.get("error"):
-                context.set_code(grpc.StatusCode.INTERNAL)
-                context.set_details(result["error"])
-                return intelligence_pb2.ClippingResponse(error=result["error"])
-            
-            # Convert result to protobuf response
-            response = intelligence_pb2.ClippingResponse()
-            response.clips_generated = result.get("clips_generated", 0)
-            response.average_quality = result.get("average_quality", 0.0)
-            response.detection_method = result.get("detection_method", "automatic")
-            
-            # Map clips
-            for clip_data in result.get("clips", []):
-                clip = intelligence_pb2.Clip()
-                clip.url = clip_data.get("url", "")
-                clip.start_time = clip_data.get("start_time", 0.0)
-                clip.end_time = clip_data.get("end_time", 0.0)
-                clip.title = clip_data.get("title", "")
-                clip.theme = clip_data.get("theme", "")
-                clip.engagement_score = clip_data.get("engagement_score", 0.0)
-                clip.duration_seconds = clip_data.get("duration_seconds", 0.0)
-                
-                # Map social media ready status
-                social_ready = clip_data.get("social_media_ready", {})
-                for platform, ready in social_ready.items():
-                    clip.social_media_ready[platform] = bool(ready)
-                
-                response.clips.append(clip)
                 
             job_checker.complete_job(job_id)
             logger.info(f"✅ Smart clipping completed for: {request.media_url}")
@@ -214,12 +252,61 @@ class PlatformOptimizerServicer(intelligence_pb2_grpc.PlatformOptimizerServiceSe
         try:
             if job_checker.handle_cancellation(job_id, context):
                 return intelligence_pb2.OptimizeResponse(success=False)
-           
+
+            logger.info(f"📱 Platform optimization for {request.target_platform}: {request.media_url}")
+
+            # Check if viral mode is enabled (we'll add this to protobuf)
+            enable_viral_mode = getattr(request, 'enable_viral_optimization', False)
+            enhanced_settings = {}
+
+            if enable_viral_mode:
+                logger.info("🚀 Viral optimization mode enabled...")
+
+                # Step 1: Get viral analysis to inform platform optimization
+                from src.services.viral_analyzer.viral_detector import ViralContentDetector
+                viral_detector = ViralContentDetector()
+
+                viral_analysis = viral_detector.analyze_viral_potential(
+                    media_url=request.media_url,
+                    transcript=request.transcript,
+                    brand_context=request.brand_context,
+                    target_platforms=[request.target_platform]
+                )
+
+                # Step 2: Use viral insights to enhance optimization parameters
+                platform_viral_score = viral_analysis.platform_recommendations.get(request.target_platform, 0.5)
+
+                # Enhance settings based on viral potential
+                if platform_viral_score > 0.7:
+                    # High viral potential - optimize for engagement
+                    enhanced_settings.update({
+                        "enable_captions": True,  # Always add captions for viral content
+                        "enable_media_enhancement": True,  # Enhance quality for viral reach
+                        "optimization_priority": "viral_engagement"
+                    })
+                    logger.info(f"🚀 High viral potential ({platform_viral_score:.2f}) - optimizing for engagement")
+
+                elif platform_viral_score > 0.4:
+                    # Medium viral potential - balanced approach
+                    enhanced_settings.update({
+                        "optimization_priority": "balanced"
+                    })
+                    logger.info(f"⚖️ Medium viral potential ({platform_viral_score:.2f}) - balanced optimization")
+                else:
+                    # Lower viral potential - focus on quality
+                    enhanced_settings.update({
+                        "optimization_priority": "quality_focused"
+                    })
+                    logger.info(f"🎯 Lower viral potential ({platform_viral_score:.2f}) - quality-focused optimization")
+
+                # Add trending elements if available
+                if viral_analysis.trending_keywords:
+                    enhanced_settings["trending_keywords"] = viral_analysis.trending_keywords[:5]
+                    logger.info(f"📈 Added trending keywords: {', '.join(viral_analysis.trending_keywords[:3])}")
+
             from src.services.platform_optimizer.optimizer import PlatformOptimizer
             optimizer = PlatformOptimizer()
-            
-            # # Call RunPod function
-            # result = runpod_client.call_function_safely('platform-optimizer', **request_params)
+
             result = optimizer.optimize(
                 media_url=request.media_url,
                 target_platform=request.target_platform,
@@ -227,10 +314,10 @@ class PlatformOptimizerServicer(intelligence_pb2_grpc.PlatformOptimizerServiceSe
                 background_music=request.background_music or None,
                 music_volume=request.music_volume or 'low',
                 transcript=request.transcript,
-                enable_captions=request.enable_captions,
-                enable_media_enhancement=request.enable_media_enhancement,
+                enable_captions=enhanced_settings.get("enable_captions", request.enable_captions),
+                enable_media_enhancement=enhanced_settings.get("enable_media_enhancement", request.enable_media_enhancement),
                 watermark_text=request.watermark_text,
-                logo_position = request.logo_position,
+                logo_position=request.logo_position,
                 watermark_position=request.watermark_position,
                 transcript_segments=request.transcript_segments,
                 add_background_music=request.add_background_music,
@@ -258,14 +345,19 @@ class StoryModeServicer(intelligence_pb2_grpc.StoryModeServiceServicer):
         try:
             if job_checker.handle_cancellation(job_id, context):
                 return intelligence_pb2.StoryModeResponse(success=False)
-            logger.info(f"📖 Story mode request: {len(request.testimonial_segments)} segments, music: {request.background_music}")
+            
+            segments = request.testimonial_segments
+            if request.type == "clips" and request.processed_segments:
+                segments = request.processed_segments
+
+            logger.info(f"📖 Story mode request: {len(segments)} segments, music: {request.background_music}, request_type {request.type}")
 
             from src.services.story_mode.story_generator import StoryModeGenerator
             story_generator = StoryModeGenerator()
-           
+            
 
             result = story_generator.generate_story_video(
-                testimonial_segments=request.testimonial_segments,
+                segments=segments,
                 brand_context=request.brand_context,
                 output_format=request.output_format,
                 background_music=request.background_music if request.background_music else None,
@@ -274,7 +366,9 @@ class StoryModeServicer(intelligence_pb2_grpc.StoryModeServiceServicer):
                 add_background_music = request.add_background_music,
                 intro_image_url = request.intro_image_url,
                 outro_image_url = request.outro_image_url,
-                company_name=request.company_name
+                company_name=request.company_name,
+                request_type=request.type,
+                auto_order=request.auto_order
             )
             
             if result.get('error'):
@@ -299,7 +393,7 @@ class StoryModeServicer(intelligence_pb2_grpc.StoryModeServiceServicer):
 
 class NoiseReducerServicer(intelligence_pb2_grpc.NoiseReducerServiceServicer):
     """gRPC Servicer for Noise reduction/removal"""
-    
+
     def ReduceNoise(self, request, context):
         """Reduce noise from testimonial"""
         job_id = request.job_id or str(uuid.uuid4())
@@ -309,18 +403,19 @@ class NoiseReducerServicer(intelligence_pb2_grpc.NoiseReducerServiceServicer):
 
             from src.services.noise_reducer.reducer import NoiseReducer
             noise_reducer = NoiseReducer()
-            
+
 
             result = noise_reducer.process(
+                testimonial_id = request.testimonial_id,
                 media_url=request.media_url,
                 level=request.level
             )
-            
-           
+
+
             job_checker.complete_job(job_id)
             logger.info(f"✅ Noise reduction completed: {result.denoised_media_url}")
             return result
-            
+
         except Exception as e:
             logger.error(f"❌ Noise reduction failed: {str(e)}")
             job_checker.complete_job(job_id)
@@ -356,6 +451,8 @@ class NoiseReducerServicer(intelligence_pb2_grpc.NoiseReducerServiceServicer):
             return intelligence_pb2.BatchNoiseReductionResponse(
                 error=str(e)
             )
+
+# Viral analysis is now integrated directly into clipping and platform optimization services
 
 def create_server():
     """Create and configure the gRPC server"""
@@ -396,7 +493,8 @@ def create_server():
     intelligence_pb2_grpc.add_NoiseReducerServiceServicer_to_server(
         NoiseReducerServicer(), server
     )
-    
+    # Viral analysis is now integrated into clipping and platform optimization
+
     # Enable reflection for development
     if getattr(settings, 'enable_reflection', True):
         SERVICE_NAMES = (
@@ -408,6 +506,7 @@ def create_server():
             # intelligence_pb2.DESCRIPTOR.services_by_name['ThumbnailService'].full_name,
             intelligence_pb2.DESCRIPTOR.services_by_name['StoryModeService'].full_name,
             intelligence_pb2.DESCRIPTOR.services_by_name['NoiseReducerService'].full_name,
+            intelligence_pb2.DESCRIPTOR.services_by_name['ViralAnalysisService'].full_name,
             reflection.SERVICE_NAME,
         )
         reflection.enable_server_reflection(SERVICE_NAMES, server)
@@ -449,7 +548,7 @@ def serve():
     # Start server
     server.start()
     logger.info(f"🚀 AI gRPC Server started on {listen_addr}")
-    logger.info("Available services: MediaEnhancement, Narration, SmartClipping, PlatformOptimizer, GenerateStoryVideo")
+    logger.info("Available services: MediaEnhancement, Narration, SmartClipping, PlatformOptimizer, GenerateStoryVideo, NoiseReducer, ViralAnalysis")
     # logger.info(f"RunPod endpoint: {runpod_client.runpod_endpoint}")
     
     try:

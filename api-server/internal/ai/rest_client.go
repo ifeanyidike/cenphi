@@ -450,12 +450,12 @@ func (c *RESTClient) GenerateNarration(ctx context.Context, req *pb.NarrationReq
 	}
 
 	return &pb.NarrationResponse{
-		AudioUrl:             getStringFromMap(restResp, "audio_url"),
-		AudioDurationSeconds: getFloat64FromMap(restResp, "audio_duration_seconds"),
-		VoiceProvider:        getStringFromMap(restResp, "voice_provider"),
-		QualityScore:         getFloat64FromMap(restResp, "quality_score"),
-		ProcessedText:        getStringFromMap(restResp, "processed_text"),
-		Error:                getStringFromMap(restResp, "error"),
+		AudioUrl:      getStringFromMap(restResp, "audio_url"),
+		Duration:      getFloat64FromMap(restResp, "duration"),
+		VoiceProvider: getStringFromMap(restResp, "voice_provider"),
+		QualityScore:  getFloat64FromMap(restResp, "quality_score"),
+		ProcessedText: getStringFromMap(restResp, "processed_text"),
+		Error:         getStringFromMap(restResp, "error"),
 	}, nil
 }
 
@@ -512,12 +512,12 @@ func (c *RESTClient) BatchGenerateNarration(ctx context.Context, req *pb.BatchNa
 		for _, resp := range respArray {
 			if respMap, ok := resp.(map[string]interface{}); ok {
 				responses = append(responses, &pb.NarrationResponse{
-					AudioUrl:             getStringFromMap(respMap, "audio_url"),
-					AudioDurationSeconds: getFloat64FromMap(respMap, "audio_duration_seconds"),
-					VoiceProvider:        getStringFromMap(respMap, "voice_provider"),
-					QualityScore:         getFloat64FromMap(respMap, "quality_score"),
-					ProcessedText:        getStringFromMap(respMap, "processed_text"),
-					Error:                getStringFromMap(respMap, "error"),
+					AudioUrl:      getStringFromMap(respMap, "audio_url"),
+					Duration:      getFloat64FromMap(respMap, "duration"),
+					VoiceProvider: getStringFromMap(respMap, "voice_provider"),
+					QualityScore:  getFloat64FromMap(respMap, "quality_score"),
+					ProcessedText: getStringFromMap(respMap, "processed_text"),
+					Error:         getStringFromMap(respMap, "error"),
 				})
 			}
 		}
@@ -572,7 +572,7 @@ func (c *RESTClient) GenerateClips(ctx context.Context, req *pb.ClippingRequest)
 					Title:            getStringFromMap(clipMap, "title"),
 					Theme:            getStringFromMap(clipMap, "theme"),
 					EngagementScore:  getFloat64FromMap(clipMap, "engagement_score"),
-					DurationSeconds:  getFloat64FromMap(clipMap, "duration_seconds"),
+					Duration:         getFloat64FromMap(clipMap, "duration"),
 					SocialMediaReady: getMapBoolFromMap(clipMap, "social_media_ready"),
 				})
 			}
@@ -645,7 +645,6 @@ func (c *RESTClient) OptimizeMediaForPlatform(ctx context.Context, req *pb.Optim
 			"brand_context":            pbToRESTBrandContext(req.BrandContext),
 			"transcript":               req.Transcript,
 			"optimization_quality":     req.OptimizationQuality,
-			"max_moments":              req.MaxMoments,
 			"enable_transitions":       req.EnableTransitions,
 			"add_branding":             req.AddBranding,
 			"background_music":         req.BackgroundMusic,
@@ -667,7 +666,6 @@ func (c *RESTClient) OptimizeMediaForPlatform(ctx context.Context, req *pb.Optim
 			"brand_context":            pbToRESTBrandContext(req.BrandContext),
 			"transcript":               req.Transcript,
 			"optimization_quality":     req.OptimizationQuality,
-			"max_moments":              req.MaxMoments,
 			"enable_transitions":       req.EnableTransitions,
 			"add_branding":             req.AddBranding,
 			"background_music":         req.BackgroundMusic,
@@ -719,7 +717,6 @@ func (c *RESTClient) BatchOptimizeMedia(ctx context.Context, req *pb.BatchOptimi
 			"brand_context":            pbToRESTBrandContext(req.BrandContext),
 			"transcript":               req.Transcript,
 			"optimization_quality":     req.OptimizationQuality,
-			"max_moments":              req.MaxMoments,
 			"enable_transitions":       req.EnableTransitions,
 			"add_branding":             req.AddBranding,
 			"background_music":         req.BackgroundMusic,
@@ -739,7 +736,6 @@ func (c *RESTClient) BatchOptimizeMedia(ctx context.Context, req *pb.BatchOptimi
 			"brand_context":            pbToRESTBrandContext(req.BrandContext),
 			"transcript":               req.Transcript,
 			"optimization_quality":     req.OptimizationQuality,
-			"max_moments":              req.MaxMoments,
 			"enable_transitions":       req.EnableTransitions,
 			"add_branding":             req.AddBranding,
 			"background_music":         req.BackgroundMusic,
@@ -910,7 +906,7 @@ func (c *RESTClient) BatchGenerateStoryVideos(ctx context.Context, req *pb.Batch
 }
 
 // NOISE REDUCER SERVICE
-func (c *RESTClient) ReduceNoise(ctx context.Context, req *pb.NoiseReductionRequest) (*pb.NoiseReductionResponse, error) {
+func (c *RESTClient) NoiseRemoval(ctx context.Context, req *pb.NoiseReductionRequest) (*pb.NoiseReductionResponse, error) {
 	var restReq map[string]interface{}
 
 	if c.isRunPod {
@@ -942,7 +938,7 @@ func (c *RESTClient) ReduceNoise(ctx context.Context, req *pb.NoiseReductionRequ
 	}, nil
 }
 
-func (c *RESTClient) BatchReduceNoise(ctx context.Context, req *pb.BatchNoiseReductionRequest) (*pb.BatchNoiseReductionResponse, error) {
+func (c *RESTClient) BatchNoiseRemoval(ctx context.Context, req *pb.BatchNoiseReductionRequest) (*pb.BatchNoiseReductionResponse, error) {
 	var restReq map[string]interface{}
 
 	if c.isRunPod {
@@ -981,6 +977,85 @@ func (c *RESTClient) BatchReduceNoise(ctx context.Context, req *pb.BatchNoiseRed
 
 	return &pb.BatchNoiseReductionResponse{
 		Response: responses,
+	}, nil
+}
+
+// VIRAL ANALYSIS SERVICE
+func (c *RESTClient) AnalyzeViralPotential(ctx context.Context, req *pb.ViralAnalysisRequest) (*pb.ViralAnalysisResponse, error) {
+	var restReq map[string]interface{}
+
+	if c.isRunPod {
+		restReq = map[string]interface{}{
+			"task":             "analyze_viral_potential",
+			"testimonial_id":   req.TestimonialId,
+			"media_url":        req.MediaUrl,
+			"transcript":       req.Transcript,
+			"brand_context":    pbToRESTBrandContext(req.BrandContext),
+			"target_platforms": req.TargetPlatforms,
+			"job_id":           req.JobId,
+		}
+	} else {
+		restReq = map[string]interface{}{
+			"testimonial_id":   req.TestimonialId,
+			"media_url":        req.MediaUrl,
+			"transcript":       req.Transcript,
+			"brand_context":    pbToRESTBrandContext(req.BrandContext),
+			"target_platforms": req.TargetPlatforms,
+			"job_id":           req.JobId,
+		}
+	}
+
+	var restResp map[string]interface{}
+	if err := c.makeRequest(ctx, "/ai/viral/analyze", restReq, &restResp); err != nil {
+		return nil, err
+	}
+
+	// Convert viral moments
+	viralMoments := []*pb.ViralMoment{}
+	if moments, ok := restResp["viral_moments"].([]interface{}); ok {
+		for _, moment := range moments {
+			if momentMap, ok := moment.(map[string]interface{}); ok {
+				viralMoments = append(viralMoments, &pb.ViralMoment{
+					StartTime:             getFloat64FromMap(momentMap, "start_time"),
+					EndTime:               getFloat64FromMap(momentMap, "end_time"),
+					ViralScore:            getFloat64FromMap(momentMap, "viral_score"),
+					Reasons:               getStringSliceFromMap(momentMap, "reasons"),
+					RecommendedPlatforms:  getStringSliceFromMap(momentMap, "recommended_platforms"),
+					ThumbnailTimestamp:    getFloat64FromMap(momentMap, "thumbnail_timestamp"),
+					SuggestedCaption:      getStringFromMap(momentMap, "suggested_caption"),
+					TrendingElements:      getStringSliceFromMap(momentMap, "trending_elements"),
+				})
+			}
+		}
+	}
+
+	// Convert thumbnail options
+	thumbnailOptions := []*pb.ThumbnailOption{}
+	if thumbnails, ok := restResp["best_thumbnail_options"].([]interface{}); ok {
+		for _, thumbnail := range thumbnails {
+			if thumbMap, ok := thumbnail.(map[string]interface{}); ok {
+				thumbnailOptions = append(thumbnailOptions, &pb.ThumbnailOption{
+					Timestamp:       getFloat64FromMap(thumbMap, "timestamp"),
+					ViralScore:      getFloat64FromMap(thumbMap, "viral_score"),
+					RecommendedText: getStringFromMap(thumbMap, "recommended_text"),
+					Platforms:       getStringSliceFromMap(thumbMap, "platforms"),
+					Reason:          getStringFromMap(thumbMap, "reason"),
+				})
+			}
+		}
+	}
+
+	return &pb.ViralAnalysisResponse{
+		Success:                 getBoolFromMap(restResp, "success"),
+		OverallViralScore:       getFloat64FromMap(restResp, "overall_viral_score"),
+		ViralMoments:            viralMoments,
+		BestThumbnailOptions:    thumbnailOptions,
+		TrendingKeywords:        getStringSliceFromMap(restResp, "trending_keywords"),
+		PlatformRecommendations: getMapFloat64FromMap(restResp, "platform_recommendations"),
+		OptimizationSuggestions: getStringSliceFromMap(restResp, "optimization_suggestions"),
+		Error:                   getStringFromMap(restResp, "error"),
+		ProcessingTime:          getFloat64FromMap(restResp, "processing_time"),
+		TestimonialId:           getStringFromMap(restResp, "testimonial_id"),
 	}, nil
 }
 

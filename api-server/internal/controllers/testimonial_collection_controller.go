@@ -3,7 +3,6 @@ package controllers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -12,23 +11,41 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/ifeanyidike/cenphi/internal/ai"
 	"github.com/ifeanyidike/cenphi/internal/models"
 	"github.com/ifeanyidike/cenphi/internal/services"
 	"github.com/ifeanyidike/cenphi/internal/utils"
 	"go.uber.org/zap"
 )
 
-type TestimonialCollectionController struct {
-	service      services.TestimonialCollectionService
-	driveService services.DriveService
-	logger       *zap.Logger
+type AudioQualityRequest struct {
+	MediaURL string `json:"media_url" validate:"required"`
 }
 
-func NewTestimonialCollectionController(service services.TestimonialCollectionService, driveService services.DriveService, logger *zap.Logger) *TestimonialCollectionController {
+type AudioQualityResponse struct {
+	Score          float64  `json:"score"`
+	HasSpeech      bool     `json:"has_speech"`
+	NoiseLevel     string   `json:"noise_level"`
+	Confidence     float64  `json:"confidence"`
+	SpeechRatio    float64  `json:"speech_ratio"`
+	Recommendation string   `json:"recommendation"`
+	ShouldReject   bool     `json:"should_reject"`
+	Issues         []string `json:"issues"`
+}
+
+type TestimonialCollectionController struct {
+	service                   services.TestimonialCollectionService
+	driveService              services.DriveService
+	audioTranscriptionService ai.AudioTranscriptionService
+	logger                    *zap.Logger
+}
+
+func NewTestimonialCollectionController(service services.TestimonialCollectionService, driveService services.DriveService, audioTranscriptionService ai.AudioTranscriptionService, logger *zap.Logger) *TestimonialCollectionController {
 	return &TestimonialCollectionController{
-		service:      service,
-		driveService: driveService,
-		logger:       logger,
+		service:                   service,
+		driveService:              driveService,
+		audioTranscriptionService: audioTranscriptionService,
+		logger:                    logger,
 	}
 }
 
@@ -114,9 +131,8 @@ func (tcc *TestimonialCollectionController) CollectFromForm(w http.ResponseWrite
 	})
 }
 
-// NEW: Unified video submission handler for both widget and form
-func (tcc *TestimonialCollectionController) handleVideoSubmission(w http.ResponseWriter, r *http.Request, workspaceID uuid.UUID, collectionMethod string) {
-	// Parse multipart form (max 200MB for videos)
+func (tcc *TestimonialCollectionController) processVideoUpload(w http.ResponseWriter, r *http.Request, workspaceID uuid.UUID, collectionMethod string) {
+	// Parse multipart form
 	if err := r.ParseMultipartForm(500 << 20); err != nil {
 		utils.RespondWithError(w, http.StatusBadRequest, "Unable to parse form: "+err.Error())
 		return
@@ -130,7 +146,34 @@ func (tcc *TestimonialCollectionController) handleVideoSubmission(w http.Respons
 	}
 	defer file.Close()
 
-	// Parse author data from form
+	// UNIFIED: Validation logic for all uploads
+	validationResult, validationErr := tcc.service.ValidateVideoFile(r.Context(), file, header)
+	if validationErr != nil {
+		tcc.logger.Error("Video validation system error",
+			zap.String("filename", header.Filename),
+			zap.Error(validationErr))
+		utils.RespondWithError(w, http.StatusInternalServerError, "Unable to validate video")
+		return
+	}
+
+	if !validationResult.IsValid {
+		tcc.logger.Info("Video validation failed",
+			zap.String("filename", header.Filename),
+			zap.String("reason", validationResult.ErrorMessage))
+
+		utils.RespondWithJSON(w, http.StatusCreated, map[string]interface{}{
+			"message":          "Upload completed but validation failed",
+			"voice_detected":   validationResult.Quality.HasSpeech,
+			"can_transcribe":   false,
+			"quality_score":    validationResult.Quality.Score,
+			"quality_feedback": validationResult.ErrorMessage,
+			"testimonial_id":   "",
+		})
+		return
+	}
+	file.Seek(0, 0)
+
+	// Parse author data
 	authorData := models.TestimonialUpload{
 		WorkspaceID:      workspaceID,
 		AuthorName:       r.FormValue("author_name"),
@@ -140,8 +183,8 @@ func (tcc *TestimonialCollectionController) handleVideoSubmission(w http.Respons
 		CollectionMethod: collectionMethod,
 	}
 
-	// Validate required fields
-	if authorData.AuthorName == "" {
+	// Validate required fields for certain collection methods
+	if (collectionMethod == "widget" || collectionMethod == "webform") && authorData.AuthorName == "" {
 		utils.RespondWithError(w, http.StatusBadRequest, "Author name is required")
 		return
 	}
@@ -161,10 +204,9 @@ func (tcc *TestimonialCollectionController) handleVideoSubmission(w http.Respons
 		}
 	}
 
-	// Determine if this is a recorded video or uploaded video
-	videoMethod := r.FormValue("video_method") // "recorded" or "uploaded"
+	// Determine video method
+	videoMethod := r.FormValue("video_method")
 	if videoMethod == "" {
-		// Auto-detect based on filename or default to uploaded
 		if strings.Contains(header.Filename, "recording_") {
 			videoMethod = "recorded"
 		} else {
@@ -172,26 +214,24 @@ func (tcc *TestimonialCollectionController) handleVideoSubmission(w http.Respons
 		}
 	}
 
+	// Process video
 	var testimonial *models.Testimonial
-	if videoMethod == "recorded" {
-		authorData.CollectionMethod = collectionMethod + "_recorded"
+	requireValidation := r.FormValue("require_voice_validation") == "true"
+
+	if videoMethod == "recorded" && requireValidation {
 		testimonial, err = tcc.service.ProcessRecordedVideo(r.Context(), authorData, file, header)
 	} else {
-		authorData.CollectionMethod = collectionMethod + "_uploaded"
 		testimonial, err = tcc.service.ProcessUploadedVideo(r.Context(), authorData, file, header)
 	}
 
 	if err != nil {
-		tcc.logger.Error("Failed to process video testimonial",
-			zap.Error(err),
-			zap.String("collection_method", collectionMethod),
-			zap.String("video_method", videoMethod),
-			zap.String("workspace_id", workspaceID.String()))
+		tcc.logger.Error("Failed to process video testimonial", zap.Error(err))
 		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	utils.RespondWithJSON(w, http.StatusCreated, map[string]interface{}{
+	// UNIFIED: Consistent response structure
+	response := map[string]interface{}{
 		"message":        "Video testimonial submitted successfully!",
 		"testimonial_id": testimonial.ID.String(),
 		"status":         testimonial.Status,
@@ -200,15 +240,18 @@ func (tcc *TestimonialCollectionController) handleVideoSubmission(w http.Respons
 		"processing":     testimonial.ProcessingStatus,
 		"collection":     collectionMethod,
 		"video_method":   videoMethod,
-	})
+		"voice_detected": true,
+		"can_transcribe": true,
+	}
+
+	utils.RespondWithJSON(w, http.StatusCreated, response)
+}
+
+func (tcc *TestimonialCollectionController) handleVideoSubmission(w http.ResponseWriter, r *http.Request, workspaceID uuid.UUID, collectionMethod string) {
+	tcc.processVideoUpload(w, r, workspaceID, collectionMethod)
 }
 
 func (tcc *TestimonialCollectionController) UploadVideo(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseMultipartForm(500 << 20); err != nil {
-		utils.RespondWithError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
 	workspaceIDStr := chi.URLParam(r, "workspaceID")
 	workspaceID, err := uuid.Parse(workspaceIDStr)
 	if err != nil {
@@ -216,49 +259,7 @@ func (tcc *TestimonialCollectionController) UploadVideo(w http.ResponseWriter, r
 		return
 	}
 
-	file, header, err := r.FormFile("video")
-	if err != nil {
-		utils.RespondWithError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	defer file.Close()
-
-	authorData := models.TestimonialUpload{
-		WorkspaceID:      workspaceID,
-		AuthorName:       r.FormValue("author_name"),
-		AuthorEmail:      r.FormValue("author_email"),
-		AuthorCompany:    r.FormValue("author_company"),
-		AuthorTitle:      r.FormValue("author_title"),
-		CollectionMethod: "dashboard_import",
-	}
-
-	if ratingStr := r.FormValue("rating"); ratingStr != "" {
-		if rating, err := strconv.Atoi(ratingStr); err == nil && rating >= 1 && rating <= 5 {
-			authorData.Rating = &rating
-		}
-	}
-
-	if tagsStr := r.FormValue("tags"); tagsStr != "" {
-		for tag := range strings.SplitSeq(tagsStr, ",") {
-			if trimmed := strings.TrimSpace(tag); trimmed != "" {
-				authorData.Tags = append(authorData.Tags, trimmed)
-			}
-		}
-	}
-
-	testimonial, err := tcc.service.ProcessUploadedVideo(r.Context(), authorData, file, header)
-	if err != nil {
-		tcc.logger.Error("Failed to process video upload", zap.Error(err))
-		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	utils.RespondWithJSON(w, http.StatusCreated, map[string]interface{}{
-		"message":        "Video uploaded successfully",
-		"testimonial_id": testimonial.ID.String(),
-		"status":         testimonial.Status,
-		"media_url":      testimonial.MediaURL,
-	})
+	tcc.processVideoUpload(w, r, workspaceID, "dashboard_import")
 }
 
 // CSV upload endpoint
@@ -443,19 +444,4 @@ func (tcc *TestimonialCollectionController) SendTestimonialRequest(w http.Respon
 		"contact_email": req.ContactEmail,
 		"sent_at":       time.Now(),
 	})
-}
-
-// Replace getUserFromContext(r) with:
-func getUserIDFromContext(r *http.Request) (uuid.UUID, error) {
-	userClaims, ok := r.Context().Value("user").(map[string]interface{})
-	if !ok {
-		return uuid.Nil, fmt.Errorf("user not found in context")
-	}
-
-	userIDStr, ok := userClaims["uid"].(string)
-	if !ok {
-		return uuid.Nil, fmt.Errorf("user ID not found in context")
-	}
-
-	return uuid.Parse(userIDStr)
 }

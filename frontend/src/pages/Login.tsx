@@ -1,11 +1,11 @@
-// Login.jsx
 import { observer } from "mobx-react-lite";
+import { useNavigate } from "react-router-dom";
 import { authStore } from "@/stores/authStore";
-import { LoginForm } from "../components/auth/LoginForm";
+import { LoginForm } from "@/components/auth/LoginForm";
 import Footer from "@/components/custom/footer";
 
 export const Login = observer(() => {
-  // const navigate = useNavigate();
+  const navigate = useNavigate();
 
   const handleSubmit = async ({
     email,
@@ -15,9 +15,14 @@ export const Login = observer(() => {
     password: string;
   }) => {
     try {
-      return await authStore.login(email, password);
+      const result = await authStore.login(email, password);
+      console.log("result", result);
+      if (result) {
+        // Redirect to onboarding on successful login
+        navigate("/dashboard", { replace: true });
+      }
     } catch (error: any) {
-      authStore.setError(error);
+      // Error is already handled in authStore.login()
       console.error("Login error:", error);
     }
   };

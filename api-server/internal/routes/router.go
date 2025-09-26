@@ -29,6 +29,7 @@ func RegisterRoutes(
 	sseTestimonialMonitor controllers.SSETestimonialMonitor,
 	googleDriveController controllers.GoogleDriveController,
 	aiProcessorController controllers.AIProcessorController,
+	presetController controllers.PresetController,
 	testController controllers.TestController,
 	rateLimiter middleware.RateLimiter,
 ) {
@@ -38,7 +39,7 @@ func RegisterRoutes(
 	// Group all API routes under /api
 	r.Route("/api", func(r chi.Router) {
 		RegisterMetrics(&r)
-		RegisterAITestRoutes(r, aiTestController, rateLimiter)
+		// RegisterAITestRoutes(r, aiTestController, rateLimiter)
 		RegisterHealthRoutes(r, healthController)
 		RegisterUserRoutes(r, userController, authMiddleware)
 		RegisterSwaggerRoute(r, swaggerController)
@@ -52,7 +53,9 @@ func RegisterRoutes(
 		RegisterSSETestimonialMonitorRoutes(r, sseTestimonialMonitor, authMiddleware)
 		RegisterGoogleDriveRoutes(r, googleDriveController, authMiddleware)
 		RegisterAIProcessorRoutes(r, aiProcessorController, rateLimiter, authMiddleware)
+		RegisterPresetRoutes(r, presetController, authMiddleware)
 		RegisterTestRoutes(r, testController)
+
 	})
 
 	// RegisterWebsocket(&r, *websocketController)
@@ -93,6 +96,8 @@ func RegisterUserRoutes(r chi.Router, controller controllers.UserController, aut
 
 		r.Group(func(r chi.Router) {
 			r.Use(authMiddleware.VerifyToken)
+			r.Get("/workspace", controller.GetWorkspace)
+			r.Get("/user", controller.GetUserByUID)
 			r.Get("/{id}", controller.GetUser)
 			r.Put("/{uid}", controller.UpdateUser)
 		})
@@ -131,11 +136,10 @@ func RegisterTeamMemberRoutes(r chi.Router, controller controllers.TeamMemberCon
 }
 
 func RegisterOnboardingRoutes(r chi.Router, controller controllers.OnboardingController, authMiddleware middleware.AuthMiddleware) {
-	r.Route("/onboard", func(r chi.Router) {
+	r.Route("/onboarding", func(r chi.Router) {
 		r.Group(func(r chi.Router) {
 			r.Use(authMiddleware.VerifyToken)
-			r.Post("/", controller.OnboardOwner)
-			r.Post("/partial", controller.OnboardOwner)
+			r.Post("/setup", controller.Onboard)
 		})
 	})
 }
@@ -153,7 +157,6 @@ func RegisterTestimonialRoutes(r chi.Router, controller controllers.TestimonialC
 
 			// Search and analytics
 			r.Post("/search", controller.SearchTestimonials)
-			r.Get("/workspace/{workspaceID}/stats", controller.GetTestimonialStats)
 
 			// Upload endpoint
 			//r.Post("/upload", controller.HandleTestimonialUpload)
@@ -161,48 +164,48 @@ func RegisterTestimonialRoutes(r chi.Router, controller controllers.TestimonialC
 	})
 }
 
-func RegisterAITestRoutes(r chi.Router, controller controllers.AITestController, rateLimiter middleware.RateLimiter) {
-	// controller := controllers.NewAITestController(aiClient, logger)
+// func RegisterAITestRoutes(r chi.Router, controller controllers.AITestController, rateLimiter middleware.RateLimiter) {
+// 	// controller := controllers.NewAITestController(aiClient, logger)
 
-	r.Group(func(r chi.Router) {
-		r.Use(rateLimiter.AIGenerationMiddleware())
+// 	r.Group(func(r chi.Router) {
+// 		r.Use(rateLimiter.AIGenerationMiddleware())
 
-		r.Post("/brand-context", controller.ExtractBrandContext) // brand_context
-		r.Post("/transcribe", controller.TranscribeAudio)        // transcription
-		r.Post("/translate", controller.TranslateText)           // translation
-		r.Post("/sentiment", controller.AnalyzeSentiment)        // sentiment
-		r.Post("/highlights", controller.ExtractHighlights)      // highlight
-		r.Post("/fillers", controller.DetectFillers)             // filler
-		r.Post("/polish", controller.PolishText)                 // polish
-		r.Post("/generate-content", controller.GenerateContent)  // generation
-		// r.Post("/analyze-emotion", controller.AnalyzeEmotion)    // emotion
-	})
+// 		r.Post("/brand-context", controller.ExtractBrandContext) // brand_context
+// 		r.Post("/transcribe", controller.TranscribeAudio)        // transcription
+// 		r.Post("/translate", controller.TranslateText)           // translation
+// 		r.Post("/sentiment", controller.AnalyzeSentiment)        // sentiment
+// 		r.Post("/highlights", controller.ExtractHighlights)      // highlight
+// 		r.Post("/fillers", controller.DetectFillers)             // filler
+// 		r.Post("/polish", controller.PolishText)                 // polish
+// 		r.Post("/generate-content", controller.GenerateContent)  // generation
+// 		// r.Post("/analyze-emotion", controller.AnalyzeEmotion)    // emotion
+// 	})
 
-	// GPU-intensive AI operations (10/hour per user)
-	r.Group(func(r chi.Router) {
-		r.Use(rateLimiter.AIGPUMiddleware())
+// 	// GPU-intensive AI operations (10/hour per user)
+// 	r.Group(func(r chi.Router) {
+// 		r.Use(rateLimiter.AIGPUMiddleware())
 
-		r.Post("/optimize-platform", controller.OptimizeForPlatform) // optimizer
-		r.Post("/enhance-media", controller.EnhanceMedia)            // enhancement
-		r.Post("/generate-narration", controller.GenerateNarration)  // narration
-		r.Post("/smart-clips", controller.GenerateSmartClips)        // clipping
-		r.Post("/analyze-emotions", controller.AnalyzeEmotion)       // emotions
-		r.Post("/select-thumbnail", controller.SelectThumbnail)      // emotions
-		r.Post("/story-video", controller.GenerateStoryVideo)        // emotions
-	})
+// 		r.Post("/optimize-platform", controller.OptimizeForPlatform) // optimizer
+// 		r.Post("/enhance-media", controller.EnhanceMedia)            // enhancement
+// 		r.Post("/generate-narration", controller.GenerateNarration)  // narration
+// 		r.Post("/smart-clips", controller.GenerateSmartClips)        // clipping
+// 		r.Post("/analyze-emotions", controller.AnalyzeEmotion)       // emotions
+// 		r.Post("/select-thumbnail", controller.SelectThumbnail)      // emotions
+// 		r.Post("/story-video", controller.GenerateStoryVideo)        // emotions
+// 	})
 
-	// Job management routes - use regular API rate limiting
-	r.Route("/jobs", func(r chi.Router) {
-		r.Use(rateLimiter.APIMiddleware()) // 100/minute
+// 	// Job management routes - use regular API rate limiting
+// 	r.Route("/jobs", func(r chi.Router) {
+// 		r.Use(rateLimiter.APIMiddleware()) // 100/minute
 
-		r.Get("/{jobID}/status", controller.GetJobStatus)
-		r.Get("/status", controller.GetBulkJobStatus)
-		r.Get("/cancel/{jobID}", controller.CancelJob)
+// 		r.Get("/{jobID}/status", controller.GetJobStatus)
+// 		r.Get("/status", controller.GetBulkJobStatus)
+// 		r.Get("/cancel/{jobID}", controller.CancelJob)
 
-		r.Get("/stream", controller.StreamJobStatus)
-		r.Options("/stream", controller.HandleStreamingOptions) // CORS support
-	})
-}
+// 		r.Get("/stream", controller.StreamJobStatus)
+// 		r.Options("/stream", controller.HandleStreamingOptions) // CORS support
+// 	})
+// }
 
 func RegisterSocialRoutes(r chi.Router, controller controllers.SocialController, authMiddleware middleware.AuthMiddleware) {
 	// Public OAuth callback endpoint (no auth required)
@@ -322,31 +325,40 @@ func RegisterAIProcessorRoutes(r chi.Router, controller controllers.AIProcessorC
 	// controller := controllers.NewAITestController(aiClient, logger)
 
 	r.Group(func(r chi.Router) {
-		// r.Use(authMiddleware.VerifyToken) commented to allow for tests for now.
+		r.Use(authMiddleware.VerifyToken)
+		r.Post("/ai/save-artifact", controller.SaveArtifact)
+	})
+
+	r.Group(func(r chi.Router) {
+		r.Use(authMiddleware.VerifyToken) // commented to allow for tests for now.
 		r.Use(rateLimiter.AIGenerationMiddleware())
 
-		r.Post("/processor/transcribe", controller.TranscribeAudio)       // transcription
-		r.Post("/processor/translate", controller.TranslateText)          // translation
-		r.Post("/processor/sentiment", controller.AnalyzeSentiment)       // sentiment
-		r.Post("/processor/highlights", controller.ExtractHighlights)     // highlight
-		r.Post("/processor/polish", controller.PolishText)                // polish
-		r.Post("/processor/generate-content", controller.GenerateContent) // generation
+		r.Post("/ai/transcribe", controller.TranscribeAudio)       // transcription
+		r.Post("/ai/translate", controller.TranslateText)          // translation
+		r.Post("/ai/sentiment", controller.AnalyzeSentiment)       // sentiment
+		r.Post("/ai/highlights", controller.ExtractHighlights)     // highlight
+		r.Post("/ai/polish", controller.PolishText)                // polish
+		r.Post("/ai/generate-content", controller.GenerateContent) // generation
 	})
 
 	// GPU-intensive AI operations (10/hour per user)
 	r.Group(func(r chi.Router) {
+		r.Use(authMiddleware.VerifyToken)
 		r.Use(rateLimiter.AIGPUMiddleware())
 
-		r.Post("/processor/optimize-platform", controller.OptimizeForPlatform) // optimizer
-		r.Post("/processor/enhance-media", controller.EnhanceMedia)            // enhancement
-		r.Post("/processor/generate-narration", controller.GenerateNarration)  // narration
-		r.Post("/processor/smart-clips", controller.GenerateSmartClips)        // clipping
-		r.Post("/processor/story-video", controller.GenerateStoryVideo)        // emotions
+		r.Post("/ai/optimize-platform", controller.OptimizeForPlatform) // optimizer
+		r.Post("/ai/enhance-media", controller.EnhanceMedia)            // enhancement
+		r.Post("/ai/generate-narration", controller.GenerateNarration)  // narration
+		r.Post("/ai/smart-clips", controller.GenerateSmartClips)        // clipping
+		r.Post("/ai/story-video", controller.GenerateStoryVideo)        // emotions
+		r.Post("/ai/remove-noise", controller.RemoveNoise)              // emotions
 	})
 
 	// Job management routes - use regular API rate limiting
-	r.Route("/processor/jobs", func(r chi.Router) {
+	r.Route("/ai/jobs", func(r chi.Router) {
+		// r.Use(authMiddleware.VerifyToken)
 		r.Use(rateLimiter.APIMiddleware()) // 100/minute
+		r.Use(controller.PreventDuplicateProcessing)
 
 		r.Get("/{jobID}/status", controller.GetJobStatus)
 		r.Get("/status", controller.GetBulkJobStatus)
@@ -354,6 +366,25 @@ func RegisterAIProcessorRoutes(r chi.Router, controller controllers.AIProcessorC
 
 		r.Get("/stream", controller.StreamJobStatus)
 		r.Options("/stream", controller.HandleStreamingOptions) // CORS support
+	})
+
+	r.Route("/service-lineage", func(r chi.Router) {
+		r.Use(authMiddleware.VerifyToken)
+
+		// Get service lineage for any source
+		r.Get("/{sourceType}/{sourceID}", controller.GetServiceLineage)
+
+		// Check if specific service is already applied
+		r.Get("/{sourceType}/{sourceID}/check/{serviceName}", controller.CheckServiceApplied)
+
+		// Get service tree visualization
+		r.Get("/{sourceType}/{sourceID}/tree", controller.GetServiceTree)
+
+		// Get available services for a source
+		r.Get("/{sourceType}/{sourceID}/available", controller.GetAvailableServices)
+
+		r.Get("/optimized/{sourceType}/{sourceID}", controller.GetOptimizedServiceLineage)
+		r.Delete("/{sourceType}/{sourceID}/cache", controller.InvalidateServiceLineageCache)
 	})
 }
 
@@ -370,3 +401,21 @@ func RegisterTestRoutes(r chi.Router, controller controllers.TestController) {
 		r.Get("/workspaces/{workspaceID}/social/auth/{platform}", controller.TestGetSocialAuthURL)
 	})
 }
+
+func RegisterPresetRoutes(r chi.Router, controller controllers.PresetController, authMiddleware middleware.AuthMiddleware) {
+	r.Route("/presets", func(r chi.Router) {
+		r.Group(func(r chi.Router) {
+			r.Use(authMiddleware.VerifyToken)
+
+			r.Post("/", controller.CreatePreset)
+			r.Get("/{id}", controller.GetPresetByID)
+			r.Get("/workspace/{workspace_id}", controller.ListPresets)
+			r.Get("/workspace/{workspace_id}/service/{service_id}", controller.ListServicePresets)
+			r.Delete("/{id}", controller.DeletePreset)
+			r.Put("/{id}", controller.UpdatePreset)
+			r.Post("/set-default", controller.SetDefaultPreset)
+			r.Get("/default/{workspace_id}", controller.GetDefaultPreset)
+		})
+	})
+}
+

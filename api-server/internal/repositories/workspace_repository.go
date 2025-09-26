@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/ifeanyidike/cenphi/internal/models"
@@ -16,7 +15,7 @@ import (
 
 type WorkspaceRepository interface {
 	Repository[models.Workspace]
-	UpdateAny(ctx context.Context, updates map[string]any, id uuid.UUID, db DB) error
+	// UpdateAny(ctx context.Context, updates map[string]any, id uuid.UUID, db DB) error
 	GetModelBrandContext(ctx context.Context, workspaceID uuid.UUID, db DB) (*models.BrandContext, error)
 	GetPbBrandContext(ctx context.Context, workspaceID uuid.UUID, db DB) (*pb.BrandContext, error)
 }
@@ -70,17 +69,17 @@ func (r *workspaceRepository) GetBrandContextByID(ctx context.Context, id uuid.U
 }
 
 func (r *workspaceRepository) Create(ctx context.Context, workspace *models.Workspace, db DB) error {
-
 	query := `
 		INSERT INTO workspaces 
-			(id, name, website_url, industry, plan) 
-		VALUES ($1, $2, $3, $4, $5)
+			(id, name, website_url, industry, brand_context, plan) 
+		VALUES ($1, $2, $3, $4, $5, $6)
 	`
 	_, err := db.ExecContext(ctx, query,
 		workspace.ID,
 		workspace.Name,
 		workspace.WebsiteURL,
 		workspace.Industry,
+		string(workspace.BrandContext),
 		workspace.Plan,
 	)
 
@@ -107,51 +106,51 @@ func (r *workspaceRepository) Update(ctx context.Context, workspace *models.Work
 	return err
 }
 
-func (r *workspaceRepository) UpdateAny(ctx context.Context, updates map[string]any, id uuid.UUID, db DB) error {
-	var setStatements []string
-	var args []any
+// func (r *workspaceRepository) UpdateAny(ctx context.Context, updates map[string]any, id uuid.UUID, db DB) error {
+// 	var setStatements []string
+// 	var args []any
 
-	// First argument is always the ID
-	args = append(args, id)
-	argCount := 1
+// 	// First argument is always the ID
+// 	args = append(args, id)
+// 	argCount := 1
 
-	// Build set statement dynamically based on provided fields
-	for field, value := range updates {
-		// Map field names to db column names
-		var dbField string
-		switch field {
-		case "name", "website_url", "plan", "industry":
-			dbField = field
-		case "settings", "brand_context":
-			// JSON fields
-			dbField = field
-		default:
-			continue
-		}
+// 	// Build set statement dynamically based on provided fields
+// 	for field, value := range updates {
+// 		// Map field names to db column names
+// 		var dbField string
+// 		switch field {
+// 		case "name", "website_url", "plan", "industry":
+// 			dbField = field
+// 		case "settings", "brand_context":
+// 			// JSON fields
+// 			dbField = field
+// 		default:
+// 			continue
+// 		}
 
-		argCount++
-		setStatements = append(setStatements, fmt.Sprintf("%s = $%d", dbField, argCount))
-		args = append(args, value)
-	}
+// 		argCount++
+// 		setStatements = append(setStatements, fmt.Sprintf("%s = $%d", dbField, argCount))
+// 		args = append(args, value)
+// 	}
 
-	// Add updated_at
-	setStatements = append(setStatements, "updated_at = NOW()")
+// 	// Add updated_at
+// 	setStatements = append(setStatements, "updated_at = NOW()")
 
-	if len(setStatements) == 0 {
-		return nil // Nothing to update
-	}
+// 	if len(setStatements) == 0 {
+// 		return nil // Nothing to update
+// 	}
 
-	// Build the final query
-	query := fmt.Sprintf("UPDATE workspaces SET %s WHERE id = $1", strings.Join(setStatements, ", "))
+// 	// Build the final query
+// 	query := fmt.Sprintf("UPDATE workspaces SET %s WHERE id = $1", strings.Join(setStatements, ", "))
 
-	// Debug
-	fmt.Println("Query:", query)
-	fmt.Println("Args:", args)
+// 	// Debug
+// 	fmt.Println("Query:", query)
+// 	fmt.Println("Args:", args)
 
-	// Execute the query with args expanded correctly
-	_, err := db.ExecContext(ctx, query, args...)
-	return err
-}
+// 	// Execute the query with args expanded correctly
+// 	_, err := db.ExecContext(ctx, query, args...)
+// 	return err
+// }
 
 func (s *workspaceRepository) GetModelBrandContext(ctx context.Context, workspaceID uuid.UUID, db DB) (*models.BrandContext, error) {
 	c, err := s.GetBrandContextByID(ctx, workspaceID, db)

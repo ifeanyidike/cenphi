@@ -21,5 +21,5 @@ configure({
   computedRequiresReaction: true,
   reactionRequiresObservable: true,
   observableRequiresReaction: true,
-  disableErrorBoundaries: true,
+  disableErrorBoundaries: import.meta.env.DEV, // Only disable in development
 });

@@ -22,23 +22,23 @@ type MediaIntelligence interface {
 }
 
 type SingleMediaIntelligenceRequests interface {
-	AnalyzeEmotion(ctx context.Context, req *pb.EmotionRequest) (*pb.EmotionResponse, error)
 	EnhanceMedia(ctx context.Context, req *pb.EnhanceRequest) (*pb.EnhanceResponse, error)
 	GenerateNarration(ctx context.Context, req *pb.NarrationRequest) (*pb.NarrationResponse, error)
 	GenerateClips(ctx context.Context, req *pb.ClippingRequest) (*pb.ClippingResponse, error)
-	SelectThumbnail(ctx context.Context, req *pb.ThumbnailRequest) (*pb.ThumbnailResponse, error)
+	NoiseRemoval(ctx context.Context, req *pb.NoiseReductionRequest) (*pb.NoiseReductionResponse, error)
 	GenerateStoryVideo(ctx context.Context, req *pb.StoryModeRequest) (*pb.StoryModeResponse, error)
 	OptimizeMediaForPlatform(ctx context.Context, req *pb.OptimizeRequest) (*pb.OptimizeResponse, error)
+	AnalyzeViralPotential(ctx context.Context, req *pb.ViralAnalysisRequest) (*pb.ViralAnalysisResponse, error)
 }
 
 type GRPCClient struct {
-	emotionClient     pb.EmotionAnalysisServiceClient
-	enhancementClient pb.MediaEnhancementServiceClient
-	narrationClient   pb.NarrationServiceClient
-	clippingClient    pb.SmartClippingServiceClient
-	optimizerClient   pb.PlatformOptimizerServiceClient
-	thumbnailClient   pb.ThumbnailServiceClient
-	storyModeClient   pb.StoryModeServiceClient
+	enhancementClient  pb.MediaEnhancementServiceClient
+	narrationClient    pb.NarrationServiceClient
+	clippingClient     pb.SmartClippingServiceClient
+	optimizerClient    pb.PlatformOptimizerServiceClient
+	noiseRemovalClient pb.NoiseReducerServiceClient
+	storyModeClient    pb.StoryModeServiceClient
+	viralClient        pb.ViralAnalysisServiceClient
 
 	// Add connection reference for proper cleanup
 	conn   *grpc.ClientConn
@@ -67,15 +67,15 @@ func NewGRPCClients(cfg config.MediaIntelligenceConfig) (MediaIntelligence, erro
 	}
 
 	return &GRPCClient{
-		emotionClient:     pb.NewEmotionAnalysisServiceClient(conn),
-		enhancementClient: pb.NewMediaEnhancementServiceClient(conn),
-		narrationClient:   pb.NewNarrationServiceClient(conn),
-		clippingClient:    pb.NewSmartClippingServiceClient(conn),
-		optimizerClient:   pb.NewPlatformOptimizerServiceClient(conn),
-		thumbnailClient:   pb.NewThumbnailServiceClient(conn),
-		storyModeClient:   pb.NewStoryModeServiceClient(conn),
-		conn:              conn,
-		closed:            false,
+		enhancementClient:  pb.NewMediaEnhancementServiceClient(conn),
+		narrationClient:    pb.NewNarrationServiceClient(conn),
+		clippingClient:     pb.NewSmartClippingServiceClient(conn),
+		optimizerClient:    pb.NewPlatformOptimizerServiceClient(conn),
+		noiseRemovalClient: pb.NewNoiseReducerServiceClient(conn),
+		storyModeClient:    pb.NewStoryModeServiceClient(conn),
+		viralClient:        pb.NewViralAnalysisServiceClient(conn),
+		conn:               conn,
+		closed:             false,
 	}, nil
 }
 
@@ -100,16 +100,6 @@ func (g *GRPCClient) Close() error {
 }
 
 // Add context validation for all gRPC methods
-func (g *GRPCClient) AnalyzeEmotion(ctx context.Context, req *pb.EmotionRequest) (*pb.EmotionResponse, error) {
-	g.mu.RLock()
-	defer g.mu.RUnlock()
-
-	if g.closed {
-		return nil, fmt.Errorf("gRPC client is closed")
-	}
-
-	return g.emotionClient.AnalyzeEmotion(ctx, req)
-}
 
 func (g *GRPCClient) EnhanceMedia(ctx context.Context, req *pb.EnhanceRequest) (*pb.EnhanceResponse, error) {
 	g.mu.RLock()
@@ -144,7 +134,7 @@ func (g *GRPCClient) GenerateClips(ctx context.Context, req *pb.ClippingRequest)
 	return g.clippingClient.GenerateClips(ctx, req)
 }
 
-func (g *GRPCClient) SelectThumbnail(ctx context.Context, req *pb.ThumbnailRequest) (*pb.ThumbnailResponse, error) {
+func (g *GRPCClient) NoiseRemoval(ctx context.Context, req *pb.NoiseReductionRequest) (*pb.NoiseReductionResponse, error) {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
@@ -152,7 +142,7 @@ func (g *GRPCClient) SelectThumbnail(ctx context.Context, req *pb.ThumbnailReque
 		return nil, fmt.Errorf("gRPC client is closed")
 	}
 
-	return g.thumbnailClient.SelectThumbnails(ctx, req)
+	return g.noiseRemovalClient.ReduceNoise(ctx, req)
 }
 
 func (g *GRPCClient) GenerateStoryVideo(ctx context.Context, req *pb.StoryModeRequest) (*pb.StoryModeResponse, error) {
@@ -175,4 +165,15 @@ func (g *GRPCClient) OptimizeMediaForPlatform(ctx context.Context, req *pb.Optim
 	}
 
 	return g.optimizerClient.OptimizeMedia(ctx, req)
+}
+
+func (g *GRPCClient) AnalyzeViralPotential(ctx context.Context, req *pb.ViralAnalysisRequest) (*pb.ViralAnalysisResponse, error) {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
+	if g.closed {
+		return nil, fmt.Errorf("gRPC client is closed")
+	}
+
+	return g.viralClient.AnalyzeViralPotential(ctx, req)
 }

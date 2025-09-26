@@ -93,7 +93,7 @@ export const defaultBrandData: BrandGuide = {
   },
   voice: {
     tone: "professional",
-    values: ["Trustworthy", "Helpful", "Expert"],
+    personality: ["Trustworthy", "Helpful", "Expert"],
     ctas: ["Share your experience", "Leave a review", "Tell us what you think"],
     examples: [],
     channels: {

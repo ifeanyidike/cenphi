@@ -1,19 +1,12 @@
 // stores/rootStore.ts
 
-import { auth } from "@/config/firebase";
-import { Workspace } from "@/types/workspace";
-import { makeAutoObservable, observable } from "mobx";
+import { makeAutoObservable, observable, runInAction } from "mobx";
 import { MemberManager } from "./managers/member";
 import { TestimonialManager } from "./managers/testimonial";
-import { AnalysisManager } from "./managers/analysis";
-import { UIManager } from "./managers/ui_manager";
-import { WidgetManager } from "./managers/widget";
-import { VideoEditorManager } from "./managers/video_editor";
-import { AudioEditorManager } from "./managers/audio_editor";
-import { TextEditorManager } from "./managers/text_editor";
-import { ImageEditorManager } from "./managers/image_editor";
 import { AIStudioManager } from "./managers/ai_studio_manager";
-import { authStateManager } from "./managers/auth_state_manager";
+import { ServiceLineageManager } from "./managers/service_lineage_manager";
+import { authStore } from "@/stores/authStore";
+import { Workspace } from "@/types/testimonial";
 
 /**
  * The WorkspaceOrchestrator class handles the orchestration of workspace-related
@@ -22,18 +15,13 @@ import { authStateManager } from "./managers/auth_state_manager";
  */
 export class WorkspaceOrchestrator {
   public server = import.meta.env.VITE_API_URL + "/workspaces";
-
+  public ID: string | null = null;
   public memberManager: MemberManager;
+  public workspace: Workspace | null = null;
 
   public testimonialManager: TestimonialManager;
-  analysisManager: AnalysisManager;
-  uiManager: UIManager;
-  widgetManager: WidgetManager;
-  videoEditorManager: VideoEditorManager;
-  audioEditorManager: AudioEditorManager;
-  textEditorManager: TextEditorManager;
-  imageEditorManager: ImageEditorManager;
   aiStudioManager: AIStudioManager;
+  serviceLineageManager: ServiceLineageManager;
 
   /**
    * Constructs a new WorkspaceOrchestrator instance.
@@ -42,76 +30,16 @@ export class WorkspaceOrchestrator {
   constructor() {
     this.memberManager = new MemberManager(this);
     this.testimonialManager = new TestimonialManager(this);
-    this.analysisManager = new AnalysisManager();
-    this.uiManager = new UIManager();
-    this.widgetManager = new WidgetManager();
-    this.videoEditorManager = new VideoEditorManager();
-    this.audioEditorManager = new AudioEditorManager();
-    this.textEditorManager = new TextEditorManager();
-    this.imageEditorManager = new ImageEditorManager();
     this.aiStudioManager = new AIStudioManager();
+    this.serviceLineageManager = new ServiceLineageManager();
 
     makeAutoObservable(this, {
       memberManager: observable.ref,
       testimonialManager: observable.ref,
-      analysisManager: observable.ref,
-      uiManager: observable.ref,
-      widgetManager: observable.ref,
-      videoEditorManager: observable.ref,
-      audioEditorManager: observable.ref,
-      textEditorManager: observable.ref,
-      imageEditorManager: observable.ref,
       aiStudioManager: observable.ref,
+      serviceLineageManager: observable.ref,
     });
   }
-
-  /**
-   * Retrieves the current authenticated user's token and details.
-   *
-   * @returns A promise that resolves to an object containing the token and the current user.
-   * @throws Error if the user is not authenticated or token is not available.
-   */
-  // public async getToken() {
-  //   const currentUser = auth.currentUser;
-  //   const token = await currentUser?.getIdToken();
-  //   if (!currentUser?.uid || !token)
-  //     throw new Error("Token not found, Unauthorized!");
-  //   return { token, currentUser };
-  // }
-
-  // public async getToken() {
-  //   console.log("🔐 Getting Firebase token...");
-
-  //   const currentUser = auth.currentUser;
-  //   console.log("👤 Current user exists:", !!currentUser);
-
-  //   if (!currentUser) {
-  //     throw new Error("No current user found");
-  //   }
-
-  //   // Add timeout to token retrieval
-  //   const tokenPromise = currentUser.getIdToken();
-  //   const timeoutPromise = new Promise((_, reject) =>
-  //     setTimeout(() => reject(new Error("Firebase token timeout")), 10000)
-  //   );
-
-  //   try {
-  //     const token = (await Promise.race([
-  //       tokenPromise,
-  //       timeoutPromise,
-  //     ])) as string;
-  //     console.log("✅ Firebase token retrieved");
-
-  //     if (!currentUser?.uid || !token) {
-  //       throw new Error("Token not found, Unauthorized!");
-  //     }
-
-  //     return { token, currentUser };
-  //   } catch (error) {
-  //     console.error("❌ Firebase token error:", error);
-  //     throw error;
-  //   }
-  // }
 
   /**
    * Updates workspace details using the provided partial workspace data.
@@ -121,7 +49,7 @@ export class WorkspaceOrchestrator {
    * @throws Error if the user is not authorized, the workspace does not exist, or the request fails.
    */
   async update(updates: Partial<Workspace>) {
-    const { token, currentUser } = await authStateManager.getToken();
+    const { token, currentUser } = await authStore.getToken();
 
     let member = this.memberManager.member;
     if (!member) {
@@ -147,6 +75,112 @@ export class WorkspaceOrchestrator {
     }
     console.log("response", response.ok);
     return response.ok;
+  }
+
+  async getWorkspaceData() {
+    try {
+      const { token } = await authStore.getToken();
+      if (!token) return;
+
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/users/workspace`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log("data", data);
+        if (data.id) {
+          const { testimonials, ...workspace } = data;
+          runInAction(() => {
+            workspaceHub.workspace = workspace;
+            workspaceHub.testimonialManager.testimonials = testimonials || [];
+          });
+
+          return true;
+        }
+      }
+    } catch (error) {
+      console.error("Error checking workspace:", error);
+    }
+  }
+
+  async checkUserExists() {
+    try {
+      const { token } = await authStore.getToken();
+      if (!token) return;
+
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/users/user`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.id) {
+          return true;
+        }
+      }
+      return false;
+    } catch (error) {
+      console.error("Error checking workspace:", error);
+    }
+  }
+
+  async setupOnboarding(companyName: string, websiteUrl: string) {
+    const { token, currentUser } = await authStore.getToken();
+    if (!token) {
+      throw new Error("Authentication required");
+    }
+    const workspace_id = crypto.randomUUID();
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL}/onboarding/setup`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          firebase_uid: currentUser.uid,
+          workspace: {
+            plan: "essentials",
+            workspace_id,
+            name: `${companyName} Workspace`,
+            website_url: websiteUrl || "",
+            // Brand context extraction will happen in background if website provided
+          },
+          team_member: {
+            role: "owner",
+          },
+        }),
+      }
+    );
+    console.log("workspace_id", workspace_id);
+    if (!response.ok) {
+      const errorData = await response.text();
+      throw new Error(errorData || "Failed to create workspace");
+    }
+
+    const data = await response.json();
+    if (data.id) {
+      console.log("data", data);
+      const { testimonials, ...workspace } = data;
+      runInAction(() => {
+        workspaceHub.workspace = workspace;
+        workspaceHub.testimonialManager.testimonials = testimonials || [];
+      });
+
+      return data.id;
+    }
   }
 }
 

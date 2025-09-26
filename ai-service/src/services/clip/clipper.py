@@ -1,30 +1,14 @@
 # src/services/clipping/clipping_service.py
-
 import os
-import uuid
 import logging
 import threading
+import uuid
 from typing import List, Dict, Any, Optional, Union
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass
 
 import intelligence_pb2
 
 logger = logging.getLogger(__name__)
-
-@dataclass
-class ClipResult:
-    """Data class for clip result"""
-    url: str
-    start_time: float
-    end_time: float
-    title: str
-    theme: str
-    engagement_score: float
-    duration_seconds: float
-    social_media_ready: Dict[str, bool]
-    file_path: str = ""
-    error: str = ""
 
 class SmartClipper:
     """Clipping service for generating highlight clips"""
@@ -146,39 +130,15 @@ class SmartClipper:
                 option = future_to_option[future]
                 try:
                     result = future.result()
-                    results.append({
-                        "testimonial_id": option.get('testimonial_id', 'unknown'),
-                        "media_url": option['media_url'],
-                        "clips": result.get("clips", []),
-                        "failed_clips": result.get("failed_clips", []),
-                        "total_clips": result.get("total_clips", 0),
-                        "total_failed": result.get("total_failed", 0)
-                    })
+                    results.append(result)
                 except Exception as e:
                     logger.error(f"Clip generation failed for {option['media_url']}: {e}")
-                    results.append({
-                        "testimonial_id": option.get('testimonial_id', 'unknown'),
-                        "media_url": option['media_url'],
-                        "error": str(e),
-                        "clips": [],
-                        "failed_clips": [],
-                        "total_clips": 0,
-                        "total_failed": 0
-                    })
+                    results.append(result)
             logger.info(f"Batch clip generation completed: {len(results)} results")
-            return {
-                "results": results,
-                "total_success": sum(r['total_clips'] for r in results if 'total_clips' in r),
-                "total_failed": sum(r['total_failed'] for r in results if 'total_failed' in r)
-            }
+            return results
         except Exception as e:
             logger.error(f"Batch clip generation failed: {e}")
-            return {
-                "error": str(e),
-                "results": [],
-                "total_success": 0,
-                "total_failed": 0
-            }
+            return results
 
     def generate_clips(
         self,
@@ -262,22 +222,22 @@ class SmartClipper:
                             logger.info(f"Clip {idx} completed successfully")
                     except Exception as e:
                         logger.error(f"Clip {idx} generation failed: {e}")
-                        failed_clips.append(ClipResult(
-                            url="", start_time=moment.start_time, end_time=moment.end_time,
-                            title=f"Failed Clip {idx}", theme=moment.theme,
-                            engagement_score=0.0, duration_seconds=0.0,
-                            social_media_ready={}, error=str(e)
+                        failed_clips.append(intelligence_pb2.Clip(
+                            id=str(uuid.uuid4()),
+                            url="", 
+                            start_time=moment.start_time, 
+                            end_time=moment.end_time,
+                            title=f"Failed Clip {idx}", 
+                            text=moment.text,
+                            theme=moment.theme,
+                            engagement_score=0.0, duration=0.0, size=0.0, error=str(e)
                         ))
 
             logger.info(f"Clip generation completed: {len(clips)} successful, {len(failed_clips)} failed")
             
-            return {
-                "testimonial_id": testimonial_id,
-                "clips": [self._clip_to_dict(clip) for clip in clips],
-                "failed_clips": [self._clip_to_dict(clip) for clip in failed_clips],
-                "total_clips": len(clips),
-                "total_failed": len(failed_clips)
-            }
+            return intelligence_pb2.ClippingResponse(
+                clips=clips
+            )
             
         finally:
             # Clean up ONLY shared resources after ALL threads complete
@@ -293,7 +253,7 @@ class SmartClipper:
         clip_index: int,
         branding: Optional[intelligence_pb2.BrandingOptions],
         music_volume: str = "low"
-    ) -> ClipResult:
+    ) -> intelligence_pb2.Clip:
         """Generate single clip with completely isolated temp file management"""
         
         # THREAD ISOLATION: Each thread manages ONLY its own temporary files
@@ -319,16 +279,16 @@ class SmartClipper:
             cache_url = self.storage_manager.get_public_url_for_object(cache_path)
             if self.storage_manager.check_url_exists(cache_url):
                 logger.info(f"Thread {thread_id}-{clip_index}: Returning result from cache.")
-                return ClipResult(
+                return intelligence_pb2.Clip(
+                    id=str(uuid.uuid4()),
                     url=cache_url,
                     start_time=moment.start_time,
                     end_time=moment.end_time,
                     title=title,
+                    text=moment.text,
                     theme=moment.theme,
-                    engagement_score=float(moment.engagement_score) if hasattr(moment, 'engagement_score') else 0.8,
-                    duration_seconds=end_time - start_time,
-                    social_media_ready={},
-                    file_path=cache_url,
+                    engagement_score=float(getattr(moment, 'engagement_score', 0.5)),
+                    duration=end_time - start_time,
                     error=""
                 )
             
@@ -473,6 +433,8 @@ class SmartClipper:
             if file_size < 1024:
                 raise Exception("Final clip file too small")
             
+            file_size_mb = round(file_size / (1024 * 1024), 2)
+            
             # Upload to storage with retry
             final_url = ""
             if self.storage_manager:
@@ -492,16 +454,17 @@ class SmartClipper:
             duration = (moment.end_time - moment.start_time) / 1000
             
             # Create successful result
-            result = ClipResult(
+            result = intelligence_pb2.Clip(
+                id=str(uuid.uuid4()),
                 url=final_url,
                 start_time=moment.start_time,
                 end_time=moment.end_time,
                 title=title,
+                text=moment.text,
                 theme=moment.theme,
-                engagement_score=float(moment.engagement_score) if hasattr(moment, 'engagement_score') else 0.8,
-                duration_seconds=duration,
-                social_media_ready={},
-                file_path=final_clip,
+                engagement_score=float(getattr(moment, 'engagement_score', 0.5)),
+                duration=duration,
+                size = file_size_mb,
                 error=""
             )
             
@@ -510,16 +473,17 @@ class SmartClipper:
             
         except Exception as e:
             logger.error(f"Thread {thread_id}-{clip_index}: Clip generation failed: {e}")
-            return ClipResult(
+            return intelligence_pb2.Clip(
+                id=str(uuid.uuid4()),
                 url="",
                 start_time=moment.start_time,
                 end_time=moment.end_time,
                 title=f"Failed Clip {clip_index}",
+                text=moment.text,
                 theme=moment.theme,
                 engagement_score=0.0,
-                duration_seconds=0.0,
-                social_media_ready={},
-                file_path="",
+                duration=0.0,
+                size=0.0,
                 error=str(e)
             )
             
@@ -718,16 +682,3 @@ class SmartClipper:
             return f"{base_title} ({int(duration)}s)"
         
         return base_title
-    
-    def _clip_to_dict(self, clip: ClipResult) -> Dict[str, Any]:
-        """Convert ClipResult to dictionary"""
-        return {
-            "url": clip.url,
-            "start_time": clip.start_time,
-            "end_time": clip.end_time,
-            "title": clip.title,
-            "theme": clip.theme,
-            "engagement_score": clip.engagement_score,
-            "duration_seconds": clip.duration_seconds,
-            "social_media_ready": clip.social_media_ready
-        }

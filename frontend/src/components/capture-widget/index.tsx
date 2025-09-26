@@ -1,11 +1,11 @@
 // src/components/capture-widget/index.tsx
 import React from "react";
 import { createRoot } from "react-dom/client";
-import TestimonialWidget from "./TestimonialWidget";
+import SimpleTestimonialWidget from "./SimpleTestimonialWidget";
 import { TestimonialWidgetConfig } from "./types";
 
-// Export main component
-export default TestimonialWidget;
+// Export simplified main component
+export default SimpleTestimonialWidget;
 
 // Export types
 export type { TestimonialWidgetConfig };
@@ -39,12 +39,12 @@ if (typeof document !== "undefined") {
           document.body.appendChild(container);
         }
 
-        // Initialize widget with the global config
+        // Initialize simplified widget with the global config
         try {
           const root = createRoot(container);
           root.render(
             <React.StrictMode>
-              <TestimonialWidget config={window.testimonialWidgetConfig} />
+              <SimpleTestimonialWidget config={window.testimonialWidgetConfig} />
             </React.StrictMode>
           );
           console.log("Testimonial widget initialized successfully");

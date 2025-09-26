@@ -89,6 +89,7 @@ func NewRedisQueue(client *redis.Client, cacheService cache.RedisCache, logger *
 // Publish publishes a message to a queue
 func (r *RedisQueueService) Publish(ctx context.Context, queueName string, message Message) (string, error) {
 	// Generate ID if not provided
+	fmt.Println("message ID is", message.ID)
 	if message.ID == "" {
 		message.ID = uuid.NewString()
 	}
@@ -353,9 +354,9 @@ func (r *RedisQueueService) executeJob(ctx context.Context, msg Message, handler
 	if err != nil {
 		r.logger.Error("Failed to get current job status", zap.Error(err))
 		r.SetJobStatus(context.Background(), msg.ID, "completed", 100, map[string]interface{}{
-			"message":          "Job completed successfully",
-			"duration_seconds": duration.Seconds(),
-			"completed_at":     time.Now().Unix(),
+			"message":      "Job completed successfully",
+			"duration":     duration.Seconds(),
+			"completed_at": time.Now().Unix(),
 		})
 		return
 	}
@@ -366,9 +367,9 @@ func (r *RedisQueueService) executeJob(ctx context.Context, msg Message, handler
 		finalResult = currentStatus.Result
 	} else {
 		finalResult = map[string]interface{}{
-			"message":          "Job completed successfully",
-			"duration_seconds": duration.Seconds(),
-			"completed_at":     time.Now().Unix(),
+			"message":      "Job completed successfully",
+			"duration":     duration.Seconds(),
+			"completed_at": time.Now().Unix(),
 		}
 	}
 
@@ -426,35 +427,110 @@ func (r *RedisQueueService) ackMessage(ctx context.Context, queueName, consumerG
 	}
 }
 
-// SetJobStatus sets the status of a job
-func (r *RedisQueueService) SetJobStatus(ctx context.Context, jobID, status string, progress int, result any, opts ...JobStatusOption) {
-	var existing JobResult
-	r.cacheService.Get(ctx, fmt.Sprintf("job_status:%s", jobID), &existing)
+// // SetJobStatus sets the status of a job
+// func (r *RedisQueueService) SetJobStatus(ctx context.Context, jobID, status string, progress int, result any, opts ...JobStatusOption) {
+// 	var existing JobResult
+// 	r.cacheService.Get(ctx, fmt.Sprintf("job_status:%s", jobID), &existing)
 
-	now := time.Now()
+// 	now := time.Now()
+
+// 	jobResult := JobResult{
+// 		ID:        jobID,
+// 		Status:    status,
+// 		Progress:  progress,
+// 		Result:    result,
+// 		UpdatedAt: now,
+// 		CreatedAt: existing.CreatedAt,
+// 		Duration:  now.Sub(existing.CreatedAt),
+// 	}
+
+// 	if jobResult.CreatedAt.IsZero() {
+// 		jobResult.CreatedAt = now
+// 	}
+
+// 	// Apply options
+// 	for _, opt := range opts {
+// 		opt(&jobResult)
+// 	}
+
+// 	// Store job status in cache
+// 	ttl := r.getTTLForJobType(result)
+// 	r.cacheService.Set(ctx, fmt.Sprintf("job_status:%s", jobID), jobResult, ttl)
+// }
+
+func (r *RedisQueueService) SetJobStatus(ctx context.Context, jobID, status string, progress int, result any, opts ...JobStatusOption) {
+	key := fmt.Sprintf("job_status:%s", jobID)
+
+	// Check if job already exists to preserve CreatedAt
+	var createdAt time.Time
+	var existingJob JobResult
+
+	if err := r.cacheService.Get(ctx, key, &existingJob); err == nil {
+		// Preserve original CreatedAt
+		createdAt = existingJob.CreatedAt
+	} else {
+		// New job
+		createdAt = time.Now()
+	}
 
 	jobResult := JobResult{
 		ID:        jobID,
 		Status:    status,
 		Progress:  progress,
 		Result:    result,
-		UpdatedAt: now,
-		CreatedAt: existing.CreatedAt,
-		Duration:  now.Sub(existing.CreatedAt),
+		UpdatedAt: time.Now(),
+		CreatedAt: createdAt,
 	}
 
-	if jobResult.CreatedAt.IsZero() {
-		jobResult.CreatedAt = now
-	}
-
-	// Apply options
+	// Apply any options
 	for _, opt := range opts {
 		opt(&jobResult)
 	}
 
-	// Store job status in cache
-	ttl := r.getTTLForJobType(result)
-	r.cacheService.Set(ctx, fmt.Sprintf("job_status:%s", jobID), jobResult, ttl)
+	// Set TTL based on status - this is the key fix
+	var ttl time.Duration
+	switch status {
+	case "completed", "failed", "cancelled":
+		ttl = 2 * time.Minute // Completed jobs disappear quickly
+	case "processing":
+		ttl = 30 * time.Minute // Active jobs get more time
+	default: // pending, queued, etc
+		ttl = 15 * time.Minute // Default timeout
+	}
+
+	data, _ := json.Marshal(jobResult)
+	r.cacheService.SetWithTTL(ctx, key, string(data), ttl)
+
+	r.logger.Debug("Job status set with TTL",
+		zap.String("job_id", jobID),
+		zap.String("status", status),
+		zap.Int("progress", progress),
+		zap.Duration("ttl", ttl))
+}
+
+// One-time nuclear cleanup function - call this once to start fresh
+func NukeAllJobStatus(ctx context.Context, cacheService cache.RedisCache, logger *zap.Logger) error {
+	keys, err := cacheService.GetKeys(ctx, "job_status:*")
+	if err != nil {
+		return fmt.Errorf("failed to get job status keys: %w", err)
+	}
+
+	logger.Info("🧹 Nuking all existing job status keys", zap.Int("count", len(keys)))
+
+	deletedCount := 0
+	for _, key := range keys {
+		if err := cacheService.Delete(ctx, key); err != nil {
+			logger.Error("Failed to delete key", zap.String("key", key), zap.Error(err))
+		} else {
+			deletedCount++
+		}
+	}
+
+	logger.Info("✅ Job status cleanup completed",
+		zap.Int("deleted", deletedCount),
+		zap.Int("total", len(keys)))
+
+	return nil
 }
 
 // GetJobStatus gets the status of a job
@@ -548,7 +624,7 @@ func (r *RedisQueueService) getTTLForJobType(result any) time.Duration {
 	if resultMap, ok := result.(map[string]interface{}); ok {
 		if jobType, exists := resultMap["job_type"].(string); exists {
 			switch jobType {
-			case "enhancement", "narration", "story_video":
+			case "enhancement", "narration", "story_video", "remove_noise", "optimization", "clipping":
 				return 1 * time.Hour // Long-running jobs
 			case "publish_post", "sync_post_metrics":
 				return 48 * time.Hour // Social media jobs

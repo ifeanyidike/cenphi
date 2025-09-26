@@ -61,6 +61,7 @@ type HighlightWithWords struct {
 	Keywords           []string `json:"keywords"`
 	EmotionalIntensity float64  `json:"emotional_intensity"`
 	Shareability       float64  `json:"shareability"`
+	EngagementScore    float64  `json:"engagement_score"`
 }
 
 type HighlightService struct {
@@ -109,6 +110,7 @@ Your task is to identify the most emotionally impactful and business-relevant pa
 	pbHighlights := make([]*pb.HighlightMoment, len(highlightsResponse))
 	for i, h := range highlightsResponse {
 		pbHighlights[i] = &pb.HighlightMoment{
+			Id:                 uuid.NewString(),
 			Text:               h.Text,
 			Theme:              h.Theme,
 			StartTime:          h.StartTime,
@@ -119,6 +121,7 @@ Your task is to identify the most emotionally impactful and business-relevant pa
 			Keywords:           h.Keywords,
 			EmotionalIntensity: h.EmotionalIntensity,
 			Shareability:       h.Shareability,
+			EngagementScore:    h.EngagementScore,
 		}
 	}
 
@@ -180,6 +183,7 @@ func (s HighlightService) ExtractHighlightsByType(ctx context.Context, request H
 	pbHighlights := make([]*pb.HighlightMoment, len(highlightsResponse))
 	for i, h := range highlightsResponse {
 		pbHighlights[i] = &pb.HighlightMoment{
+			Id:                 uuid.NewString(),
 			Text:               h.Text,
 			Theme:              h.Theme,
 			StartTime:          h.StartTime,
@@ -190,6 +194,7 @@ func (s HighlightService) ExtractHighlightsByType(ctx context.Context, request H
 			Keywords:           h.Keywords,
 			EmotionalIntensity: h.EmotionalIntensity,
 			Shareability:       h.Shareability,
+			EngagementScore:    h.EngagementScore,
 		}
 	}
 
@@ -233,6 +238,7 @@ func (s HighlightService) addWordsToHighlights(highlights []*pb.HighlightMoment,
 			Keywords:           highlight.Keywords,
 			EmotionalIntensity: highlight.EmotionalIntensity,
 			Shareability:       highlight.Shareability,
+			EngagementScore:    highlight.EngagementScore,
 		}
 
 		// Add words if timing information is available
@@ -283,74 +289,6 @@ func (s HighlightService) findWordsInTimeRange(startTime, endTime float64, words
 
 	return matchingWords
 }
-
-// func (s HighlightService) buildHighlightPrompt(text string, segments []models.TranscriptionSegment, customPrompt string, highlightType string, maxHighlights int) string {
-// 	strippedSegments := s.stripWordsFromSegments(segments)
-// 	segmentsJSON, _ := json.Marshal(strippedSegments)
-// 	hasTimestamps := len(segments) > 0
-
-// 	var customInstructions string
-// 	if customPrompt != "" {
-// 		customInstructions = fmt.Sprintf("\n\nAdditional Instructions:\n%s", customPrompt)
-// 	}
-
-// 	promptBase := fmt.Sprintf(`Extract the most impactful and emotionally resonant highlights from this testimonial content. Focus on moments that would be most compelling for marketing and business purposes.%s
-
-// Content: %s`, customInstructions, text)
-
-// 	if hasTimestamps {
-// 		promptBase += fmt.Sprintf(`
-
-// Timestamped segments: %s
-
-// For timestamped content, include start_time and end_time for each highlight.`, string(segmentsJSON))
-// 	}
-
-// 	promptBase += `
-
-// Return a JSON array of highlights with this structure:
-// {
-//   "text": "exact text of the highlight",
-//   "theme": "specific theme (e.g., 'problem_solved', 'outcome_achieved', 'emotional_impact', 'recommendation', 'comparison')",
-//   "start_time": 123.45, // include only if timestamps available
-//   "end_time": 129.80,   // include only if timestamps available
-//   "impact": 0.85,       // 0.0-1.0 emotional/business impact score
-//   "category": "pain_point|solution|outcome|emotion|credibility|recommendation"
-// }
-
-// Return the result as *only* a JSON object, no explanations or additional text.
-
-// Extraction Criteria:
-// - Identify moments of high emotional intensity
-// - Highlight specific problems solved or outcomes achieved
-// - Extract compelling before/after statements
-// - Find authentic emotional expressions
-// - Identify credibility indicators (specific metrics, timeframes, details)
-// - Capture recommendations or endorsements
-// - Focus on quotable, shareable content
-// - Prioritize business value and marketing potential`
-
-// 	// Add conditional guideline for custom instructions
-// 	if customPrompt != "" {
-// 		promptBase += "\n- Follow the additional instructions provided above"
-// 	}
-
-// 	promptBase += `
-
-// Look for:
-// - Quantifiable results and metrics
-// - Emotional transformation moments
-// - Specific problem descriptions
-// - Clear value propositions
-// - Authentic personal experiences
-// - Strong recommendations or endorsements
-// - Unique selling points or differentiators
-
-// Return 3-8 highlights ranked by impact and marketing value.`
-
-// 	return promptBase
-// }
-
 func (s HighlightService) reconstructTextFromWords(words []models.Word) string {
 	if len(words) == 0 {
 		return ""
@@ -597,14 +535,23 @@ Return a JSON array with this exact structure (ORDERED CHRONOLOGICALLY):
     "theme": "Primary theme or topic of this highlight",
     "start_time": 0.0,
     "end_time": 0.0,
-    "importance_score": 0.0,
+    "importance_score": 0.0, (0-1, how important this moment is)
     "highlight_type": "%s",
     "suggested_title": "Compelling title for video clip",
     "keywords": ["keyword1", "keyword2", "keyword3"],
     "emotional_intensity": 0.0,
-    "shareability": 0.0
+    "shareability": 0.0,
+	"engagement_score":0.4, (0-1, how engaging/compelling this moment would be as a video clip)
   }
 ]
+
+Engagement score should consider:
+- Emotional impact and authenticity
+- Clarity and specificity of the message  
+- Presence of concrete results/numbers
+- Relatability to other customers
+- Natural speaking flow and energy
+- Story value (setup, conflict, resolution)
 
 FINAL VALIDATION:
 - Verify each highlight's timing matches actual segments

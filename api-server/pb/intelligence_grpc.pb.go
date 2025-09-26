@@ -1064,3 +1064,143 @@ var NoiseReducerService_ServiceDesc = grpc.ServiceDesc{
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "intelligence.proto",
 }
+
+const (
+	ViralAnalysisService_AnalyzeViralPotential_FullMethodName      = "/intelligence.ViralAnalysisService/AnalyzeViralPotential"
+	ViralAnalysisService_BatchAnalyzeViralPotential_FullMethodName = "/intelligence.ViralAnalysisService/BatchAnalyzeViralPotential"
+)
+
+// ViralAnalysisServiceClient is the client API for ViralAnalysisService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type ViralAnalysisServiceClient interface {
+	AnalyzeViralPotential(ctx context.Context, in *ViralAnalysisRequest, opts ...grpc.CallOption) (*ViralAnalysisResponse, error)
+	BatchAnalyzeViralPotential(ctx context.Context, in *BatchViralAnalysisRequest, opts ...grpc.CallOption) (*BatchViralAnalysisResponse, error)
+}
+
+type viralAnalysisServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewViralAnalysisServiceClient(cc grpc.ClientConnInterface) ViralAnalysisServiceClient {
+	return &viralAnalysisServiceClient{cc}
+}
+
+func (c *viralAnalysisServiceClient) AnalyzeViralPotential(ctx context.Context, in *ViralAnalysisRequest, opts ...grpc.CallOption) (*ViralAnalysisResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ViralAnalysisResponse)
+	err := c.cc.Invoke(ctx, ViralAnalysisService_AnalyzeViralPotential_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *viralAnalysisServiceClient) BatchAnalyzeViralPotential(ctx context.Context, in *BatchViralAnalysisRequest, opts ...grpc.CallOption) (*BatchViralAnalysisResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BatchViralAnalysisResponse)
+	err := c.cc.Invoke(ctx, ViralAnalysisService_BatchAnalyzeViralPotential_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// ViralAnalysisServiceServer is the server API for ViralAnalysisService service.
+// All implementations must embed UnimplementedViralAnalysisServiceServer
+// for forward compatibility.
+type ViralAnalysisServiceServer interface {
+	AnalyzeViralPotential(context.Context, *ViralAnalysisRequest) (*ViralAnalysisResponse, error)
+	BatchAnalyzeViralPotential(context.Context, *BatchViralAnalysisRequest) (*BatchViralAnalysisResponse, error)
+	mustEmbedUnimplementedViralAnalysisServiceServer()
+}
+
+// UnimplementedViralAnalysisServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedViralAnalysisServiceServer struct{}
+
+func (UnimplementedViralAnalysisServiceServer) AnalyzeViralPotential(context.Context, *ViralAnalysisRequest) (*ViralAnalysisResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AnalyzeViralPotential not implemented")
+}
+func (UnimplementedViralAnalysisServiceServer) BatchAnalyzeViralPotential(context.Context, *BatchViralAnalysisRequest) (*BatchViralAnalysisResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BatchAnalyzeViralPotential not implemented")
+}
+func (UnimplementedViralAnalysisServiceServer) mustEmbedUnimplementedViralAnalysisServiceServer() {}
+func (UnimplementedViralAnalysisServiceServer) testEmbeddedByValue()                              {}
+
+// UnsafeViralAnalysisServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to ViralAnalysisServiceServer will
+// result in compilation errors.
+type UnsafeViralAnalysisServiceServer interface {
+	mustEmbedUnimplementedViralAnalysisServiceServer()
+}
+
+func RegisterViralAnalysisServiceServer(s grpc.ServiceRegistrar, srv ViralAnalysisServiceServer) {
+	// If the following call pancis, it indicates UnimplementedViralAnalysisServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&ViralAnalysisService_ServiceDesc, srv)
+}
+
+func _ViralAnalysisService_AnalyzeViralPotential_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ViralAnalysisRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ViralAnalysisServiceServer).AnalyzeViralPotential(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ViralAnalysisService_AnalyzeViralPotential_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ViralAnalysisServiceServer).AnalyzeViralPotential(ctx, req.(*ViralAnalysisRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ViralAnalysisService_BatchAnalyzeViralPotential_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BatchViralAnalysisRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ViralAnalysisServiceServer).BatchAnalyzeViralPotential(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ViralAnalysisService_BatchAnalyzeViralPotential_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ViralAnalysisServiceServer).BatchAnalyzeViralPotential(ctx, req.(*BatchViralAnalysisRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// ViralAnalysisService_ServiceDesc is the grpc.ServiceDesc for ViralAnalysisService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var ViralAnalysisService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "intelligence.ViralAnalysisService",
+	HandlerType: (*ViralAnalysisServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "AnalyzeViralPotential",
+			Handler:    _ViralAnalysisService_AnalyzeViralPotential_Handler,
+		},
+		{
+			MethodName: "BatchAnalyzeViralPotential",
+			Handler:    _ViralAnalysisService_BatchAnalyzeViralPotential_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "intelligence.proto",
+}

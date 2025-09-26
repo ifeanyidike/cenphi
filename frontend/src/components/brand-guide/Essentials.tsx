@@ -6,17 +6,22 @@ import {
   CardHeader,
   CardTitle,
 } from "../ui/card";
-import { CheckCircle, Flag, Image, Sparkles, Upload, X } from "lucide-react";
+import { CheckCircle, Flag, Sparkles, Users } from "lucide-react";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
-import { Button } from "../ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 import { cn } from "@/lib/utils";
 import { observer } from "mobx-react-lite";
 import { cardTransition, itemVariants } from "./constants";
 import { FC } from "react";
 import { brandGuideStore } from "@/stores/brandGuideStore";
-import { useDropzone } from "react-dropzone";
 
 type EssentialsProps = {
   handleApplyPreset: (presetId: string) => void;
@@ -28,51 +33,6 @@ const Essentials: FC<EssentialsProps> = ({
 }) => {
   const store = brandGuideStore;
   const { brandData, brandPresets } = store;
-  // Logo upload dropzone
-
-  const handleLogoUpload = (
-    field: "main" | "alt" | "favicon" | "darkMode",
-    file: File
-  ) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      if (e.target?.result) {
-        store.updateBrandData(["logo", field], e.target.result as string);
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const {
-    getRootProps: getMainLogoProps,
-    getInputProps: getMainLogoInputProps,
-  } = useDropzone({
-    accept: {
-      "image/*": [".jpeg", ".jpg", ".png", ".svg"],
-    },
-    maxFiles: 1,
-    onDrop: (files) => handleLogoUpload("main", files[0]),
-  });
-
-  const {
-    getRootProps: getDarkLogoProps,
-    getInputProps: getDarkLogoInputProps,
-  } = useDropzone({
-    accept: {
-      "image/*": [".jpeg", ".jpg", ".png", ".svg"],
-    },
-    maxFiles: 1,
-    onDrop: (files) => handleLogoUpload("darkMode", files[0]),
-  });
-
-  const { getRootProps: getFaviconProps, getInputProps: getFaviconInputProps } =
-    useDropzone({
-      accept: {
-        "image/*": [".jpeg", ".jpg", ".png", ".svg", ".ico"],
-      },
-      maxFiles: 1,
-      onDrop: (files) => handleLogoUpload("favicon", files[0]),
-    });
   return (
     <>
       <motion.div variants={itemVariants}>
@@ -131,160 +91,150 @@ const Essentials: FC<EssentialsProps> = ({
               </div>
             </div>
 
-            {/* Brand logo */}
-            <div className="space-y-5">
-              <div className="space-y-3">
-                <Label>Primary Logo</Label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div
-                    className="border border-dashed rounded-lg p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
-                    {...getMainLogoProps()}
-                  >
-                    <input {...getMainLogoInputProps()} />
-                    {brandData.logo.main ? (
-                      <div className="relative group">
-                        <div className="aspect-video w-full flex items-center justify-center p-4 bg-white rounded-md">
-                          <img
-                            src={brandData.logo.main}
-                            alt="Brand Logo"
-                            className="max-h-full max-w-full object-contain"
-                          />
-                        </div>
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-md flex items-center justify-center">
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            className="mr-2"
-                          >
-                            <Upload className="h-4 w-4 mr-1" />
-                            Change
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              store.updateBrandData(["logo", "main"], null);
-                            }}
-                          >
-                            <X className="h-4 w-4 mr-1" />
-                            Remove
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <Image className="h-10 w-10 text-gray-400 mb-2" />
-                        <p className="text-sm font-medium mb-1">
-                          Upload primary logo
-                        </p>
-                        <p className="text-xs text-gray-500 text-center">
-                          SVG, PNG or JPG (max. 2MB)
-                          <br />
-                          Recommended size: 400x200px
-                        </p>
-                      </>
-                    )}
-                  </div>
+            {/* Brand logo - Simplified */}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="logo-url">Logo URL</Label>
+                <Input
+                  id="logo-url"
+                  type="url"
+                  placeholder="https://example.com/logo.png"
+                  value={brandData.logo.main || ""}
+                  onChange={(e) =>
+                    store.updateBrandData(["logo", "main"], e.target.value)
+                  }
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Paste the direct URL to your logo image (PNG, JPG, or SVG)
+                </p>
+              </div>
 
-                  <div className="space-y-3">
-                    <div
-                      className="border border-dashed rounded-lg p-4 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
-                      {...getDarkLogoProps()}
-                    >
-                      <input {...getDarkLogoInputProps()} />
-                      {brandData.logo.darkMode ? (
-                        <div className="relative group">
-                          <div className="h-16 w-full flex items-center justify-center p-2 bg-gray-900 rounded-md">
-                            <img
-                              src={brandData.logo.darkMode}
-                              alt="Dark Mode Logo"
-                              className="max-h-full max-w-full object-contain"
-                            />
-                          </div>
-                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-md flex items-center justify-center">
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                store.updateBrandData(
-                                  ["logo", "darkMode"],
-                                  null
-                                );
-                              }}
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-center py-1">
-                          <p className="text-xs font-medium mb-1">
-                            Dark Mode Logo
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    <div
-                      className="border border-dashed rounded-lg p-4 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
-                      {...getFaviconProps()}
-                    >
-                      <input {...getFaviconInputProps()} />
-                      {brandData.logo.favicon ? (
-                        <div className="relative group">
-                          <div className="h-12 w-12 mx-auto flex items-center justify-center p-1 bg-white rounded-md">
-                            <img
-                              src={brandData.logo.favicon}
-                              alt="Favicon"
-                              className="max-h-full max-w-full object-contain"
-                            />
-                          </div>
-                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-md flex items-center justify-center">
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                store.updateBrandData(
-                                  ["logo", "favicon"],
-                                  null
-                                );
-                              }}
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-center py-1">
-                          <p className="text-xs font-medium mb-1">Favicon</p>
-                        </div>
-                      )}
+              {/* Live Preview */}
+              {brandData.logo.main && (
+                <div className="space-y-2">
+                  <Label>Live Preview</Label>
+                  <div className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-900">
+                    <div className="max-w-48 max-h-20 mx-auto">
+                      <img
+                        src={brandData.logo.main}
+                        alt="Logo Preview"
+                        className="max-w-full max-h-full object-contain"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                        }}
+                      />
                     </div>
                   </div>
                 </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Brand Voice & Context */}
+      <motion.div variants={itemVariants}>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-primary" />
+              Brand Voice & Context
+            </CardTitle>
+            <CardDescription>
+              Define your brand's personality, values, and target audience
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* Left Column */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="industry">Industry</Label>
+                  <Input
+                    id="industry"
+                    placeholder="e.g., Technology, Healthcare, Finance"
+                    value={brandData.voice?.attributes?.[0] || ""}
+                    onChange={(e) => {
+                      const currentAttributes = brandData.voice?.attributes || [];
+                      const newAttributes = e.target.value ? [e.target.value, ...currentAttributes.slice(1)] : currentAttributes.slice(1);
+                      store.updateBrandData(["voice", "attributes"], newAttributes);
+                    }}
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Your primary business industry or sector
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="tone">Brand Tone</Label>
+                  <Select
+                    value={brandData.voice?.tone || ""}
+                    onValueChange={(value) => store.updateBrandData(["voice", "tone"], value)}
+                  >
+                    <SelectTrigger id="tone">
+                      <SelectValue placeholder="Select brand tone" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="professional">Professional</SelectItem>
+                      <SelectItem value="friendly">Friendly</SelectItem>
+                      <SelectItem value="casual">Casual</SelectItem>
+                      <SelectItem value="authoritative">Authoritative</SelectItem>
+                      <SelectItem value="inspiring">Inspiring</SelectItem>
+                      <SelectItem value="playful">Playful</SelectItem>
+                      <SelectItem value="sophisticated">Sophisticated</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    The general tone of voice for your brand communications
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="values">Brand Values</Label>
+                  <Input
+                    id="values"
+                    placeholder="e.g., innovation, reliability, customer-first"
+                    value={brandData.voice?.personality?.join(", ") || ""}
+                    onChange={(e) => {
+                      const values = e.target.value.split(",").map(v => v.trim()).filter(v => v);
+                      store.updateBrandData(["voice", "personality"], values);
+                    }}
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Core values that define your brand (comma-separated)
+                  </p>
+                </div>
               </div>
 
-              <div className="pt-2">
-                <Label className="mb-2 block">Logo Guidelines</Label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                  <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-md">
-                    <h4 className="font-medium mb-1 text-sm">Minimum Size</h4>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Never display your logo smaller than 32px in height to
-                      ensure legibility.
-                    </p>
-                  </div>
+              {/* Right Column */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="mission">Mission Statement</Label>
+                  <Textarea
+                    id="mission"
+                    placeholder="A brief description of your company's mission and purpose"
+                    value={brandData.mission || ""}
+                    onChange={(e) => store.updateBrandData(["mission"], e.target.value)}
+                    rows={3}
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Your company's mission and core purpose
+                  </p>
+                </div>
 
-                  <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-md">
-                    <h4 className="font-medium mb-1 text-sm">Clear Space</h4>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Maintain clear space around the logo of at least the
-                      height of the logo's "x-height".
-                    </p>
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="audience">Target Audience</Label>
+                  <Textarea
+                    id="audience"
+                    placeholder="Describe your ideal customers and target market"
+                    value={brandData.audience || ""}
+                    onChange={(e) => store.updateBrandData(["audience"], e.target.value)}
+                    rows={3}
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Who your products or services are designed for
+                  </p>
                 </div>
               </div>
             </div>

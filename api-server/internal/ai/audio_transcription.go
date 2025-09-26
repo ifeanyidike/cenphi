@@ -6,8 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
+	"math"
+	"mime/multipart"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -23,6 +27,26 @@ type AudioTranscriptionService struct {
 	cacheService   cache.RedisCache
 	audioExtractor storage.AudioExtractor
 	logger         *zap.Logger
+}
+
+type AudioQualityResult struct {
+	Score          float64  `json:"score"`
+	HasSpeech      bool     `json:"has_speech"`
+	SpeechDuration float64  `json:"speech_duration"`
+	TotalDuration  float64  `json:"total_duration"`
+	NoiseLevel     string   `json:"noise_level"`
+	Confidence     float64  `json:"confidence"`
+	SpeechRatio    float64  `json:"speech_ratio"`
+	Recommendation string   `json:"recommendation"`
+	ShouldReject   bool     `json:"should_reject"`
+	Issues         []string `json:"issues"`
+}
+
+type ValidationResult struct {
+	Quality      *AudioQualityResult `json:"quality"`
+	TempFilePath string              `json:"-"`
+	IsValid      bool                `json:"is_valid"`
+	ErrorMessage string              `json:"error_message,omitempty"`
 }
 
 func NewAudioTranscriptionService(assemblyAIKey string, cacheService cache.RedisCache, audioExtractor storage.AudioExtractor, logger *zap.Logger) AudioTranscriptionService {
@@ -303,4 +327,456 @@ func (s AudioTranscriptionService) groupWordsIntoSegments(words []models.Word) [
 	segments = append(segments, currentSegment)
 
 	return segments
+}
+
+func (s AudioTranscriptionService) ValidateVideoFile(
+	ctx context.Context,
+	file multipart.File,
+	header *multipart.FileHeader,
+) (*ValidationResult, error) {
+	validationCtx, cancel := context.WithTimeout(ctx, 45*time.Second) // Reduced timeout
+	defer cancel()
+
+	s.logger.Info("Starting video audio validation", zap.String("filename", header.Filename), zap.Int64("size", header.Size))
+
+	// Check cache first
+	cacheKey := fmt.Sprintf("validation:%s:%d", header.Filename, header.Size)
+	var cached ValidationResult
+	if err := s.cacheService.Get(validationCtx, cacheKey, &cached); err == nil {
+		s.logger.Info("Using cached validation result", zap.String("filename", header.Filename))
+		return &cached, nil
+	}
+
+	// Create temporary file
+	tempFilePath, err := s.createTempFileFromMultipart(file, header)
+	if err != nil {
+		return &ValidationResult{
+			IsValid:      false,
+			ErrorMessage: fmt.Sprintf("Failed to prepare file: %v", err),
+		}, nil
+	}
+	defer s.audioExtractor.Cleanup(tempFilePath)
+
+	// Extract audio (quick)
+	audioFilePath, err := s.audioExtractor.ExtractAudioFromLocalVideo(validationCtx, tempFilePath)
+	if err != nil {
+		s.logger.Error("Audio extraction failed", zap.String("temp_path", tempFilePath), zap.String("filename", header.Filename), zap.Error(err))
+		return &ValidationResult{
+			IsValid:      false,
+			ErrorMessage: "Unable to extract audio from video file. Please ensure the file is a valid video format.",
+		}, nil
+	}
+	defer s.audioExtractor.Cleanup(audioFilePath)
+
+	// STEP 1: Local validation first (very fast - under 2 seconds)
+	quality, err := s.performLocalValidation(validationCtx, audioFilePath)
+	if err != nil {
+		return &ValidationResult{
+			IsValid:      false,
+			ErrorMessage: fmt.Sprintf("Audio validation failed: %v", err),
+		}, nil
+	}
+
+	// If local validation strongly rejects, don't waste time on AssemblyAI
+	if quality.ShouldReject && quality.Score < 30 {
+		result := &ValidationResult{
+			Quality:      quality,
+			IsValid:      false,
+			ErrorMessage: quality.Recommendation,
+		}
+
+		// Cache negative results for shorter time
+		s.cacheService.Set(validationCtx, cacheKey, result, 10*time.Minute)
+		s.logger.Info("Video rejected by local validation", zap.String("filename", header.Filename), zap.Float64("score", quality.Score), zap.String("reason", quality.Recommendation))
+
+		return result, nil
+	}
+
+	// STEP 2: If local validation is uncertain or positive, do minimal AssemblyAI check
+	if quality.Score > 30 && !quality.ShouldReject {
+		s.logger.Info("Local validation passed, performing AssemblyAI verification", zap.String("filename", header.Filename), zap.Float64("local_score", quality.Score))
+
+		// Perform minimal AssemblyAI validation
+		assemblyQuality, err := s.performSmallAssemblyValidation(validationCtx, audioFilePath, quality.TotalDuration)
+		if err != nil {
+			// If AssemblyAI fails, fall back to local analysis
+			s.logger.Warn("AssemblyAI validation failed, using local analysis",
+				zap.Error(err))
+		} else {
+			// Use AssemblyAI result if it's available
+			quality = assemblyQuality
+		}
+	}
+
+	result := &ValidationResult{
+		Quality: quality,
+		IsValid: !quality.ShouldReject,
+	}
+
+	if quality.ShouldReject {
+		result.ErrorMessage = quality.Recommendation
+	}
+
+	// Cache for 30 minutes
+	s.cacheService.Set(validationCtx, cacheKey, result, 30*time.Minute)
+
+	s.logger.Info("Video validation completed", zap.String("filename", header.Filename), zap.Bool("is_valid", result.IsValid),
+		zap.Float64("quality_score", quality.Score), zap.Bool("used_assembly_ai", quality.Confidence > 0))
+
+	return result, nil
+}
+
+func (s AudioTranscriptionService) createTempFileFromMultipart(file multipart.File, header *multipart.FileHeader) (string, error) {
+	// Extract file extension from original filename
+	ext := filepath.Ext(header.Filename)
+	if ext == "" {
+		// Fallback based on content type
+		contentType := header.Header.Get("Content-Type")
+		switch contentType {
+		case "video/webm":
+			ext = ".webm"
+		case "video/mp4":
+			ext = ".mp4"
+		case "video/quicktime":
+			ext = ".mov"
+		default:
+			ext = ".tmp"
+		}
+	}
+
+	// Create temporary file with proper extension
+	tempFile, err := os.CreateTemp("", fmt.Sprintf("validation_*%s", ext))
+	if err != nil {
+		return "", fmt.Errorf("failed to create temp file: %w", err)
+	}
+	defer tempFile.Close()
+
+	// Reset file pointer
+	file.Seek(0, 0)
+
+	// Copy multipart file to temp file
+	_, err = io.Copy(tempFile, file)
+	if err != nil {
+		os.Remove(tempFile.Name())
+		return "", fmt.Errorf("failed to copy file: %w", err)
+	}
+
+	// Reset file pointer for potential reuse
+	file.Seek(0, 0)
+
+	s.logger.Info("Created temp file for validation",
+		zap.String("original_filename", header.Filename),
+		zap.String("temp_path", tempFile.Name()),
+		zap.String("extension", ext))
+
+	return tempFile.Name(), nil
+}
+
+func (s AudioTranscriptionService) analyzeFastQualityFromTranscription(result *models.TranscriptionResult) *AudioQualityResult {
+	var issues []string
+	var recommendation string
+	shouldReject := false
+
+	// Calculate basic metrics
+	transcript := strings.TrimSpace(result.Transcript)
+	wordCount := len(strings.Fields(transcript))
+	hasVoice := len(transcript) > 0
+	log.Printf("confidence %v", result.Confidence)
+	// Simple binary decision for fast validation
+	score := 50.0 // Base score
+
+	// Primary check: Is there any speech at all?
+	if wordCount == 0 {
+		issues = append(issues, "No speech detected in the audio")
+		shouldReject = true
+		recommendation = "No speech was detected in your video. Please ensure your microphone is working and speak clearly during recording."
+		score = 0
+	} else {
+		// There's speech, check confidence
+		if result.Confidence >= 0.6 {
+			score = 80 // Good enough
+			recommendation = "Audio quality looks good for processing."
+		} else if result.Confidence >= 0.4 {
+			score = 60
+			recommendation = "Audio quality is acceptable but could be improved."
+		} else if result.Confidence >= 0.3 {
+			score = 40
+			recommendation = "Audio quality needs improvement. Consider recording in a quieter space."
+		} else {
+			score = 20
+			shouldReject = true
+			recommendation = "Audio quality is too poor for processing. Please record in a quieter environment with better microphone positioning."
+			issues = append(issues, "Very poor audio quality detected")
+		}
+
+		// Additional check for very short speech
+		if wordCount < 3 {
+			score -= 20
+			issues = append(issues, "Very little speech detected")
+			if wordCount == 1 {
+				shouldReject = true
+				recommendation = "Almost no speech detected. Please ensure you speak clearly for a longer duration."
+			}
+		}
+	}
+
+	// Estimate noise level quickly
+	noiseLevel := "medium" // Default
+	if result.Confidence >= 0.8 {
+		noiseLevel = "low"
+	} else if result.Confidence < 0.4 {
+		noiseLevel = "high"
+	}
+
+	return &AudioQualityResult{
+		Score:          math.Max(0, math.Min(100, score)),
+		HasSpeech:      hasVoice,
+		SpeechDuration: float64(wordCount) * 0.4, // Rough estimate
+		TotalDuration:  20.0,                     // We only process 20 seconds
+		NoiseLevel:     noiseLevel,
+		Confidence:     result.Confidence,
+		SpeechRatio:    float64(wordCount) * 0.4 / 20.0,
+		Recommendation: recommendation,
+		ShouldReject:   shouldReject,
+		Issues:         issues,
+	}
+}
+func (s AudioTranscriptionService) CleanupValidationFile(tempFilePath string) {
+	if tempFilePath != "" {
+		s.audioExtractor.Cleanup(tempFilePath)
+	}
+}
+
+// Enhanced validation method
+func (s AudioTranscriptionService) performLocalValidation(ctx context.Context, audioFilePath string) (*AudioQualityResult, error) {
+	// Step 1: Local audio analysis (very fast)
+	analysis, err := s.audioExtractor.AnalyzeAudioLocally(ctx, audioFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("local audio analysis failed: %w", err)
+	}
+
+	result := &AudioQualityResult{
+		SpeechDuration: analysis.Duration,
+		TotalDuration:  analysis.Duration,
+		HasSpeech:      analysis.EstimatedSpeech,
+		NoiseLevel:     analysis.VolumeLevel,
+	}
+
+	// Quick rejection criteria
+	if !analysis.HasAudio {
+		result.ShouldReject = true
+		result.Score = 0
+		result.Recommendation = "No audio track detected in the video file."
+		result.Issues = []string{"No audio stream found"}
+		return result, nil
+	}
+
+	if analysis.Duration < 3.0 {
+		result.ShouldReject = true
+		result.Score = 10
+		result.Recommendation = "Video is too short. Please record at least 5 seconds of content."
+		result.Issues = []string{"Video too short"}
+		return result, nil
+	}
+
+	if !analysis.EstimatedSpeech || analysis.SilenceRatio > 0.9 {
+		result.ShouldReject = true
+		result.Score = 20
+		result.Recommendation = "Very little to no speech detected in the audio. Please ensure your microphone is working."
+		result.Issues = []string{"No speech detected", "Too much silence"}
+		return result, nil
+	}
+
+	// If local analysis looks promising, do a small AssemblyAI validation
+	if analysis.EstimatedSpeech && analysis.Duration > 5 {
+		return s.performSmallAssemblyValidation(ctx, audioFilePath, analysis.Duration)
+	}
+
+	// Default to local analysis result
+	result.Score = 75
+	result.Confidence = 0.7 // Estimated
+	result.Recommendation = "Audio appears to be valid based on local analysis."
+
+	return result, nil
+}
+
+// Optimized validation with tiny samples
+func (s AudioTranscriptionService) performSmallAssemblyValidation(ctx context.Context, audioFilePath string, totalDuration float64) (*AudioQualityResult, error) {
+	// Extract 3 small samples from different parts of the audio
+	sampleDuration := 3.0 // 3 seconds each
+	samples := []float64{
+		totalDuration * 0.1, // 10% into the file
+		totalDuration * 0.5, // 50% into the file
+		totalDuration * 0.8, // 80% into the file
+	}
+
+	var bestResult *models.TranscriptionResult
+	var bestConfidence float64
+
+	for i, startTime := range samples {
+		if startTime+sampleDuration > totalDuration {
+			startTime = math.Max(0, totalDuration-sampleDuration)
+		}
+
+		// Extract tiny sample
+		samplePath, err := s.audioExtractor.ExtractValidationSample(ctx, audioFilePath, startTime, sampleDuration)
+		if err != nil {
+			s.logger.Warn("Failed to extract validation sample", zap.Int("sample", i), zap.Error(err))
+			continue
+		}
+		defer s.audioExtractor.Cleanup(samplePath)
+
+		// Upload tiny sample (should be very fast - typically <100KB)
+		uploadURL, err := s.uploadMediaToAssemblyAI(ctx, samplePath, "audio/mp3")
+		if err != nil {
+			s.logger.Warn("Failed to upload validation sample", zap.Int("sample", i), zap.Error(err))
+			continue
+		}
+
+		// Quick transcription with minimal features
+		jobID, err := s.startMinimalTranscription(ctx, uploadURL)
+		if err != nil {
+			s.logger.Warn("Failed to start sample transcription", zap.Int("sample", i), zap.Error(err))
+			continue
+		}
+
+		// Poll with short timeout
+		result, err := s.pollWithTimeout(ctx, jobID, 30*time.Second)
+		if err != nil {
+			s.logger.Warn("Sample transcription failed", zap.Int("sample", i), zap.Error(err))
+			continue
+		}
+
+		// Keep the best result
+		if result.Confidence > bestConfidence {
+			bestConfidence = result.Confidence
+			bestResult = result
+		}
+
+		// Early success - if we get good confidence, stop testing
+		if result.Confidence > 0.7 && len(strings.Fields(result.Transcript)) > 2 {
+			bestResult = result
+			break
+		}
+	}
+
+	if bestResult == nil {
+		return &AudioQualityResult{
+			Score:          0,
+			HasSpeech:      false,
+			ShouldReject:   true,
+			Recommendation: "Unable to detect any speech in the audio samples.",
+			Issues:         []string{"No transcribable content found"},
+		}, nil
+	}
+
+	return s.analyzeFastQualityFromTranscription(bestResult), nil
+}
+
+// Minimal transcription for validation (fastest possible)
+func (s AudioTranscriptionService) startMinimalTranscription(ctx context.Context, uploadURL string) (string, error) {
+	payload := map[string]any{
+		"audio_url":          uploadURL,
+		"punctuate":          false,
+		"format_text":        false,
+		"speaker_labels":     false,
+		"auto_highlights":    false,
+		"sentiment_analysis": false,
+		"language_detection": false,
+		"dual_channel":       false,
+		"speech_model":       "nano", // Fastest model
+		"boost_param":        "low",  // Lowest processing
+	}
+
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return "", err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", "https://api.assemblyai.com/v2/transcript", bytes.NewBuffer(payloadBytes))
+	if err != nil {
+		return "", err
+	}
+
+	req.Header.Set("Authorization", s.assemblyAIKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("transcription request failed with status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var transcriptResp struct {
+		ID string `json:"id"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&transcriptResp); err != nil {
+		return "", err
+	}
+
+	return transcriptResp.ID, nil
+}
+
+// Poll with timeout for validation
+func (s AudioTranscriptionService) pollWithTimeout(ctx context.Context, jobID string, timeout time.Duration) (*models.TranscriptionResult, error) {
+	url := fmt.Sprintf("https://api.assemblyai.com/v2/transcript/%s", jobID)
+	ticker := time.NewTicker(1 * time.Second) // Check every second for validation
+	defer ticker.Stop()
+	timeoutTimer := time.After(timeout)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-timeoutTimer:
+			return nil, fmt.Errorf("validation timeout after %v", timeout)
+		case <-ticker.C:
+			req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+			if err != nil {
+				continue
+			}
+
+			req.Header.Set("Authorization", s.assemblyAIKey)
+
+			resp, err := s.httpClient.Do(req)
+			if err != nil {
+				continue
+			}
+
+			var result struct {
+				Status     string  `json:"status"`
+				Text       string  `json:"text"`
+				Confidence float64 `json:"confidence"`
+				Language   string  `json:"language_code"`
+				Error      string  `json:"error"`
+			}
+
+			if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+				resp.Body.Close()
+				continue
+			}
+			resp.Body.Close()
+
+			switch result.Status {
+			case "completed":
+				return &models.TranscriptionResult{
+					Transcript: result.Text,
+					Language:   result.Language,
+					Confidence: result.Confidence,
+				}, nil
+			case "error":
+				return nil, fmt.Errorf("transcription failed: %s", result.Error)
+			case "queued", "processing":
+				continue
+			default:
+				return nil, fmt.Errorf("unexpected status: %s", result.Status)
+			}
+		}
+	}
 }

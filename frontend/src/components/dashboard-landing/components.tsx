@@ -1,49 +1,8 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { itemVariants } from "./constants";
-import { Sparkles, TrendingDown, TrendingUp } from "lucide-react";
+import { TrendingDown, TrendingUp } from "lucide-react";
 import { StatCardSkeleton } from "./LoadingSkeleton";
-
-interface StepItemProps {
-  label: string;
-  description: string;
-  icon: React.ElementType;
-  status: "pending" | "completed";
-  number: number;
-}
-
-export const StepItem: React.FC<StepItemProps> = ({
-  label,
-  description,
-  icon: Icon,
-  status,
-  number,
-}) => (
-  <motion.div
-    variants={itemVariants}
-    className="flex items-start space-x-4 p-5 border border-gray-100 rounded-xl hover:border-gray-200 hover:shadow-sm transition-all duration-200"
-  >
-    <div className="relative">
-      <div
-        className={`flex items-center justify-center w-10 h-10 rounded-xl ${
-          status === "pending" ? "bg-gray-100" : "bg-green-500"
-        } transition-colors duration-300`}
-      >
-        <span className="text-sm font-semibold text-gray-500">{number}</span>
-      </div>
-      {number < 3 && (
-        <div className="absolute left-1/2 top-full h-8 w-px bg-gray-200 -translate-x-1/2"></div>
-      )}
-    </div>
-    <div className="flex-1">
-      <p className="font-semibold text-gray-900 flex items-center gap-2">
-        {label}
-        <Icon className="h-4 w-4 text-gray-400" />
-      </p>
-      <p className="text-sm text-gray-500 mt-1">{description}</p>
-    </div>
-  </motion.div>
-);
 
 interface StatCardProps {
   title: string;
@@ -73,48 +32,56 @@ export const StatCard: React.FC<StatCardProps> = ({
       <StatCardSkeleton />
     ) : (
       <motion.div variants={itemVariants}>
-        <Card className="overflow-hidden group border-0 shadow-md hover:shadow-xl transition-all duration-300">
-          <div className={`h-1 ${accentColor} w-full`} />
-          <CardContent className="p-6 lg:p-6">
-            <div className="flex justify-between items-start mb-4">
-              <div
-                className={`p-3 rounded-xl ${color} group-hover:scale-110 transition-transform duration-300`}
-              >
-                <Icon className="h-6 w-6 text-white" />
+        <Card className="group border border-gray-200/60 shadow-sm hover:shadow-md hover:border-gray-300/80 transition-all duration-200 bg-white/80 backdrop-blur-sm">
+          <div className={`h-0.5 ${accentColor} w-full opacity-60`} />
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`p-2 rounded-lg ${color} group-hover:shadow-sm transition-all duration-200`}
+                >
+                  <Icon className="h-4 w-4 text-white" />
+                </div>
+                <h3 className="text-sm font-medium text-gray-700 leading-tight">
+                  {title}
+                </h3>
               </div>
-              <Sparkles className="h-4 w-4 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity" />
-            </div>
-            <div className="space-y-2">
-              <h3 className="text-sm font-semibold text-gray-700">{title}</h3>
 
+              {trend && (
+                <div
+                  className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                    trend === "up"
+                      ? "text-emerald-600 bg-emerald-50"
+                      : trend === "down"
+                        ? "text-rose-600 bg-rose-50"
+                        : "text-gray-600 bg-gray-50"
+                  }`}
+                >
+                  {trend === "up" ? (
+                    <TrendingUp className="h-3 w-3" />
+                  ) : trend === "down" ? (
+                    <TrendingDown className="h-3 w-3" />
+                  ) : null}
+                  {percentage !== undefined && <span>{percentage}%</span>}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-1">
               {value ? (
-                <div className="flex items-end justify-between">
-                  <div className="text-2xl font-bold">{value}</div>
-                  {trend && (
-                    <div
-                      className={`flex items-center space-x-1 ${
-                        trend === "up"
-                          ? "text-emerald-500"
-                          : trend === "down"
-                          ? "text-rose-500"
-                          : "text-gray-500"
-                      }`}
-                    >
-                      {trend === "up" ? (
-                        <TrendingUp className="h-4 w-4" />
-                      ) : trend === "down" ? (
-                        <TrendingDown className="h-4 w-4" />
-                      ) : null}
-                      {percentage !== undefined && (
-                        <span className="text-sm font-medium">
-                          {percentage}%
-                        </span>
-                      )}
-                    </div>
-                  )}
+                <div className="text-2xl font-semibold text-gray-900 tracking-tight">
+                  {value}
                 </div>
               ) : (
-                <div className="text-sm text-gray-500">{message}</div>
+                <div className="text-sm text-gray-600 leading-relaxed">
+                  {message}
+                </div>
+              )}
+
+              {value && (
+                <div className="text-xs text-gray-500 font-medium">
+                  {message}
+                </div>
               )}
             </div>
           </CardContent>

@@ -19,7 +19,7 @@ import (
 func TestUserService(t *testing.T) {
 	t.Skip("Skipping test: feature not implemented yet")
 
-	mockRepo := &mocks.UserRepository{}
+	mockRepo := &mocks.Repo{}
 	db, _, _ := sqlmock.New()
 	mockLogger := zap.NewNop()
 	svc := NewUserService(mockRepo, db, mockLogger)

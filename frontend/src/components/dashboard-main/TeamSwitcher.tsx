@@ -38,11 +38,11 @@ export function TeamSwitcher({
                 className="group transition-all duration-300 hover:bg-sidebar-accent/40 data-[state=open]:bg-sidebar-accent/80 data-[state=open]:text-sidebar-accent-foreground rounded-xl"
               >
                 <motion.div
-                  className="flex aspect-square size-10 items-center justify-center rounded-lg bg-gradient-to-br from-sidebar-primary to-sidebar-secondary text-sidebar-primary-foreground shadow-md"
+                  className="flex aspect-square size-20 items-center justify-center shadow-md"
                   whileHover={{ scale: 1.05 }}
                   transition={{ type: "spring", stiffness: 300, damping: 20 }}
                 >
-                  <activeTeam.logo className="size-5" />
+                  <activeTeam.logo className="size-8" />
                 </motion.div>
                 <div className="grid flex-1 text-left text-sm leading-tight pl-2">
                   <AnimatePresence mode="wait">
@@ -92,9 +92,9 @@ export function TeamSwitcher({
                   }`}
                 >
                   <motion.div
-                    className={`flex size-8 items-center justify-center rounded-lg ${
+                    className={`flex size-12 items-center justify-center rounded-lg ${
                       activeTeam.name === team.name
-                        ? "bg-gradient-to-br from-dropdown-primary to-dropdown-secondary shadow-md"
+                        ? " shadow-md"
                         : "border border-dropdown-border"
                     }`}
                     whileHover={{ scale: 1.05 }}

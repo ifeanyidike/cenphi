@@ -16,9 +16,9 @@ type UserService struct {
 	mock.Mock
 }
 
-// FindByUID provides a mock function with given fields: ctx, uid
-func (_m *UserService) FindByUID(ctx context.Context, uid string) (*models.User, error) {
-	ret := _m.Called(ctx, uid)
+// FindByUID provides a mock function with given fields: ctx
+func (_m *UserService) FindByUID(ctx context.Context) (*models.User, error) {
+	ret := _m.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindByUID")
@@ -26,19 +26,19 @@ func (_m *UserService) FindByUID(ctx context.Context, uid string) (*models.User,
 
 	var r0 *models.User
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string) (*models.User, error)); ok {
-		return rf(ctx, uid)
+	if rf, ok := ret.Get(0).(func(context.Context) (*models.User, error)); ok {
+		return rf(ctx)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string) *models.User); ok {
-		r0 = rf(ctx, uid)
+	if rf, ok := ret.Get(0).(func(context.Context) *models.User); ok {
+		r0 = rf(ctx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*models.User)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, uid)
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -69,6 +69,64 @@ func (_m *UserService) GetUser(ctx context.Context, id uuid.UUID) (*models.User,
 
 	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
 		r1 = rf(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetWorkspaceByUser provides a mock function with given fields: ctx
+func (_m *UserService) GetWorkspaceByUser(ctx context.Context) (models.Workspace, error) {
+	ret := _m.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetWorkspaceByUser")
+	}
+
+	var r0 models.Workspace
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) (models.Workspace, error)); ok {
+		return rf(ctx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) models.Workspace); ok {
+		r0 = rf(ctx)
+	} else {
+		r0 = ret.Get(0).(models.Workspace)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetWorkspaceDataByUser provides a mock function with given fields: ctx
+func (_m *UserService) GetWorkspaceDataByUser(ctx context.Context) (*models.GetWorkspaceDataParam, error) {
+	ret := _m.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetWorkspaceDataByUser")
+	}
+
+	var r0 *models.GetWorkspaceDataParam
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) (*models.GetWorkspaceDataParam, error)); ok {
+		return rf(ctx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) *models.GetWorkspaceDataParam); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*models.GetWorkspaceDataParam)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
 	} else {
 		r1 = ret.Error(1)
 	}

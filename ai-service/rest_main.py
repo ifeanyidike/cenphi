@@ -145,7 +145,7 @@ async def generate_narration(request: models.NarrationRequest) -> models.Narrati
         
         return models.NarrationResponse(
             audio_url=result.get("audio_url", ""),
-            audio_duration_seconds=result.get("audio_duration_seconds", 0.0),
+            duration=result.get("duration", 0.0),
             voice_provider=result.get("voice_provider", "unknown"),
             quality_score=result.get("quality_score", 0.0),
             processed_text=result.get("processed_text", request.text)
@@ -199,7 +199,7 @@ async def generate_clips(request: models.ClippingRequest) -> models.ClippingResp
                 title=clip_data.get("title", ""),
                 theme=clip_data.get("theme", ""),
                 engagement_score=clip_data.get("engagement_score", 0.0),
-                duration_seconds=clip_data.get("duration_seconds", 0.0),
+                duration=clip_data.get("duration", 0.0),
                 social_media_ready=clip_data.get("social_media_ready", {})
             ))
         

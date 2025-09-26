@@ -14,7 +14,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/ifeanyidike/cenphi/internal/cache"
 	"github.com/ifeanyidike/cenphi/internal/config"
-	"github.com/ifeanyidike/cenphi/internal/models"
 	"github.com/ifeanyidike/cenphi/internal/repositories"
 	"go.uber.org/zap"
 	"golang.org/x/oauth2"
@@ -268,13 +267,8 @@ func (ds *DriveService) GetUserInfo(ctx context.Context) (map[string]string, err
 }
 
 func (ds *DriveService) SaveUserAccount(ctx context.Context, workspaceID, userID uuid.UUID, token *oauth2.Token, accountInfo map[string]string) error {
-	log.Println("userID", userID.String())
-	log.Println("workspaceID", workspaceID.String())
-	log.Println("accesstoken", token.AccessToken)
-	log.Println("refreshtoken", token.RefreshToken)
-	log.Println("expiery", token.Expiry)
 
-	account := &models.GoogleDriveAccount{
+	account := repositories.GoogleDriveAccount{
 		ID:          uuid.New(),
 		WorkspaceID: workspaceID,
 		UserID:      userID,
@@ -302,7 +296,7 @@ func (ds *DriveService) SaveUserAccount(ctx context.Context, workspaceID, userID
 	return ds.repo.SaveAccount(ctx, account, ds.db)
 }
 
-func (ds *DriveService) GetUserAccount(ctx context.Context, workspaceID, userID uuid.UUID) (*models.GoogleDriveAccount, error) {
+func (ds *DriveService) GetUserAccount(ctx context.Context, workspaceID, userID uuid.UUID) (repositories.GoogleDriveAccount, error) {
 	return ds.repo.GetAccount(ctx, workspaceID, userID, ds.db)
 }
 

@@ -7,359 +7,226 @@ import {
 } from "@/components/ui/sidebar";
 import { NavMain } from "./NavMain";
 import { NavProjects } from "./NavProjects";
-import { NavUser } from "./NavUser";
+import NavUser from "./NavUser";
 import { TeamSwitcher } from "./TeamSwitcher";
 import CenphiLogo from "../custom/cenphi-logo";
 import * as React from "react";
 import {
-  BarChart2,
-  Brain,
-  Command,
-  Heart,
   Home,
   MessageSquare,
+  Sparkles,
   Settings2,
-  Share2,
-  Brush,
-  Megaphone,
-  Award,
-  MessagesSquare,
-  Film,
-  Trophy,
+  Mail,
+  Video,
+  FileText,
+  Zap,
+  Command,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { workspaceHub } from "@/repo/workspace_hub";
+import { auth } from "@/config/firebase";
+import { observer } from "mobx-react-lite";
 
-const data = {
-  user: {
-    name: "John Doe",
-    email: "john@example.com",
-    avatar: "/avatars/john.jpg",
-  },
-  teams: [
-    {
-      name: "CENPHI",
-      logo: CenphiLogo,
-      plan: "",
-    },
-    {
-      name: "Support Team",
-      logo: MessageSquare,
-      plan: "Business",
-    },
-    {
-      name: "Product Team",
-      logo: Command,
-      plan: "Pro",
-    },
-    {
-      name: "AI Research",
-      logo: Brain,
-      plan: "Enterprise",
-    },
-    {
-      name: "Content Studio",
-      logo: Brush,
-      plan: "Pro",
-    },
-  ],
-  navMain: [
-    {
-      title: "Dashboard",
-      url: "/dashboard",
-      icon: Home,
-      isActive: true,
-      items: [
-        {
-          title: "Overview",
-          url: "/dashboard/overview",
-        },
-        {
-          title: "Performance Metrics",
-          url: "/dashboard/performance",
-        },
-        {
-          title: "ROI Calculator",
-          url: "/dashboard/roi",
-        },
-        {
-          title: "Team Activity",
-          url: "/dashboard/activity",
-        },
-      ],
-    },
-    {
-      title: "Testimonial Hub",
-      url: "/testimonials",
-      icon: MessageSquare,
-      items: [
-        {
-          title: "All Reviews",
-          url: "/testimonials/all",
-        },
-        {
-          title: "Pending Reviews",
-          url: "/testimonials/pending",
-        },
-        {
-          title: "Published",
-          url: "/testimonials/published",
-        },
-        {
-          title: "Flagged Content",
-          url: "/testimonials/flagged",
-        },
-        {
-          title: "Video Testimonials",
-          url: "/testimonials/video",
-        },
-        {
-          title: "Success Stories",
-          url: "/testimonials/stories",
-        },
-        {
-          title: "Review Requests",
-          url: "/testimonials/requests",
-        },
-      ],
-    },
-    {
-      title: "AI Studio",
-      url: "/ai",
-      icon: Brain,
-      items: [
-        {
-          title: "Sentiment Analysis",
-          url: "/ai/sentiment",
-        },
-        {
-          title: "Content Enhancement",
-          url: "/ai/enhance",
-        },
-        {
-          title: "Response Generator",
-          url: "/ai/responses",
-        },
-        {
-          title: "Review Summarizer",
-          url: "/ai/summarize",
-        },
-        {
-          title: "Voice Analysis",
-          url: "/ai/voice",
-        },
-        {
-          title: "Authenticity Check",
-          url: "/ai/authenticity",
-        },
-        {
-          title: "Translation Hub",
-          url: "/ai/translate",
-        },
-      ],
-    },
-    {
-      title: "Content Studio",
-      url: "/studio",
-      icon: Brush,
-      items: [
-        {
-          title: "Visual Generator",
-          url: "/studio/visuals",
-        },
-        {
-          title: "Quote Cards",
-          url: "/studio/quotes",
-        },
-        {
-          title: "Video Editor",
-          url: "/studio/video",
-        },
-        {
-          title: "Templates",
-          url: "/studio/templates",
-        },
-        {
-          title: "Brand Assets",
-          url: "/studio/assets",
-        },
-      ],
-    },
-    {
-      title: "Engagement",
-      url: "/engagement",
-      icon: Heart,
-      items: [
-        {
-          title: "Social Campaigns",
-          url: "/engagement/social",
-        },
-        {
-          title: "Email Sequences",
-          url: "/engagement/email",
-        },
-        {
-          title: "Reward System",
-          url: "/engagement/rewards",
-        },
-        {
-          title: "Customer Journey",
-          url: "/engagement/journey",
-        },
-        {
-          title: "Gamification",
-          url: "/engagement/gamify",
-        },
-      ],
-    },
-    {
-      title: "Analytics",
-      url: "/analytics",
-      icon: BarChart2,
-      items: [
-        {
-          title: "Review Analytics",
-          url: "/analytics/reviews",
-        },
-        {
-          title: "Impact Metrics",
-          url: "/analytics/impact",
-        },
-        {
-          title: "Competitive Intel",
-          url: "/analytics/competitive",
-        },
-        {
-          title: "Sentiment Trends",
-          url: "/analytics/trends",
-        },
-        {
-          title: "Conversion Impact",
-          url: "/analytics/conversion",
-        },
-      ],
-    },
-    {
-      title: "Distribution",
-      url: "/distribution",
-      icon: Share2,
-      items: [
-        {
-          title: "Widget Builder",
-          url: "/distribution/widgets",
-        },
-        {
-          title: "Social Auto-Post",
-          url: "/distribution/social",
-        },
-        {
-          title: "API Access",
-          url: "/distribution/api",
-        },
-        {
-          title: "Embed Codes",
-          url: "/distribution/embed",
-        },
-        {
-          title: "QR Campaigns",
-          url: "/distribution/qr",
-        },
-      ],
-    },
-    {
-      title: "Settings",
-      url: "/settings",
-      icon: Settings2,
-      items: [
-        {
-          title: "General",
-          url: "/settings/general",
-        },
-        {
-          title: "Team & Roles",
-          url: "/settings/team",
-        },
-        {
-          title: "Integrations",
-          url: "/settings/integrations",
-        },
-        {
-          title: "Automation Rules",
-          url: "/settings/automation",
-        },
-        {
-          title: "Security",
-          url: "/settings/security",
-        },
-        {
-          title: "Billing",
-          url: "/settings/billing",
-        },
-      ],
-    },
-  ],
-  projects: [
-    {
-      name: "Review Campaigns",
-      url: "/campaigns",
-      icon: Megaphone,
-    },
-    {
-      name: "Video Stories",
-      url: "/video-stories",
-      icon: Film,
-    },
-    {
-      name: "Social Proof",
-      url: "/social-proof",
-      icon: Trophy,
-    },
-    {
-      name: "Customer Awards",
-      url: "/awards",
-      icon: Award,
-    },
-    {
-      name: "User Feedback",
-      url: "/feedback",
-      icon: MessagesSquare,
-    },
-  ],
-};
+export const AppSidebar = observer(
+  ({ ...props }: React.ComponentProps<typeof Sidebar>) => {
+    const [mounted, setMounted] = React.useState(false);
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  // const { theme } = useTheme();
-  const [mounted, setMounted] = React.useState(false);
+    // Handle hydration issues
+    React.useEffect(() => {
+      setMounted(true);
+    }, []);
 
-  // Handle hydration issues
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
+    // Get actual user data
+    // const member = workspaceHub.memberManager.member;
+    const firebaseUser = auth.currentUser;
 
-  if (!mounted) return null;
+    const userName = firebaseUser?.displayName || "User";
+    const userEmail = firebaseUser?.email || "";
+    const userAvatar = firebaseUser?.photoURL || undefined;
+    const workspaceName = workspaceHub.workspace?.name || "";
+    const workspacePlan = workspaceHub.workspace?.plan || "";
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.5, ease: "easeOut" }}
-    >
-      <Sidebar
-        collapsible="icon"
-        className="backdrop-blur-lg bg-sidebar-bg/95 border-r border-sidebar-border/30 shadow-xl"
-        {...props}
+    // const workspacePlan = member?.workspace_plan || "";
+
+    const data = {
+      user: {
+        name: userName,
+        email: userEmail,
+        avatar: userAvatar,
+      },
+      teams: [
+        {
+          name: workspaceName,
+          logo: CenphiLogo,
+          plan: workspacePlan,
+        },
+        {
+          name: "Product Team",
+          logo: Command,
+          plan: "Pro",
+        },
+      ],
+      navMain: [
+        {
+          title: "Dashboard",
+          url: "/dashboard",
+          icon: Home,
+          isActive: true,
+        },
+        {
+          title: "Collect",
+          url: "/collect",
+          icon: MessageSquare,
+          items: [
+            {
+              title: "Video Testimonials",
+              url: "/collect/video",
+            },
+            {
+              title: "Text Testimonials",
+              url: "/collect/text",
+            },
+            {
+              title: "Email Requests",
+              url: "/emailpage",
+            },
+            {
+              title: "Google Drive Import",
+              url: "/google-drive",
+            },
+          ],
+        },
+        {
+          title: "AI Studio",
+          url: "/studio",
+          icon: Sparkles,
+          items: [
+            {
+              title: "Video Processing",
+              url: "/studio?tab=video",
+            },
+            {
+              title: "Text Processing",
+              url: "/studio?tab=text",
+            },
+            {
+              title: "Smart Clipping",
+              url: "/studio?service=clipping",
+            },
+            {
+              title: "Content Enhancement",
+              url: "/studio?service=enhancement",
+            },
+            {
+              title: "Platform Optimization",
+              url: "/studio?service=platform_optimizer",
+            },
+            {
+              title: "AI Narration",
+              url: "/studio?service=narration",
+            },
+          ],
+        },
+        {
+          title: "AI-Generated Content",
+          url: "/ai-content",
+          icon: FileText,
+        },
+        {
+          title: "Email Campaigns",
+          url: "/email",
+          icon: Mail,
+          items: [
+            {
+              title: "Request Templates",
+              url: "/email/templates",
+            },
+            {
+              title: "Send Requests",
+              url: "/emailpage",
+            },
+            {
+              title: "Campaign Analytics",
+              url: "/email/analytics",
+            },
+          ],
+        },
+        {
+          title: "Settings",
+          url: "/settings",
+          icon: Settings2,
+          items: [
+            {
+              title: "Brand Guide",
+              url: "/brand-guide",
+            },
+            {
+              title: "Website Widgets",
+              url: "/settings/widgets",
+            },
+            {
+              title: "Team & Workspace",
+              url: "/settings/team",
+            },
+            {
+              title: "Billing",
+              url: "/checkout",
+            },
+          ],
+        },
+      ],
+      projects: [
+        {
+          name: "Video Collection",
+          url: "/collect/video",
+          icon: Video,
+        },
+        {
+          name: "Text Collection",
+          url: "/collect/text",
+          icon: FileText,
+        },
+        {
+          name: "AI Processing",
+          url: "/studio",
+          icon: Zap,
+        },
+        {
+          name: "Email Campaigns",
+          url: "/emailpage",
+          icon: Mail,
+        },
+      ],
+    };
+
+    if (!mounted) return null;
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
       >
-        <SidebarHeader className="px-2 py-3">
-          <TeamSwitcher teams={data.teams} />
-        </SidebarHeader>
-        <SidebarContent className="scrollbar-thin">
-          <NavMain items={data.navMain} />
-          <NavProjects projects={data.projects} />
-        </SidebarContent>
-        <SidebarFooter>
-          <NavUser user={data.user} />
-        </SidebarFooter>
-        <SidebarRail />
-      </Sidebar>
-    </motion.div>
-  );
-}
+        <Sidebar
+          collapsible="icon"
+          className="backdrop-blur-lg bg-sidebar-bg/95 border-r border-sidebar-border/30"
+          {...props}
+        >
+          <SidebarHeader className="px-2 py-3">
+            <TeamSwitcher teams={data.teams} />
+          </SidebarHeader>
+          <SidebarContent className="scrollbar-thin">
+            <NavMain items={data.navMain} />
+            <NavProjects projects={data.projects} />
+          </SidebarContent>
+          <SidebarFooter>
+            <NavUser user={data.user} />
+          </SidebarFooter>
+          <SidebarRail />
+        </Sidebar>
+      </motion.div>
+    );
+  }
+);
+
+export default AppSidebar;

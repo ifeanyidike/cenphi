@@ -363,7 +363,7 @@ class AudioProcessor:
                 "hf_energy_ratio": hf_energy,
                 "speech_energy_ratio": speech_energy,
                 "thd_n_estimate_percent": thd_n_estimate,
-                "duration_seconds": len(audio) / sr,
+                "duration": len(audio) / sr,
                 "quality_indicators": quality_indicators,
                 "professional_assessment": {
                     "broadcast_ready": quality_score >= 0.8,

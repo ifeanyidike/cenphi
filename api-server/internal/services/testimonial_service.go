@@ -16,32 +16,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// type TestimonialService interface {
-// 	GetTestimonialByID(ctx context.Context, id uuid.UUID) (*models.Testimonial, error)
-// 	GetTestimonialsByWorkspace(ctx context.Context, workspaceID uuid.UUID, filter models.TestimonialFilter) ([]models.Testimonial, error)
-// 	UpdateTestimonial(ctx context.Context, testimonial *models.Testimonial) error
-// 	DeleteTestimonial(ctx context.Context, id uuid.UUID) error
-
-// 	// Add these new methods to match the complete implementation:
-// 	SearchTestimonials(ctx context.Context, workspaceID uuid.UUID, query string, filter models.TestimonialFilter) ([]*models.Testimonial, error)
-// 	GetTestimonialStats(ctx context.Context, workspaceID uuid.UUID) (*models.TestimonialStats, error)
-// 	GetTestimonialsByStatus(ctx context.Context, workspaceID uuid.UUID, status string, limit int) ([]models.Testimonial, error)
-// 	GetTestimonialsByType(ctx context.Context, workspaceID uuid.UUID, testimonialType string, limit int) ([]models.Testimonial, error)
-// 	GetTestimonialsByRating(ctx context.Context, workspaceID uuid.UUID, minRating int) ([]models.Testimonial, error)
-// 	GetRecentTestimonials(ctx context.Context, workspaceID uuid.UUID, days int, limit int) ([]models.Testimonial, error)
-// 	GetTestimonialsByAuthor(ctx context.Context, workspaceID uuid.UUID, authorEmail string) ([]models.Testimonial, error)
-
-// 	// Bulk operations
-// 	BulkUpdateStatus(ctx context.Context, testimonialIDs []uuid.UUID, status string) error
-// 	BulkDelete(ctx context.Context, testimonialIDs []uuid.UUID) error
-
-// 	// Analytics
-// 	GetStatusCounts(ctx context.Context, workspaceID uuid.UUID) (map[string]int, error)
-// 	GetTypeCounts(ctx context.Context, workspaceID uuid.UUID) (map[string]int, error)
-// 	GetAverageRating(ctx context.Context, workspaceID uuid.UUID) (float64, error)
-// 	GetTopAuthors(ctx context.Context, workspaceID uuid.UUID, limit int) ([]models.AuthorStats, error)
-// }
-
 type TestimonialService struct {
 	repo           repositories.TestimonialRepository
 	userRepo       repositories.UserRepository
@@ -75,7 +49,7 @@ func (s *TestimonialService) GetTestimonialByID(ctx context.Context, id uuid.UUI
 		return nil, fmt.Errorf("user is not authorized to acccess resource %w", err)
 	}
 
-	workspaceID, err := s.userRepo.GetWorkspaceByUID(ctx, uid, s.db)
+	workspaceID, err := s.userRepo.GetWorkspaceIDByUID(ctx, uid, s.db)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the workspace ID %w", err)
 	}
@@ -96,15 +70,24 @@ func (s *TestimonialService) GetTestimonialByID(ctx context.Context, id uuid.UUI
 
 func (s *TestimonialService) GetTestimonialsByWorkspace(ctx context.Context, filter models.TestimonialFilter) ([]models.Testimonial, error) {
 	// Set default limit if not provided
+	s.logger.Info("🔍 Starting GetTestimonialsByWorkspace")
+
 	uid, err := middleware.GetUserFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("user is not authorized to acccess resource %w", err)
+		s.logger.Error("❌ Failed to get user from context", zap.Error(err))
+		return nil, fmt.Errorf("user is not authorized to access resource: %w", err)
 	}
 
-	workspaceID, err := s.userRepo.GetWorkspaceByUID(ctx, uid, s.db)
+	s.logger.Info("✅ Got user from context", zap.String("uid", uid))
+
+	s.logger.Info("🔍 About to call GetWorkspaceIDByUID")
+	workspaceID, err := s.userRepo.GetWorkspaceIDByUID(ctx, uid, s.db)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get the workspace ID %w", err)
+		s.logger.Error("❌ GetWorkspaceIDByUID failed", zap.String("uid", uid), zap.Error(err))
+		return nil, fmt.Errorf("failed to get the workspace ID: %w", err)
 	}
+
+	s.logger.Info("✅ Got workspace ID", zap.String("workspace_id", workspaceID.String()))
 
 	if filter.Limit == 0 {
 		filter.Limit = 50
@@ -129,7 +112,7 @@ func (s *TestimonialService) UpdateTestimonial(ctx context.Context, testimonial 
 
 	testimonial.UpdatedAt = time.Now()
 
-	err := s.repo.Update(ctx, testimonial, s.db)
+	err := s.repo.Update(ctx, testimonial, testimonial.ID, s.db)
 	if err != nil {
 		s.logger.Error("Failed to update testimonial", zap.Error(err))
 		return fmt.Errorf("failed to update testimonial: %w", err)
@@ -178,128 +161,6 @@ func (s *TestimonialService) SearchTestimonials(ctx context.Context, workspaceID
 	return testimonials, nil
 }
 
-func (s *TestimonialService) GetTestimonialStats(ctx context.Context, workspaceID uuid.UUID) (*models.TestimonialStats, error) {
-	stats, err := s.repo.GetStats(ctx, workspaceID, s.db)
-	if err != nil {
-		s.logger.Error("Failed to get testimonial stats",
-			zap.Error(err),
-			zap.String("workspace_id", workspaceID.String()))
-		return nil, err
-	}
-
-	return stats, nil
-}
-
-func (s *TestimonialService) GetTestimonialsByStatus(ctx context.Context, workspaceID uuid.UUID, status string, limit int) ([]models.Testimonial, error) {
-	if limit == 0 {
-		limit = 50
-	}
-
-	testimonials, err := s.repo.GetByStatus(ctx, workspaceID, status, limit, s.db)
-	if err != nil {
-		s.logger.Error("Failed to get testimonials by status",
-			zap.Error(err),
-			zap.String("workspace_id", workspaceID.String()),
-			zap.String("status", status))
-		return nil, err
-	}
-
-	return testimonials, nil
-}
-
-func (s *TestimonialService) GetTestimonialsByType(ctx context.Context, workspaceID uuid.UUID, testimonialType string, limit int) ([]models.Testimonial, error) {
-	if limit == 0 {
-		limit = 50
-	}
-
-	testimonials, err := s.repo.GetByType(ctx, workspaceID, testimonialType, limit, s.db)
-	if err != nil {
-		s.logger.Error("Failed to get testimonials by type",
-			zap.Error(err),
-			zap.String("workspace_id", workspaceID.String()),
-			zap.String("type", testimonialType))
-		return nil, err
-	}
-
-	return testimonials, nil
-}
-
-func (s *TestimonialService) GetTestimonialsByRating(ctx context.Context, workspaceID uuid.UUID, minRating int) ([]models.Testimonial, error) {
-	if minRating < 1 || minRating > 5 {
-		return nil, fmt.Errorf("rating must be between 1 and 5")
-	}
-
-	testimonials, err := s.repo.GetByRating(ctx, workspaceID, minRating, s.db)
-	if err != nil {
-		s.logger.Error("Failed to get testimonials by rating",
-			zap.Error(err),
-			zap.String("workspace_id", workspaceID.String()),
-			zap.Int("min_rating", minRating))
-		return nil, err
-	}
-
-	return testimonials, nil
-}
-
-func (s *TestimonialService) GetRecentTestimonials(ctx context.Context, workspaceID uuid.UUID, days int, limit int) ([]models.Testimonial, error) {
-	if days <= 0 {
-		days = 30
-	}
-	if limit == 0 {
-		limit = 50
-	}
-
-	testimonials, err := s.repo.GetRecent(ctx, workspaceID, days, limit, s.db)
-	if err != nil {
-		s.logger.Error("Failed to get recent testimonials",
-			zap.Error(err),
-			zap.String("workspace_id", workspaceID.String()),
-			zap.Int("days", days))
-		return nil, err
-	}
-
-	return testimonials, nil
-}
-
-func (s *TestimonialService) GetTestimonialsByAuthor(ctx context.Context, workspaceID uuid.UUID, authorEmail string) ([]models.Testimonial, error) {
-	if authorEmail == "" {
-		return nil, fmt.Errorf("author email cannot be empty")
-	}
-
-	testimonials, err := s.repo.GetByAuthor(ctx, workspaceID, authorEmail, s.db)
-	if err != nil {
-		s.logger.Error("Failed to get testimonials by author",
-			zap.Error(err),
-			zap.String("workspace_id", workspaceID.String()),
-			zap.String("author_email", authorEmail))
-		return nil, err
-	}
-
-	return testimonials, nil
-}
-
-// Bulk operations
-func (s *TestimonialService) BulkUpdateStatus(ctx context.Context, testimonialIDs []uuid.UUID, status string) error {
-	if len(testimonialIDs) == 0 {
-		return fmt.Errorf("no testimonial IDs provided")
-	}
-
-	err := s.repo.BulkUpdateStatus(ctx, testimonialIDs, status, s.db)
-	if err != nil {
-		s.logger.Error("Failed to bulk update testimonial status",
-			zap.Error(err),
-			zap.String("status", status),
-			zap.Int("count", len(testimonialIDs)))
-		return err
-	}
-
-	s.logger.Info("Testimonials status updated successfully",
-		zap.String("status", status),
-		zap.Int("count", len(testimonialIDs)))
-
-	return nil
-}
-
 func (s *TestimonialService) BulkDelete(ctx context.Context, testimonialIDs []uuid.UUID) error {
 	if len(testimonialIDs) == 0 {
 		return fmt.Errorf("no testimonial IDs provided")
@@ -317,59 +178,6 @@ func (s *TestimonialService) BulkDelete(ctx context.Context, testimonialIDs []uu
 		zap.Int("count", len(testimonialIDs)))
 
 	return nil
-}
-
-// Analytics methods
-func (s *TestimonialService) GetStatusCounts(ctx context.Context, workspaceID uuid.UUID) (map[string]int, error) {
-	counts, err := s.repo.GetCountByStatus(ctx, workspaceID, s.db)
-	if err != nil {
-		s.logger.Error("Failed to get status counts",
-			zap.Error(err),
-			zap.String("workspace_id", workspaceID.String()))
-		return nil, err
-	}
-
-	return counts, nil
-}
-
-func (s *TestimonialService) GetTypeCounts(ctx context.Context, workspaceID uuid.UUID) (map[string]int, error) {
-	counts, err := s.repo.GetCountByType(ctx, workspaceID, s.db)
-	if err != nil {
-		s.logger.Error("Failed to get type counts",
-			zap.Error(err),
-			zap.String("workspace_id", workspaceID.String()))
-		return nil, err
-	}
-
-	return counts, nil
-}
-
-func (s *TestimonialService) GetAverageRating(ctx context.Context, workspaceID uuid.UUID) (float64, error) {
-	avgRating, err := s.repo.GetAverageRating(ctx, workspaceID, s.db)
-	if err != nil {
-		s.logger.Error("Failed to get average rating",
-			zap.Error(err),
-			zap.String("workspace_id", workspaceID.String()))
-		return 0, err
-	}
-
-	return avgRating, nil
-}
-
-func (s *TestimonialService) GetTopAuthors(ctx context.Context, workspaceID uuid.UUID, limit int) ([]models.AuthorStats, error) {
-	if limit == 0 {
-		limit = 10
-	}
-
-	authors, err := s.repo.GetTopAuthors(ctx, workspaceID, limit, s.db)
-	if err != nil {
-		s.logger.Error("Failed to get top authors",
-			zap.Error(err),
-			zap.String("workspace_id", workspaceID.String()))
-		return nil, err
-	}
-
-	return authors, nil
 }
 
 // Helper Methods

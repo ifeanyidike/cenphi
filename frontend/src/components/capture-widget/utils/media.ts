@@ -10,51 +10,32 @@ export const createMediaBlobFromChunks = (
   chunks: Blob[],
   mimeType: string
 ): Blob => {
-  // Log beginning of blob creation
-  console.log(
-    `🔧 Creating blob from ${chunks.length} chunks of type ${mimeType}`
-  );
 
   if (!chunks || !Array.isArray(chunks) || chunks.length === 0) {
-    console.error("❌ No chunks provided to createMediaBlobFromChunks");
-
     // Instead of returning an empty blob (which might not be usable),
     // throw an error that can be caught and handled
     throw new Error("Cannot create media from empty chunks");
   }
 
   try {
-    // Log chunks for debugging
-    const chunkSizes = chunks.map((chunk) => chunk.size);
-    const totalSize = chunkSizes.reduce((sum, size) => sum + size, 0);
-
-    console.log(
-      `📊 Chunk sizes: [${chunkSizes.join(", ")}], total: ${totalSize} bytes`
-    );
 
     // Check if we have valid data
     const validChunks = chunks.filter((chunk) => chunk.size > 0);
 
     if (validChunks.length === 0) {
-      console.error("❌ All chunks have zero size!");
       throw new Error("All recorded chunks have zero size");
     }
 
     // Create the blob from valid chunks only
     const blob = new Blob(validChunks, { type: mimeType });
-    console.log(`✅ Created blob: ${blob.size} bytes of type ${blob.type}`);
 
     // Verify the blob is valid
     if (blob.size === 0) {
-      console.error(
-        "❌ Created blob has zero size despite having valid chunks!"
-      );
       throw new Error("Created blob has zero size");
     }
 
     return blob;
   } catch (error) {
-    console.error("❌ Error creating blob from chunks:", error);
     throw error; // Re-throw to allow proper error handling
   }
 };
@@ -66,13 +47,9 @@ export const createMediaBlobFromChunks = (
  */
 export const createObjectURL = (blob: Blob): string => {
   try {
-    if (blob.size === 0) {
-      console.warn("Attempting to create URL from empty blob");
-    }
     const url = URL.createObjectURL(blob);
     return url;
   } catch (error) {
-    console.error("Error creating object URL:", error);
     throw error;
   }
 };
@@ -85,7 +62,7 @@ export const revokeObjectURL = (url: string): void => {
   try {
     URL.revokeObjectURL(url);
   } catch (error) {
-    console.error("Error revoking object URL:", error);
+    // Silently ignore revoke errors
   }
 };
 
@@ -293,14 +270,12 @@ export const setupAudioVisualization = (
             // audioContext.close();
           }
         } catch (err) {
-          console.error("Error cleaning up AudioContext:", err);
+          // Silently ignore cleanup errors
         }
       },
       getAverageVolume: () => avgVolume,
     };
   } catch (error) {
-    console.error("Error setting up audio visualization:", error);
-
     // Return a dummy implementation that won't crash
     return {
       start: () => {},

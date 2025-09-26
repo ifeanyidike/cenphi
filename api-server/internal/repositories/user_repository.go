@@ -20,9 +20,10 @@ type UserRepository interface {
 	Repository[models.User]
 	FindByEmail(ctx context.Context, email string, db DB) (*models.User, error)
 	FindByUID(ctx context.Context, uid string, db DB) (*models.User, error)
-	GetWorkspaceByUID(ctx context.Context, uid string, db DB) (uuid.UUID, error)
+	GetWorkspaceIDByUID(ctx context.Context, uid string, db DB) (uuid.UUID, error)
+	GetWorkspaceByUID(ctx context.Context, uid string, db DB) (models.Workspace, error)
 	FindAndJoinByUID(ctx context.Context, uid string, db DB) (*models.TeamMemberGetParams, error)
-	UpdateAny(ctx context.Context, updates map[string]any, uid string, db DB) error
+	UpdateAnyByUid(ctx context.Context, updates map[string]any, uid string, db DB) error
 }
 
 type userRepository struct {
@@ -63,7 +64,7 @@ func (r *userRepository) Update(ctx context.Context, user *models.User, id uuid.
 	return err
 }
 
-func (r *userRepository) UpdateAny(ctx context.Context, updates map[string]any, uid string, db DB) error {
+func (r *userRepository) UpdateAnyByUid(ctx context.Context, updates map[string]any, uid string, db DB) error {
 	var setStatements []string
 	var args []any
 
@@ -158,72 +159,69 @@ func (r *userRepository) FindByEmail(ctx context.Context, firebase_uid string, d
 	return &user, nil
 }
 
-// func (r *userRepository) FindByUID(ctx context.Context, uid string, db DB) (*models.User, error) {
-// 	query :=
-// 		`
-// 		SELECT
-// 			id, firebase_uid, email, name, email_verified, last_active_at, created_at
-// 		FROM users
-// 		WHERE firebase_uid = $1
-// 		`
-// 	row := db.QueryRowContext(ctx, query, uid)
-// 	var user models.User
+func (r *userRepository) GetWorkspaceIDByUID(ctx context.Context, uid string, db DB) (uuid.UUID, error) {
+	start := time.Now()
+	fmt.Printf("🔍 Starting optimized GetWorkspaceIDByUID for uid: %s\n", uid)
 
-// 	err := row.Scan(
-// 		&user.ID,
-// 		&user.FirebaseUID,
-// 		&user.Email,
-// 		&user.Name,
-// 		&user.EmailVerified,
-// 		&user.LastActiveAt,
-// 		&user.CreatedAt,
-// 	)
-// 	fmt.Println("uid", uid)
-// 	fmt.Println("found user", user)
-
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return &user, nil
-// }
-
-func (r *userRepository) GetWorkspaceByUID(ctx context.Context, uid string, db DB) (uuid.UUID, error) {
-	fmt.Println("getting workspace id by uid")
+	// Optimized query - only get what we need
 	query := `
-        SELECT
-			u.id,
-			t.workspace_id
+        SELECT t.workspace_id
         FROM users u
-		INNER JOIN team_members t ON u.id = t.user_id
-        WHERE u.firebase_uid = $1
+        INNER JOIN team_members t ON u.id = t.user_id
+        WHERE u.firebase_uid::text = $1::text
+        LIMIT 1
     `
 
-	row := db.QueryRowContext(ctx, query, uid)
-	var userID uuid.UUID
 	var workspaceID uuid.UUID
+	err := db.QueryRowContext(ctx, query, uid).Scan(&workspaceID)
 
-	err := row.Scan(
-		&userID,
-		&workspaceID,
-	)
+	duration := time.Since(start)
+	fmt.Printf("⏱️ Optimized query took: %v\n", duration)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			fmt.Println("No rows found for Firebase UID:", uid)
-			return uuid.Nil, errors.New("user not found")
+			fmt.Printf("❌ No workspace found for Firebase UID: %s\n", uid)
+			return uuid.Nil, fmt.Errorf("user not found or not associated with workspace")
 		}
-		fmt.Printf("Scan error: %v\n", err)
+		fmt.Printf("❌ Query error: %v\n", err)
 		return uuid.Nil, err
 	}
 
-	// Check if we got an empty result even without error
-	if userID == uuid.Nil {
-		fmt.Println("Got empty user result for Firebase UID:", uid)
-		return uuid.Nil, errors.New("user not found")
-	}
-	fmt.Println("workspaceID", workspaceID)
-
+	fmt.Printf("✅ Found workspaceID: %s in %v\n", workspaceID, duration)
 	return workspaceID, nil
+}
+
+func (r *userRepository) GetWorkspaceByUID(ctx context.Context, uid string, db DB) (models.Workspace, error) {
+	start := time.Now()
+	fmt.Printf("🔍 Starting optimized GetWorkspaceIDByUID for uid: %s\n", uid)
+
+	// Optimized query - only get what we need
+	query := `
+        SELECT w.id, w.name, w.website_url, w.industry, w.plan, w.brand_context, w.total_testimonials
+        FROM workspaces w
+        INNER JOIN team_members t ON w.id = t.workspace_id
+		INNER JOIN users u ON u.id = t.user_id
+        WHERE u.firebase_uid::text = $1::text
+        LIMIT 1
+    `
+
+	var w models.Workspace
+	err := db.QueryRowContext(ctx, query, uid).Scan(
+		&w.ID, &w.Name, &w.WebsiteURL, &w.Industry, &w.Plan, &w.BrandContext, &w.TotalTestimonials)
+
+	duration := time.Since(start)
+	fmt.Printf("⏱️ Optimized query took: %v\n", duration)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			fmt.Printf("❌ No workspace found for Firebase UID: %s\n", uid)
+			return models.Workspace{}, fmt.Errorf("user not found or not associated with workspace")
+		}
+		fmt.Printf("❌ Query error: %v\n", err)
+		return models.Workspace{}, err
+	}
+
+	return w, nil
 }
 
 func (r *userRepository) FindAndJoinByUID(ctx context.Context, uid string, db DB) (*models.TeamMemberGetParams, error) {
@@ -235,7 +233,7 @@ func (r *userRepository) FindAndJoinByUID(ctx context.Context, uid string, db DB
         FROM users u
 		INNER JOIN team_members t ON u.id = t.user_id
 		INNER JOIN workspaces w ON t.workspace_id = w.id
-        WHERE u.firebase_uid = $1
+        WHERE u.firebase_uid::text = $1::text
     `
 
 	row := db.QueryRowContext(ctx, query, uid)
@@ -297,10 +295,10 @@ func (r *userRepository) FindByUID(ctx context.Context, uid string, db DB) (*mod
 		&user.CreatedAt,
 	)
 
-	fmt.Printf("Scan error: %v\n", err)
 	fmt.Printf("Found user: %+v\n", user)
 
 	if err != nil {
+		fmt.Printf("Scan error: %v\n", err)
 		if err == sql.ErrNoRows {
 			fmt.Println("No rows found for Firebase UID:", uid)
 			return nil, errors.New("user not found")

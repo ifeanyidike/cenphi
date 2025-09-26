@@ -1,24 +1,18 @@
 // components/ai-studio/service-config/SavedPresets.tsx
+import { preset_manager } from "@/repo/managers/preset_manager";
+import { AIService, Preset } from "@/types/ai-service";
 import { Bookmark, Heart, Trash2 } from "lucide-react";
+import { observer } from "mobx-react-lite";
 
 type Props = {
-  savedPresets: any[];
-  selectedPreset: any;
-  handleLoadPreset: (preset: any) => void;
-  defaultPreset: any;
-  onSetDefaultPreset: (serviceId: string, preset: any) => void;
-  service: any;
-  onDeletePreset: (serviceId: string, presetId: string) => void;
+  selectedPreset: Preset | null;
+  handleLoadPreset: (preset: Preset) => void;
+  service: AIService;
 };
-const SavedPresets = ({
-  savedPresets,
-  selectedPreset,
-  defaultPreset,
-  service,
-  handleLoadPreset,
-  onSetDefaultPreset,
-  onDeletePreset,
-}: Props) => {
+const SavedPresets = ({ selectedPreset, service, handleLoadPreset }: Props) => {
+  const savedPresets = preset_manager.savedPresets[service.id] || [];
+  const defaultPreset = preset_manager.defaultPresets[service.id];
+
   return (
     <div className="lg:col-span-1 order-2 lg:order-1">
       <div className="bg-white rounded-lg border shadow-sm">
@@ -64,7 +58,8 @@ const SavedPresets = ({
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        onSetDefaultPreset(service.id, preset);
+                        preset_manager.setDefaultPreset(service.id, preset);
+                        // onSetDefaultPreset(service.id, preset);
                       }}
                       className="flex-1 text-xs px-2 py-1 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
                     >
@@ -73,7 +68,8 @@ const SavedPresets = ({
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        onDeletePreset(service.id, preset.id);
+                        preset_manager.deletePreset(service.id, preset.id);
+                        // onDeletePreset(service.id, preset.id);
                       }}
                       className="px-2 py-1 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
                     >
@@ -90,4 +86,4 @@ const SavedPresets = ({
   );
 };
 
-export default SavedPresets;
+export default observer(SavedPresets);

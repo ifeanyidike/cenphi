@@ -3,11 +3,7 @@
 # ================================================================
 
 import os
-import uuid
-import subprocess
-import tempfile
 import logging
-import json
 from typing import List, Dict, Any, Optional, Tuple
 
 logger = logging.getLogger(__name__)
@@ -148,25 +144,36 @@ class TransitionEngine:
                 "error": str(e),
                 "transitions_applied": 0
             }
-
+        
     def _normalize_clips_for_perfect(self, clip_paths: List[str]) -> List[str]:
-        """✅ Normalize all clips for perfect synchronization compatibility"""
+        """✅ Normalize all clips for perfect synchronization compatibility INCLUDING resolution"""
         
         normalized_clips = []
+        
+        # First, determine the target resolution from all clips
+        target_resolution = self._determine_target_resolution(clip_paths)
+        if not target_resolution:
+            logger.error("Could not determine target resolution")
+            return clip_paths
+        
+        target_width, target_height = target_resolution
+        logger.info(f"Normalizing all clips to {target_width}x{target_height}")
         
         for i, clip_path in enumerate(clip_paths):
             try:
                 normalized_path = self.file_manager.create_temp_video(f"sync_normalized_{i}_")
                 
-                # ✅ CRITICAL: Normalize for perfect sync
+                # ✅ CRITICAL: Normalize for perfect sync AND resolution
                 cmd = [
                     "ffmpeg", "-y",
                     "-i", clip_path,
                     
-                    # ✅ Synchronized video and audio processing
+                    # ✅ Synchronized video and audio processing WITH resolution scaling
                     "-filter_complex", (
-                        "[0:v]setpts=PTS-STARTPTS[video_out];"
-                        "[0:a]asetpts=PTS-STARTPTS[audio_out]"
+                        f"[0:v]scale=w={target_width}:h={target_height}:force_original_aspect_ratio=decrease,"
+                        f"pad={target_width}:{target_height}:(ow-iw)/2:(oh-ih)/2:color=black,"
+                        f"setpts=PTS-STARTPTS[video_out];"
+                        f"[0:a]asetpts=PTS-STARTPTS[audio_out]"
                     ),
                     "-map", "[video_out]",
                     "-map", "[audio_out]",
@@ -186,7 +193,6 @@ class TransitionEngine:
                     # ✅ Perfect sync parameters
                     "-async", self.sync_optimized_encoding["audio_sync_method"],
                     "-fps_mode", "cfr",
-                    # "-vsync", self.sync_optimized_encoding["video_sync_method"],
                     "-force_key_frames", "expr:gte(t,n_forced*1)",
                     "-avoid_negative_ts", "make_zero",
                     "-fflags", "+genpts",
@@ -195,13 +201,12 @@ class TransitionEngine:
                     normalized_path
                 ]
                 
-                # result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
                 result = self.ffmpeg_optimizer.optimize_and_execute(cmd, 
                     capture_output=True, text=True, timeout=300)
                 
                 if result.returncode == 0 and os.path.exists(normalized_path):
                     normalized_clips.append(normalized_path)
-                    logger.debug(f"✅ Clip {i} normalized for perfect sync")
+                    logger.debug(f"✅ Clip {i} normalized for perfect sync and resolution")
                 else:
                     logger.warning(f"Normalization failed for clip {i}, using original")
                     normalized_clips.append(clip_path)
@@ -212,18 +217,66 @@ class TransitionEngine:
         
         return normalized_clips
 
+    def _determine_target_resolution(self, clip_paths: List[str]) -> Optional[Tuple[int, int]]:
+        """Determine the optimal target resolution for all clips"""
+        
+        resolutions = []
+        
+        for clip_path in clip_paths:
+            try:
+                info = self._get_detailed_clip_info(clip_path)
+                if info and info.get("width") and info.get("height"):
+                    width = info["width"]
+                    height = info["height"]
+                    pixel_count = width * height
+                    resolutions.append((width, height, pixel_count))
+            except Exception as e:
+                logger.warning(f"Could not get resolution for {clip_path}: {e}")
+        
+        if not resolutions:
+            # Fallback to common resolution
+            return (1920, 1080)
+        
+        # Strategy: Use the most common resolution, or highest if all different
+        resolution_counts = {}
+        for width, height, _ in resolutions:
+            res_key = (width, height)
+            resolution_counts[res_key] = resolution_counts.get(res_key, 0) + 1
+        
+        # Find most common resolution
+        most_common = max(resolution_counts.items(), key=lambda x: x[1])
+        
+        # If multiple clips have the same resolution, use it
+        if most_common[1] > 1:
+            return most_common[0]
+        
+        # Otherwise, use the highest resolution for best quality
+        highest_res = max(resolutions, key=lambda x: x[2])
+        return (highest_res[0], highest_res[1])
+
     def _copy_with_sync_optimization(self, input_path: str, output_path: str) -> bool:
-        """✅ Copy single clip with sync optimization"""
+        """✅ Copy single clip with sync optimization and resolution normalization"""
         
         try:
+            # Get input resolution
+            info = self._get_detailed_clip_info(input_path)
+            if not info:
+                return False
+                
+            # Determine if we need to normalize resolution (for consistency)
+            width = info.get("width", 1920)
+            height = info.get("height", 1080)
+            
             cmd = [
                 "ffmpeg", "-y",
                 "-i", input_path,
                 
-                # ✅ Apply sync optimization even for single clip
+                # ✅ Apply sync optimization with consistent resolution
                 "-filter_complex", (
-                    "[0:v]setpts=PTS-STARTPTS[video_out];"
-                    "[0:a]asetpts=PTS-STARTPTS[audio_out]"
+                    f"[0:v]scale={width}:{height}:force_original_aspect_ratio=decrease,"
+                    f"pad={width}:{height}:(ow-iw)/2:(oh-ih)/2:black,"
+                    f"setpts=PTS-STARTPTS[video_out];"
+                    f"[0:a]asetpts=PTS-STARTPTS[audio_out]"
                 ),
                 "-map", "[video_out]",
                 "-map", "[audio_out]",
@@ -237,7 +290,6 @@ class TransitionEngine:
                 
                 "-async", self.sync_optimized_encoding["audio_sync_method"],
                 "-fps_mode", "cfr",
-                # "-vsync", self.sync_optimized_encoding["video_sync_method"],
                 "-avoid_negative_ts", "make_zero",
                 "-fflags", "+genpts",
                 "-movflags", "+faststart",
@@ -245,7 +297,6 @@ class TransitionEngine:
                 output_path
             ]
             
-            # result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
             result = self.ffmpeg_optimizer.optimize_and_execute(cmd, 
                     capture_output=True, text=True, timeout=300)
             return result.returncode == 0 and os.path.exists(output_path)
@@ -253,6 +304,111 @@ class TransitionEngine:
         except Exception as e:
             logger.error(f"Sync optimization copy failed: {e}")
             return False
+
+    # def _normalize_clips_for_perfect(self, clip_paths: List[str]) -> List[str]:
+    #     """✅ Normalize all clips for perfect synchronization compatibility"""
+        
+    #     normalized_clips = []
+        
+    #     for i, clip_path in enumerate(clip_paths):
+    #         try:
+    #             normalized_path = self.file_manager.create_temp_video(f"sync_normalized_{i}_")
+                
+    #             # ✅ CRITICAL: Normalize for perfect sync
+    #             cmd = [
+    #                 "ffmpeg", "-y",
+    #                 "-i", clip_path,
+                    
+    #                 # ✅ Synchronized video and audio processing
+    #                 "-filter_complex", (
+    #                     "[0:v]setpts=PTS-STARTPTS[video_out];"
+    #                     "[0:a]asetpts=PTS-STARTPTS[audio_out]"
+    #                 ),
+    #                 "-map", "[video_out]",
+    #                 "-map", "[audio_out]",
+                    
+    #                 # ✅ Perfect sync encoding parameters
+    #                 "-c:v", self.sync_optimized_encoding["video_codec"],
+    #                 "-preset", self.sync_optimized_encoding["preset"],
+    #                 "-crf", self.sync_optimized_encoding["crf"],
+    #                 "-pix_fmt", self.sync_optimized_encoding["pixel_format"],
+    #                 "-r", self.sync_optimized_encoding["frame_rate"],
+                    
+    #                 "-c:a", self.sync_optimized_encoding["audio_codec"],
+    #                 "-b:a", self.sync_optimized_encoding["audio_bitrate"],
+    #                 "-ar", self.sync_optimized_encoding["audio_sample_rate"],
+    #                 "-ac", self.sync_optimized_encoding["audio_channels"],
+                    
+    #                 # ✅ Perfect sync parameters
+    #                 "-async", self.sync_optimized_encoding["audio_sync_method"],
+    #                 "-fps_mode", "cfr",
+    #                 # "-vsync", self.sync_optimized_encoding["video_sync_method"],
+    #                 "-force_key_frames", "expr:gte(t,n_forced*1)",
+    #                 "-avoid_negative_ts", "make_zero",
+    #                 "-fflags", "+genpts",
+    #                 "-movflags", "+faststart",
+                    
+    #                 normalized_path
+    #             ]
+                
+    #             # result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+    #             result = self.ffmpeg_optimizer.optimize_and_execute(cmd, 
+    #                 capture_output=True, text=True, timeout=300)
+                
+    #             if result.returncode == 0 and os.path.exists(normalized_path):
+    #                 normalized_clips.append(normalized_path)
+    #                 logger.debug(f"✅ Clip {i} normalized for perfect sync")
+    #             else:
+    #                 logger.warning(f"Normalization failed for clip {i}, using original")
+    #                 normalized_clips.append(clip_path)
+                    
+    #         except Exception as e:
+    #             logger.warning(f"Normalization failed for clip {i}: {e}")
+    #             normalized_clips.append(clip_path)
+        
+    #     return normalized_clips
+
+    # def _copy_with_sync_optimization(self, input_path: str, output_path: str) -> bool:
+    #     """✅ Copy single clip with sync optimization"""
+        
+    #     try:
+    #         cmd = [
+    #             "ffmpeg", "-y",
+    #             "-i", input_path,
+                
+    #             # ✅ Apply sync optimization even for single clip
+    #             "-filter_complex", (
+    #                 "[0:v]setpts=PTS-STARTPTS[video_out];"
+    #                 "[0:a]asetpts=PTS-STARTPTS[audio_out]"
+    #             ),
+    #             "-map", "[video_out]",
+    #             "-map", "[audio_out]",
+                
+    #             "-c:v", self.sync_optimized_encoding["video_codec"],
+    #             "-preset", self.sync_optimized_encoding["preset"],
+    #             "-crf", self.sync_optimized_encoding["crf"],
+                
+    #             "-c:a", self.sync_optimized_encoding["audio_codec"],
+    #             "-b:a", self.sync_optimized_encoding["audio_bitrate"],
+                
+    #             "-async", self.sync_optimized_encoding["audio_sync_method"],
+    #             "-fps_mode", "cfr",
+    #             # "-vsync", self.sync_optimized_encoding["video_sync_method"],
+    #             "-avoid_negative_ts", "make_zero",
+    #             "-fflags", "+genpts",
+    #             "-movflags", "+faststart",
+                
+    #             output_path
+    #         ]
+            
+    #         # result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+    #         result = self.ffmpeg_optimizer.optimize_and_execute(cmd, 
+    #                 capture_output=True, text=True, timeout=300)
+    #         return result.returncode == 0 and os.path.exists(output_path)
+            
+    #     except Exception as e:
+    #         logger.error(f"Sync optimization copy failed: {e}")
+    #         return False
 
     def _combine_two_clips_perfect(
         self,

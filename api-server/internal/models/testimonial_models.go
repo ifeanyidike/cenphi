@@ -12,6 +12,17 @@ import (
 	"github.com/lib/pq"
 )
 
+type ArtifactSourceType string
+
+const (
+	NoTypeSource          ArtifactSourceType = "no_source"
+	TestimonialTypeSource ArtifactSourceType = "testimonial"
+	ArtifactTypeSource    ArtifactSourceType = "artifact"
+	ClipTypeSource        ArtifactSourceType = "clip"
+	ClipsTypeSource       ArtifactSourceType = "clips"
+	BestStoryMoments      ArtifactSourceType = "best_story_moments"
+)
+
 type MediaOpt struct {
 	TestimonialID string `json:"testimonial_id"`
 	MediaURL      string `json:"media_url"`
@@ -78,7 +89,7 @@ type Clip struct {
 	Title            string          `json:"title,omitempty"`
 	Theme            string          `json:"theme,omitempty"`
 	EngagementScore  float64         `json:"engagement_score,omitempty"`
-	DurationSeconds  float64         `json:"duration_seconds,omitempty"`
+	DurationSeconds  float64         `json:"duration,omitempty"`
 	SocialMediaReady map[string]bool `json:"social_media_ready,omitempty"`
 }
 
@@ -147,6 +158,23 @@ type Testimonial struct {
 	Artifacts []TestimonialArtifact `json:"artifacts,omitempty" db:"-"`
 }
 
+type TestimonialAIData struct {
+	ID                 uuid.UUID           `json:"id"`
+	WorkspaceID        uuid.UUID           `json:"workspace_id"`
+	Content            *string             `json:"content"`
+	MediaURL           *string             `json:"media_url"`
+	TranscriptSegments *TranscriptSegments `json:"transcript_segments"`
+}
+
+type TestimonialInput struct {
+	Text     string            `json:"text"`
+	Author   string            `json:"author,omitempty"`
+	Company  string            `json:"company,omitempty"`
+	Title    string            `json:"title,omitempty"`
+	Rating   *float64          `json:"rating,omitempty"`
+	Metadata map[string]string `json:"metadata,omitempty"`
+}
+
 type TestimonialArtifact struct {
 	ID            uuid.UUID  `db:"id" json:"id"`
 	TestimonialID *uuid.UUID `db:"testimonial_id" json:"testimonial_id"`
@@ -170,6 +198,33 @@ type TestimonialArtifact struct {
 
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
 	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
+
+	ArtifactSources []ArtifactSource `json:"artifact_sources,omitempty" db:"-"`
+}
+
+type ArtifactSource struct {
+	ID                  uuid.UUID  `db:"id" json:"id"`
+	ArtifactID          *uuid.UUID `db:"artifact_id" json:"artifact_id"`
+	SourceTestimonialID *uuid.UUID `db:"source_testimonial_id" json:"source_testimonial_id"`
+	SourceArtifactID    *uuid.UUID `db:"source_artifact_id" json:"source_artifact_id"`
+	SourceClipID        *uuid.UUID `db:"source_clip_id" json:"source_clip_id"`
+	SourceType          string     `db:"source_type" json:"source_type"`
+	CreatedAt           time.Time  `db:"created_at" json:"created_at"`
+}
+
+type ClipSource struct {
+	ArtifactID uuid.UUID `json:"artifact_id"`
+	ClipID     uuid.UUID `json:"clip_id"`
+}
+
+type CreateArtifactSourceParams struct {
+	Type                ArtifactSourceType `json:"type"`
+	From                string             `json:"from"`
+	ParentTestimonialId string             `json:"parent_testimonial_id,omitempty"`
+	RawData             any                `json:"raw_data,omitempty"`
+	Data                any                `json:"data"`
+	AppliedServices     []string           `json:"applied_services"`
+	Metadata            JSONMap            `json:"metadata"`
 }
 
 // TestimonialUpload represents file upload data
@@ -404,4 +459,62 @@ func (ts TranscriptSegments) Value() (driver.Value, error) {
 		return "[]", nil
 	}
 	return json.Marshal(ts)
+}
+
+func ExtractClipSourcesData(data any) ([]ClipSource, error) {
+	var clips []ClipSource
+
+	switch data := data.(type) {
+	case []ClipSource:
+		clips = data
+	case []any:
+		fmt.Println("type is []interface{}")
+		clips = make([]ClipSource, len(data))
+		for i, item := range data {
+			if clipMap, ok := item.(map[string]any); ok {
+				artifactIDStr, _ := clipMap["ArtifactID"].(string)
+				clipIDStr, _ := clipMap["ClipID"].(string)
+
+				artifactID, err := uuid.Parse(artifactIDStr)
+				if err != nil {
+					return nil, fmt.Errorf("invalid artifact ID: %w", err)
+				}
+
+				clipID, err := uuid.Parse(clipIDStr)
+				if err != nil {
+					return nil, fmt.Errorf("invalid clip ID: %w", err)
+				}
+
+				clips[i] = ClipSource{
+					ArtifactID: artifactID,
+					ClipID:     clipID,
+				}
+			}
+		}
+	case []map[string]any:
+		fmt.Println("type is []map[string]any")
+		clips = make([]ClipSource, len(data))
+		for i, clipMap := range data {
+			artifactIDStr, _ := clipMap["ArtifactID"].(string)
+			clipIDStr, _ := clipMap["ClipID"].(string)
+
+			artifactID, err := uuid.Parse(artifactIDStr)
+			if err != nil {
+				return nil, fmt.Errorf("invalid artifact ID: %w", err)
+			}
+
+			clipID, err := uuid.Parse(clipIDStr)
+			if err != nil {
+				return nil, fmt.Errorf("invalid clip ID: %w", err)
+			}
+
+			clips[i] = ClipSource{
+				ArtifactID: artifactID,
+				ClipID:     clipID,
+			}
+		}
+	default:
+		return nil, fmt.Errorf("unexpected data type for clip sources: %T", data)
+	}
+	return clips, nil
 }

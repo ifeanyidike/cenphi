@@ -92,6 +92,7 @@ CREATE TABLE team_members (
 CREATE TRIGGER trg_team_members_updated BEFORE UPDATE ON team_members FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE INDEX idx_team_members_workspace ON team_members(workspace_id);
 CREATE INDEX idx_team_members_user ON team_members(user_id);
+CREATE INDEX IF NOT EXISTS idx_team_members_user_workspace ON team_members(user_id, workspace_id);
 
 -- Testimonials
 CREATE TABLE testimonials (
@@ -136,6 +137,25 @@ CREATE INDEX idx_testimonials_content_trgm ON testimonials USING gin(content gin
 CREATE INDEX idx_testimonials_collection_method ON testimonials(collection_method);
 CREATE INDEX idx_testimonials_rating ON testimonials(rating);
 
+
+CREATE TABLE presets (
+  id uuid_pk PRIMARY KEY,
+  workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  service_id VARCHAR(100) NOT NULL, -- e.g. 'enhancement', 'story_mode'
+  name VARCHAR(100) NOT NULL,
+  config JSONB DEFAULT '{}',
+  is_default BOOLEAN DEFAULT false,
+  created_at ts_tz,
+  updated_at ts_tz,
+  
+  UNIQUE(workspace_id, service_id, name)
+);
+CREATE TRIGGER trg_presets_updated BEFORE UPDATE ON presets FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE INDEX idx_presets_workspace ON presets(workspace_id);
+CREATE INDEX idx_presets_service ON presets(service_id);
+CREATE INDEX idx_presets_default ON presets(workspace_id, service_id) WHERE is_default = true;
+
+
 -- Testimonial Artifacts for all AI processing results
 CREATE TABLE testimonial_artifacts (
   id uuid_pk PRIMARY KEY,
@@ -150,6 +170,8 @@ CREATE TABLE testimonial_artifacts (
   text_content TEXT, -- translated text, polished text, generated content
   data JSONB DEFAULT '{}', -- sentiment scores, highlights array, emotions, business_recommendations
   asset_url TEXT, -- video URLs, audio URLs, enhanced media
+
+  service_lineage TEXT[] DEFAULT '{}',
   
   -- Context and metadata
   content_type TEXT, -- case_study, white_paper, sales_deck, video, audio, etc.
@@ -174,6 +196,41 @@ CREATE INDEX idx_testimonial_artifacts_category ON testimonial_artifacts(result_
 CREATE INDEX idx_testimonial_artifacts_platform ON testimonial_artifacts(platform);
 CREATE INDEX idx_testimonial_artifacts_saved ON testimonial_artifacts(is_user_saved);
 CREATE INDEX idx_testimonial_artifacts_content_type ON testimonial_artifacts(content_type);
+
+
+CREATE TABLE artifact_sources (
+  id UUID PRIMARY KEY,
+  artifact_id UUID REFERENCES testimonial_artifacts(id),
+  
+  -- Either of these can be the source (but not both)
+  source_testimonial_id UUID REFERENCES testimonials(id),     -- Original testimonial
+  source_artifact_id UUID REFERENCES testimonial_artifacts(id), -- Existing artifact
+  
+  source_clip_id UUID,  -- Only relevant when source is artifact with clips
+  source_type VARCHAR(20) NOT NULL,  -- 'testimonial', 'clip', 'artifact'
+  
+  created_at TIMESTAMP,
+  
+  -- Constraint: exactly one source must be specified
+  CONSTRAINT check_single_source CHECK (
+    (source_testimonial_id IS NOT NULL AND source_artifact_id IS NULL) OR
+    (source_testimonial_id IS NULL AND source_artifact_id IS NOT NULL)
+  )
+);
+-- 1. Forward lineage: "What artifacts were created from this testimonial?"
+CREATE INDEX idx_artifact_sources_testimonial ON artifact_sources(source_testimonial_id) WHERE source_testimonial_id IS NOT NULL;
+-- 2. Forward lineage: "What artifacts were created from this artifact/clip?"
+CREATE INDEX idx_artifact_sources_artifact_clip ON artifact_sources(source_artifact_id, source_clip_id, created_at DESC) WHERE source_artifact_id IS NOT NULL;
+-- 3. Reverse lineage: "What was this artifact created from?"
+CREATE INDEX idx_artifact_sources_reverse ON artifact_sources(artifact_id);
+-- 4. Source type filtering: "Find all clips/testimonials/artifacts used as sources"
+CREATE INDEX idx_artifact_sources_type ON artifact_sources(source_type, created_at DESC);
+-- 5. Covering index for common clip lineage queries (avoids table lookups)
+CREATE INDEX idx_artifact_sources_clip_covering ON artifact_sources(source_artifact_id, source_clip_id) INCLUDE (artifact_id, source_type, created_at);
+-- 6. Efficient joins with testimonial_artifacts for processing type filtering
+CREATE INDEX idx_artifact_sources_for_joins ON artifact_sources(artifact_id, source_artifact_id) INCLUDE (source_clip_id, source_type);
+-- 7. Temporal queries: "Recent artifacts created from this source"
+CREATE INDEX idx_artifact_sources_temporal ON artifact_sources(source_artifact_id, created_at DESC) WHERE source_artifact_id IS NOT NULL;
 
 
 -- Social Media Accounts
@@ -415,3 +472,93 @@ CREATE TRIGGER trg_google_drive_accounts_updated BEFORE UPDATE ON google_drive_a
 CREATE INDEX idx_google_drive_accounts_workspace ON google_drive_accounts(workspace_id);
 CREATE INDEX idx_google_drive_accounts_user ON google_drive_accounts(user_id);
 CREATE INDEX idx_google_drive_accounts_status ON google_drive_accounts(status);
+
+-- Add indexes for efficient lineage queries
+CREATE INDEX IF NOT EXISTS idx_artifact_sources_testimonial_lineage 
+    ON artifact_sources(source_testimonial_id) 
+    WHERE source_testimonial_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_artifact_sources_artifact_lineage 
+    ON artifact_sources(source_artifact_id) 
+    WHERE source_artifact_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_testimonial_artifacts_processing_type 
+    ON testimonial_artifacts(processing_type, created_at);
+
+-- Create function to update service lineage
+CREATE OR REPLACE FUNCTION update_service_lineage()
+RETURNS TRIGGER AS $$
+DECLARE
+    lineage TEXT[];
+    parent_lineage TEXT[];
+    source_rec RECORD;
+BEGIN
+    -- Get the source of this artifact
+    SELECT * INTO source_rec 
+    FROM artifact_sources 
+    WHERE artifact_id = NEW.id;
+    
+    IF FOUND THEN
+        IF source_rec.source_testimonial_id IS NOT NULL THEN
+            -- Direct from testimonial
+            lineage := ARRAY[NEW.processing_type];
+        ELSE
+            -- From another artifact - get parent's lineage
+            SELECT service_lineage INTO parent_lineage
+            FROM testimonial_artifacts
+            WHERE id = source_rec.source_artifact_id;
+            
+            lineage := COALESCE(parent_lineage, '{}') || NEW.processing_type;
+        END IF;
+        
+        NEW.service_lineage := lineage;
+    END IF;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create service lineage trigger
+DROP TRIGGER IF EXISTS trg_update_service_lineage ON testimonial_artifacts;
+CREATE TRIGGER trg_update_service_lineage
+    BEFORE INSERT ON testimonial_artifacts
+    FOR EACH ROW
+    EXECUTE FUNCTION update_service_lineage();
+  
+
+CREATE OR REPLACE FUNCTION increment_total_testimonials()
+RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE workspaces
+    SET total_testimonials = total_testimonials + 1,
+        updated_at = NOW()
+    WHERE id = NEW.workspace_id;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create testimonial insert trigger trigger
+DROP TRIGGER IF EXISTS testimonial_insert_trigger ON testimonials;
+CREATE TRIGGER testimonial_insert_trigger
+  AFTER INSERT ON testimonials
+  FOR EACH ROW
+  EXECUTE FUNCTION increment_total_testimonials();
+
+CREATE OR REPLACE FUNCTION decrement_total_testimonials()
+RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE workspaces
+    SET total_testimonials = total_testimonials - 1,
+        updated_at = NOW()
+    WHERE id = OLD.workspace_id;
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create testimonial delete trigger trigger
+DROP TRIGGER IF EXISTS testimonial_delete_trigger ON testimonials;
+CREATE TRIGGER testimonial_delete_trigger
+  AFTER DELETE ON testimonials
+  FOR EACH ROW
+  EXECUTE FUNCTION decrement_total_testimonials();
+

@@ -79,7 +79,6 @@ export const useWebSocket = (
           heartbeatInterval
         );
       } catch (error) {
-        console.error("Failed to send heartbeat:", error);
         // Don't continue heartbeat if sending fails
       }
     }
@@ -94,7 +93,6 @@ export const useWebSocket = (
         // Handle internal messages
         if (data.type === "pong") {
           lastHeartbeatRef.current = Date.now();
-          console.log("🏓 Received pong response");
           return;
         }
 
@@ -103,7 +101,6 @@ export const useWebSocket = (
           onMessage(data);
         }
       } catch (error) {
-        console.error("Error parsing WebSocket message:", error);
         if (onError) {
           onError(new Event("message_parse_error"));
         }
@@ -114,7 +111,6 @@ export const useWebSocket = (
 
   // Handle WebSocket open
   const handleOpen = useCallback(() => {
-    console.log("✅ WebSocket connected");
     setConnectionStatus("connected");
     setReconnectAttempts(0);
     isConnectingRef.current = false;
@@ -130,9 +126,7 @@ export const useWebSocket = (
 
   // Handle WebSocket close
   const handleClose = useCallback(
-    (event: CloseEvent) => {
-      console.log("❌ WebSocket disconnected:", event.code, event.reason);
-
+    (_event: CloseEvent) => {
       setConnectionStatus("disconnected");
       isConnectingRef.current = false;
       clearTimeouts();
@@ -147,10 +141,6 @@ export const useWebSocket = (
         autoReconnect &&
         reconnectAttempts < maxReconnectAttempts
       ) {
-        console.log(
-          `🔄 Attempting reconnection (${reconnectAttempts + 1}/${maxReconnectAttempts})`
-        );
-
         setReconnectAttempts((prev) => prev + 1);
 
         reconnectTimeoutRef.current = window.setTimeout(
@@ -175,8 +165,6 @@ export const useWebSocket = (
   // Handle WebSocket error
   const handleError = useCallback(
     (event: Event) => {
-      console.error("❌ WebSocket error:", event);
-
       if (onError) {
         onError(event);
       }
@@ -189,7 +177,6 @@ export const useWebSocket = (
     (path: string) => {
       // Prevent multiple simultaneous connection attempts
       if (isConnectingRef.current) {
-        console.log("⚠️ Connection attempt already in progress");
         return;
       }
 
@@ -207,7 +194,6 @@ export const useWebSocket = (
 
       try {
         const url = `${baseUrl.replace(/^http/, "ws")}${path}`;
-        console.log(`🔌 Connecting to WebSocket: ${url}`);
 
         const ws = new WebSocket(url);
         wsRef.current = ws;
@@ -218,7 +204,6 @@ export const useWebSocket = (
         ws.onclose = handleClose;
         ws.onerror = handleError;
       } catch (error) {
-        console.error("❌ Failed to create WebSocket connection:", error);
         setConnectionStatus("disconnected");
         isConnectingRef.current = false;
 
@@ -240,8 +225,6 @@ export const useWebSocket = (
 
   // Disconnect from WebSocket
   const disconnect = useCallback(() => {
-    console.log("🔌 Manually disconnecting WebSocket");
-
     isManuallyDisconnectedRef.current = true;
     clearTimeouts();
 
@@ -266,12 +249,10 @@ export const useWebSocket = (
         wsRef.current.send(JSON.stringify(message));
         return true;
       } catch (error) {
-        console.error("❌ Failed to send WebSocket message:", error);
         return false;
       }
     }
 
-    console.warn("⚠️ WebSocket not connected, cannot send message");
     return false;
   }, []);
 
@@ -282,12 +263,10 @@ export const useWebSocket = (
         wsRef.current.send(data);
         return true;
       } catch (error) {
-        console.error("❌ Failed to send binary WebSocket data:", error);
         return false;
       }
     }
 
-    console.warn("⚠️ WebSocket not connected, cannot send binary data");
     return false;
   }, []);
 
@@ -317,10 +296,6 @@ export const useWebSocket = (
 
         // If no heartbeat for more than 2 intervals, consider connection dead
         if (timeSinceLastHeartbeat > heartbeatInterval * 2) {
-          console.warn(
-            "⚠️ WebSocket connection appears to be dead, reconnecting..."
-          );
-
           if (wsRef.current) {
             wsRef.current.close();
           }
