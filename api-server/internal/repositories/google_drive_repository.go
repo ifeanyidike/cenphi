@@ -7,29 +7,62 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/ifeanyidike/cenphi/internal/models"
 	"github.com/redis/go-redis/v9"
+	"golang.org/x/oauth2"
 )
 
-type GoogleDriveRepository interface {
-	SaveAccount(ctx context.Context, account *models.GoogleDriveAccount, db *sql.DB) error
-	GetAccount(ctx context.Context, workspaceID, userID uuid.UUID, db *sql.DB) (*models.GoogleDriveAccount, error)
-	UpdateTokens(ctx context.Context, accountID uuid.UUID, accessToken, refreshToken string, expiresAt *time.Time, db *sql.DB) error
-	DeleteAccount(ctx context.Context, accountID uuid.UUID, db *sql.DB) error
-	GetAccountsByWorkspace(ctx context.Context, workspaceID uuid.UUID, db *sql.DB) ([]*models.GoogleDriveAccount, error)
+type GoogleDriveAccount struct {
+	ID          uuid.UUID `json:"id" db:"id"`
+	WorkspaceID uuid.UUID `json:"workspace_id" db:"workspace_id"`
+	UserID      uuid.UUID `json:"user_id" db:"user_id"`
+
+	// OAuth tokens
+	AccessToken  string     `json:"-" db:"access_token"`  // Don't expose in JSON
+	RefreshToken *string    `json:"-" db:"refresh_token"` // Don't expose in JSON
+	TokenType    string     `json:"token_type" db:"token_type"`
+	ExpiresAt    *time.Time `json:"expires_at" db:"expires_at"`
+
+	// Account info
+	AccountEmail *string `json:"account_email" db:"account_email"`
+	AccountName  *string `json:"account_name" db:"account_name"`
+
+	// Status
+	Status    string  `json:"status" db:"status"` // connected, expired, revoked, error
+	LastError *string `json:"last_error" db:"last_error"`
+
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 }
 
-type googleDriveRepository struct {
+// ToOAuth2Token converts to oauth2.Token
+func (gda *GoogleDriveAccount) ToOAuth2Token() *oauth2.Token {
+	token := &oauth2.Token{
+		AccessToken: gda.AccessToken,
+		TokenType:   gda.TokenType,
+	}
+
+	if gda.RefreshToken != nil {
+		token.RefreshToken = *gda.RefreshToken
+	}
+
+	if gda.ExpiresAt != nil {
+		token.Expiry = *gda.ExpiresAt
+	}
+
+	return token
+}
+
+type GoogleDriveRepository struct {
 	redisClient *redis.Client
 }
 
 func NewGoogleDriveRepository(redisClient *redis.Client) GoogleDriveRepository {
-	return &googleDriveRepository{
+	return GoogleDriveRepository{
 		redisClient: redisClient,
 	}
 }
 
-func (r *googleDriveRepository) SaveAccount(ctx context.Context, account *models.GoogleDriveAccount, db *sql.DB) error {
+func (r GoogleDriveRepository) SaveAccount(ctx context.Context, account GoogleDriveAccount, db *sql.DB) error {
 	query := `
         INSERT INTO google_drive_accounts (
             id, workspace_id, user_id, access_token, refresh_token, 
@@ -57,7 +90,7 @@ func (r *googleDriveRepository) SaveAccount(ctx context.Context, account *models
 	return err
 }
 
-func (r *googleDriveRepository) GetAccount(ctx context.Context, workspaceID, userID uuid.UUID, db *sql.DB) (*models.GoogleDriveAccount, error) {
+func (r GoogleDriveRepository) GetAccount(ctx context.Context, workspaceID, userID uuid.UUID, db *sql.DB) (GoogleDriveAccount, error) {
 	query := `
         SELECT id, workspace_id, user_id, access_token, refresh_token,
                token_type, expires_at, account_email, account_name,
@@ -66,7 +99,7 @@ func (r *googleDriveRepository) GetAccount(ctx context.Context, workspaceID, use
         WHERE workspace_id = $1 AND user_id = $2
     `
 
-	account := &models.GoogleDriveAccount{}
+	account := GoogleDriveAccount{}
 	err := db.QueryRowContext(ctx, query, workspaceID, userID).Scan(
 		&account.ID, &account.WorkspaceID, &account.UserID,
 		&account.AccessToken, &account.RefreshToken, &account.TokenType,
@@ -75,13 +108,13 @@ func (r *googleDriveRepository) GetAccount(ctx context.Context, workspaceID, use
 	)
 
 	if err != nil {
-		return nil, err
+		return account, err
 	}
 
 	return account, nil
 }
 
-func (r *googleDriveRepository) UpdateTokens(ctx context.Context, accountID uuid.UUID, accessToken, refreshToken string, expiresAt *time.Time, db *sql.DB) error {
+func (r GoogleDriveRepository) UpdateTokens(ctx context.Context, accountID uuid.UUID, accessToken, refreshToken string, expiresAt *time.Time, db *sql.DB) error {
 	query := `
         UPDATE google_drive_accounts 
         SET access_token = $2, refresh_token = $3, expires_at = $4, 
@@ -93,13 +126,13 @@ func (r *googleDriveRepository) UpdateTokens(ctx context.Context, accountID uuid
 	return err
 }
 
-func (r *googleDriveRepository) DeleteAccount(ctx context.Context, accountID uuid.UUID, db *sql.DB) error {
+func (r GoogleDriveRepository) DeleteAccount(ctx context.Context, accountID uuid.UUID, db *sql.DB) error {
 	query := `DELETE FROM google_drive_accounts WHERE id = $1`
 	_, err := db.ExecContext(ctx, query, accountID)
 	return err
 }
 
-func (r *googleDriveRepository) GetAccountsByWorkspace(ctx context.Context, workspaceID uuid.UUID, db *sql.DB) ([]*models.GoogleDriveAccount, error) {
+func (r GoogleDriveRepository) GetAccountsByWorkspace(ctx context.Context, workspaceID uuid.UUID, db *sql.DB) ([]GoogleDriveAccount, error) {
 	query := `
         SELECT id, workspace_id, user_id, access_token, refresh_token,
                token_type, expires_at, account_email, account_name,
@@ -115,9 +148,9 @@ func (r *googleDriveRepository) GetAccountsByWorkspace(ctx context.Context, work
 	}
 	defer rows.Close()
 
-	var accounts []*models.GoogleDriveAccount
+	var accounts []GoogleDriveAccount
 	for rows.Next() {
-		account := &models.GoogleDriveAccount{}
+		account := GoogleDriveAccount{}
 		err := rows.Scan(
 			&account.ID, &account.WorkspaceID, &account.UserID,
 			&account.AccessToken, &account.RefreshToken, &account.TokenType,

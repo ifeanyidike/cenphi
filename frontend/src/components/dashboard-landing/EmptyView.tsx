@@ -10,16 +10,12 @@ import { itemVariants } from "./constants";
 import {
   ArrowUpRight,
   Award,
-  Brain,
   FileText,
-  MessageSquare,
   Plus,
   Send,
   ThumbsUp,
 } from "lucide-react";
 import { Button } from "../ui/button";
-import { AIActionsCard } from "./AIActionsCard";
-import { StepItem } from "./components";
 import { observer } from "mobx-react-lite";
 import LoadingSkeleton from "./LoadingSkeleton";
 import { workspaceHub } from "@/repo/workspace_hub";

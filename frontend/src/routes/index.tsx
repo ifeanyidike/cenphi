@@ -6,14 +6,12 @@ import { Signup } from "@/pages/SignUp";
 import ResetPasswordPage from "@/pages/ResetPassword";
 
 import EmailPage from "@/pages/EmailPage";
-import AllReviewsPage from "@/pages/AllReviewsPage";
 
 // Testimonial Collection Process
 import TestimonialCollectionLayout from "@/layouts/TestimonialCollectionLayout";
 import TestimonialTypeSelection from "@/pages/collection/TypeSelection";
 import TestimonialUploads from "@/pages/collection/TestimonialUploads";
 import VideoTestimonialRecorder from "@/pages/collection/VideoTestimonialRecorder";
-import AudioTestimonialRecorder from "@/pages/collection/AudioTestimonialRecorder";
 import TextTestimonialCollection from "@/pages/collection/TextTestimonialCollection";
 import MobileTransferPage from "@/pages/collection/MobileTransferPage";
 import ThankYouPage from "@/pages/collection/ThankYouPage";
@@ -22,7 +20,6 @@ import AuthFlow from "@/pages/authflow";
 
 import { useParams } from "react-router-dom";
 
-import ReviewPage from "@/components/custom/dashboard/ReviewPage";
 import Checkout from "@/pages/Checkout";
 import { lazy } from "react";
 import {
@@ -32,15 +29,18 @@ import {
 } from "@/components/ComponentRegistry";
 import LoadingIndicator from "@/components/LoadingIndicator";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import OnboardingError from "@/components/onboarding/OnboardingError";
 import DashboardProtectedRoute from "@/components/auth/protected_routes/Dashboard";
 import GenericProtectedRoute from "@/components/auth/protected_routes/Generic";
 import OnboardingProtectedRoute from "@/components/auth/protected_routes/Onboarding";
+import AuthPagesProtectedRoute from "@/components/auth/protected_routes/AuthPages";
 import BrandGuidePage from "@/pages/BrandGuidePage";
-import AIServiceTester from "@/pages/AIServiceTester";
-import Tester from "@/pages/PageTester";
+// import AIServiceTester from "@/pages/AIServiceTester";
+// import Tester from "@/pages/PageTester";
 import AIStudioPage from "@/pages/aistudio";
 import TestimonialDetailPage from "@/pages/TestimonialPage";
+import TempCapturePage from "@/pages/TempCapturePage";
+import StoryVideosPage from "@/pages/StoryVideosPage";
+import AIGeneratedContentPage from "@/pages/AIGeneratedContentPage";
 
 // lazy load
 const LandingPage = lazy(() => import("@/pages/Landing"));
@@ -58,8 +58,6 @@ const DynamicRecorder = () => {
   };
   if (type === "video") {
     return <VideoTestimonialRecorder />;
-  } else if (type === "audio") {
-    return <AudioTestimonialRecorder />;
   } else {
     // Although the loader should prevent an invalid type from reaching here,
     // we return NotFoundPage as a fallback.
@@ -72,40 +70,107 @@ export const router = createBrowserRouter([
     path: "/",
     element: <LandingPage />,
   },
-  { element: <BrandGuidePage />, path: "/brand-guide" },
-  { element: <AIServiceTester />, path: "/ai-tests" },
-  { element: <Tester />, path: "/tester" },
-  { element: <AIStudioPage />, path: "/studio" },
-  { element: <TestimonialDetailPage />, path: "/detail/:testimonialId" },
   {
-    path: "/dashboard",
-    element: (
-      <ErrorBoundary
-        ErrorComponent={DashboardErrorComponent}
-        LoadingComponent={LoadingIndicator}
-        componentName="Dashboard"
-      >
-        <TestimonialsDashboard />
-      </ErrorBoundary>
-    ),
+    element: <DashboardProtectedRoute />,
+    children: [
+      {
+        path: "/dashboard",
+        element: (
+          <ErrorBoundary
+            ErrorComponent={DashboardErrorComponent}
+            LoadingComponent={LoadingIndicator}
+            componentName="Dashboard"
+          >
+            <TestimonialsDashboard />
+          </ErrorBoundary>
+        ),
+      },
+      {
+        path: "/studio",
+        element: (
+          <ErrorBoundary
+            ErrorComponent={DashboardErrorComponent}
+            LoadingComponent={LoadingIndicator}
+            componentName="Studio"
+          >
+            <AIStudioPage />
+          </ErrorBoundary>
+        ),
+      },
+      {
+        path: "/detail/:testimonialId",
+        element: (
+          <ErrorBoundary
+            ErrorComponent={DashboardErrorComponent}
+            LoadingComponent={LoadingIndicator}
+            componentName="DetailPage"
+          >
+            <TestimonialDetailPage />
+          </ErrorBoundary>
+        ),
+      },
+      {
+        path: "/brand-guide",
+        element: (
+          <ErrorBoundary
+            ErrorComponent={DashboardErrorComponent}
+            LoadingComponent={LoadingIndicator}
+            componentName="BrandGuide"
+          >
+            <BrandGuidePage />
+          </ErrorBoundary>
+        ),
+      },
+      {
+        path: "/capture-page",
+        element: (
+          <ErrorBoundary
+            ErrorComponent={DashboardErrorComponent}
+            LoadingComponent={LoadingIndicator}
+            componentName="CapturePage"
+          >
+            <TempCapturePage />
+          </ErrorBoundary>
+        ),
+      },
+      {
+        path: "/studio/stories",
+        element: (
+          <ErrorBoundary
+            ErrorComponent={DashboardErrorComponent}
+            LoadingComponent={LoadingIndicator}
+            componentName="StoryVideos"
+          >
+            <StoryVideosPage />
+          </ErrorBoundary>
+        ),
+      },
+      {
+        path: "/studio/stories/:jobId",
+        element: (
+          <ErrorBoundary
+            ErrorComponent={DashboardErrorComponent}
+            LoadingComponent={LoadingIndicator}
+            componentName="StoryVideos"
+          >
+            <StoryVideosPage />
+          </ErrorBoundary>
+        ),
+      },
+      {
+        path: "/ai-content",
+        element: (
+          <ErrorBoundary
+            ErrorComponent={DashboardErrorComponent}
+            LoadingComponent={LoadingIndicator}
+            componentName="AIGeneratedContent"
+          >
+            <AIGeneratedContentPage />
+          </ErrorBoundary>
+        ),
+      },
+    ],
   },
-  // {
-  //   element: <DashboardProtectedRoute />,
-  //   children: [
-  //     {
-  //       path: "/dashboard",
-  //       element: (
-  //         <ErrorBoundary
-  //           ErrorComponent={DashboardErrorComponent}
-  //           LoadingComponent={LoadingIndicator}
-  //           componentName="Dashboard"
-  //         >
-  //           <TestimonialsDashboard />
-  //         </ErrorBoundary>
-  //       ),
-  //     },
-  //   ],
-  // },
   {
     element: <OnboardingProtectedRoute />,
     children: [
@@ -113,7 +178,7 @@ export const router = createBrowserRouter([
         path: "/onboarding",
         element: (
           <ErrorBoundary
-            ErrorComponent={OnboardingError}
+            ErrorComponent={DashboardErrorComponent}
             LoadingComponent={OnboardingLoadingComponent}
             componentName="Onboarding"
           >
@@ -159,25 +224,21 @@ export const router = createBrowserRouter([
     element: <EmailPage />,
   },
   {
-    path: "/reviewpage",
-    element: <ReviewPage />,
-  },
-
-  {
-    path: "/all-reviewpage",
-    element: <AllReviewsPage />,
-  },
-  {
-    path: "/login",
-    element: <Login />,
-  },
-  {
-    path: "/signup",
-    element: <Signup />,
-  },
-  {
-    path: "/reset-password",
-    element: <ResetPasswordPage />,
+    element: <AuthPagesProtectedRoute />,
+    children: [
+      {
+        path: "/login",
+        element: <Login />,
+      },
+      {
+        path: "/signup",
+        element: <Signup />,
+      },
+      {
+        path: "/reset-password",
+        element: <ResetPasswordPage />,
+      },
+    ],
   },
 
   {

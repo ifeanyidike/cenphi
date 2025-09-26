@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
@@ -132,6 +133,7 @@ export const ResetPasswordForm = observer(
     isLoading,
     ...props
   }: PasswordResetAuthFormProps) => {
+    const navigate = useNavigate();
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [isSuccess, setIsSuccess] = useState(false);
@@ -171,7 +173,7 @@ export const ResetPasswordForm = observer(
               <Button
                 type="button"
                 className="w-full"
-                onClick={() => (window.location.href = "/login")}
+                onClick={() => navigate("/login")}
               >
                 Return to Login
               </Button>

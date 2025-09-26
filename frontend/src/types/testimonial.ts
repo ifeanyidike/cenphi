@@ -99,10 +99,12 @@ export type ProcessingType =
   | "enhancement"
   | "clipping"
   | "story_mode_generation"
-  | "video_platform_optization"
+  | "video_platform_optimization"
   | "text_platform_optization"
   | "content_generation"
   | "text_polishing"
+  | "translation"
+  | "viral_analysis"
   | "narration";
 export interface TestimonialArtifact extends BaseEntity {
   testimonial_id: string;
@@ -125,6 +127,7 @@ export interface TestimonialArtifact extends BaseEntity {
   // User interaction
   is_user_saved: boolean;
   is_streamed: boolean;
+  source_id: string;
 
   // Processing metadata
   processing_metadata: Record<string, any>;

@@ -4,33 +4,16 @@
 
 import os
 import uuid
-import subprocess
 import logging
-import json
 import time
-from typing import List, Dict, Any, Optional
-from dataclasses import dataclass
+from typing import List, Dict, Any, Optional, Union
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from src.config.settings import settings
+from google.protobuf.struct_pb2 import Struct
 import threading
 
 import intelligence_pb2
 
 logger = logging.getLogger(__name__)
-
-@dataclass
-class ProcessedSegment:
-    """Represents a processed video segment ready for story assembly"""
-    video_path: str
-    start_time: float
-    end_time: float
-    duration: float
-    text_content: str
-    theme: str
-    include_logo: bool
-    include_subtitle: bool
-    include_watermark: bool
-    metadata: Dict[str, Any]
 
 class StoryModeGenerator:
     """
@@ -48,6 +31,8 @@ class StoryModeGenerator:
         self._file_manager = None
         self._audio_normalizer = None
         self._ffmpeg_optimizer = None
+        self._ai_client = None
+        self._video_normalizer = None
         self.max_workers = min(4, os.cpu_count() or 1) + 2
         
         # ✅ SIMPLE: Basic standardized encoding (no exotic options)
@@ -129,9 +114,25 @@ class StoryModeGenerator:
             self._audio_normalizer = AudioNormalizer()
         return self._audio_normalizer
     
+    @property
+    def ai_client(self):
+        """Lazy load AI client"""
+        if self._ai_client is None:
+            from src.ai_providers.client import ai_client
+            self._ai_client = ai_client
+        return self._ai_client
+
+    @property
+    def video_normalizer(self):
+        """Lazy load video resolution normalizer"""
+        if self._video_normalizer is None:
+            from .video_resolution_normalizer import VideoResolutionNormalizer
+            self._video_normalizer = VideoResolutionNormalizer()
+        return self._video_normalizer
+    
     def batch_generate_stories(
         self,
-        testimonial_segments: List[List[intelligence_pb2.TestimonialSegment]],
+        segments: List[Union[intelligence_pb2.TestimonialSegment, intelligence_pb2.ProcessedSegment]],
         brand_context: intelligence_pb2.BrandContext,
         output_format: str = "mp4",
         background_music: Optional[str] = "corporate",
@@ -140,12 +141,14 @@ class StoryModeGenerator:
         add_background_music: Optional[bool] = True,
         intro_image_url: Optional[str] = None,
         outro_image_url: Optional[str] = None,
-        company_name: Optional[str] = "Our Company"
+        company_name: Optional[str] = "Our Company",
+        request_type: str = "testimonial",
+        auto_order: bool = False
     ) -> List[Dict[str, Any]]:
         """✅ Batch generate professional story videos using thread pool concurrency"""
         results = []
         start_time = time.time()
-        logger.info(f"🚀 Starting batch story generation for {len(testimonial_segments)} segments"
+        logger.info(f"🚀 Starting batch story generation for {len(segments)} segments"
                      f" with {self.max_workers} workers"
                      f" at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time))}"
                      f" ({start_time:.2f} seconds since epoch)"
@@ -153,7 +156,7 @@ class StoryModeGenerator:
         try:
             with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
                 futures = []
-                for idx, segments in enumerate(testimonial_segments):
+                for idx, segments in enumerate(segments):
                     story_id = uuid.uuid4().hex
                     future = executor.submit(
                         self.generate_story_video,
@@ -166,7 +169,9 @@ class StoryModeGenerator:
                         add_background_music,
                         intro_image_url,
                         outro_image_url,
-                        company_name    
+                        company_name,
+                        request_type,
+                        auto_order  
                     )
                     futures.append((idx, future, story_id))
                 for idx, future, story_id in futures:
@@ -202,7 +207,40 @@ class StoryModeGenerator:
             logger.info(f"📊 Generated {len(results)} stories with {sum(1 for r in results if r.get('status') == 'success')} successes"
                         f" and {sum(1 for r in results if r.get('status') == 'failed')} failures")
             self.file_manager.cleanup_all_temp_files()
+    
     def generate_story_video(
+        self,
+        segments: List[Union[intelligence_pb2.TestimonialSegment, intelligence_pb2.ProcessedSegment]],
+        brand_context: intelligence_pb2.BrandContext,
+        output_format: str = "mp4",
+        background_music: Optional[str] = "corporate",
+        music_volume: str = "low",
+        prompt: Optional[str] = None,
+        add_background_music: Optional[bool] = True,
+        intro_image_url: Optional[str] = None,
+        outro_image_url: Optional[str] = None,
+        company_name: Optional[str] = "Our Company",
+        request_type: str = "testimonial",
+        auto_order: bool = False
+    ) -> Dict[str, Any]:
+        """✅ Generate professional story video with working fixes"""
+        logger.info(f"auto order: {auto_order}")
+        if request_type == "clips" and len(segments):
+            return self.generate_story_video_from_clips(
+                segments, brand_context, output_format, background_music, music_volume, prompt,
+                add_background_music, intro_image_url, outro_image_url, company_name, auto_order
+            )
+        elif len(segments):
+            return self.generate_story_video_from_testimonial(
+                segments, brand_context, output_format, background_music, music_volume, prompt,
+                add_background_music, intro_image_url, outro_image_url, company_name, auto_order
+            )
+        else:
+            raise ValueError("invalid request")
+
+    
+    
+    def generate_story_video_from_testimonial(
         self,
         testimonial_segments: List[intelligence_pb2.TestimonialSegment],
         brand_context: intelligence_pb2.BrandContext,
@@ -213,13 +251,14 @@ class StoryModeGenerator:
         add_background_music: Optional[bool] = True,
         intro_image_url: Optional[str] = None,
         outro_image_url: Optional[str] = None,
-        company_name: Optional[str] = "Our Company"
+        company_name: Optional[str] = "Our Company",
+        auto_order: bool = False,
     ) -> Dict[str, Any]:
         """✅ Generate professional story video with working fixes"""
         
         story_id = str(uuid.uuid4())
         cache_key = self.generate_story_cache_key(testimonial_segments, brand_context, output_format, background_music,
-                    music_volume, prompt, add_background_music, intro_image_url, outro_image_url, company_name
+                    music_volume, prompt, add_background_music, intro_image_url, outro_image_url, company_name, auto_order
                 )
         temp_files_local = []
         
@@ -249,7 +288,7 @@ class StoryModeGenerator:
                     self._process_segments, testimonial_segments, brand_context, temp_files_local
                 )
                 script_future = executor.submit(
-                    self._generate_prompt_driven_script, testimonial_segments, brand_context, company_name, prompt
+                    self._generate_prompt_driven_script, brand_context, company_name, prompt
                 )
                 
                 # Wait for all to complete
@@ -259,6 +298,11 @@ class StoryModeGenerator:
             if not processed_segments:
                 self._cleanup_temp_files(temp_files_local)
                 return {"success": False, "error": "No valid video segments processed"}
+            
+            if auto_order:
+                processed_segments = self._intelligently_order_segments(
+                    processed_segments, company_name, prompt
+                )
             
             brand_colors = []
             try:
@@ -338,6 +382,341 @@ class StoryModeGenerator:
             self._cleanup_temp_files(temp_files_local)
             self.file_manager.cleanup_all_temp_files()
 
+    def generate_story_video_from_clips(self, 
+            processed_segments: List[intelligence_pb2.ProcessedSegment], 
+            brand_context: intelligence_pb2.BrandContext,
+            output_format: str = "mp4",
+            background_music: Optional[str] = "corporate",
+            music_volume: str = "low",
+            prompt: Optional[str] = None,
+            add_background_music: Optional[bool] = True,
+            intro_image_url: Optional[str] = None,
+            outro_image_url: Optional[str] = None,
+            company_name: Optional[str] = "Our Company",
+            auto_order: bool = False
+        ):
+        """Create story mode from already splitted segments _process_disparate_segments"""
+        story_id = str(uuid.uuid4())
+        cache_key = self.generate_clips_story_cache_key(processed_segments, brand_context, output_format, background_music,
+                    music_volume, prompt, add_background_music, intro_image_url, outro_image_url, company_name, auto_order
+                )
+        temp_files_local = []
+        
+        try:
+            logger.info(f"🚀 Starting story generation: {story_id}")
+            start_time = time.time()
+
+           
+            cache_url = self.storage_manager.get_public_url_for_object(f"stories/{cache_key}.{output_format}")
+            if self.storage_manager.check_url_exists(cache_url):
+                logger.info(f"✅ Using cached platform optimizer URL: stories/{cache_key[:12]}.{output_format}")
+                return {
+                    "success": True,
+                    "story_video_url": cache_url,
+                }
+            
+            # ✅ Step 1: Validate inputs
+            if not processed_segments or len(processed_segments) == 0:
+                return {"success": False, "error": "No processed segments provided"}
+            
+            # ✅ CHANGE: Run these 3 tasks in parallel
+            with ThreadPoolExecutor(max_workers=3) as executor:
+                music_future = executor.submit(
+                    self._get_music_path, background_music, add_background_music, temp_files_local
+                )
+                segments_future = executor.submit(
+                    self._process_disparate_segments, processed_segments, brand_context, temp_files_local
+                )
+                script_future = executor.submit(
+                    self._generate_prompt_driven_script, brand_context, company_name, prompt
+                )
+                
+                # Wait for all to complete
+                music_path = music_future.result()
+                processed_segments = segments_future.result()
+                story_script = script_future.result()
+            if not processed_segments:
+                self._cleanup_temp_files(temp_files_local)
+                return {"success": False, "error": "No valid video segments processed"}
+            
+            if auto_order:
+                processed_segments = self._intelligently_order_segments(
+                    processed_segments, company_name, prompt
+                )
+            
+            brand_colors = []
+            try:
+                if hasattr(brand_context, 'color_slice') and brand_context.color_slice:
+                    brand_colors = list(brand_context.color_slice)
+            except Exception as e:
+                logger.debug(f"Could not extract brand colors: {e}")
+                brand_colors = []
+
+            # ✅ Create intro and outro in parallel
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                intro_future = executor.submit(
+                    self._get_cached_intro_or_create, brand_colors, company_name, story_script, temp_files_local, intro_image_url
+                )
+                outro_future = executor.submit(
+                    self._get_cached_outro_or_create, brand_colors, company_name, story_script, temp_files_local, outro_image_url
+                )
+                
+                intro_video_path = intro_future.result()
+                outro_video_path = outro_future.result()
+
+            # intro_video_path = ""
+            # outro_video_path = ""
+            
+            # ✅ Steps 7-12: Rest remains sequential (dependencies)
+            main_story_path = self._combine_segments_with_transitions(
+                processed_segments, story_id, temp_files_local
+            )
+            
+            assembled_story_path = self._assemble_complete_story(
+                intro_video_path, main_story_path, outro_video_path, story_id, temp_files_local
+            )
+            
+            branded_story_path = self._apply_story_level_branding(
+                assembled_story_path, brand_context, story_id, temp_files_local
+            )
+
+            media_info = self.storage_manager.get_video_info(branded_story_path)
+            # final_story_path = branded_story_path
+            final_story_path = self.music_mixer.mix_music_with_cleanups(branded_story_path,
+                    music_path, media_info, story_id, temp_files_local, music_volume)
+            
+            final_story_path = self.noise_service.process_with_denoising(final_story_path, 
+                        "medium", temp_files_local, story_id)
+            
+            # final_story_path = self._add_background_music_professional(
+            #     branded_story_path, music_path, music_volume, story_id, temp_files_local
+            # )
+
+            
+            encoded_story_path = self._apply_studio_encoding(
+                final_story_path, output_format, story_id, temp_files_local
+            )
+            file_size_bytes = os.path.getsize(encoded_story_path)
+            file_size_mb = round(file_size_bytes / (1024 * 1024), 2)
+            
+            object_name = f"stories/{cache_key}.{output_format}"
+            story_video_url = self.storage_manager.upload_file_with_retry(encoded_story_path, object_name)
+            
+            temp_files_local.append(encoded_story_path)
+            self._cleanup_temp_files(temp_files_local)
+            
+            processing_time = time.time() - start_time
+            
+            if not story_video_url:
+                return {"success": False, "error": "Failed to upload story video"}
+            
+            logger.info(f"✅ Story generation completed in {processing_time:.2f}s: {story_id}")
+            return {
+                "success": True,
+                "story_video_url": story_video_url,
+                "size": file_size_mb,
+                "duration": media_info.get("duration", 0)
+            }
+            
+        except Exception as e:
+            self._cleanup_temp_files(temp_files_local)
+            logger.error(f"❌ Story generation failed: {str(e)}")
+            return {"success": False, "error": f"Story generation failed: {str(e)}"}
+        finally:
+            # Ensure all temp files are cleaned up
+            self._cleanup_temp_files(temp_files_local)
+            self.file_manager.cleanup_all_temp_files()
+
+
+    def _intelligently_order_segments(
+        self,
+        segments: List[intelligence_pb2.ProcessedSegment],
+        company_name: str,
+        prompt: Optional[str] = None
+    ) -> List[intelligence_pb2.ProcessedSegment]:
+        """
+        ✅ Use AI to determine optimal segment ordering for narrative flow
+        """
+        
+        try:
+            if len(segments) <= 1:
+                return segments
+            
+            logger.info(f"🤖 AI analyzing optimal order for {len(segments)} segments")
+            start_time = time.time()
+            
+            # Prepare segment data for AI analysis
+            segment_data = []
+            for i, seg in enumerate(segments):
+                segment_info = {
+                    "index": i,
+                    "text": seg.text_content[:500] if seg.text_content else "",  # Limit text for token efficiency
+                    "theme": seg.theme if hasattr(seg, 'theme') else "general",
+                    "duration": seg.duration if hasattr(seg, 'duration') else 0,
+                    "summary": self._extract_segment_summary(seg.text_content)
+                }
+                segment_data.append(segment_info)
+            
+            # Create AI prompt for segment ordering
+            ai_prompt = self._create_ordering_prompt(segment_data, company_name, prompt)
+            
+            # Call AI with retry logic
+            try:
+                response = self.ai_client.chat_completion(
+                    messages=[
+                        {"role": "system", "content": "You are an expert video editor and storyteller specializing in creating compelling narrative flows from customer testimonials and content segments."},
+                        {"role": "user", "content": ai_prompt}
+                    ],
+                    temperature=0.2,  # Lower temperature for more consistent ordering decisions
+                    max_tokens=2000
+                )
+                
+                ai_content = response.content.strip()
+                logger.debug(f"🤖 AI ordering response: {ai_content[:200]}...")
+                
+            except Exception as e:
+                logger.warning(f"AI ordering primary attempt failed: {e}, trying fallback")
+                response = self.ai_client.chat_completion(
+                    messages=[
+                        {"role": "system", "content": "You are a video editor. Reorder segments for best story flow."},
+                        {"role": "user", "content": self._create_simple_ordering_prompt(segment_data)}
+                    ],
+                    temperature=0.3,
+                    max_tokens=1000
+                )
+                ai_content = response.content.strip()
+            
+            # Parse AI response and reorder segments
+            new_order = self._parse_ai_ordering_response(ai_content, len(segments))
+            
+            if new_order:
+                reordered_segments = [segments[i] for i in new_order if 0 <= i < len(segments)]
+                
+                # Validate that we didn't lose any segments
+                if len(reordered_segments) == len(segments):
+                    processing_time = time.time() - start_time
+                    logger.info(f"✅ AI reordered segments in {processing_time:.2f}s: {new_order}")
+                    
+                    # Log the reasoning for debugging/improvement
+                    if "reasoning" in ai_content.lower() or "because" in ai_content.lower():
+                        reasoning = ai_content.split('\n')[0] if '\n' in ai_content else ai_content[:100]
+                        logger.info(f"🎯 AI ordering reasoning: {reasoning}")
+                    
+                    return reordered_segments
+                else:
+                    logger.warning(f"AI ordering validation failed: {len(reordered_segments)} != {len(segments)}")
+            
+            # Fallback to original order
+            logger.warning("AI ordering failed, using original order")
+            return segments
+            
+        except Exception as e:
+            logger.error(f"AI segment ordering failed: {e}")
+            return segments
+
+    def _extract_segment_summary(self, text_content: str) -> str:
+        """Extract a brief summary of segment content"""
+        if not text_content:
+            return "No content"
+        
+        # Simple heuristic-based summary
+        sentences = text_content.split('.')[:2]  # First 2 sentences
+        summary = '. '.join(sentences).strip()
+        return summary[:150] if summary else "Brief content"
+
+    def _create_ordering_prompt(
+        self, 
+        segment_data: List[Dict], 
+        company_name: str, 
+        user_prompt: Optional[str]
+    ) -> str:
+        """Create detailed AI prompt for segment ordering"""
+        
+        segments_text = ""
+        for i, seg in enumerate(segment_data):
+            segments_text += f"Segment {i}: \"{seg['summary']}\" (Theme: {seg['theme']}, Duration: {seg['duration']:.1f}s)\n"
+        
+        base_prompt = f"""
+    I need to create an optimal narrative flow for a {company_name} video story from these segments:
+
+    {segments_text}
+
+    Please analyze these segments and provide the optimal order (0-based indices) that creates:
+    1. A compelling narrative arc (setup → development → conclusion)
+    2. Smooth emotional progression 
+    3. Logical flow of ideas
+    4. Strong opening and closing
+
+    """
+        
+        if user_prompt:
+            base_prompt += f"\nSpecial requirements: {user_prompt}\n"
+        
+        base_prompt += """
+    Respond with:
+    1. The optimal order as a comma-separated list of indices (e.g., "2,0,1,3")
+    2. Brief reasoning for this order
+
+    Format:
+    ORDER: [indices]
+    REASONING: [explanation]
+    """
+        
+        return base_prompt
+
+    def _create_simple_ordering_prompt(self, segment_data: List[Dict]) -> str:
+        """Create simplified prompt for fallback AI calls"""
+        
+        segments_text = ""
+        for i, seg in enumerate(segment_data):
+            segments_text += f"{i}: {seg['summary'][:100]}\n"
+        
+        return f"""
+    Reorder these video segments for best storytelling flow:
+
+    {segments_text}
+
+    Respond with just the optimal order as comma-separated indices (e.g., "2,0,1,3").
+    """
+
+    def _parse_ai_ordering_response(self, ai_response: str, expected_count: int) -> Optional[List[int]]:
+        """Parse AI response to extract new segment order"""
+        
+        try:
+            # Look for ORDER: pattern first
+            if "ORDER:" in ai_response.upper():
+                order_line = ""
+                for line in ai_response.split('\n'):
+                    if "ORDER:" in line.upper():
+                        order_line = line.split(':', 1)[1].strip()
+                        break
+            else:
+                # Fallback: look for comma-separated numbers
+                lines = ai_response.strip().split('\n')
+                order_line = lines[0]
+                
+                # Find the line with comma-separated numbers
+                for line in lines:
+                    if ',' in line and any(c.isdigit() for c in line):
+                        order_line = line
+                        break
+            
+            # Extract numbers
+            import re
+            numbers = re.findall(r'\d+', order_line)
+            indices = [int(n) for n in numbers]
+            
+            # Validate indices
+            if len(indices) == expected_count and set(indices) == set(range(expected_count)):
+                return indices
+            
+            logger.warning(f"Invalid AI ordering response: {indices}")
+            return None
+            
+        except Exception as e:
+            logger.warning(f"Failed to parse AI ordering response: {e}")
+            return None
+        
     
     def generate_story_cache_key(self,
         testimonial_segments: List[intelligence_pb2.TestimonialSegment],
@@ -349,7 +728,8 @@ class StoryModeGenerator:
         add_background_music: Optional[bool] = True,
         intro_image_url: Optional[str] = None,
         outro_image_url: Optional[str] = None,
-        company_name: Optional[str] = "Our Company"
+        company_name: Optional[str] = "Our Company",
+        auto_order: bool = False
     ):
         """Generate deterministic cache key including brand colors"""
         import hashlib
@@ -377,11 +757,78 @@ class StoryModeGenerator:
         
         cache_data = (
             f"{STORY_ALGORITHM_VERSION}|{prompt}|{intro_image_url or ''}|{segs_hash}|{logo_url}|{colors}|{outro_image_url or ''}" 
-            f"|{background_music or ''}|{music_volume or ''}|{company_name}|{str(add_background_music)}|{output_format}"
+            f"|{background_music or ''}|{music_volume or ''}|{company_name}|{str(add_background_music)}|{output_format}|{str(auto_order)}"
         )
         
         cache_hash = hashlib.md5(cache_data.encode()).hexdigest()
         return cache_hash
+    
+
+
+    def generate_clips_story_cache_key(self,
+        processed_segments: List[intelligence_pb2.ProcessedSegment],
+        brand_context: intelligence_pb2.BrandContext,
+        output_format: str = "mp4",
+        background_music: Optional[str] = "corporate",
+        music_volume: str = "low",
+        prompt: Optional[str] = None,
+        add_background_music: Optional[bool] = True,
+        intro_image_url: Optional[str] = None,
+        outro_image_url: Optional[str] = None,
+        company_name: Optional[str] = "Our Company",
+        auto_order: bool = False
+    ):
+        """Generate deterministic cache key including brand colors"""
+        import hashlib
+        import json
+
+        STORY_ALGORITHM_VERSION = "v1.0"
+
+        logo_url = getattr(brand_context, 'logo_url', "")
+        brand_colors = []
+        if hasattr(brand_context, 'color_slice') and brand_context.color_slice:
+                brand_colors = list(brand_context.color_slice)
+        colors = "|".join(brand_colors)
+        prompt = prompt[:100] if prompt else ""
+
+        def _extract_processed_segment_cache_data(segment: intelligence_pb2.ProcessedSegment):
+            """Extract only cache-relevant data from segment"""
+            from urllib.parse import urlparse
+            
+            # Normalize media URL
+            media_id = ""
+            if segment.media_url:
+                parsed_url = urlparse(segment.media_url)
+                media_id = f"{parsed_url.netloc}{parsed_url.path}"
+            
+            # Extract only fields that affect output
+            return {
+                "media_id": media_id,
+                "start_time": segment.start_time,
+                "end_time": segment.end_time,
+                "theme": segment.theme,
+                "text_content": segment.text_content,
+            }
+
+
+        # ----- deterministic hash for processed_segments -----
+        if processed_segments:
+            cache_segments = [
+                _extract_processed_segment_cache_data(seg) for seg in processed_segments
+            ]
+            segs_json = json.dumps(cache_segments, sort_keys=True, separators=(",", ":"))
+            segs_hash = hashlib.sha256(segs_json.encode()).hexdigest()[:16]
+        else:
+            segs_hash = "empty"
+        
+        cache_data = (
+            f"{STORY_ALGORITHM_VERSION}|{prompt}|{intro_image_url or ''}|{segs_hash}|{logo_url}|{colors}|{outro_image_url or ''}" 
+            f"|{background_music or ''}|{music_volume or ''}|{company_name}|{str(add_background_music)}|{output_format}|{str(auto_order)}"
+        )
+        
+        cache_hash = hashlib.md5(cache_data.encode()).hexdigest()
+        return cache_hash
+    
     
     def _extract_segment_cache_data(self, segment: intelligence_pb2.TestimonialSegment):
         """Extract only cache-relevant data from segment"""
@@ -416,7 +863,7 @@ class StoryModeGenerator:
         segments: List[intelligence_pb2.TestimonialSegment],
         brand_context: intelligence_pb2.BrandContext,
         temp_files: List[str]
-    ) -> List[ProcessedSegment]:
+    ) -> List[intelligence_pb2.ProcessedSegment]:
         """✅ Process segments with working voice sync"""
         
         logger.info(f"🔄 Processing {len(segments)} segments in parallel")
@@ -437,8 +884,16 @@ class StoryModeGenerator:
                     clip_id = f"{segment_idx}_{highlight_idx}"
                     logger.info(f"EXTRACTING SEGMENT {highlight_idx}")
                     # ✅ Extract with working sync method
+                    # Ensure timing values are properly converted to float
+                    try:
+                        start_time_seconds = float(highlight.start_time) / 1000.0
+                        end_time_seconds = float(highlight.end_time) / 1000.0
+                    except (ValueError, TypeError) as e:
+                        logger.error(f"❌ Invalid timing values for highlight {highlight_idx}: start_time={highlight.start_time}, end_time={highlight.end_time}, error={e}")
+                        continue
+
                     clip_path = self._extract_highlight_clip(
-                        local_media_path, highlight.start_time/1000 , highlight.end_time/1000, 
+                        local_media_path, start_time_seconds, end_time_seconds,
                         clip_id, segment_temp_files
                     )
                     logger.info(f"Got clip path {clip_path}")
@@ -456,28 +911,27 @@ class StoryModeGenerator:
                             logger.info(f"✅ Audio normalized: {normalize_result.original_loudness:.1f} → {normalize_result.target_loudness:.1f} LUFS")
                             
                         # Apply branding with consistent encoding
-                        branded_clip_path = self._apply_highlight_level_branding(
-                            clip_path, highlight, brand_context, clip_id, segment_temp_files
-                        )
-                        
-                        segment_results.append(ProcessedSegment(
-                            video_path=branded_clip_path,
-                            start_time=highlight.start_time / 1000,
-                            end_time=highlight.end_time / 1000,
-                            duration=(highlight.end_time - highlight.start_time) / 1000,
-                            text_content=highlight.text,
-                            theme=highlight.theme,
-                            include_logo=highlight.include_logo,
-                            include_subtitle=highlight.include_subtitle,
-                            include_watermark=highlight.include_watermark,
-                            metadata={
+                        # branded_clip_path = self._apply_highlight_level_branding(
+                        #     clip_path, highlight, brand_context, clip_id, segment_temp_files
+                        # )
+                        meta = Struct()
+                        meta.update({
                                 "source_url": segment.media_url,
                                 "segment_index": segment_idx,
                                 "highlight_index": highlight_idx,
                                 "original_start_time": highlight.start_time / 1000,
                                 "original_end_time": highlight.end_time / 1000
-                            }
-                        ))
+                        })
+                        ps = intelligence_pb2.ProcessedSegment(
+                            media_url=clip_path,
+                            start_time=highlight.start_time / 1000,
+                            end_time=highlight.end_time / 1000,
+                            duration=(highlight.end_time - highlight.start_time) / 1000,
+                            text_content=highlight.text,
+                            theme=highlight.theme
+                        )
+                        ps.metadata.CopyFrom(meta)
+                        segment_results.append(ps)
                 
                 return segment_results, segment_temp_files
                 
@@ -508,17 +962,110 @@ class StoryModeGenerator:
 
         if processed_segments:
             logger.info("🔄 Sorting segments chronologically...")
-            processed_segments.sort(key=lambda seg: (seg.start_time, seg.end_time))
+            # Ensure safe sorting with proper type conversion
+            try:
+                processed_segments.sort(key=lambda seg: (float(seg.start_time) if seg.start_time else 0.0, float(seg.end_time) if seg.end_time else 0.0))
+            except (ValueError, TypeError) as e:
+                logger.warning(f"Failed to sort segments by time, using insertion order: {e}")
+                # Keep original order if sorting fails
 
             logger.info("📋 Final segment order:")
-            for i, seg in enumerate(processed_segments[:5]):  # Log first 5
-                logger.info(f"  {i+1}: {seg.start_time:.1f}s-{seg.end_time:.1f}s "
-                       f"(segment_{seg.metadata['segment_index']}_{seg.metadata['highlight_index']}) "
-                       f"- {seg.text_content[:50]}...")
         
         processing_time = time.time() - start_time
         logger.info(f"✅ Processed {len(processed_segments)} highlights in CHRONOLOGICAL TIME order in {processing_time:.2f}s")
         
+        return processed_segments
+    
+
+    def _process_disparate_segments(
+        self,
+        segments: List[intelligence_pb2.ProcessedSegment],
+        brand_context: intelligence_pb2.BrandContext,
+        temp_files: List[str],
+    ) -> List[intelligence_pb2.ProcessedSegment]:
+        """Process segments in parallel, include only existing media, and return results in the original input order."""
+        logger.info(f"🔄 Processing {len(segments)} segments in parallel")
+        start_time = time.time()
+
+        results_by_index: dict[int, intelligence_pb2.ProcessedSegment] = {}
+        temp_files_local: List[str] = []
+
+        def process_single_segment(segment_data) -> tuple[int, Optional[intelligence_pb2.ProcessedSegment], Optional[str]]:
+            idx, segment = segment_data
+            try:
+                clip = segment  # operate in-place on the proto message
+
+                # keep original ms values for metadata and safe conversion
+                orig_start_ms = float(getattr(clip, "start_time", 0.0))
+                orig_end_ms = float(getattr(clip, "end_time", 0.0))
+
+                # download media (returns path or falsy)
+                clip_path = self.storage_manager.download_media(clip.media_url)
+                if not clip_path:
+                    # media not available -> return None for clip
+                    return idx, None, None
+
+                # convert ms -> seconds exactly once
+                clip.start_time = orig_start_ms / 1000.0
+                clip.end_time = orig_end_ms / 1000.0
+                clip.duration = (orig_end_ms - orig_start_ms) / 1000.0
+
+                # normalize audio; may produce a new path
+                normalize_result = self.audio_normalizer.normalize_audio(
+                    media_path=clip_path,
+                    target_platform="youtube_standard",
+                    preserve_dynamics=True,
+                )
+                if normalize_result.success:
+                    clip_path = normalize_result.normalized_path
+                    logger.info(f"✅ Audio normalized (idx={idx}): {normalize_result.original_loudness:.1f} → {normalize_result.target_loudness:.1f} LUFS")
+
+                # build metadata (Struct supports numbers)
+                meta = Struct()
+                meta.update({
+                    "source_url": clip.media_url,
+                    "segment_index": idx,
+                    "highlight_index": 0,
+                    "original_start_time": orig_start_ms / 1000.0,
+                    "original_end_time": orig_end_ms / 1000.0,
+                })
+                clip.metadata.CopyFrom(meta)
+
+                # return the processed clip + single temp file path
+                return idx, clip, clip_path
+
+            except Exception as e:
+                logger.warning(f"Segment processing failed (idx={idx}): {e}")
+                return idx, None, None
+
+        # Run workers
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            tasks = [executor.submit(process_single_segment, (i, s)) for i, s in enumerate(segments)]
+            for future in as_completed(tasks):
+                try:
+                    idx, clip_or_none, temp_file = future.result()
+                    if temp_file:
+                        temp_files_local.append(temp_file)
+                    if clip_or_none is not None:
+                        # store by original index for deterministic reassembly
+                        results_by_index[idx] = clip_or_none
+                except Exception as e:
+                    logger.warning(f"Segment processing future failed: {e}")
+
+        # extend shared temp_files in main thread once
+        if temp_files_local:
+            temp_files.extend(temp_files_local)
+
+        # reassemble results in the original input order (skip missing)
+        processed_segments: List[intelligence_pb2.ProcessedSegment] = []
+        for i in range(len(segments)):
+            clip = results_by_index.get(i)
+            if clip is not None:
+                processed_segments.append(clip)
+
+        processing_time = time.time() - start_time
+        logger.info(f"✅ Processed {len(processed_segments)} highlights in ORIGINAL INPUT order in {processing_time:.2f}s")
+
         return processed_segments
 
     def _extract_highlight_clip(
@@ -535,7 +1082,15 @@ class StoryModeGenerator:
             # ✅ Debug the exact values being passed
             logger.info(f"🔍 DEBUG {clip_id}: start_time={start_time}, end_time={end_time}, type(start_time)={type(start_time)}")
             
-            # Check if timing values are actually numbers
+            # Ensure timing values are converted to float
+            try:
+                start_time = float(start_time)
+                end_time = float(end_time)
+            except (ValueError, TypeError) as e:
+                logger.error(f"❌ {clip_id}: Cannot convert timing values to float - start_time={start_time}, end_time={end_time}, error={e}")
+                return None
+
+            # Check if timing values are valid numbers
             if not isinstance(start_time, (int, float)) or not isinstance(end_time, (int, float)):
                 logger.error(f"❌ {clip_id}: Invalid timing types - start_time={type(start_time)}, end_time={type(end_time)}")
                 return None
@@ -836,53 +1391,71 @@ class StoryModeGenerator:
 
     def _combine_segments_with_transitions(
         self,
-        segments: List[ProcessedSegment],
+        segments: List[intelligence_pb2.ProcessedSegment],
         story_id: str,
         temp_files: List[str]
     ) -> Optional[str]:
-        """✅ Combine segments with proper ordering"""
-        
+        """✅ CPU-optimized batch segment combination with quality preservation"""
+
         try:
             # ✅ ENSURE: Segments are in proper order (if not already sorted)
             if not segments:
                 return None
-            
-            # ✅ OPTIONAL: Re-sort if needed (in case they got mixed up somewhere)
-            segments.sort(key=lambda seg: (
-                seg.metadata.get("segment_index", 0),
-                seg.metadata.get("highlight_index", 0)
-            ))
-            
-            video_paths = [seg.video_path for seg in segments]
-            
-            logger.info(f"🔄 Combining {len(video_paths)} segments in CORRECT order")
-            
-            # ✅ DEBUG: Log the order being used
-            for i, seg in enumerate(segments[:3]):  # Log first 3
-                logger.info(f"  Order {i}: {seg.metadata.get('segment_index')}_{seg.metadata.get('highlight_index')} "
-                        f"({seg.start_time:.1f}s) - {seg.text_content[:30]}...")
-            
+
+            logger.info(f"🚀 CPU-optimized batch combining {len(segments)} segments")
+
+            segments.sort(
+                key=lambda seg: (
+                    dict(seg.metadata).get("segment_index", 0),
+                    dict(seg.metadata).get("highlight_index", 0)
+                )
+            )
+
+            video_paths = [seg.media_url for seg in segments]
+
             if len(video_paths) == 1:
                 return video_paths[0]
-            
-            # Rest of your existing combination logic...
-            normalized_paths = self._normalize_video_streams(video_paths, story_id, temp_files)
-            
-            # output_path = os.path.join(tempfile.gettempdir(), f"main_story_{story_id}.mp4")
-            output_path = self.file_manager.create_temp_video("main_story_")
-            
-            # Try transition engine with normalized videos
-            moment_data = [{"theme": seg.theme} for seg in segments]
-            
-            result = self.transition_engine.combine_clips_with_transitions(
-                clip_paths=normalized_paths,
-                moments=moment_data,
+
+            # ✅ NEW: Use CPU-optimized batch processing
+            output_path = self.file_manager.create_temp_video("batch_story_")
+
+            # Use quality-preserving preset for story combination
+            quality_preset = self.ffmpeg_optimizer.get_quality_preserving_preset("very_fast_hq")
+
+            # Create batch story command with optimized settings
+            batch_cmd = self.ffmpeg_optimizer.create_batch_story_command(
+                clip_paths=video_paths,
                 output_path=output_path,
-                auto_select_transitions=True,
+                quality_preset=quality_preset,
                 transition_duration=1.0,
-                enable_audio_sync=True,
-                temp_files=temp_files,
+                enable_audio_sync=True
             )
+
+            logger.info(f"📊 Executing batch story combination with {quality_preset['preset']} preset")
+            result = self.ffmpeg_optimizer.execute_with_monitoring(batch_cmd, timeout=300)
+
+            if result.returncode == 0 and os.path.exists(output_path):
+                temp_files.append(output_path)
+                logger.info(f"✅ Batch story combination completed: {output_path}")
+                return output_path
+            else:
+                logger.warning("⚠️ Batch processing failed, falling back to transition engine")
+                # Fallback to existing transition engine approach
+                target_platform = self._detect_target_platform_from_context() or "default"
+                normalized_paths = self._normalize_video_streams(video_paths, story_id, temp_files, target_platform)
+
+                fallback_output = self.file_manager.create_temp_video("main_story_")
+                moment_data = [{"theme": seg.theme} for seg in segments]
+
+                result = self.transition_engine.combine_clips_with_transitions(
+                    clip_paths=normalized_paths,
+                    moments=moment_data,
+                    output_path=fallback_output,
+                    auto_select_transitions=True,
+                    transition_duration=1.0,
+                    enable_audio_sync=True,
+                    temp_files=temp_files,
+                )
             
             if result.get("success") and os.path.exists(output_path):
                 temp_files.append(output_path)
@@ -894,38 +1467,70 @@ class StoryModeGenerator:
             
         except Exception as e:
             logger.error(f"Segment combination failed: {e}")
-            return self._fallback_concatenation(video_paths, story_id, temp_files)
+            return self._fallback_concatenation(video_paths, story_id, temp_files) if 'video_paths' in locals() else None
+
 
     def _normalize_video_streams(
         self,
         video_paths: List[str],
         story_id: str,
+        temp_files: List[str],
+        target_platform: str = "default"
+    ) -> List[str]:
+        """✅ Advanced video normalization using VideoResolutionNormalizer"""
+
+        try:
+            logger.info(f"🎯 Normalizing {len(video_paths)} video streams with advanced normalizer")
+
+            # Convert paths to segments format expected by normalizer
+            video_segments = [{"media_url": path} for path in video_paths]
+
+            # Determine target profile based on story context or default
+            target_profile = self.video_normalizer.get_recommended_profile_for_platform(target_platform)
+
+            # Use advanced normalizer
+            normalized_segments = self.video_normalizer.normalize_video_resolutions_for_story(
+                video_segments=video_segments,
+                target_profile=target_profile,
+                temp_files=temp_files
+            )
+
+            # Extract normalized paths
+            normalized_paths = [segment.get("media_url") for segment in normalized_segments]
+
+            logger.info(f"✅ Advanced normalization completed for {len(normalized_paths)} videos")
+            return normalized_paths
+
+        except Exception as e:
+            logger.warning(f"Advanced normalization failed, falling back to basic: {e}")
+            return self._normalize_video_streams_basic(video_paths, story_id, temp_files)
+
+    def _normalize_video_streams_basic(
+        self,
+        video_paths: List[str],
+        story_id: str,
         temp_files: List[str]
     ) -> List[str]:
-        """✅ Normalize videos with working parameters only"""
-        
+        """✅ Fallback basic normalization for compatibility"""
+
         normalized_paths = []
-        
+
         try:
             for i, video_path in enumerate(video_paths):
-                # normalized_path = os.path.join(
-                #     tempfile.gettempdir(),
-                #     f"normalized_{story_id}_{i}_{uuid.uuid4().hex}.mp4"
-                # )
-                normalized_path = self.file_manager.create_temp_video(f"normalized_{story_id}_")
-                
+                normalized_path = self.file_manager.create_temp_video(f"normalized_basic_{story_id}_")
+
                 # ✅ Use only working FFmpeg options
                 cmd = [
                     "ffmpeg", "-y",
                     "-i", video_path,
-                    
+
                     # ✅ Standard encoding parameters
                     "-c:v", self.standard_encoding["video_codec"],
                     "-preset", self.standard_encoding["preset"],
                     "-crf", self.standard_encoding["crf"],
                     "-pix_fmt", self.standard_encoding["pixel_format"],
                     "-r", self.standard_encoding["frame_rate"],
-                    
+
                     # ✅ Standard audio parameters
                     "-c:a", self.standard_encoding["audio_codec"],
                     "-b:a", self.standard_encoding["audio_bitrate"],
@@ -1628,7 +2233,6 @@ class StoryModeGenerator:
 
     def _generate_prompt_driven_script(
         self,
-        segments: List[intelligence_pb2.TestimonialSegment],
         brand_context: intelligence_pb2.BrandContext,
         company_name: str,
         prompt: Optional[str]
@@ -1714,29 +2318,33 @@ class StoryModeGenerator:
         story_id: str,
         temp_files: List[str]
     ) -> str:
-        """✅ Apply final studio-quality encoding"""
-        
+        """✅ CPU-optimized studio encoding with quality preservation"""
+
         try:
-            # output_path = os.path.join(tempfile.gettempdir(), f"studio_encoded_{story_id}.{output_format}")
             output_path = self.file_manager.create_temp_file(suffix=f".{output_format}", prefix="studio_encoded_")
-            
+
+            # ✅ NEW: Use quality-preserving preset for final encoding
+            quality_preset = self.ffmpeg_optimizer.get_quality_preserving_preset("fast_hq")
+
+            # Apply CPU-optimized encoding with quality preservation
             cmd = [
                 "ffmpeg", "-y",
                 "-i", video_path,
                 "-c:v", self.standard_encoding["video_codec"],
-                "-preset", "fast",  # Highest quality preset
-                "-crf", "18",  # High quality
+                "-preset", quality_preset["preset"],  # CPU-optimized preset
+                "-crf", quality_preset["crf"],        # Better quality than original
+                "-tune", quality_preset.get("tune", "film"),  # Film tuning for better quality
                 "-pix_fmt", self.standard_encoding["pixel_format"],
                 "-c:a", self.standard_encoding["audio_codec"],
                 "-b:a", "256k",  # Higher audio bitrate for final output
                 "-movflags", "+faststart",
+                "-threads", str(min(4, os.cpu_count() or 2)),  # Optimize for Cloud Run CPU
                 output_path
             ]
-            
-            # result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
-            result = self.ffmpeg_optimizer.optimize_and_execute(cmd, 
-                    capture_output=True, text=True, timeout=600)
-            
+
+            logger.info(f"📊 Applying studio encoding with {quality_preset['preset']}, CRF {quality_preset['crf']}")
+            result = self.ffmpeg_optimizer.execute_with_monitoring(cmd, timeout=600)
+
             if result.returncode == 0 and os.path.exists(output_path):
                 temp_files.append(output_path)
                 logger.info("✅ Studio encoding applied")
@@ -1760,3 +2368,12 @@ class StoryModeGenerator:
                 logger.warning(f"Failed to cleanup {temp_file}: {e}")
         
         logger.debug(f"✅ Cleaned up {len(temp_files)} temporary files")
+
+    def _detect_target_platform_from_context(self) -> Optional[str]:
+        """Detect optimal target platform based on story context and user preferences"""
+
+        # This could be enhanced to detect from user preferences, brand context, or story metadata
+        # For now, return a sensible default for story mode
+        # You could extend this to check brand context, user settings, etc.
+
+        return "instagram_reel"  # Default for story mode - high engagement format

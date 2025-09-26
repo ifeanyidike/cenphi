@@ -25,11 +25,13 @@ import {
 } from "@/components/ui/sidebar";
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { observer } from "mobx-react-lite";
+import { authStore } from "@/stores/authStore";
 
-export function NavUser({
+function NavUser({
   user,
 }: {
-  user: { name: string; email: string; avatar: string };
+  user: { name: string; email: string; avatar?: string };
 }) {
   const { isMobile } = useSidebar();
   const [isOpen, setIsOpen] = useState(false);
@@ -142,8 +144,8 @@ export function NavUser({
             </DropdownMenuGroup>
             <DropdownMenuSeparator className="my-1" />
             <DropdownMenuItem
-              onClick={() => {}}
-              className="flex gap-2 rounded-lg m-1 p-2.5 hover:bg-dropdown-hover transition-colors duration-150"
+              onClick={() => authStore.logout()}
+              className="flex gap-2 cursor-pointer rounded-lg m-1 p-2.5 hover:bg-dropdown-hover transition-colors duration-150"
             >
               <LogOut className="size-4 text-dropdown-icon" />
               <span>Log out</span>
@@ -154,3 +156,5 @@ export function NavUser({
     </SidebarMenu>
   );
 }
+
+export default observer(NavUser);

@@ -11,18 +11,21 @@ type Repo interface {
 	User() UserRepository
 	TeamMember() TeamMemberRepository
 	Workspace() WorkspaceRepository
+	Testimonial() TestimonialRepository
 }
 
 type repo struct {
-	redis          *redis.Client
-	userRepo       UserRepository
-	workspaceRepo  WorkspaceRepository
-	teamMemberRepo TeamMemberRepository
+	redis           *redis.Client
+	userRepo        UserRepository
+	workspaceRepo   WorkspaceRepository
+	teamMemberRepo  TeamMemberRepository
+	testimonialRepo TestimonialRepository
 
 	// Separate Once for each repo
-	userOnce       sync.Once
-	workspaceOnce  sync.Once
-	teamMemberOnce sync.Once
+	userOnce            sync.Once
+	workspaceOnce       sync.Once
+	teamMemberOnce      sync.Once
+	testimonialRepoOnce sync.Once
 }
 
 func NewRepositoryManager(redis *redis.Client) Repo {
@@ -53,4 +56,11 @@ func (m *repo) Workspace() WorkspaceRepository {
 		m.workspaceRepo = NewWorkspaceRepository(m.redis)
 	})
 	return m.workspaceRepo
+}
+
+func (m *repo) Testimonial() TestimonialRepository {
+	m.testimonialRepoOnce.Do(func() {
+		m.testimonialRepo = NewTestimonialRepository(m.redis)
+	})
+	return m.testimonialRepo
 }

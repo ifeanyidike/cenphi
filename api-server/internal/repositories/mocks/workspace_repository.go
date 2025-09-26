@@ -12,6 +12,8 @@ import (
 
 	repositories "github.com/ifeanyidike/cenphi/internal/repositories"
 
+	sql "database/sql"
+
 	uuid "github.com/google/uuid"
 )
 
@@ -164,17 +166,17 @@ func (_m *WorkspaceRepository) Update(ctx context.Context, entity *models.Worksp
 	return r0
 }
 
-// UpdateAny provides a mock function with given fields: ctx, updates, id, db
-func (_m *WorkspaceRepository) UpdateAny(ctx context.Context, updates map[string]interface{}, id uuid.UUID, db repositories.DB) error {
-	ret := _m.Called(ctx, updates, id, db)
+// UpdateAny provides a mock function with given fields: ctx, id, updates, db
+func (_m *WorkspaceRepository) UpdateAny(ctx context.Context, id uuid.UUID, updates map[string]interface{}, db *sql.DB) error {
+	ret := _m.Called(ctx, id, updates, db)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateAny")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, map[string]interface{}, uuid.UUID, repositories.DB) error); ok {
-		r0 = rf(ctx, updates, id, db)
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, map[string]interface{}, *sql.DB) error); ok {
+		r0 = rf(ctx, id, updates, db)
 	} else {
 		r0 = ret.Error(0)
 	}

@@ -72,7 +72,7 @@ export const useMediaRecorder = (
       try {
         mediaRecorderRef.current.stop();
       } catch (err) {
-        console.warn("Error stopping MediaRecorder during cleanup:", err);
+        // MediaRecorder cleanup failed - continuing
       }
     }
     mediaRecorderRef.current = null;
@@ -97,7 +97,6 @@ export const useMediaRecorder = (
   // Initialize media stream
   const initializeMedia = useCallback(async (): Promise<MediaStream | null> => {
     if (isInitializingRef.current) {
-      console.log("📱 Media initialization already in progress");
       return streamRef.current;
     }
 
@@ -114,7 +113,6 @@ export const useMediaRecorder = (
             : streamRef.current.getAudioTracks().length > 0;
 
         if (hasRequiredTracks) {
-          console.log("📱 Using existing valid stream");
           isInitializingRef.current = false;
           setIsInitialized(true);
           return streamRef.current;
@@ -147,7 +145,6 @@ export const useMediaRecorder = (
         video: videoConstraints,
       };
 
-      console.log("📱 Requesting media with constraints:", constraints);
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
 
@@ -163,9 +160,6 @@ export const useMediaRecorder = (
         throw new Error("Failed to get audio track");
       }
 
-      console.log("✅ Media stream obtained successfully");
-      console.log("🎥 Video tracks:", videoTracks.length);
-      console.log("🎵 Audio tracks:", audioTracks.length);
 
       // Store stream
       streamRef.current = stream;
@@ -176,9 +170,8 @@ export const useMediaRecorder = (
         videoRef.current.srcObject = stream;
         try {
           await videoRef.current.play();
-          console.log("✅ Video preview started");
         } catch (err) {
-          console.warn("⚠️ Could not start video preview:", err);
+          // Video preview failed - continuing
         }
       }
 
@@ -186,7 +179,6 @@ export const useMediaRecorder = (
       isInitializingRef.current = false;
       return stream;
     } catch (err) {
-      console.error("❌ Error accessing media devices:", err);
       isInitializingRef.current = false;
 
       let errorMessage = "Unable to access camera/microphone. ";
@@ -224,18 +216,14 @@ export const useMediaRecorder = (
 
   // Initialize media stream on mount or when media type/orientation changes
   useEffect(() => {
-    console.log("🎬 Initializing media stream...");
     initializeMedia();
   }, [mediaType, cameraOrientation]);
 
   // Start recording
   const startRecording = useCallback(async () => {
     if (isRecording || isStoppingRef.current) {
-      console.log("⚠️ Recording already in progress or stopping");
       return;
     }
-
-    console.log("🎬 Starting recording...");
 
     // Reset state
     chunksCollectorRef.current = [];
@@ -246,10 +234,8 @@ export const useMediaRecorder = (
     // Ensure we have a media stream
     let stream = streamRef.current;
     if (!stream || !stream.active) {
-      console.log("📱 Media stream not ready, initializing...");
       stream = await initializeMedia();
       if (!stream) {
-        console.error("❌ Failed to initialize media stream");
         return;
       }
     }
@@ -258,8 +244,6 @@ export const useMediaRecorder = (
       // Determine MIME type
       let finalMimeType = mimeType;
       if (!MediaRecorder.isTypeSupported(mimeType)) {
-        console.warn(`⚠️ ${mimeType} not supported, trying alternatives`);
-
         const alternatives =
           mediaType === "video"
             ? ["video/webm;codecs=vp9", "video/webm", "video/mp4"]
@@ -270,8 +254,6 @@ export const useMediaRecorder = (
           mimeType;
       }
 
-      console.log("🎙️ Creating MediaRecorder with MIME type:", finalMimeType);
-
       // Create MediaRecorder
       const recorder = new MediaRecorder(stream, { mimeType: finalMimeType });
       mediaRecorderRef.current = recorder;
@@ -279,7 +261,6 @@ export const useMediaRecorder = (
       // Set up event handlers
       recorder.ondataavailable = (event) => {
         if (event.data && event.data.size > 0) {
-          console.log(`📦 Data chunk: ${event.data.size} bytes`);
           chunksCollectorRef.current.push(event.data);
           setRecordedChunks((prev) => [...prev, event.data]);
 
@@ -290,9 +271,7 @@ export const useMediaRecorder = (
       };
 
       recorder.onstop = () => {
-        console.log("🛑 Recording stopped");
         const finalChunks = [...chunksCollectorRef.current];
-        console.log(`📊 Final chunks count: ${finalChunks.length}`);
 
         setIsRecording(false);
         setIsPaused(false);
@@ -309,8 +288,7 @@ export const useMediaRecorder = (
         isStoppingRef.current = false;
       };
 
-      recorder.onerror = (event) => {
-        console.error("❌ MediaRecorder error:", event);
+      recorder.onerror = (_event) => {
         setError("Recording error occurred. Please try again.");
         cleanup();
       };
@@ -319,14 +297,11 @@ export const useMediaRecorder = (
       recorder.start(chunkInterval);
       setIsRecording(true);
 
-      console.log("✅ Recording started successfully");
-
       // Start timer
       timerRef.current = window.setInterval(() => {
         setRecordingTime((prev) => {
           const newTime = prev + 1;
           if (newTime >= maxDuration) {
-            console.log("⏰ Maximum duration reached, stopping...");
             stopRecording();
             return maxDuration;
           }
@@ -334,7 +309,6 @@ export const useMediaRecorder = (
         });
       }, 1000);
     } catch (err) {
-      console.error("❌ Failed to create MediaRecorder:", err);
       setError("Recording is not supported in your browser.");
       cleanup();
     }
@@ -352,11 +326,8 @@ export const useMediaRecorder = (
   // Stop recording
   const stopRecording = useCallback(() => {
     if (!isRecording || isStoppingRef.current) {
-      console.log("⚠️ Not recording or already stopping");
       return;
     }
-
-    console.log("🛑 Stopping recording...");
     isStoppingRef.current = true;
 
     if (
@@ -377,11 +348,9 @@ export const useMediaRecorder = (
           }
         }, 100);
       } catch (err) {
-        console.error("❌ Error stopping recorder:", err);
         isStoppingRef.current = false;
       }
     } else {
-      console.log("⚠️ MediaRecorder not in recording state");
       isStoppingRef.current = false;
     }
   }, [isRecording]);
@@ -401,9 +370,8 @@ export const useMediaRecorder = (
           timerRef.current = null;
         }
 
-        console.log("⏸️ Recording paused");
       } catch (err) {
-        console.error("❌ Error pausing recording:", err);
+        // Pause failed - continuing
       }
     }
   }, []);
@@ -430,9 +398,8 @@ export const useMediaRecorder = (
           });
         }, 1000);
 
-        console.log("▶️ Recording resumed");
       } catch (err) {
-        console.error("❌ Error resuming recording:", err);
+        // Resume failed - continuing
       }
     }
   }, [maxDuration, stopRecording]);

@@ -14,20 +14,20 @@ import (
 	"go.uber.org/zap"
 )
 
-type WorkspaceService interface {
-	CreateWorkspace(ctx context.Context, workspace *models.Workspace) error
-	GetWorkspaceByID(ctx context.Context, id uuid.UUID) (*models.Workspace, error)
-	GetWorkspacesByUser(ctx context.Context, userID uuid.UUID) ([]*models.Workspace, error)
-	UpdateWorkspace(ctx context.Context, workspace *models.Workspace) error
-	DeleteWorkspace(ctx context.Context, id uuid.UUID) error
-	GetWorkspaceStats(ctx context.Context, workspaceID uuid.UUID) (*WorkspaceStats, error)
-	UpdateWorkspaceSettings(ctx context.Context, workspaceID uuid.UUID, settings models.JSONMap) error
-	UpdateBrandingSettings(ctx context.Context, workspaceID uuid.UUID, settings models.JSONMap) error
-	ArchiveWorkspace(ctx context.Context, workspaceID uuid.UUID) error
-	RestoreWorkspace(ctx context.Context, workspaceID uuid.UUID) error
-}
+// type WorkspaceService interface {
+// 	CreateWorkspace(ctx context.Context, workspace *models.Workspace) error
+// 	GetWorkspaceByID(ctx context.Context, id uuid.UUID) (*models.Workspace, error)
+// 	GetWorkspacesByUser(ctx context.Context, userID uuid.UUID) ([]*models.Workspace, error)
+// 	UpdateWorkspace(ctx context.Context, workspace *models.Workspace) error
+// 	DeleteWorkspace(ctx context.Context, id uuid.UUID) error
+// 	GetWorkspaceStats(ctx context.Context, workspaceID uuid.UUID) (*WorkspaceStats, error)
+// 	UpdateWorkspaceSettings(ctx context.Context, workspaceID uuid.UUID, settings models.JSONMap) error
+// 	UpdateBrandingSettings(ctx context.Context, workspaceID uuid.UUID, settings models.JSONMap) error
+// 	ArchiveWorkspace(ctx context.Context, workspaceID uuid.UUID) error
+// 	RestoreWorkspace(ctx context.Context, workspaceID uuid.UUID) error
+// }
 
-type workspaceService struct {
+type WorkspaceService struct {
 	repo            repositories.WorkspaceRepository
 	teamMemberRepo  repositories.TeamMemberRepository
 	testimonialRepo repositories.TestimonialRepository
@@ -62,7 +62,7 @@ func NewWorkspaceService(
 	redis *redis.Client,
 	logger *zap.Logger,
 ) WorkspaceService {
-	return &workspaceService{
+	return WorkspaceService{
 		repo:           repo,
 		teamMemberRepo: teamMemberRepo,
 		// campaignRepo:    campaignRepo,
@@ -73,7 +73,7 @@ func NewWorkspaceService(
 	}
 }
 
-func (s *workspaceService) CreateWorkspace(ctx context.Context, workspace *models.Workspace) error {
+func (s WorkspaceService) CreateWorkspace(ctx context.Context, workspace *models.Workspace) error {
 	if workspace.ID == uuid.Nil {
 		workspace.ID = uuid.New()
 	}
@@ -98,7 +98,7 @@ func (s *workspaceService) CreateWorkspace(ctx context.Context, workspace *model
 	return nil
 }
 
-func (s *workspaceService) GetWorkspaceByID(ctx context.Context, id uuid.UUID) (*models.Workspace, error) {
+func (s WorkspaceService) GetWorkspaceByID(ctx context.Context, id uuid.UUID) (*models.Workspace, error) {
 	// Try cache first
 	if cached := s.getCachedWorkspace(ctx, id); cached != nil {
 		return cached, nil
@@ -116,7 +116,7 @@ func (s *workspaceService) GetWorkspaceByID(ctx context.Context, id uuid.UUID) (
 	return workspace, nil
 }
 
-func (s *workspaceService) GetWorkspacesByUser(ctx context.Context, userID uuid.UUID) ([]*models.Workspace, error) {
+func (s WorkspaceService) GetWorkspacesByUser(ctx context.Context, userID uuid.UUID) ([]*models.Workspace, error) {
 	s.logger.Info("Getting workspaces for user", zap.String("user_id", userID.String()))
 
 	// Get team memberships for the user
@@ -171,7 +171,7 @@ func (s *workspaceService) GetWorkspacesByUser(ctx context.Context, userID uuid.
 	return filteredWorkspaces, nil
 }
 
-func (s *workspaceService) UpdateWorkspace(ctx context.Context, workspace *models.Workspace) error {
+func (s WorkspaceService) UpdateWorkspace(ctx context.Context, workspace *models.Workspace) error {
 	workspace.UpdatedAt = time.Now()
 
 	err := s.repo.Update(ctx, workspace, workspace.ID, s.db)
@@ -192,7 +192,7 @@ func (s *workspaceService) UpdateWorkspace(ctx context.Context, workspace *model
 	return nil
 }
 
-func (s *workspaceService) DeleteWorkspace(ctx context.Context, id uuid.UUID) error {
+func (s WorkspaceService) DeleteWorkspace(ctx context.Context, id uuid.UUID) error {
 	err := s.repo.Delete(ctx, id, s.db)
 	if err != nil {
 		s.logger.Error("Failed to delete workspace", zap.Error(err))
@@ -207,7 +207,7 @@ func (s *workspaceService) DeleteWorkspace(ctx context.Context, id uuid.UUID) er
 	return nil
 }
 
-func (s *workspaceService) GetWorkspaceStats(ctx context.Context, workspaceID uuid.UUID) (*WorkspaceStats, error) {
+func (s WorkspaceService) GetWorkspaceStats(ctx context.Context, workspaceID uuid.UUID) (*WorkspaceStats, error) {
 	s.logger.Info("Getting workspace stats", zap.String("workspace_id", workspaceID.String()))
 
 	// Check cache first
@@ -290,7 +290,7 @@ func (s *workspaceService) GetWorkspaceStats(ctx context.Context, workspaceID uu
 	return stats, nil
 }
 
-func (s *workspaceService) UpdateWorkspaceSettings(ctx context.Context, workspaceID uuid.UUID, settings models.JSONMap) error {
+func (s WorkspaceService) UpdateWorkspaceSettings(ctx context.Context, workspaceID uuid.UUID, settings models.JSONMap) error {
 	workspace, err := s.GetWorkspaceByID(ctx, workspaceID)
 	if err != nil {
 		return err
@@ -308,7 +308,7 @@ func (s *workspaceService) UpdateWorkspaceSettings(ctx context.Context, workspac
 	return s.UpdateWorkspace(ctx, workspace)
 }
 
-func (s *workspaceService) UpdateBrandingSettings(ctx context.Context, workspaceID uuid.UUID, settings models.JSONMap) error {
+func (s WorkspaceService) UpdateBrandingSettings(ctx context.Context, workspaceID uuid.UUID, settings models.JSONMap) error {
 	workspace, err := s.GetWorkspaceByID(ctx, workspaceID)
 	if err != nil {
 		return err
@@ -326,7 +326,7 @@ func (s *workspaceService) UpdateBrandingSettings(ctx context.Context, workspace
 	return s.UpdateWorkspace(ctx, workspace)
 }
 
-func (s *workspaceService) ArchiveWorkspace(ctx context.Context, workspaceID uuid.UUID) error {
+func (s WorkspaceService) ArchiveWorkspace(ctx context.Context, workspaceID uuid.UUID) error {
 	workspace, err := s.GetWorkspaceByID(ctx, workspaceID)
 	if err != nil {
 		return err
@@ -348,7 +348,7 @@ func (s *workspaceService) ArchiveWorkspace(ctx context.Context, workspaceID uui
 	return nil
 }
 
-func (s *workspaceService) RestoreWorkspace(ctx context.Context, workspaceID uuid.UUID) error {
+func (s WorkspaceService) RestoreWorkspace(ctx context.Context, workspaceID uuid.UUID) error {
 	workspace, err := s.GetWorkspaceByID(ctx, workspaceID)
 	if err != nil {
 		return err
@@ -392,7 +392,7 @@ type analyticsStatsResult struct {
 	ConversionRate float64
 }
 
-func (s *workspaceService) getTestimonialStats(ctx context.Context, workspaceID uuid.UUID) (*testimonialStatsResult, error) {
+func (s WorkspaceService) getTestimonialStats(ctx context.Context, workspaceID uuid.UUID) (*testimonialStatsResult, error) {
 	query := `
 		SELECT 
 			COUNT(*) as total,
@@ -422,7 +422,7 @@ func (s *workspaceService) getTestimonialStats(ctx context.Context, workspaceID 
 	return &stats, nil
 }
 
-func (s *workspaceService) getCampaignStats(ctx context.Context, workspaceID uuid.UUID) (*campaignStatsResult, error) {
+func (s WorkspaceService) getCampaignStats(ctx context.Context, workspaceID uuid.UUID) (*campaignStatsResult, error) {
 	query := `
 		SELECT 
 			COUNT(*) as total,
@@ -450,7 +450,7 @@ func (s *workspaceService) getCampaignStats(ctx context.Context, workspaceID uui
 	return &stats, nil
 }
 
-func (s *workspaceService) getTeamMemberCount(ctx context.Context, workspaceID uuid.UUID) (int, error) {
+func (s WorkspaceService) getTeamMemberCount(ctx context.Context, workspaceID uuid.UUID) (int, error) {
 	query := `SELECT COUNT(*) FROM team_members WHERE workspace_id = $1 AND status = 'active'`
 
 	var count int
@@ -462,7 +462,7 @@ func (s *workspaceService) getTeamMemberCount(ctx context.Context, workspaceID u
 	return count, nil
 }
 
-func (s *workspaceService) getAnalyticsStats(ctx context.Context, workspaceID uuid.UUID) (*analyticsStatsResult, error) {
+func (s WorkspaceService) getAnalyticsStats(ctx context.Context, workspaceID uuid.UUID) (*analyticsStatsResult, error) {
 	// This would typically query an analytics_events table
 	// For now, return calculated values based on testimonials and campaigns
 	query := `
@@ -491,7 +491,7 @@ func (s *workspaceService) getAnalyticsStats(ctx context.Context, workspaceID uu
 	return &stats, nil
 }
 
-func (s *workspaceService) getStorageUsage(ctx context.Context, workspaceID uuid.UUID) (int64, error) {
+func (s WorkspaceService) getStorageUsage(ctx context.Context, workspaceID uuid.UUID) (int64, error) {
 	// This would calculate file sizes from media storage
 	// For now, estimate based on testimonial count and assume average file sizes
 	query := `
@@ -510,7 +510,7 @@ func (s *workspaceService) getStorageUsage(ctx context.Context, workspaceID uuid
 	return storageUsed, nil
 }
 
-func (s *workspaceService) getLastActivity(ctx context.Context, workspaceID uuid.UUID) (*time.Time, error) {
+func (s WorkspaceService) getLastActivity(ctx context.Context, workspaceID uuid.UUID) (*time.Time, error) {
 	query := `
 		SELECT MAX(latest_activity) as last_activity
 		FROM (
@@ -534,7 +534,7 @@ func (s *workspaceService) getLastActivity(ctx context.Context, workspaceID uuid
 	return &lastActivity, nil
 }
 
-func (s *workspaceService) getTeamMembershipsByUser(ctx context.Context, userID uuid.UUID) ([]*models.TeamMember, error) {
+func (s WorkspaceService) getTeamMembershipsByUser(ctx context.Context, userID uuid.UUID) ([]*models.TeamMember, error) {
 	query := `
 		SELECT id, workspace_id, user_id, role, permissions, created_at, updated_at
 		FROM team_members 
@@ -570,7 +570,7 @@ func (s *workspaceService) getTeamMembershipsByUser(ctx context.Context, userID 
 	return memberships, nil
 }
 
-func (s *workspaceService) getWorkspacesByIDs(ctx context.Context, workspaceIDs []uuid.UUID) ([]*models.Workspace, error) {
+func (s WorkspaceService) getWorkspacesByIDs(ctx context.Context, workspaceIDs []uuid.UUID) ([]*models.Workspace, error) {
 	if len(workspaceIDs) == 0 {
 		return []*models.Workspace{}, nil
 	}
@@ -620,7 +620,7 @@ func (s *workspaceService) getWorkspacesByIDs(ctx context.Context, workspaceIDs 
 	return workspaces, nil
 }
 
-func (s *workspaceService) findUserMembership(memberships []*models.TeamMember, workspaceID uuid.UUID) *models.TeamMember {
+func (s WorkspaceService) findUserMembership(memberships []*models.TeamMember, workspaceID uuid.UUID) *models.TeamMember {
 	for _, membership := range memberships {
 		if membership.WorkspaceID == workspaceID {
 			return membership
@@ -631,7 +631,7 @@ func (s *workspaceService) findUserMembership(memberships []*models.TeamMember, 
 
 // Cache helper methods
 
-func (s *workspaceService) cacheWorkspace(ctx context.Context, workspace *models.Workspace) {
+func (s WorkspaceService) cacheWorkspace(ctx context.Context, workspace *models.Workspace) {
 	cacheKey := fmt.Sprintf("workspace:%s", workspace.ID.String())
 	err := s.redis.Set(ctx, cacheKey, workspace, time.Hour).Err()
 	if err != nil {
@@ -639,7 +639,7 @@ func (s *workspaceService) cacheWorkspace(ctx context.Context, workspace *models
 	}
 }
 
-func (s *workspaceService) getCachedWorkspace(ctx context.Context, id uuid.UUID) *models.Workspace {
+func (s WorkspaceService) getCachedWorkspace(ctx context.Context, id uuid.UUID) *models.Workspace {
 	cacheKey := fmt.Sprintf("workspace:%s", id.String())
 	var workspace models.Workspace
 	err := s.redis.Get(ctx, cacheKey).Scan(&workspace)
@@ -649,12 +649,12 @@ func (s *workspaceService) getCachedWorkspace(ctx context.Context, id uuid.UUID)
 	return &workspace
 }
 
-func (s *workspaceService) clearWorkspaceCache(ctx context.Context, id uuid.UUID) {
+func (s WorkspaceService) clearWorkspaceCache(ctx context.Context, id uuid.UUID) {
 	cacheKey := fmt.Sprintf("workspace:%s", id.String())
 	s.redis.Del(ctx, cacheKey)
 }
 
-func (s *workspaceService) cacheWorkspaceStats(ctx context.Context, workspaceID uuid.UUID, stats *WorkspaceStats) {
+func (s WorkspaceService) cacheWorkspaceStats(ctx context.Context, workspaceID uuid.UUID, stats *WorkspaceStats) {
 	cacheKey := fmt.Sprintf("workspace_stats:%s", workspaceID.String())
 	err := s.redis.Set(ctx, cacheKey, stats, 5*time.Minute).Err()
 	if err != nil {
@@ -662,7 +662,7 @@ func (s *workspaceService) cacheWorkspaceStats(ctx context.Context, workspaceID 
 	}
 }
 
-func (s *workspaceService) getCachedWorkspaceStats(ctx context.Context, workspaceID uuid.UUID) *WorkspaceStats {
+func (s WorkspaceService) getCachedWorkspaceStats(ctx context.Context, workspaceID uuid.UUID) *WorkspaceStats {
 	cacheKey := fmt.Sprintf("workspace_stats:%s", workspaceID.String())
 	var stats WorkspaceStats
 	err := s.redis.Get(ctx, cacheKey).Scan(&stats)

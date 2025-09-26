@@ -4,7 +4,7 @@ import { MemberDataParams } from "@/types/member";
 import { makeAutoObservable, runInAction } from "mobx";
 import { WorkspaceOrchestrator } from "../workspace_hub";
 import axios from "axios";
-import { authStateManager } from "./auth_state_manager";
+import { authStore } from "@/stores/authStore";
 
 /**
  * Manages member-related operations, including fetching and storing member data.
@@ -32,7 +32,7 @@ export class MemberManager {
    * @throws Will throw an error if the request fails or the member data cannot be retrieved.
    */
   async getUser(uid?: string): Promise<MemberDataParams | null> {
-    const { token, currentUser } = await authStateManager.getToken();
+    const { token, currentUser } = await authStore.getToken();
     const id = uid ?? currentUser.uid;
 
     // PREVENT CONCURRENT CALLS FOR SAME UID

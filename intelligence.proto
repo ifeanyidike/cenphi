@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 package intelligence;
+import "google/protobuf/struct.proto";
 
 option go_package = "./pb";
 
@@ -84,7 +85,8 @@ message EnhanceRequest {
   string watermark_position = 8;
   string brand_color = 9;
   bool add_branding = 10;
-  string job_id = 11;
+  bool remove_noise = 11;
+  string job_id = 12;
 }
 
 message EnhanceResponse {
@@ -93,6 +95,8 @@ message EnhanceResponse {
   double quality_score = 3;
   string media_type = 4;
   string error = 5;
+  double duration = 6;
+  double size = 7;
 }
 
 message BatchEnhanceRequest {
@@ -144,11 +148,12 @@ message NarrationRequest {
 }
 message NarrationResponse {
   string audio_url = 1;
-  double audio_duration_seconds = 2;
+  double duration = 2;
   string voice_provider = 3;
   double quality_score = 4;
   string processed_text = 5;
   string error = 6;
+  double size = 7;
 }
 
 message BatchNarrationOpt {
@@ -210,27 +215,29 @@ message TranscriptSegment {
 }
 
 message HighlightMoment {
-  double start_time = 1;
-  double end_time = 2;
-  string text = 3;
-  string theme = 4;
-  repeated Word words = 5; 
-  bool social_media_optimize = 6;
-  bool enhance_clip = 7;
-  bool include_logo = 8;
-  bool include_subtitle = 9;
-  bool include_watermark = 10;
-  string quality = 11; // "high", "medium", "low"
-  bool add_background_music = 12;
-  bool include_theme = 13;
-  bool remove_noise = 14;
+  string id = 1;
+  double start_time = 2;
+  double end_time = 3;
+  string text = 4;
+  string theme = 5;
+  repeated Word words = 6; 
+  bool social_media_optimize = 7;
+  bool enhance_clip = 8;
+  bool include_logo = 9;
+  bool include_subtitle = 10;
+  bool include_watermark = 11;
+  string quality = 12; // "high", "medium", "low"
+  bool add_background_music = 13;
+  bool include_theme = 14;
+  bool remove_noise = 15;
 
-  double importance_score = 15;
-  string highlight_type = 16;        // "general", "problem", "results", etc.
-  string suggested_title = 17;       // Title for video clip
-  repeated string keywords = 18;     // Searchable keywords
-  double emotional_intensity = 19;  // 0-10 emotional score
-  double shareability = 20;         // 0-10 social media potential score
+  double importance_score = 16;
+  string highlight_type = 17;        // "general", "problem", "results", etc.
+  string suggested_title = 18;       // Title for video clip
+  repeated string keywords = 19;     // Searchable keywords
+  double emotional_intensity = 20;  // 0-10 emotional score
+  double shareability = 21;         // 0-10 social media potential score
+  double engagement_score = 22;
 }
 
 message BrandingOptions {
@@ -248,14 +255,18 @@ message ClippingResponse {
 }
 
 message Clip {
-  string url = 1;
-  double start_time = 2;
-  double end_time = 3;
-  string title = 4;
-  string theme = 5;
-  double engagement_score = 6;
-  double duration_seconds = 7;
-  map<string, bool> social_media_ready = 8; // platform -> ready status
+  string id = 1;
+  string url = 2;
+  double start_time = 3;
+  double end_time = 4;
+  string title = 5;
+  string text = 6;
+  string theme = 7;
+  double engagement_score = 8;
+  double duration = 9;
+  double size = 10;
+  map<string, bool> social_media_ready = 11; // platform -> ready status
+  string error = 12;
 }
 
 message ClippingRequestOpt {
@@ -292,7 +303,6 @@ message OptimizeRequest {
   BrandContext brand_context = 4;
   string transcript = 5;
   string optimization_quality = 6; // "high", "medium", "low"
-  int32 max_moments = 7;
   bool enable_transitions = 8;
   bool add_branding = 9;
   string background_music = 10; // Optional
@@ -305,6 +315,8 @@ message OptimizeRequest {
   repeated TranscriptSegment transcript_segments = 17; 
   bool add_background_music = 18;
   string job_id = 19;
+  bool remove_noise = 20;
+  bool enable_audio_normalization = 21;
 }
 
 message OptimizeOptions {
@@ -318,7 +330,6 @@ message BatchOptimizeRequest {
   BrandContext brand_context = 3;
   string transcript = 4;
   string optimization_quality = 5; // "high", "medium", "low"
-  int32 max_moments = 6;
   bool enable_transitions = 7;
   bool add_branding = 8;
   string background_music = 9; // Optional
@@ -340,6 +351,9 @@ message OptimizeResponse {
   bool success = 5;
   string error = 6;
   string testimonial_id = 7;
+  double duration = 8;
+  double size = 9;
+
 }
 
 message BatchOptimizeResponse {
@@ -382,19 +396,34 @@ message TestimonialSegment {
   repeated HighlightMoment highlights = 3;
 }
 
+message ProcessedSegment {
+  string media_url = 1;
+  double start_time = 2;
+  double end_time = 3;
+  double duration = 4;
+  string text_content = 5;
+  string theme = 6;
+  google.protobuf.Struct metadata = 10;
+  string testimonial_id = 11;
+}
+
 message StoryModeRequest {
   repeated TestimonialSegment testimonial_segments = 1;
-  BrandContext brand_context = 2;
-  string output_format = 3;
-  string background_music = 4;
-  string music_volume = 5;
-  string prompt = 6;
-  string intro_image_url = 7;
-  string outro_image_url = 8;
-  string company_name = 9;
-  bool add_background_music = 10;
-  string job_id = 11;
+  repeated ProcessedSegment processed_segments = 2;
+  BrandContext brand_context = 3;
+  string output_format = 4;
+  string background_music = 5;
+  string music_volume = 6;
+  string prompt = 7;
+  string intro_image_url = 8;
+  string outro_image_url = 9;
+  string company_name = 10;
+  bool add_background_music = 11;
+  string job_id = 12;
+  string type = 13;
+  bool auto_order = 14;
 }
+
 
 message BatchStoryModeOptions {
   repeated TestimonialSegment opt = 1;
@@ -417,6 +446,8 @@ message BatchStoryModeRequest {
 
 message StoryModeResponse {
   string story_video_url = 1;
+  double duration = 2;
+  double size = 3;
 }
 
 message BatchStoryModeResponse {
@@ -455,4 +486,62 @@ message BatchNoiseReductionRequest {
 
 message BatchNoiseReductionResponse {
   repeated NoiseReductionResponse response = 1;
+}
+
+// ============================================================================
+// Viral Content Analysis Service
+// ============================================================================
+
+service ViralAnalysisService {
+  rpc AnalyzeViralPotential(ViralAnalysisRequest) returns (ViralAnalysisResponse);
+  rpc BatchAnalyzeViralPotential(BatchViralAnalysisRequest) returns (BatchViralAnalysisResponse);
+}
+
+message ViralAnalysisRequest {
+  string testimonial_id = 1;
+  string media_url = 2;
+  string transcript = 3;
+  BrandContext brand_context = 4;
+  repeated string target_platforms = 5;
+  string job_id = 6;
+}
+
+message ViralMoment {
+  double start_time = 1;
+  double end_time = 2;
+  double viral_score = 3;
+  repeated string reasons = 4;
+  repeated string recommended_platforms = 5;
+  double thumbnail_timestamp = 6;
+  string suggested_caption = 7;
+  repeated string trending_elements = 8;
+}
+
+message ThumbnailOption {
+  double timestamp = 1;
+  double viral_score = 2;
+  string recommended_text = 3;
+  repeated string platforms = 4;
+  string reason = 5;
+}
+
+message ViralAnalysisResponse {
+  bool success = 1;
+  double overall_viral_score = 2;
+  repeated ViralMoment viral_moments = 3;
+  repeated ThumbnailOption best_thumbnail_options = 4;
+  repeated string trending_keywords = 5;
+  map<string, double> platform_recommendations = 6;
+  repeated string optimization_suggestions = 7;
+  string error = 8;
+  double processing_time = 9;
+  string testimonial_id = 10;
+}
+
+message BatchViralAnalysisRequest {
+  repeated ViralAnalysisRequest requests = 1;
+}
+
+message BatchViralAnalysisResponse {
+  repeated ViralAnalysisResponse responses = 1;
 }

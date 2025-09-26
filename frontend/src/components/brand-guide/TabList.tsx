@@ -1,6 +1,6 @@
 import { ScrollArea } from "../ui/scroll-area";
 import { TabsList, TabsTrigger } from "../ui/tabs";
-import { Code, Flag, Palette, Type } from "lucide-react";
+import { Flag, Palette, Type } from "lucide-react";
 
 const TabListElement = () => {
   return (
@@ -30,10 +30,6 @@ const TabListElement = () => {
           <Eye className="h-4 w-4" />
           <span>Preview</span>
         </TabsTrigger> */}
-        <TabsTrigger value="code" className="flex items-center gap-1.5">
-          <Code className="h-4 w-4" />
-          <span>Developer</span>
-        </TabsTrigger>
       </TabsList>
     </ScrollArea>
   );

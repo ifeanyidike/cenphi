@@ -1,256 +1,287 @@
 // components/ai-studio/service-config/ClippingConfig.tsx
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import {
-  FileText,
-  Image,
-  Scissors,
-  Shield,
-  Sparkles,
-  VolumeX,
-} from "lucide-react";
-import { Dispatch, SetStateAction, useState } from "react";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { FileText, Scissors, VolumeX, Target } from "lucide-react";
+import { useState } from "react";
 import HighlightSegment from "./HighlightSegment";
 import HighlightSegmentModal from "./HighlightSegmentModal";
+import BackgroundMusicSelector from "./BackgroundMusicSelector";
+import BrandingSelector from "./BrandingSelector";
+import { observer } from "mobx-react-lite";
+import { SmartClippingConfig } from "@/types/ai-service";
 
 type Props = {
   updateConfig: (key: string, value: any) => void;
-  config: any;
-  selectedSegments: string[];
-  setSelectedSegments: Dispatch<SetStateAction<string[]>>;
+  config: SmartClippingConfig;
   selectedTestimonials: string[];
-  videoPreviewUrl: string;
 };
 
-const ClippingConfig = ({
-  updateConfig,
-  config,
-  setSelectedSegments,
-  selectedSegments,
-  selectedTestimonials,
-  videoPreviewUrl,
-}: Props) => {
+const ClippingConfig = ({ updateConfig, config }: Props) => {
   const [highlightPreviewModal, setHighlightPreviewModal] =
     useState<boolean>(false);
+
   return (
     <>
-      <div className="space-y-12">
+      <div className="space-y-6">
         {/* Smart Segment Selection */}
+
         <HighlightSegment
           setHighlightPreviewModal={setHighlightPreviewModal}
-          selectedSegments={selectedSegments}
-          setSelectedSegments={setSelectedSegments}
+          selectedSegments={config.segments}
+          clearSegments={() => updateConfig("segments", [])}
         />
-        {/* Clip Configuration */}
-        <div className="bg-gradient-to-r from-emerald-50/50 to-teal-50/50 rounded-2xl p-4 border border-emerald-50">
-          <div className="flex items-center gap-3 mb-6">
-            <div>
-              <h3 className="text-lg font-bold text-gray-900">Clip Settings</h3>
-              <p className="text-sm text-gray-600">
-                Configure how clips will be generated and formatted
-              </p>
-            </div>
-          </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div>
-              <Label className="text-base font-semibold text-gray-900 mb-3 block">
-                Clip Strategy
-              </Label>
-              <div className="space-y-2">
-                {[
-                  {
-                    value: "best_moments",
-                    desc: "Top-rated highlights only",
-                    score: "95%+",
-                  },
-                  {
-                    value: "story_arc",
-                    desc: "Problem → Solution flow",
-                    score: "Narrative",
-                  },
-                  {
-                    value: "social_ready",
-                    desc: "Optimized for sharing",
-                    score: "Viral",
-                  },
-                  {
-                    value: "comprehensive",
-                    desc: "Cover all key points",
-                    score: "Complete",
-                  },
-                ].map((strategy) => (
-                  <button
-                    key={strategy.value}
-                    className={`w-full p-3 text-left rounded-lg border-2 transition-all ${
-                      config.clipStrategy === strategy.value
-                        ? "border-emerald-500 bg-emerald-50 text-emerald-700"
-                        : "border-gray-200 hover:border-gray-300"
-                    }`}
-                    onClick={() => updateConfig("clipStrategy", strategy.value)}
-                  >
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <div className="font-medium">{strategy.desc}</div>
-                        <div className="text-xs text-gray-500">
-                          Strategy: {strategy.value.replace("_", " ")}
-                        </div>
-                      </div>
-                      <div className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded">
-                        {strategy.score}
-                      </div>
-                    </div>
-                  </button>
-                ))}
+        {/* Highlight Detection Strategy */}
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-50 bg-gray-50/50">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center">
+                <Target className="h-4 w-4 text-white" />
               </div>
-            </div>
-
-            <div>
-              <Label className="text-base font-semibold text-gray-900 mb-3 block">
-                Highlight Focus
-              </Label>
-              <div className="space-y-2">
-                {[
-                  {
-                    value: "emotional",
-                    desc: "High emotion moments",
-                    icon: "💝",
-                  },
-                  {
-                    value: "results",
-                    desc: "Results & outcomes",
-                    icon: "📈",
-                  },
-                  {
-                    value: "transformation",
-                    desc: "Before & after stories",
-                    icon: "",
-                  },
-                  {
-                    value: "problem",
-                    desc: "Pain points addressed",
-                    icon: "🎯",
-                  },
-                  {
-                    value: "recommendation",
-                    desc: "Recommendation moments",
-                    icon: "⭐",
-                  },
-                  {
-                    value: "metrics",
-                    desc: "Numbers & statistics",
-                    icon: "📊",
-                  },
-                ].map((focus) => (
-                  <button
-                    key={focus.value}
-                    className={`w-full p-3 text-left rounded-lg border-2 transition-all ${
-                      config.highlightFocus === focus.value
-                        ? "border-emerald-500 bg-emerald-50 text-emerald-700"
-                        : "border-gray-200 hover:border-gray-300"
-                    }`}
-                    onClick={() => updateConfig("highlightFocus", focus.value)}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span>{focus.icon}</span>
-                      <div>
-                        <div className="font-medium capitalize">
-                          {focus.value}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {focus.desc}
-                        </div>
-                      </div>
-                    </div>
-                  </button>
-                ))}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900">
+                  Detection Strategy
+                </h3>
+                <p className="text-xs text-gray-500">
+                  Configure highlight detection and focus
+                </p>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Enhancement Options */}
-        <div className="bg-gradient-to-r from-blue-50/50 to-cyan-50/50 rounded-2xl p-4 border border-blue-50">
-          <div className="flex items-center gap-3 mb-6">
-            <div>
-              <h3 className="text-lg font-bold text-gray-900">
-                Enhancement Options
-              </h3>
-              <p className="text-sm text-gray-600">
-                Add professional touches to your clips
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {[
-              {
-                key: "includeSubtitles",
-                label: "Auto Subtitles",
-                desc: "Generate captions for accessibility",
-                icon: FileText,
-              },
-              {
-                key: "removeNoise",
-                label: "Audio Enhancement",
-                desc: "Clean and professional audio",
-                icon: VolumeX,
-              },
-              {
-                key: "addLogo",
-                label: "Logo Overlay",
-                desc: "Brand logo on each clip",
-                icon: Image,
-              },
-              {
-                key: "addWatermark",
-                label: "Watermark",
-                desc: "Brand watermark protection",
-                icon: Shield,
-              },
-            ].map((option) => {
-              const IconComponent = option.icon;
-              return (
-                <div
-                  key={option.key}
-                  className="flex items-center justify-between p-4 bg-white rounded-xl border border-gray-200 hover:border-blue-300 transition-all"
+          <div className="p-6">
+            <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
+              <div className="space-y-2">
+                <Label className="text-xs font-medium text-gray-600 uppercase tracking-wide">
+                  Highlight Type
+                </Label>
+                <Select
+                  value={config.highlight_type || "general"}
+                  onValueChange={(value) =>
+                    updateConfig("highlightType", value)
+                  }
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-gray-100 to-gray-200 flex items-center justify-center">
-                      <IconComponent className="h-6 w-6 text-gray-600" />
-                    </div>
-                    <div>
-                      <Label className="text-base font-semibold text-gray-900">
-                        {option.label}
-                      </Label>
-                      <p className="text-sm text-gray-600">{option.desc}</p>
-                    </div>
-                  </div>
-                  <Switch
-                    checked={config[option.key]}
-                    onCheckedChange={(checked) =>
-                      updateConfig(option.key, checked)
-                    }
-                    className="data-[state=checked]:bg-blue-600"
-                  />
-                </div>
-              );
-            })}
+                  <SelectTrigger className="h-10 text-sm border-gray-200 focus:border-gray-400">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[
+                      {
+                        value: "general",
+                        label: "General Highlights",
+                        desc: "Overall compelling moments",
+                      },
+                      {
+                        value: "emotional",
+                        label: "Emotional Highlights",
+                        desc: "Strong emotional impact",
+                      },
+                      {
+                        value: "results",
+                        label: "Results & Metrics",
+                        desc: "Quantifiable outcomes",
+                      },
+                      {
+                        value: "problem",
+                        label: "Problem/Solution",
+                        desc: "Challenge resolution",
+                      },
+                      {
+                        value: "recommendation",
+                        label: "Recommendations",
+                        desc: "Strong endorsements",
+                      },
+                      {
+                        value: "metrics",
+                        label: "Metrics",
+                        desc: "Numbers and statistics",
+                      },
+                      {
+                        value: "before_after",
+                        label: "Transformation",
+                        desc: "Before and after",
+                      },
+                      {
+                        value: "solution",
+                        label: "Solution Discovery",
+                        desc: "How they found solution",
+                      },
+                    ].map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        <div className="py-1">
+                          <div className="font-medium text-sm">
+                            {type.label}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {type.desc}
+                          </div>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* <div className="space-y-2">
+                <Label className="text-xs font-medium text-gray-600 uppercase tracking-wide flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  Max Clips
+                </Label>
+                <Select
+                  value={config.max_clips?.toString() || "5"}
+                  onValueChange={(value) =>
+                    updateConfig("maxMoments", parseInt(value))
+                  }
+                >
+                  <SelectTrigger className="h-10 text-sm border-gray-200 focus:border-gray-400 max-w-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="3">3 clips</SelectItem>
+                    <SelectItem value="5">5 clips</SelectItem>
+                    <SelectItem value="8">8 clips</SelectItem>
+                    <SelectItem value="10">10 clips</SelectItem>
+                    <SelectItem value="15">15 clips</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div> */}
+            </div>
           </div>
         </div>
+
+        {/* Clip Processing Options */}
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-50 bg-gray-50/50">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center">
+                <Scissors className="h-4 w-4 text-white" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900">
+                  Processing Options
+                </h3>
+                <p className="text-xs text-gray-500">
+                  Configure clip enhancements
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {[
+                {
+                  key: "enable_captions",
+                  label: "Auto Subtitles",
+                  desc: "Generate captions for accessibility",
+                  icon: FileText,
+                  comingSoon: true,
+                },
+                {
+                  key: "remove_noise",
+                  label: "Remove noise",
+                  desc: "Clean and professional audio",
+                  icon: VolumeX,
+                  comingSoon: false,
+                },
+              ].map((option) => {
+                const IconComponent = option.icon;
+                return (
+                  <div
+                    key={option.key}
+                    className={`flex items-center justify-between p-4 rounded-lg border transition-all ${
+                      option.comingSoon
+                        ? "border-gray-100 bg-gray-50/30"
+                        : "border-gray-200 hover:border-gray-300 bg-gray-50/50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                          option.comingSoon ? "bg-gray-300" : "bg-gray-100"
+                        }`}
+                      >
+                        <IconComponent
+                          className={`h-4 w-4 ${
+                            option.comingSoon
+                              ? "text-gray-500"
+                              : "text-gray-600"
+                          }`}
+                        />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <Label
+                            className={`text-sm font-medium ${
+                              option.comingSoon
+                                ? "text-gray-500"
+                                : "text-gray-900"
+                            }`}
+                          >
+                            {option.label}
+                          </Label>
+                          {option.comingSoon && (
+                            <span className="px-2 py-0.5 bg-gray-200 text-gray-600 text-xs rounded-full font-medium">
+                              Coming Soon
+                            </span>
+                          )}
+                        </div>
+                        <p
+                          className={`text-xs ${
+                            option.comingSoon
+                              ? "text-gray-400"
+                              : "text-gray-500"
+                          }`}
+                        >
+                          {option.desc}
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={
+                        option.comingSoon
+                          ? false
+                          : !!config[option.key as keyof SmartClippingConfig] ||
+                            false
+                      }
+                      onCheckedChange={
+                        option.comingSoon
+                          ? undefined
+                          : (checked) => updateConfig(option.key, checked)
+                      }
+                      disabled={option.comingSoon}
+                      className="data-[state=checked]:bg-gray-900"
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Brand Identity */}
+        <BrandingSelector config={config} updateConfig={updateConfig} />
+
+        {/* Background Music */}
+        <BackgroundMusicSelector config={config} updateConfig={updateConfig} />
       </div>
+
       <HighlightSegmentModal
         isOpen={highlightPreviewModal}
         onClose={() => setHighlightPreviewModal(false)}
-        // testimonials={TESTIMONIALS_DATA.filter((t) =>
-        //   selectedTestimonials.includes(t.id)
-        // )}
-        testimonials={[]}
-        videoPreviewUrl={videoPreviewUrl}
-        onSegmentsSelected={setSelectedSegments}
+        highlightSegments={config.segments}
+        updateConfig={updateConfig}
+        minSelection={1}
       />
     </>
   );
 };
 
-export default ClippingConfig;
+export default observer(ClippingConfig);

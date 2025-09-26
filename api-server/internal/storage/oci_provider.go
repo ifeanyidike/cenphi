@@ -1,1133 +1,3 @@
-// package storage
-
-// import (
-// 	"context"
-// 	"crypto/rsa"
-// 	"crypto/x509"
-// 	"encoding/pem"
-// 	"fmt"
-// 	"io"
-// 	"mime/multipart"
-// 	"net/http"
-// 	"os"
-// 	"os/exec"
-// 	"path/filepath"
-// 	"strings"
-// 	"sync"
-// 	"time"
-
-// 	"github.com/google/uuid"
-// 	"github.com/ifeanyidike/cenphi/internal/config"
-// 	"github.com/oracle/oci-go-sdk/v65/common"
-// 	"github.com/oracle/oci-go-sdk/v65/objectstorage"
-// 	"go.uber.org/zap"
-// )
-
-// type OCIProvider struct {
-// 	client objectstorage.ObjectStorageClient
-// 	config config.OCIConfig
-// 	logger *zap.Logger
-
-// 	// Performance settings
-// 	chunkSize      int64
-// 	maxConcurrency int
-// 	uploadTimeout  time.Duration
-// 	retryAttempts  int
-// 	retryDelay     time.Duration
-// }
-
-// type ChunkUpload struct {
-// 	PartNumber int
-// 	Data       []byte
-// 	Size       int64
-// }
-
-// type UploadResult struct {
-// 	PartNumber int
-// 	ETag       string
-// 	Error      error
-// }
-
-// const (
-// 	DefaultChunkSize      = 10 * 1024 * 1024 // 10MB
-// 	MaxSimpleUploadSize   = 15 * 1024 * 1024 // REDUCED: 50MB (was 128MB)
-// 	DefaultMaxConcurrency = 4
-// 	DefaultUploadTimeout  = 20 * time.Minute
-// 	DefaultRetryAttempts  = 3
-// 	DefaultRetryDelay     = 2 * time.Second
-// )
-
-// // NewOCIProvider creates an optimized OCI provider
-// func NewOCIProvider(ctx context.Context, cfg config.OCIConfig, logger *zap.Logger) (*OCIProvider, error) {
-// 	client, err := createOCIClient(cfg)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("failed to create OCI client: %w", err)
-// 	}
-
-// 	provider := &OCIProvider{
-// 		client:         client,
-// 		config:         cfg,
-// 		logger:         logger,
-// 		chunkSize:      DefaultChunkSize,
-// 		maxConcurrency: DefaultMaxConcurrency,
-// 		uploadTimeout:  DefaultUploadTimeout,
-// 		retryAttempts:  DefaultRetryAttempts,
-// 		retryDelay:     DefaultRetryDelay,
-// 	}
-
-// 	logger.Info("OCI provider initialized with enhanced timeouts",
-// 		zap.String("region", cfg.Region),
-// 		zap.String("bucket", cfg.Bucket),
-// 		zap.Int64("chunk_size_mb", DefaultChunkSize/(1024*1024)),
-// 		zap.Int("max_concurrency", DefaultMaxConcurrency),
-// 		zap.Duration("upload_timeout", DefaultUploadTimeout),
-// 		zap.Int64("simple_upload_threshold_mb", MaxSimpleUploadSize/(1024*1024)))
-
-// 	return provider, nil
-// }
-
-// // UploadFile handles file uploads with intelligent routing and proper timeout handling
-// func (p *OCIProvider) UploadFile(ctx context.Context, file multipart.File, header *multipart.FileHeader, folder string) (string, error) {
-// 	// Create upload context with timeout
-// 	uploadCtx, cancel := context.WithTimeout(ctx, p.uploadTimeout)
-// 	defer cancel()
-// 	defer file.Close()
-
-// 	// Generate unique object path
-// 	objectPath := p.generateObjectPath(header.Filename, folder)
-// 	contentType := p.getContentType(header)
-
-// 	// Determine file size
-// 	fileSize, err := p.getFileSize(file)
-// 	if err != nil {
-// 		return "", fmt.Errorf("failed to get file size: %w", err)
-// 	}
-
-// 	p.logger.Info("Starting upload",
-// 		zap.String("filename", header.Filename),
-// 		zap.Int64("size", fileSize),
-// 		zap.String("content_type", contentType),
-// 		zap.String("strategy", func() string {
-// 			if fileSize <= MaxSimpleUploadSize {
-// 				return "simple_upload"
-// 			}
-// 			return "chunked_upload"
-// 		}()))
-
-// 	// Choose upload strategy based on file size
-// 	// For 35MB+ files, always use chunked upload to avoid timeouts
-// 	if fileSize <= MaxSimpleUploadSize {
-// 		return p.simpleUploadWithRetry(uploadCtx, file, objectPath, contentType, fileSize)
-// 	}
-
-// 	return p.chunkedUploadWithRetry(uploadCtx, file, header, objectPath, contentType, fileSize)
-// }
-
-// // simpleUploadWithRetry performs simple upload with retry logic
-// func (p *OCIProvider) simpleUploadWithRetry(ctx context.Context, reader io.Reader, objectPath, contentType string, contentLength int64) (string, error) {
-// 	var lastErr error
-
-// 	for attempt := 1; attempt <= p.retryAttempts; attempt++ {
-// 		// Reset reader position if possible
-// 		if seeker, ok := reader.(io.Seeker); ok {
-// 			seeker.Seek(0, io.SeekStart)
-// 		}
-
-// 		url, err := p.simpleUpload(ctx, reader, objectPath, contentType, contentLength)
-// 		if err == nil {
-// 			p.logger.Info("Simple upload successful",
-// 				zap.String("object", objectPath),
-// 				zap.Int("attempt", attempt))
-// 			return url, nil
-// 		}
-
-// 		lastErr = err
-// 		p.logger.Warn("Simple upload attempt failed",
-// 			zap.Int("attempt", attempt),
-// 			zap.Error(err))
-
-// 		if attempt < p.retryAttempts {
-// 			time.Sleep(time.Duration(attempt) * p.retryDelay)
-// 		}
-// 	}
-
-// 	return "", fmt.Errorf("simple upload failed after %d attempts: %w", p.retryAttempts, lastErr)
-// }
-
-// // chunkedUploadWithRetry performs efficient parallel chunked upload
-// func (p *OCIProvider) chunkedUploadWithRetry(ctx context.Context, file multipart.File, header *multipart.FileHeader, objectPath, contentType string, fileSize int64) (string, error) {
-// 	// Create temp file for efficient chunked reading
-// 	tmpFile, err := p.createTempFile(file, header)
-// 	if err != nil {
-// 		return "", fmt.Errorf("failed to create temp file: %w", err)
-// 	}
-// 	defer os.Remove(tmpFile.Name())
-// 	defer tmpFile.Close()
-
-// 	var lastErr error
-// 	for attempt := 1; attempt <= p.retryAttempts; attempt++ {
-// 		url, err := p.parallelChunkedUpload(ctx, tmpFile, objectPath, contentType, fileSize)
-// 		if err == nil {
-// 			p.logger.Info("Chunked upload successful",
-// 				zap.String("object", objectPath),
-// 				zap.Int("attempt", attempt))
-// 			return url, nil
-// 		}
-
-// 		lastErr = err
-// 		p.logger.Warn("Chunked upload attempt failed",
-// 			zap.Int("attempt", attempt),
-// 			zap.Error(err))
-
-// 		if attempt < p.retryAttempts {
-// 			time.Sleep(time.Duration(attempt) * p.retryDelay)
-// 		}
-// 	}
-
-// 	return "", fmt.Errorf("chunked upload failed after %d attempts: %w", p.retryAttempts, lastErr)
-// }
-
-// // parallelChunkedUpload performs efficient parallel upload
-// func (p *OCIProvider) parallelChunkedUpload(ctx context.Context, file *os.File, objectPath, contentType string, fileSize int64) (string, error) {
-// 	// Initialize multipart upload
-// 	uploadID, err := p.initMultipartUpload(ctx, objectPath, contentType)
-// 	if err != nil {
-// 		return "", fmt.Errorf("failed to init multipart upload: %w", err)
-// 	}
-
-// 	// Calculate chunks
-// 	totalChunks := int((fileSize + p.chunkSize - 1) / p.chunkSize)
-
-// 	p.logger.Info("Starting parallel upload",
-// 		zap.String("upload_id", uploadID),
-// 		zap.Int("chunks", totalChunks),
-// 		zap.Int64("chunk_size", p.chunkSize))
-
-// 	// Create worker pool
-// 	jobs := make(chan ChunkUpload, totalChunks)
-// 	results := make(chan UploadResult, totalChunks)
-
-// 	// Start workers
-// 	var wg sync.WaitGroup
-// 	for i := 0; i < p.maxConcurrency; i++ {
-// 		wg.Add(1)
-// 		go p.uploadWorker(ctx, &wg, jobs, results, uploadID, objectPath)
-// 	}
-
-// 	// Submit jobs
-// 	go func() {
-// 		defer close(jobs)
-// 		for i := 0; i < totalChunks; i++ {
-// 			offset := int64(i) * p.chunkSize
-// 			size := p.chunkSize
-// 			if offset+size > fileSize {
-// 				size = fileSize - offset
-// 			}
-
-// 			// Read chunk
-// 			data, err := p.readChunk(file, offset, size)
-// 			if err != nil {
-// 				p.logger.Error("Failed to read chunk", zap.Int("chunk", i+1), zap.Error(err))
-// 				return
-// 			}
-
-// 			select {
-// 			case jobs <- ChunkUpload{
-// 				PartNumber: i + 1,
-// 				Data:       data,
-// 				Size:       size,
-// 			}:
-// 			case <-ctx.Done():
-// 				return
-// 			}
-// 		}
-// 	}()
-
-// 	// Wait for workers
-// 	go func() {
-// 		wg.Wait()
-// 		close(results)
-// 	}()
-
-// 	// Collect results and ensure proper ordering
-// 	parts := make([]objectstorage.CommitMultipartUploadPartDetails, totalChunks)
-// 	receivedParts := 0
-// 	var uploadError error
-
-// 	for result := range results {
-// 		if result.Error != nil {
-// 			uploadError = result.Error
-// 			break
-// 		}
-
-// 		// Store part in correct position (parts are 1-indexed)
-// 		if result.PartNumber >= 1 && result.PartNumber <= totalChunks {
-// 			parts[result.PartNumber-1] = objectstorage.CommitMultipartUploadPartDetails{
-// 				PartNum: common.Int(result.PartNumber),
-// 				Etag:    common.String(result.ETag),
-// 			}
-// 			receivedParts++
-// 		}
-// 	}
-
-// 	// Handle errors
-// 	if uploadError != nil || receivedParts != totalChunks {
-// 		p.abortMultipartUpload(ctx, objectPath, uploadID)
-// 		if uploadError != nil {
-// 			return "", uploadError
-// 		}
-// 		return "", fmt.Errorf("incomplete upload: got %d parts, expected %d", receivedParts, totalChunks)
-// 	}
-
-// 	// Commit upload
-// 	err = p.commitMultipartUpload(ctx, objectPath, uploadID, parts)
-// 	if err != nil {
-// 		return "", fmt.Errorf("failed to commit upload: %w", err)
-// 	}
-
-// 	return p.getPublicURL(objectPath), nil
-// }
-
-// // uploadWorker processes chunk uploads concurrently
-// func (p *OCIProvider) uploadWorker(ctx context.Context, wg *sync.WaitGroup, jobs <-chan ChunkUpload, results chan<- UploadResult, uploadID, objectPath string) {
-// 	defer wg.Done()
-
-// 	for job := range jobs {
-// 		select {
-// 		case <-ctx.Done():
-// 			results <- UploadResult{PartNumber: job.PartNumber, Error: ctx.Err()}
-// 			return
-// 		default:
-// 		}
-
-// 		// Upload part with timeout
-// 		partCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
-// 		etag, err := p.uploadPart(partCtx, job, uploadID, objectPath)
-// 		cancel()
-
-// 		results <- UploadResult{
-// 			PartNumber: job.PartNumber,
-// 			ETag:       etag,
-// 			Error:      err,
-// 		}
-
-// 		if err != nil {
-// 			p.logger.Error("Part upload failed",
-// 				zap.Int("part", job.PartNumber),
-// 				zap.Error(err))
-// 		}
-// 	}
-// }
-
-// // uploadPart uploads a single part
-// func (p *OCIProvider) uploadPart(ctx context.Context, chunk ChunkUpload, uploadID, objectPath string) (string, error) {
-// 	request := objectstorage.UploadPartRequest{
-// 		NamespaceName:  common.String(p.config.Namespace),
-// 		BucketName:     common.String(p.config.Bucket),
-// 		ObjectName:     common.String(objectPath),
-// 		UploadId:       common.String(uploadID),
-// 		UploadPartNum:  common.Int(chunk.PartNumber),
-// 		UploadPartBody: io.NopCloser(strings.NewReader(string(chunk.Data))),
-// 		ContentLength:  common.Int64(chunk.Size),
-// 	}
-
-// 	response, err := p.client.UploadPart(ctx, request)
-// 	if err != nil {
-// 		return "", err
-// 	}
-
-// 	return *response.ETag, nil
-// }
-
-// // Helper methods
-
-// func (p *OCIProvider) createTempFile(file multipart.File, header *multipart.FileHeader) (*os.File, error) {
-// 	tmpFile, err := os.CreateTemp("", "upload-*"+filepath.Ext(header.Filename))
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	_, err = io.Copy(tmpFile, file)
-// 	if err != nil {
-// 		tmpFile.Close()
-// 		os.Remove(tmpFile.Name())
-// 		return nil, err
-// 	}
-
-// 	// Reset to beginning
-// 	_, err = tmpFile.Seek(0, io.SeekStart)
-// 	if err != nil {
-// 		tmpFile.Close()
-// 		os.Remove(tmpFile.Name())
-// 		return nil, err
-// 	}
-
-// 	return tmpFile, nil
-// }
-
-// func (p *OCIProvider) readChunk(file *os.File, offset, size int64) ([]byte, error) {
-// 	data := make([]byte, size)
-// 	n, err := file.ReadAt(data, offset)
-// 	if err != nil && err != io.EOF {
-// 		return nil, err
-// 	}
-// 	return data[:n], nil
-// }
-
-// func (p *OCIProvider) getFileSize(file multipart.File) (int64, error) {
-// 	if seeker, ok := file.(io.Seeker); ok {
-// 		current, _ := seeker.Seek(0, io.SeekCurrent)
-// 		end, err := seeker.Seek(0, io.SeekEnd)
-// 		if err != nil {
-// 			return -1, err
-// 		}
-// 		seeker.Seek(current, io.SeekStart)
-// 		return end - current, nil
-// 	}
-// 	return -1, fmt.Errorf("cannot determine file size")
-// }
-
-// func (p *OCIProvider) generateObjectPath(filename, folder string) string {
-// 	ext := filepath.Ext(filename)
-// 	if ext == "" {
-// 		ext = ".bin"
-// 	}
-// 	uniqueName := uuid.New().String() + ext
-
-// 	if folder != "" {
-// 		folder = strings.Trim(folder, "/") + "/"
-// 	}
-// 	return folder + uniqueName
-// }
-
-// func (p *OCIProvider) getContentType(header *multipart.FileHeader) string {
-// 	contentType := header.Header.Get("Content-Type")
-// 	if contentType == "" {
-// 		contentType = guessContentType(header.Filename)
-// 	}
-// 	return contentType
-// }
-
-// func (p *OCIProvider) initMultipartUpload(ctx context.Context, objectPath, contentType string) (string, error) {
-// 	request := objectstorage.CreateMultipartUploadRequest{
-// 		NamespaceName: common.String(p.config.Namespace),
-// 		BucketName:    common.String(p.config.Bucket),
-// 		CreateMultipartUploadDetails: objectstorage.CreateMultipartUploadDetails{
-// 			Object:      common.String(objectPath),
-// 			ContentType: common.String(contentType),
-// 		},
-// 	}
-
-// 	response, err := p.client.CreateMultipartUpload(ctx, request)
-// 	if err != nil {
-// 		return "", err
-// 	}
-
-// 	return *response.UploadId, nil
-// }
-
-// func (p *OCIProvider) commitMultipartUpload(ctx context.Context, objectPath, uploadID string, parts []objectstorage.CommitMultipartUploadPartDetails) error {
-// 	request := objectstorage.CommitMultipartUploadRequest{
-// 		NamespaceName: common.String(p.config.Namespace),
-// 		BucketName:    common.String(p.config.Bucket),
-// 		ObjectName:    common.String(objectPath),
-// 		UploadId:      common.String(uploadID),
-// 		CommitMultipartUploadDetails: objectstorage.CommitMultipartUploadDetails{
-// 			PartsToCommit: parts,
-// 		},
-// 	}
-
-// 	_, err := p.client.CommitMultipartUpload(ctx, request)
-// 	return err
-// }
-
-// func (p *OCIProvider) abortMultipartUpload(ctx context.Context, objectPath, uploadID string) {
-// 	request := objectstorage.AbortMultipartUploadRequest{
-// 		NamespaceName: common.String(p.config.Namespace),
-// 		BucketName:    common.String(p.config.Bucket),
-// 		ObjectName:    common.String(objectPath),
-// 		UploadId:      common.String(uploadID),
-// 	}
-
-// 	_, err := p.client.AbortMultipartUpload(ctx, request)
-// 	if err != nil {
-// 		p.logger.Error("Failed to abort multipart upload",
-// 			zap.String("upload_id", uploadID),
-// 			zap.Error(err))
-// 	} else {
-// 		p.logger.Info("Successfully aborted multipart upload",
-// 			zap.String("upload_id", uploadID))
-// 	}
-// }
-
-// // simpleUpload performs a simple PUT upload with enhanced logging
-// func (p *OCIProvider) simpleUpload(ctx context.Context, reader io.Reader, objectPath, contentType string, contentLength int64) (string, error) {
-// 	start := time.Now()
-
-// 	var readCloser io.ReadCloser
-// 	if rc, ok := reader.(io.ReadCloser); ok {
-// 		readCloser = rc
-// 	} else {
-// 		readCloser = io.NopCloser(reader)
-// 	}
-
-// 	p.logger.Info("Starting simple upload",
-// 		zap.String("object", objectPath),
-// 		zap.String("content_type", contentType),
-// 		zap.Int64("content_length", contentLength))
-
-// 	request := objectstorage.PutObjectRequest{
-// 		NamespaceName: common.String(p.config.Namespace),
-// 		BucketName:    common.String(p.config.Bucket),
-// 		ObjectName:    common.String(objectPath),
-// 		ContentType:   common.String(contentType),
-// 		PutObjectBody: readCloser,
-// 	}
-
-// 	if contentLength >= 0 {
-// 		request.ContentLength = common.Int64(contentLength)
-// 	}
-
-// 	p.logger.Info("Executing PutObject request",
-// 		zap.String("namespace", p.config.Namespace),
-// 		zap.String("bucket", p.config.Bucket),
-// 		zap.String("object", objectPath))
-
-// 	_, err := p.client.PutObject(ctx, request)
-// 	if err != nil {
-// 		duration := time.Since(start)
-// 		p.logger.Error("Simple upload failed",
-// 			zap.String("object", objectPath),
-// 			zap.Duration("duration", duration),
-// 			zap.Error(err))
-// 		return "", fmt.Errorf("failed to upload object: %w", err)
-// 	}
-
-// 	duration := time.Since(start)
-// 	url := p.getPublicURL(objectPath)
-
-// 	p.logger.Info("Simple upload completed successfully",
-// 		zap.String("object", objectPath),
-// 		zap.String("url", url),
-// 		zap.Duration("duration", duration),
-// 		zap.Float64("speed_mbps", float64(contentLength)/(1024*1024)/duration.Seconds()))
-
-// 	return url, nil
-// }
-
-// func (p *OCIProvider) getPublicURL(objectPath string) string {
-// 	if p.config.PublicEndpoint != "" {
-// 		return fmt.Sprintf("%s/%s",
-// 			strings.TrimRight(p.config.PublicEndpoint, "/"),
-// 			strings.TrimLeft(objectPath, "/"))
-// 	}
-
-// 	return fmt.Sprintf("https://objectstorage.%s.oraclecloud.com/n/%s/b/%s/o/%s",
-// 		p.config.Region,
-// 		p.config.Namespace,
-// 		p.config.Bucket,
-// 		normalizePath(objectPath))
-// }
-
-// // normalizePath ensures the path format is consistent
-// func normalizePath(path string) string {
-// 	// Remove leading slashes
-// 	path = strings.TrimPrefix(path, "/")
-
-// 	// Use the filename only if a full path is provided
-// 	if filepath.IsAbs(path) {
-// 		path = filepath.Base(path)
-// 	}
-
-// 	return path
-// }
-
-// // createOCIClient creates the OCI client with optimized timeouts
-// func createOCIClient(cfg config.OCIConfig) (objectstorage.ObjectStorageClient, error) {
-// 	var configProvider common.ConfigurationProvider
-// 	var err error
-
-// 	if cfg.UseInstancePrincipal {
-// 		// Use environment variables for instance principal
-// 		configProvider = common.ConfigurationProviderEnvironmentVariables("OCI_", "")
-// 	} else if cfg.ConfigFilePath != "" {
-// 		// Use config file
-// 		configProvider, err = common.ConfigurationProviderFromFile(cfg.ConfigFilePath, cfg.ProfileName)
-// 		if err != nil {
-// 			return objectstorage.ObjectStorageClient{}, fmt.Errorf("failed to create config from file: %w", err)
-// 		}
-// 	} else {
-// 		// Use individual config values
-// 		configProvider, err = createUserPrincipalProvider(cfg)
-// 		if err != nil {
-// 			return objectstorage.ObjectStorageClient{}, fmt.Errorf("failed to create user principal config: %w", err)
-// 		}
-// 	}
-
-// 	// CRITICAL FIX: Create custom HTTP client with longer timeouts
-// 	httpClient := &http.Client{
-// 		Timeout: 30 * time.Minute, // 30 minutes total timeout
-// 		Transport: &http.Transport{
-// 			TLSHandshakeTimeout:   30 * time.Second,
-// 			ResponseHeaderTimeout: 5 * time.Minute, // Wait 5 minutes for headers
-// 			ExpectContinueTimeout: 30 * time.Second,
-// 			IdleConnTimeout:       90 * time.Second,
-// 			MaxIdleConns:          100,
-// 			MaxIdleConnsPerHost:   10,
-// 			DisableKeepAlives:     false, // Enable keep-alive for better performance
-// 		},
-// 	}
-
-// 	// Create client with custom HTTP client
-// 	client, err := objectstorage.NewObjectStorageClientWithConfigurationProvider(configProvider)
-// 	if err != nil {
-// 		return objectstorage.ObjectStorageClient{}, fmt.Errorf("failed to create OCI client: %w", err)
-// 	}
-
-// 	// CRITICAL FIX: Set the custom HTTP client
-// 	client.HTTPClient = httpClient
-
-// 	return client, nil
-// }
-
-// func createUserPrincipalProvider(cfg config.OCIConfig) (common.ConfigurationProvider, error) {
-// 	if cfg.ConfigFilePath != "" {
-// 		return common.ConfigurationProviderFromFile(cfg.ConfigFilePath, cfg.ProfileName)
-// 	}
-
-// 	// Create from individual config values
-// 	privateKey, err := loadPrivateKey(cfg.PrivateKeyPath, cfg.PrivateKeyPassphrase)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	return common.NewRawConfigurationProvider(
-// 		cfg.TenancyOCID,
-// 		cfg.UserOCID,
-// 		cfg.Region,
-// 		cfg.Fingerprint,
-// 		string(pemFromPrivateKey(privateKey)),
-// 		common.String(cfg.PrivateKeyPassphrase),
-// 	), nil
-// }
-
-// func loadPrivateKey(keyPath, passphrase string) (*rsa.PrivateKey, error) {
-// 	keyData, err := os.ReadFile(keyPath)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	block, _ := pem.Decode(keyData)
-// 	if block == nil {
-// 		return nil, fmt.Errorf("failed to decode PEM block")
-// 	}
-
-// 	var privateKey interface{}
-// 	if passphrase != "" {
-// 		privateKey, err = x509.DecryptPEMBlock(block, []byte(passphrase))
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		privateKey, err = x509.ParsePKCS1PrivateKey(privateKey.([]byte))
-// 	} else {
-// 		privateKey, err = x509.ParsePKCS1PrivateKey(block.Bytes)
-// 	}
-
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	if rsaKey, ok := privateKey.(*rsa.PrivateKey); ok {
-// 		return rsaKey, nil
-// 	}
-
-// 	return nil, fmt.Errorf("private key is not RSA")
-// }
-
-// func pemFromPrivateKey(privateKey *rsa.PrivateKey) []byte {
-// 	keyBytes := x509.MarshalPKCS1PrivateKey(privateKey)
-// 	block := &pem.Block{
-// 		Type:  "RSA PRIVATE KEY",
-// 		Bytes: keyBytes,
-// 	}
-// 	return pem.EncodeToMemory(block)
-// }
-
-// // guessContentType determines content type from file extension
-// func guessContentType(filename string) string {
-// 	ext := strings.ToLower(filepath.Ext(filename))
-// 	switch ext {
-// 	case ".mp4":
-// 		return "video/mp4"
-// 	case ".mov":
-// 		return "video/quicktime"
-// 	case ".avi":
-// 		return "video/x-msvideo"
-// 	case ".webm":
-// 		return "video/webm"
-// 	case ".mkv":
-// 		return "video/x-matroska"
-// 	case ".jpg", ".jpeg":
-// 		return "image/jpeg"
-// 	case ".png":
-// 		return "image/png"
-// 	case ".gif":
-// 		return "image/gif"
-// 	case ".pdf":
-// 		return "application/pdf"
-// 	default:
-// 		return "application/octet-stream"
-// 	}
-// }
-
-// // Additional methods to maintain compatibility with existing interface
-
-// // Upload uploads a file from filesystem path
-// func (p *OCIProvider) Upload(ctx context.Context, filePath, destinationPath, contentType string) (string, error) {
-// 	file, err := os.Open(filePath)
-// 	if err != nil {
-// 		return "", fmt.Errorf("failed to open file: %w", err)
-// 	}
-// 	defer file.Close()
-
-// 	fileInfo, err := file.Stat()
-// 	if err != nil {
-// 		return "", fmt.Errorf("failed to get file stats: %w", err)
-// 	}
-
-// 	if fileInfo.Size() <= MaxSimpleUploadSize {
-// 		return p.simpleUpload(ctx, file, destinationPath, contentType, fileInfo.Size())
-// 	}
-
-// 	return p.UploadChunked(ctx, filePath, destinationPath, contentType, p.chunkSize)
-// }
-
-// // UploadFromReader uploads from an io.Reader
-// func (p *OCIProvider) UploadFromReader(ctx context.Context, reader io.Reader, destinationPath, contentType string) (string, error) {
-// 	return p.simpleUpload(ctx, reader, destinationPath, contentType, -1)
-// }
-
-// // UploadChunked performs chunked upload from file path
-// func (p *OCIProvider) UploadChunked(ctx context.Context, filePath, destinationPath, contentType string, chunkSize int64) (string, error) {
-// 	file, err := os.Open(filePath)
-// 	if err != nil {
-// 		return "", fmt.Errorf("failed to open file: %w", err)
-// 	}
-// 	defer file.Close()
-
-// 	fileInfo, err := file.Stat()
-// 	if err != nil {
-// 		return "", fmt.Errorf("failed to get file stats: %w", err)
-// 	}
-
-// 	return p.parallelChunkedUpload(ctx, file, destinationPath, contentType, fileInfo.Size())
-// }
-
-// // Delete removes an object from storage
-// func (p *OCIProvider) Delete(ctx context.Context, objectPath string) error {
-// 	request := objectstorage.DeleteObjectRequest{
-// 		NamespaceName: common.String(p.config.Namespace),
-// 		BucketName:    common.String(p.config.Bucket),
-// 		ObjectName:    common.String(objectPath),
-// 	}
-
-// 	_, err := p.client.DeleteObject(ctx, request)
-// 	return err
-// }
-
-// // UploadMedia uploads media content from byte data efficiently
-// func (p *OCIProvider) UploadMedia(ctx context.Context, filePath string, data []byte, contentType string) (string, error) {
-// 	dataSize := int64(len(data))
-
-// 	// Create upload context with timeout
-// 	uploadCtx, cancel := context.WithTimeout(ctx, p.uploadTimeout)
-// 	defer cancel()
-
-// 	p.logger.Info("Starting media upload",
-// 		zap.String("path", filePath),
-// 		zap.Int64("size", dataSize),
-// 		zap.String("content_type", contentType))
-
-// 	// For small data, use simple upload
-// 	if dataSize <= MaxSimpleUploadSize {
-// 		reader := strings.NewReader(string(data))
-// 		return p.simpleUpload(uploadCtx, reader, filePath, contentType, dataSize)
-// 	}
-
-// 	// For large data, use chunked upload with streaming
-// 	return p.chunkedUploadFromBytes(uploadCtx, data, filePath, contentType, dataSize)
-// }
-
-// // chunkedUploadFromBytes performs efficient chunked upload from byte data
-// func (p *OCIProvider) chunkedUploadFromBytes(ctx context.Context, data []byte, objectPath, contentType string, dataSize int64) (string, error) {
-// 	// Initialize multipart upload
-// 	uploadID, err := p.initMultipartUpload(ctx, objectPath, contentType)
-// 	if err != nil {
-// 		return "", fmt.Errorf("failed to init multipart upload: %w", err)
-// 	}
-
-// 	// Calculate chunks
-// 	totalChunks := int((dataSize + p.chunkSize - 1) / p.chunkSize)
-
-// 	p.logger.Info("Starting chunked upload from bytes",
-// 		zap.String("upload_id", uploadID),
-// 		zap.Int("chunks", totalChunks),
-// 		zap.Int64("chunk_size", p.chunkSize))
-
-// 	// Create worker pool
-// 	jobs := make(chan ChunkUpload, totalChunks)
-// 	results := make(chan UploadResult, totalChunks)
-
-// 	// Start workers
-// 	var wg sync.WaitGroup
-// 	for i := 0; i < p.maxConcurrency; i++ {
-// 		wg.Add(1)
-// 		go p.uploadWorker(ctx, &wg, jobs, results, uploadID, objectPath)
-// 	}
-
-// 	// Submit jobs
-// 	go func() {
-// 		defer close(jobs)
-// 		for i := 0; i < totalChunks; i++ {
-// 			offset := int64(i) * p.chunkSize
-// 			size := p.chunkSize
-// 			if offset+size > dataSize {
-// 				size = dataSize - offset
-// 			}
-
-// 			// Extract chunk from data
-// 			chunkData := make([]byte, size)
-// 			copy(chunkData, data[offset:offset+size])
-
-// 			select {
-// 			case jobs <- ChunkUpload{
-// 				PartNumber: i + 1,
-// 				Data:       chunkData,
-// 				Size:       size,
-// 			}:
-// 			case <-ctx.Done():
-// 				return
-// 			}
-// 		}
-// 	}()
-
-// 	// Wait for workers
-// 	go func() {
-// 		wg.Wait()
-// 		close(results)
-// 	}()
-
-// 	// Collect results and ensure proper ordering
-// 	parts := make([]objectstorage.CommitMultipartUploadPartDetails, totalChunks)
-// 	receivedParts := 0
-// 	var uploadError error
-
-// 	for result := range results {
-// 		if result.Error != nil {
-// 			uploadError = result.Error
-// 			break
-// 		}
-
-// 		// Store part in correct position (parts are 1-indexed)
-// 		if result.PartNumber >= 1 && result.PartNumber <= totalChunks {
-// 			parts[result.PartNumber-1] = objectstorage.CommitMultipartUploadPartDetails{
-// 				PartNum: common.Int(result.PartNumber),
-// 				Etag:    common.String(result.ETag),
-// 			}
-// 			receivedParts++
-// 		}
-// 	}
-
-// 	// Handle errors
-// 	if uploadError != nil || receivedParts != totalChunks {
-// 		p.abortMultipartUpload(ctx, objectPath, uploadID)
-// 		if uploadError != nil {
-// 			return "", uploadError
-// 		}
-// 		return "", fmt.Errorf("incomplete upload: got %d parts, expected %d", receivedParts, totalChunks)
-// 	}
-
-// 	// Commit upload
-// 	err = p.commitMultipartUpload(ctx, objectPath, uploadID, parts)
-// 	if err != nil {
-// 		return "", fmt.Errorf("failed to commit upload: %w", err)
-// 	}
-
-// 	return p.getPublicURL(objectPath), nil
-// }
-
-// // DownloadMedia efficiently downloads media from external URLs with retry and streaming
-// func (p *OCIProvider) DownloadMedia(ctx context.Context, mediaURL string, maxRetries int) (string, error) {
-// 	downloadCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
-// 	defer cancel()
-
-// 	p.logger.Info("Starting media download",
-// 		zap.String("url", mediaURL),
-// 		zap.Int("max_retries", maxRetries))
-
-// 	// Generate unique filename for downloaded media
-// 	fileName := fmt.Sprintf("downloaded_%s_%s",
-// 		uuid.New().String()[:8],
-// 		time.Now().Format("20060102_150405"))
-
-// 	// Detect file extension from URL
-// 	if ext := p.getExtensionFromURL(mediaURL); ext != "" {
-// 		fileName += ext
-// 	} else {
-// 		fileName += ".mp4" // Default for media
-// 	}
-
-// 	var lastErr error
-// 	for attempt := 1; attempt <= maxRetries; attempt++ {
-// 		p.logger.Info("Download attempt",
-// 			zap.Int("attempt", attempt),
-// 			zap.String("url", mediaURL))
-
-// 		// Try direct HTTP download first
-// 		tempFile, err := p.downloadWithHTTP(downloadCtx, mediaURL)
-// 		if err == nil {
-// 			// Upload the downloaded file to OCI
-// 			defer os.Remove(tempFile)
-// 			return p.uploadDownloadedFile(downloadCtx, tempFile, fileName)
-// 		}
-
-// 		p.logger.Warn("HTTP download failed, trying with ffmpeg",
-// 			zap.Error(err),
-// 			zap.Int("attempt", attempt))
-
-// 		// Fallback to ffmpeg if available
-// 		tempFile, err = p.downloadWithFFmpeg(downloadCtx, mediaURL)
-// 		if err == nil {
-// 			defer os.Remove(tempFile)
-// 			return p.uploadDownloadedFile(downloadCtx, tempFile, fileName)
-// 		}
-
-// 		lastErr = err
-// 		p.logger.Warn("Download attempt failed",
-// 			zap.Int("attempt", attempt),
-// 			zap.Error(err))
-
-// 		if attempt < maxRetries {
-// 			backoff := time.Duration(attempt) * 2 * time.Second
-// 			time.Sleep(backoff)
-// 		}
-// 	}
-
-// 	return "", fmt.Errorf("download failed after %d attempts: %w", maxRetries, lastErr)
-// }
-
-// // downloadWithHTTP performs efficient HTTP download with streaming
-// func (p *OCIProvider) downloadWithHTTP(ctx context.Context, mediaURL string) (string, error) {
-// 	// Create HTTP client with proper timeouts
-// 	client := &http.Client{
-// 		Timeout: 10 * time.Minute,
-// 		Transport: &http.Transport{
-// 			ResponseHeaderTimeout: 30 * time.Second,
-// 			IdleConnTimeout:       90 * time.Second,
-// 		},
-// 	}
-
-// 	req, err := http.NewRequestWithContext(ctx, "GET", mediaURL, nil)
-// 	if err != nil {
-// 		return "", fmt.Errorf("failed to create request: %w", err)
-// 	}
-
-// 	// Set user agent to avoid blocking
-// 	req.Header.Set("User-Agent", "OCI-Media-Downloader/1.0")
-
-// 	resp, err := client.Do(req)
-// 	if err != nil {
-// 		return "", fmt.Errorf("failed to download: %w", err)
-// 	}
-// 	defer resp.Body.Close()
-
-// 	if resp.StatusCode != http.StatusOK {
-// 		return "", fmt.Errorf("download failed with status: %d", resp.StatusCode)
-// 	}
-
-// 	// Create temporary file
-// 	tmpFile, err := os.CreateTemp("", "download-*.tmp")
-// 	if err != nil {
-// 		return "", fmt.Errorf("failed to create temp file: %w", err)
-// 	}
-// 	defer tmpFile.Close()
-
-// 	// Stream download with progress tracking
-// 	written, err := io.Copy(tmpFile, resp.Body)
-// 	if err != nil {
-// 		os.Remove(tmpFile.Name())
-// 		return "", fmt.Errorf("failed to write downloaded data: %w", err)
-// 	}
-
-// 	p.logger.Info("HTTP download completed",
-// 		zap.String("url", mediaURL),
-// 		zap.Int64("bytes", written))
-
-// 	return tmpFile.Name(), nil
-// }
-
-// // downloadWithFFmpeg downloads using ffmpeg for better media handling
-// func (p *OCIProvider) downloadWithFFmpeg(ctx context.Context, mediaURL string) (string, error) {
-// 	// Create temporary file
-// 	tmpFile, err := os.CreateTemp("", "ffmpeg-download-*.mp4")
-// 	if err != nil {
-// 		return "", fmt.Errorf("failed to create temp file: %w", err)
-// 	}
-// 	tmpFile.Close()
-
-// 	// Use ffmpeg for robust media downloading
-// 	cmd := exec.CommandContext(ctx,
-// 		"ffmpeg",
-// 		"-y", // Overwrite output
-// 		"-user_agent", "OCI-Media-Downloader/1.0",
-// 		"-reconnect", "1",
-// 		"-reconnect_streamed", "1",
-// 		"-reconnect_delay_max", "30",
-// 		"-i", mediaURL,
-// 		"-c", "copy", // Copy without re-encoding
-// 		"-movflags", "+faststart", // Optimize for streaming
-// 		tmpFile.Name())
-
-// 	output, err := cmd.CombinedOutput()
-// 	if err != nil {
-// 		os.Remove(tmpFile.Name())
-// 		return "", fmt.Errorf("ffmpeg download failed: %v, output: %s", err, string(output))
-// 	}
-
-// 	p.logger.Info("FFmpeg download completed",
-// 		zap.String("url", mediaURL),
-// 		zap.String("output_file", tmpFile.Name()))
-
-// 	return tmpFile.Name(), nil
-// }
-
-// // uploadDownloadedFile uploads the downloaded temporary file to OCI
-// func (p *OCIProvider) uploadDownloadedFile(ctx context.Context, tempFilePath, objectName string) (string, error) {
-// 	file, err := os.Open(tempFilePath)
-// 	if err != nil {
-// 		return "", fmt.Errorf("failed to open downloaded file: %w", err)
-// 	}
-// 	defer file.Close()
-
-// 	fileInfo, err := file.Stat()
-// 	if err != nil {
-// 		return "", fmt.Errorf("failed to get file stats: %w", err)
-// 	}
-
-// 	contentType := guessContentType(objectName)
-// 	objectPath := "downloaded/" + objectName
-
-// 	// Use appropriate upload method based on file size
-// 	if fileInfo.Size() <= MaxSimpleUploadSize {
-// 		return p.simpleUpload(ctx, file, objectPath, contentType, fileInfo.Size())
-// 	}
-
-// 	return p.parallelChunkedUpload(ctx, file, objectPath, contentType, fileInfo.Size())
-// }
-
-// // getExtensionFromURL extracts file extension from URL
-// func (p *OCIProvider) getExtensionFromURL(url string) string {
-// 	// Remove query parameters
-// 	if idx := strings.Index(url, "?"); idx != -1 {
-// 		url = url[:idx]
-// 	}
-
-// 	ext := filepath.Ext(url)
-// 	if ext != "" {
-// 		return ext
-// 	}
-
-// 	// Try to detect from URL patterns
-// 	lower := strings.ToLower(url)
-// 	switch {
-// 	case strings.Contains(lower, ".mp4"):
-// 		return ".mp4"
-// 	case strings.Contains(lower, ".mov"):
-// 		return ".mov"
-// 	case strings.Contains(lower, ".avi"):
-// 		return ".avi"
-// 	case strings.Contains(lower, ".webm"):
-// 		return ".webm"
-// 	case strings.Contains(lower, ".mkv"):
-// 		return ".mkv"
-// 	default:
-// 		return ""
-// 	}
-// }
-
-// // PresignedURL generates a secure presigned URL for temporary access
-// func (p *OCIProvider) PresignedURL(ctx context.Context, objectPath string, expiry time.Duration) (string, error) {
-// 	p.logger.Info("Generating presigned URL",
-// 		zap.String("object", objectPath),
-// 		zap.Duration("expiry", expiry))
-
-// 	// Create preauthenticated request
-// 	requestName := fmt.Sprintf("presigned-%s-%d",
-// 		strings.ReplaceAll(objectPath, "/", "-"),
-// 		time.Now().Unix())
-
-// 	request := objectstorage.CreatePreauthenticatedRequestRequest{
-// 		NamespaceName: common.String(p.config.Namespace),
-// 		BucketName:    common.String(p.config.Bucket),
-// 		CreatePreauthenticatedRequestDetails: objectstorage.CreatePreauthenticatedRequestDetails{
-// 			Name:        common.String(requestName),
-// 			AccessType:  objectstorage.CreatePreauthenticatedRequestDetailsAccessTypeObjectread,
-// 			TimeExpires: &common.SDKTime{Time: time.Now().Add(expiry)},
-// 			ObjectName:  common.String(objectPath),
-// 		},
-// 	}
-
-// 	response, err := p.client.CreatePreauthenticatedRequest(ctx, request)
-// 	if err != nil {
-// 		return "", fmt.Errorf("failed to create presigned URL: %w", err)
-// 	}
-
-// 	// Construct the full presigned URL
-// 	baseURL := p.getBaseURL()
-// 	presignedURL := fmt.Sprintf("%s%s", baseURL, *response.AccessUri)
-
-// 	p.logger.Info("Presigned URL generated successfully",
-// 		zap.String("object", objectPath),
-// 		zap.Duration("expiry", expiry),
-// 		zap.String("url", presignedURL))
-
-// 	return presignedURL, nil
-// }
-
-// // CreatePresignedUploadURL generates a presigned URL for uploading
-// func (p *OCIProvider) CreatePresignedUploadURL(ctx context.Context, objectPath string, expiry time.Duration) (string, error) {
-// 	requestName := fmt.Sprintf("upload-%s-%d",
-// 		strings.ReplaceAll(objectPath, "/", "-"),
-// 		time.Now().Unix())
-
-// 	request := objectstorage.CreatePreauthenticatedRequestRequest{
-// 		NamespaceName: common.String(p.config.Namespace),
-// 		BucketName:    common.String(p.config.Bucket),
-// 		CreatePreauthenticatedRequestDetails: objectstorage.CreatePreauthenticatedRequestDetails{
-// 			Name:        common.String(requestName),
-// 			AccessType:  objectstorage.CreatePreauthenticatedRequestDetailsAccessTypeObjectwrite,
-// 			TimeExpires: &common.SDKTime{Time: time.Now().Add(expiry)},
-// 			ObjectName:  common.String(objectPath),
-// 		},
-// 	}
-
-// 	response, err := p.client.CreatePreauthenticatedRequest(ctx, request)
-// 	if err != nil {
-// 		return "", fmt.Errorf("failed to create presigned upload URL: %w", err)
-// 	}
-
-// 	baseURL := p.getBaseURL()
-// 	return fmt.Sprintf("%s%s", baseURL, *response.AccessUri), nil
-// }
-
-// // getBaseURL returns the base URL for the OCI Object Storage
-// func (p *OCIProvider) getBaseURL() string {
-// 	if p.config.PublicEndpoint != "" {
-// 		return strings.TrimRight(p.config.PublicEndpoint, "/")
-// 	}
-// 	return fmt.Sprintf("https://objectstorage.%s.oraclecloud.com", p.config.Region)
-// }
-
 package storage
 
 import (
@@ -1169,8 +39,7 @@ type OCIProvider struct {
 	retryDelay     time.Duration
 
 	// NEW: Advanced monitoring and metrics
-	uploadStats    *UploadStats
-	connectionPool *http.Transport
+	uploadStats *UploadStats
 
 	// NEW: Resource management
 	cleanupTicker  *time.Ticker
@@ -1241,7 +110,7 @@ func NewOCIProvider(ctx context.Context, cfg config.OCIConfig, logger *zap.Logge
 		uploadStats:    &UploadStats{},
 		tempFiles:      make(map[string]time.Time),
 	}
-
+	provider.ensureTunedTransport()
 	// NEW: Start background cleanup for temporary files
 	provider.startTempFileCleanup()
 
@@ -1255,6 +124,60 @@ func NewOCIProvider(ctx context.Context, cfg config.OCIConfig, logger *zap.Logge
 		zap.Int("retry_attempts", retryAttempts))
 
 	return provider, nil
+}
+
+// ensureTunedTransport tweaks default transport parameters to improve throughput.
+// Call once in NewOCIProvider (or lazily before the first upload).
+func (p *OCIProvider) ensureTunedTransport() {
+	// try to cast the default transport (safe on std lib)
+	if tr, ok := http.DefaultTransport.(*http.Transport); ok {
+		tr.MaxIdleConns = 200
+		tr.MaxIdleConnsPerHost = 200
+		tr.IdleConnTimeout = 90 * time.Second
+		tr.DisableCompression = true // disable gzip for binary uploads
+		// Keep other defaults as-is
+	}
+}
+
+// optimizedSimpleUploadUsingSDK streams reader -> io.Pipe -> SDK PutObject.
+// Returns the public URL on success.
+func (p *OCIProvider) optimizedSimpleUploadUsingSDK(ctx context.Context, reader io.Reader, objectPath, contentType string, contentLength int64) (string, error) {
+	// Create pipe: writer side will copy the source reader into the pipe
+	pr, pw := io.Pipe()
+
+	// Copy into the pipe in a goroutine using a large buffer to avoid tiny writes.
+	go func() {
+		// 256KB buffer reduces syscall/writes; tune if needed.
+		buf := make([]byte, 256*1024)
+		_, err := io.CopyBuffer(pw, reader, buf)
+		// CloseWithError will propagate the error to the reader side if copy failed.
+		if err != nil {
+			_ = pw.CloseWithError(err)
+			return
+		}
+		_ = pw.Close() // normal EOF
+	}()
+
+	// Build PutObjectRequest. pr already implements io.ReadCloser.
+	req := objectstorage.PutObjectRequest{
+		NamespaceName: common.String(p.config.Namespace),
+		BucketName:    common.String(p.config.Bucket),
+		ObjectName:    common.String(objectPath),
+		PutObjectBody: pr,
+		ContentLength: common.Int64(contentLength),
+		ContentType:   common.String(contentType),
+	}
+
+	// Execute PutObject. It will read from pr which is being filled by the goroutine.
+	// Note: PutObject blocks until the upload completes (or context timeouts).
+	if _, err := p.client.PutObject(ctx, req); err != nil {
+		// In case of error, make sure writer is closed (best effort)
+		_ = pr.Close()
+		return "", fmt.Errorf("failed to upload object: %w", err)
+	}
+
+	// Success: return the public URL using your helper
+	return p.getPublicURL(objectPath), nil
 }
 
 // IMPROVED: Enhanced UploadFile with better error handling and metrics
@@ -1370,11 +293,16 @@ func (p *OCIProvider) simpleUploadWithRetry(ctx context.Context, reader io.Reade
 		// NEW: Create individual timeout per attempt (shorter for retries)
 		attemptTimeout := p.uploadTimeout
 		if attempt > 1 {
-			attemptTimeout = p.uploadTimeout / 2 // Shorter timeout for retries
+			// attemptTimeout = p.uploadTimeout / 2 // Shorter timeout for retries
+			attemptTimeout = p.uploadTimeout / 2
+			if attemptTimeout < 3*time.Minute {
+				attemptTimeout = 3 * time.Minute
+			}
 		}
 
 		attemptCtx, cancel := context.WithTimeout(ctx, attemptTimeout)
-		url, err := p.simpleUpload(attemptCtx, reader, objectPath, contentType, contentLength)
+		// url, err := p.simpleUpload(attemptCtx, reader, objectPath, contentType, contentLength)
+		url, err := p.optimizedSimpleUploadUsingSDK(attemptCtx, reader, objectPath, contentType, contentLength)
 		cancel()
 
 		if err == nil {
@@ -1838,13 +766,49 @@ func (p *OCIProvider) isRetryableError(err error) bool {
 }
 
 // IMPROVED: Better file size detection with multiple fallback methods
+// func (p *OCIProvider) getFileSizeRobust(file multipart.File, header *multipart.FileHeader) (int64, error) {
+// 	// Method 1: Use header size if available and reasonable
+// 	if header.Size > 0 && header.Size < 2*1024*1024*1024 { // Less than 2GB
+// 		return header.Size, nil
+// 	}
+
+// 	// Method 2: Try seeking to get size
+// 	if seeker, ok := file.(io.Seeker); ok {
+// 		current, err := seeker.Seek(0, io.SeekCurrent)
+// 		if err == nil {
+// 			end, err := seeker.Seek(0, io.SeekEnd)
+// 			if err == nil {
+// 				_, err = seeker.Seek(current, io.SeekStart)
+// 				if err == nil {
+// 					return end - current, nil
+// 				}
+// 			}
+// 		}
+// 	}
+
+// 	// Method 3: Read all data to determine size (last resort)
+// 	p.logger.Warn("Falling back to reading entire file to determine size")
+
+// 	data, err := io.ReadAll(file)
+// 	if err != nil {
+// 		return -1, fmt.Errorf("cannot determine file size: %w", err)
+// 	}
+
+// 	// Reset file with the data we just read
+// 	if seeker, ok := file.(io.Seeker); ok {
+// 		seeker.Seek(0, io.SeekStart)
+// 	}
+
+// 	return int64(len(data)), nil
+// }
+
 func (p *OCIProvider) getFileSizeRobust(file multipart.File, header *multipart.FileHeader) (int64, error) {
-	// Method 1: Use header size if available and reasonable
-	if header.Size > 0 && header.Size < 2*1024*1024*1024 { // Less than 2GB
+	// Just use header size - it's reliable for multipart uploads
+	if header.Size > 0 {
 		return header.Size, nil
 	}
 
-	// Method 2: Try seeking to get size
+	// Only fallback to seeking if header size is missing
 	if seeker, ok := file.(io.Seeker); ok {
 		current, err := seeker.Seek(0, io.SeekCurrent)
 		if err == nil {
@@ -1858,20 +822,7 @@ func (p *OCIProvider) getFileSizeRobust(file multipart.File, header *multipart.F
 		}
 	}
 
-	// Method 3: Read all data to determine size (last resort)
-	p.logger.Warn("Falling back to reading entire file to determine size")
-
-	data, err := io.ReadAll(file)
-	if err != nil {
-		return -1, fmt.Errorf("cannot determine file size: %w", err)
-	}
-
-	// Reset file with the data we just read
-	if seeker, ok := file.(io.Seeker); ok {
-		seeker.Seek(0, io.SeekStart)
-	}
-
-	return int64(len(data)), nil
+	return -1, fmt.Errorf("cannot determine file size")
 }
 
 // IMPROVED: Secure object path generation with better validation
@@ -2035,22 +986,22 @@ func createOCIClient(cfg config.OCIConfig, logger *zap.Logger) (objectstorage.Ob
 
 	// CRITICAL IMPROVEMENT: Optimized HTTP client for large uploads
 	httpClient := &http.Client{
-		Timeout: 35 * time.Minute, // Slightly longer than our upload timeout
+		Timeout: 10 * time.Minute, // Slightly longer than our upload timeout
 		Transport: &http.Transport{
 			DialContext: (&net.Dialer{
-				Timeout:   30 * time.Second,
-				KeepAlive: 30 * time.Second,
+				Timeout:   10 * time.Second,
+				KeepAlive: 60 * time.Second,
 			}).DialContext,
-			MaxIdleConns:          20,                // Increased for better connection reuse
-			MaxIdleConnsPerHost:   10,                // Increased per host
-			IdleConnTimeout:       120 * time.Second, // Longer idle timeout
-			TLSHandshakeTimeout:   30 * time.Second,
-			ResponseHeaderTimeout: 2 * time.Minute, // Longer for large uploads
-			ExpectContinueTimeout: 30 * time.Second,
-			DisableCompression:    true,      // Important: disable compression for uploads
-			WriteBufferSize:       64 * 1024, // 64KB write buffer
-			ReadBufferSize:        64 * 1024, // 64KB read buffer
-			ForceAttemptHTTP2:     false,     // HTTP/1.1 can be more reliable for large uploads
+			MaxIdleConns:          50,                // Increased for better connection reuse
+			MaxIdleConnsPerHost:   20,                // Increased per host
+			IdleConnTimeout:       300 * time.Second, // Longer idle timeout
+			TLSHandshakeTimeout:   10 * time.Second,
+			ResponseHeaderTimeout: 30 * time.Second, // Longer for large uploads
+			ExpectContinueTimeout: 1 * time.Second,
+			DisableCompression:    true,        // Important: disable compression for uploads
+			WriteBufferSize:       1024 * 1024, // 64KB write buffer
+			ReadBufferSize:        1024 * 1024, // 64KB read buffer
+			ForceAttemptHTTP2:     true,        // HTTP/1.1 can be more reliable for large uploads
 		},
 	}
 
@@ -2543,7 +1494,16 @@ func (p *OCIProvider) UploadChunked(ctx context.Context, filePath, destinationPa
 	return p.parallelChunkedUpload(ctx, file, destinationPath, contentType, fileInfo.Size())
 }
 
-func (p *OCIProvider) Delete(ctx context.Context, objectPath string) error {
+func (p *OCIProvider) Delete(ctx context.Context, objectPathOrURL string) error {
+	objectPath := objectPathOrURL
+
+	if strings.Contains(objectPathOrURL, "/o/") {
+		parts := strings.Split(objectPathOrURL, "/o/")
+		if len(parts) > 1 {
+			objectPath = parts[1]
+		}
+	}
+
 	request := objectstorage.DeleteObjectRequest{
 		NamespaceName: common.String(p.config.Namespace),
 		BucketName:    common.String(p.config.Bucket),

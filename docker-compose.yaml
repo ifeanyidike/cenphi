@@ -23,8 +23,9 @@ services:
       - ./api-server/.env
     volumes:
       - ./api-server:/src
-      - ~/.aws:/root/.aws:ro
       - ~/.ssh:/app/oci-secrets
+      # - .:/app
+      # - /app/bin
       # - /etc/ssl/certs:/etc/ssl/certs:ro
     environment:
       - OCI_GO_SDK_DEBUG=info
@@ -32,19 +33,22 @@ services:
       - cenphidb
       - redis
 
+    # command: >
+    #   sh -c "echo 'DEBUG: running go run to print build errors'; cd /src || true; go run ./cmd || true; sleep 5"
+
     # command: ["air", "-c", ".air.toml"]
-    command: >
-      sh -c "chmod 600 /app/oci-secrets/private_rsa && 
-             echo 'OCI key permissions set' && 
-             ls -la /app/oci-secrets/ && 
-             echo 'Starting server...' && 
-             OCI_GO_SDK_DEBUG=info air -c .air.toml"
-    # command: ["/app/api"]
+    # command: >
+    #   sh -c "chmod 600 /app/oci-secrets/private_rsa &&
+    #          echo 'OCI key permissions set' &&
+    #          ls -la /app/oci-secrets/ &&
+    #          echo 'Starting server...' &&
+    #          OCI_GO_SDK_DEBUG=info air -c .air.toml"
+    command: ["/app/api"]
 
   ai-service:
     build:
       context: ./ai-service
-      dockerfile: Dockerfile.cloudrun
+      dockerfile: Dockerfile.dev
     ports:
       # - "50052:50052"
       - "8080:8080"
@@ -172,16 +176,16 @@ services:
 
     restart: unless-stopped
 
-  grpc-tester:
-    image: fullstorydev/grpcurl:latest
-    command: ["tail", "-f", "/dev/null"]
-    depends_on:
-      - ai-service
-    profiles:
-      - testing
-    volumes:
-      - ./ai-service:/workspace
-    working_dir: /workspace
+  # grpc-tester:
+  #   image: fullstorydev/grpcurl:latest
+  #   command: ["tail", "-f", "/dev/null"]
+  #   depends_on:
+  #     - ai-service
+  #   profiles:
+  #     - testing
+  #   volumes:
+  #     - ./ai-service:/workspace
+  #   working_dir: /workspace
 
   # rabbitmq:
   #   image: rabbitmq:3.12-management-alpine

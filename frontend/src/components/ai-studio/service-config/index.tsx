@@ -1,98 +1,116 @@
 // components/ai-studio/service-config/index.tsx
-import { useEffect, useState } from "react";
-import { ArrowLeft, Play, Save, Settings } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { AlertTriangle, ArrowLeft, Play, Save, Settings } from "lucide-react";
 import EnhancementConfig from "./EnhancementConfig";
 import StoryModeConfig from "./StoryModeConfig";
 import PlatformOptimizerConfig from "./PlatformOptimizerConfig";
 import ClippingConfig from "./ClippingConfig";
 import NoiseRemovalConfig from "./NoiseRemovalConfig";
-import ContentGeneratorConfig from "./ContentGeneratorConfig";
-import TextPolishingConfig from "./TextPolishingConfig";
-import TextTranslationConfig from "./TextTranslationConfig";
 import NarrationConfig from "./NarrationConfig";
 import SavedPresets from "./SavedPresets";
 import SavePresetModal from "./SavePresetModal";
+import {
+  AIService,
+  DefaultSettings,
+  MediaEnhancementConfig,
+  NarrationConfig as NarratorConfig,
+  Preset,
+  ServiceType,
+  SmartClippingConfig,
+  SourceInfo,
+} from "@/types/ai-service";
+import { PlatformOptimizerConfig as OptimizerConfig } from "@/types/ai-service";
+import { observer } from "mobx-react-lite";
+import { preset_manager } from "@/repo/managers/preset_manager";
 
 // Service Configuration Page Component
 const ServiceConfigPage: React.FC<{
-  service: any;
+  service: AIService;
   selectedTestimonials: string[];
   onBack: () => void;
-  onProcess: (serviceId: string, config: any) => void;
-  savedPresets: any[];
-  onSavePreset: (serviceId: string, preset: any) => void;
-  onDeletePreset: (serviceId: string, presetId: string) => void;
-  onSetDefaultPreset: (serviceId: string, preset: any) => void;
-  defaultPreset: any;
-}> = ({
-  service,
-  selectedTestimonials,
-  onBack,
-  onProcess,
-  savedPresets,
-  onSavePreset,
-  onDeletePreset,
-  onSetDefaultPreset,
-  defaultPreset,
-}) => {
-  const [config, setConfig] = useState(service?.defaultSettings || {});
-  const [presetName, setPresetName] = useState("");
-  const [showSavePreset, setShowSavePreset] = useState(false);
-  const [selectedPreset, setSelectedPreset] = useState(null);
-  const [videoPreviewUrl] = useState<string>("");
+  onProcess: (serviceId: string, config: DefaultSettings) => void;
+  sourceInfo?: SourceInfo;
+}> = ({ service, selectedTestimonials, onBack, onProcess, sourceInfo }) => {
+  const serviceValidation = useMemo(() => {
+    if (!sourceInfo) return { canApply: true };
 
-  //   const [highlightPreviewModal, setHighlightPreviewModal] =
-  //     useState<boolean>(false);
-  const [selectedSegments, setSelectedSegments] = useState<string[]>([]);
+    const appliedServices = sourceInfo.appliedServices || [];
+    if (appliedServices.includes(service.id as ServiceType)) {
+      return {
+        canApply: false,
+        reason: `${service.title} has already been applied to this content`,
+      };
+    }
+
+    return { canApply: true };
+  }, [service, sourceInfo]);
+
+  const [presetName, setPresetName] = useState<string>("");
+  const [showSavePreset, setShowSavePreset] = useState<boolean>(false);
+  const [selectedPreset, setSelectedPreset] = useState<Preset | null>(null);
 
   useEffect(() => {
-    if (service && defaultPreset) {
-      setConfig(defaultPreset.config);
-    } else if (service) {
-      setConfig(service.defaultSettings || {});
-    }
-  }, [service, defaultPreset]);
+    preset_manager.getConfig(service.id);
+  }, [service.id]);
 
-  const updateConfig = (key: string, value: any) => {
-    setConfig((prev: any) => ({ ...prev, [key]: value }));
+  const config = preset_manager.serviceConfig;
+
+  const updateConfig = (key: string, value: DefaultSettings) => {
+    preset_manager.updateConfig(key, value);
   };
 
   const handleSavePreset = () => {
     if (presetName.trim()) {
-      onSavePreset(service.id, {
-        id: Date.now().toString(),
-        name: presetName.trim(),
-        config: { ...config },
-        createdAt: new Date(),
-      });
+      preset_manager.savePreset(service.id, presetName);
       setPresetName("");
       setShowSavePreset(false);
     }
   };
 
-  const handleLoadPreset = (preset: any) => {
-    setConfig(preset.config);
+  const handleLoadPreset = (preset: Preset) => {
+    preset_manager.setConfig(preset);
     setSelectedPreset(preset);
   };
 
   const handleProcess = () => {
-    onProcess(service.id, config);
+    if (!serviceValidation.canApply) {
+      // Show error message
+      return;
+    }
+
+    const processConfig = {
+      ...config,
+      // Add artifact context for backend processing
+      sourceInfo,
+    };
+
+    console.log("process config", processConfig);
+    onProcess(service.id, processConfig as DefaultSettings);
   };
 
   const renderConfigOptions = () => {
     switch (service.id) {
       case "enhancement":
         return (
-          <EnhancementConfig config={config} updateConfig={updateConfig} />
+          <EnhancementConfig
+            config={config as MediaEnhancementConfig}
+            updateConfig={updateConfig}
+          />
         );
 
       case "story_mode":
-        return <StoryModeConfig config={config} updateConfig={updateConfig} />;
+        return (
+          <StoryModeConfig
+            config={config}
+            updateConfig={updateConfig}
+            selectedTestimonials={selectedTestimonials}
+          />
+        );
 
       case "platform_optimizer":
         return (
           <PlatformOptimizerConfig
-            config={config}
+            config={config as OptimizerConfig}
             updateConfig={updateConfig}
           />
         );
@@ -100,12 +118,9 @@ const ServiceConfigPage: React.FC<{
       case "clipping":
         return (
           <ClippingConfig
-            config={config}
+            config={config as SmartClippingConfig}
             updateConfig={updateConfig}
-            selectedSegments={selectedSegments}
             selectedTestimonials={selectedTestimonials}
-            setSelectedSegments={setSelectedSegments}
-            videoPreviewUrl={videoPreviewUrl}
           />
         );
 
@@ -113,23 +128,28 @@ const ServiceConfigPage: React.FC<{
         return (
           <NoiseRemovalConfig config={config} updateConfig={updateConfig} />
         );
-      case "content_generator":
-        return (
-          <ContentGeneratorConfig config={config} updateConfig={updateConfig} />
-        );
+      // case "content_generation":
+      //   return (
+      //     <ContentGeneratorConfig config={config} updateConfig={updateConfig} />
+      //   );
 
-      case "text_polishing":
-        return (
-          <TextPolishingConfig config={config} updateConfig={updateConfig} />
-        );
+      // case "text_polishing":
+      //   return (
+      //     <TextPolishingConfig config={config} updateConfig={updateConfig} />
+      //   );
 
-      case "translation":
-        return (
-          <TextTranslationConfig config={config} updateConfig={updateConfig} />
-        );
+      // case "translation":
+      //   return (
+      //     <TextTranslationConfig config={config} updateConfig={updateConfig} />
+      //   );
 
       case "narration":
-        return <NarrationConfig config={config} updateConfig={updateConfig} />;
+        return (
+          <NarrationConfig
+            config={config as NarratorConfig}
+            updateConfig={updateConfig}
+          />
+        );
 
       // Keep all other existing cases (enhancement, story_mode, etc.)
       default:
@@ -167,14 +187,27 @@ const ServiceConfigPage: React.FC<{
               </button>
               <div className="h-6 w-px bg-gray-300 hidden sm:block" />
               <div className="flex items-center gap-3">
+                {!serviceValidation.canApply && (
+                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="w-5 h-5 text-yellow-600" />
+                      <span className="font-medium text-yellow-800">
+                        Service Cannot Be Applied
+                      </span>
+                    </div>
+                    <p className="text-yellow-700 mt-1">
+                      {serviceValidation.reason}
+                    </p>
+                  </div>
+                )}
                 <div>
                   <h1 className="font-semibold text-gray-900">
                     {service.title} Configuration
                   </h1>
-                  <p className="text-xs text-gray-600">
+                  {/* <p className="text-xs text-gray-600">
                     Customize settings for {selectedTestimonials?.length}{" "}
                     testimonial{selectedTestimonials?.length > 1 ? "s" : ""}
-                  </p>
+                  </p> */}
                 </div>
               </div>
             </div>
@@ -203,11 +236,7 @@ const ServiceConfigPage: React.FC<{
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 sm:gap-8">
           {/* Saved Presets Sidebar */}
           <SavedPresets
-            defaultPreset={defaultPreset}
             handleLoadPreset={handleLoadPreset}
-            onDeletePreset={onDeletePreset}
-            onSetDefaultPreset={onSetDefaultPreset}
-            savedPresets={savedPresets}
             selectedPreset={selectedPreset}
             service={service}
           />
@@ -241,4 +270,4 @@ const ServiceConfigPage: React.FC<{
   );
 };
 
-export default ServiceConfigPage;
+export default observer(ServiceConfigPage);

@@ -25,6 +25,11 @@ func (m *Repo) TeamMember() repositories.TeamMemberRepository {
 	return args.Get(0).(repositories.TeamMemberRepository)
 }
 
+func (m *Repo) Testimonial() repositories.TestimonialRepository {
+	args := m.Called()
+	return args.Get(0).(repositories.TestimonialRepository)
+}
+
 func (m *Repo) Close() error {
 	args := m.Called()
 	return args.Error(0)

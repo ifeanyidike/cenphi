@@ -96,7 +96,17 @@ export interface BrandGuide {
   border?: boolean;
   rating_style?: "stars" | "number" | "text";
 
-  // Brand voice
+  // Brand voice and messaging
+  voice?: {
+    tone?: string;
+    personality?: string[];
+    attributes?: string[];
+    ctas?: string[];
+    examples?: string[];
+    channels?: Record<string, any>;
+  };
+  mission?: string;
+  audience?: string;
 
   // UI settings
   ui_settings?: {

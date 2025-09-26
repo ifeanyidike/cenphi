@@ -1,42 +1,88 @@
-# Base image with Go and Air preinstalled
-FROM golang:1.24-alpine
-ENV CGO_ENABLED=0
+# FROM golang:1.24-alpine
 
-# Set the working directory 
-WORKDIR /app
-
-RUN apk add --no-cache ffmpeg && \
-    go install github.com/air-verse/air@latest
-
-COPY go.mod go.sum ./
-RUN go mod download && \
-rm -rf /go/pkg/mod/cache
-
-COPY . .
-
-EXPOSE 8081
-
-# ENTRYPOINT ["/app/scripts/docker-entrypoint-dev.sh"]
-
-# Command to run Air
-CMD ["air", "-c", ".air.toml"]
-
-
-
-# FROM golang:1.23.2-alpine
-
+# ENV CGO_ENABLED=0
 # WORKDIR /app
 
-# RUN apk add --no-cache ffmpeg
+# RUN apk add --no-cache ffmpeg git build-base && \
+#     go install github.com/air-verse/air@latest
 
 # COPY go.mod go.sum ./
-
-# RUN go mod download && rm -rf /go/pkg/mod/cache
+# RUN go mod download
 
 # COPY . .
 
-# RUN go build -o /app/api ./cmd
-
 # EXPOSE 8081
 
-# CMD ["/app/api"]
+# # CMD ["air", "-c", ".air.toml"]
+
+
+# CMD ["sh","-c","go run ./cmd"]
+
+# Build stage
+FROM golang:1.24-alpine AS builder
+ENV CGO_ENABLED=0
+
+# Install build dependencies
+RUN apk add --no-cache make git ffmpeg tzdata ca-certificates curl
+
+# Set working directory
+WORKDIR /app
+
+# Copy go mod files first to leverage Docker layer caching
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Add a cache buster argument to force rebuilds when needed
+ARG CACHE_BUSTER=unknown
+RUN echo "Cache buster: ${CACHE_BUSTER}"
+
+# Copy the rest of the source code
+COPY . .
+
+# Build a static binary with optimizations
+RUN CGO_ENABLED=0 go build \
+    -ldflags="-s -w -X main.Version=${VERSION}" \
+    -trimpath \
+    -o /app/api \
+    ./cmd
+
+# Create a custom certificate directory and download certificates
+RUN mkdir -p /app/certs && \
+    (curl -sSL --retry 3 --retry-delay 5 https://pki.goog/roots.pem -o /app/certs/google_roots.pem || true) && \
+    (curl -sSL --retry 3 --retry-delay 5 https://curl.se/ca/cacert.pem -o /app/certs/cacert.pem || true)
+
+# Final stage - Minimal production image
+FROM alpine:latest
+
+# Install only essential packages
+RUN apk add --no-cache curl tzdata bind-tools ffmpeg
+
+# Create app directories
+RUN mkdir -p /app/certs /app/data
+
+# Copy the binary and certificates from the builder stage
+COPY --from=builder /app/api /app/api
+COPY --from=builder /app/certs/ /app/certs/
+COPY --from=builder /app/cenphiio-service-account.json /app/cenphiio-service-account.json
+
+# Copy the entrypoint script
+COPY scripts/docker-entrypoint.sh /app/docker-entrypoint.sh
+# Fix line endings and make executable
+RUN sed -i 's/\r$//' /app/docker-entrypoint.sh && \
+    chmod 755 /app/docker-entrypoint.sh
+
+# Set environment variables to point to our custom certificate locations
+ENV SSL_CERT_FILE=/app/certs/cacert.pem
+ENV GOOGLE_APPLICATION_CREDENTIALS=/app/cenphiio-service-account.json
+
+# Set the PORT environment variable for platforms that require it
+ENV PORT=8081
+
+# Set working directory
+WORKDIR /app
+
+# Expose the port
+EXPOSE 8081
+
+# Default command
+CMD ["/app/api"]

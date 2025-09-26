@@ -50,12 +50,23 @@ class PlatformOptimizer:
         self.tiktok_optimizer = TikTokOptimizer()
         self.linkedin_optimizer = LinkedInOptimizer()
         self.youtube_optimizer = YouTubeOptimizer()
+
+        # High-value engagement optimizer
+        self._engagement_optimizer = None
         
         # Specialized processors for each media type
         self.video_processor = VideoOptimizer(self.media_processor) 
         self.audio_normalizer = AudioNormalizer()
         
         logger.info("Enhanced PlatformOptimizer initialized with advanced features")
+
+    @property
+    def engagement_optimizer(self):
+        """Lazy load engagement optimizer"""
+        if self._engagement_optimizer is None:
+            from .engagement_optimizer import EngagementOptimizer
+            self._engagement_optimizer = EngagementOptimizer()
+        return self._engagement_optimizer
 
     @property
     def storage_manager(self):
@@ -114,7 +125,14 @@ class PlatformOptimizer:
             if not options or not isinstance(options, dict):
                 raise ValueError("Invalid options provided for batch optimization")
             
-            optimal_workers = min(8, max(2, os.cpu_count() - 1))
+            # CloudRun-optimized worker count
+            cpu_count = os.cpu_count() or 2
+            if cpu_count <= 2:
+                optimal_workers = 1  # Single worker for small CloudRun instances
+            elif cpu_count <= 4:
+                optimal_workers = 2  # Conservative for standard CloudRun
+            else:
+                optimal_workers = min(4, max(2, cpu_count - 1))  # Cap for larger instances
 
             # Prepare thread pool for concurrent processing
             with ThreadPoolExecutor(max_workers=optimal_workers) as executor:
@@ -324,15 +342,29 @@ class PlatformOptimizer:
             if not enhanced_media_path:
                 raise Exception("Enhanced media path is empty")
             
-            # STEP 2: Basic platform optimization
+            # STEP 2: CPU-optimized platform processing with quality preservation
             if media_type == "video":
+                # Use CPU-optimized settings for Cloud Run
+                if not optimization_options:
+                    optimization_options = {}
+
+                # Add CPU optimization settings
+                optimization_options.update({
+                    "use_cpu_optimization": True,
+                    "quality_preset": "very_fast_hq",  # Quality-preserving fast preset
+                    "use_hw_accel": False,  # Disabled for Cloud Run CPU-only
+                    "threads": min(4, os.cpu_count() or 2),  # Optimize for CloudRun CPU
+                    "cloudrun_optimized": True,  # Enable CloudRun-specific optimizations
+                    "preserve_colors": enable_media_enhancement  # Preserve enhanced colors
+                })
+
                 basic_result = self.video_processor.optimize(
                     enhanced_media_path, platform_spec, media_analysis, brand_context, optimization_options
                 )
                 temp_files.append(basic_result.optimized_url)
             else:
                 raise ValueError(f"Unsupported media type: {media_type}")
-            
+
             optimized_media_path = basic_result.optimized_url
             if not optimized_media_path:
                 raise Exception("Optimized media path is empty after basic optimization")
@@ -341,20 +373,38 @@ class PlatformOptimizer:
             platform_specific_result = self._apply_platform_specific_optimization(
                 optimized_media_path, target_platform, platform_spec, media_analysis
             )
-            
+
             if platform_specific_result.success and platform_specific_result.optimized_path:
-                final_media_path = platform_specific_result.optimized_path
-                temp_files.append(final_media_path)
+                intermediate_media_path = platform_specific_result.optimized_path
+                temp_files.append(intermediate_media_path)
             else:
-                final_media_path = optimized_media_path
+                intermediate_media_path = optimized_media_path
                 logger.warning(f"Platform-specific optimization failed: {platform_specific_result.error}")
+
+            # STEP 3.5: High-value engagement optimization 🚀
+            logger.info("🚀 Applying high-value engagement optimization")
+            engagement_result = self.engagement_optimizer.optimize_for_maximum_engagement(
+                media_path=intermediate_media_path,
+                target_platform=target_platform,
+                content_analysis=media_analysis,
+                brand_context=brand_context,
+                temp_files=temp_files
+            )
+
+            if engagement_result.get("success") and engagement_result.get("optimized_path"):
+                final_media_path = engagement_result["optimized_path"]
+                temp_files.append(final_media_path)
+                logger.info(f"✅ Engagement optimization: +{engagement_result.get('improvement_metrics', {}).get('engagement_boost_percentage', 0):.0f}% boost expected")
+            else:
+                final_media_path = intermediate_media_path
+                logger.warning(f"Engagement optimization failed: {engagement_result.get('error', 'Unknown')}")
 
             if not final_media_path:
                 raise Exception("Final media path is empty")
             
             # STEP 4: Caption generation (if enabled and transcript provided)
             caption_paths = {}
-            if enable_captions and transcript and final_media_path:
+            if enable_captions and (transcript or transcript_segments) and final_media_path:
                 logger.info("📝 Generating captions...")
                 caption_result = self.caption_generator.generate_captions(
                     media_path=final_media_path,
@@ -380,8 +430,8 @@ class PlatformOptimizer:
                     logger.info(f"✅ Captions generated: {caption_result.word_count} words")
                 else:
                     logger.warning(f"Caption generation failed: {caption_result.error}")
-            elif enable_captions and not transcript:
-                logger.warning("Caption generation requested but no transcript provided")
+            elif enable_captions and (not transcript or not transcript_segments):
+                logger.warning("Caption generation requested but no transcript or transcript segments provided")
             
             # STEP 5: Background music mixing (if requested)
             if add_background_music and not in_process and final_media_path:
@@ -437,7 +487,12 @@ class PlatformOptimizer:
                     
                     # Upload all files in parallel
                     uploaded_urls = {}
-                    optimal_workers = min(8, max(2, os.cpu_count() - 1))
+                    # CloudRun-optimized upload workers
+                    cpu_count = os.cpu_count() or 2
+                    if cpu_count <= 2:
+                        optimal_workers = 2  # Parallel uploads even on small instances
+                    else:
+                        optimal_workers = min(6, max(3, cpu_count))  # More workers for uploads
 
                     with ThreadPoolExecutor(max_workers=optimal_workers) as executor:
                         # Submit all uploads
@@ -476,7 +531,12 @@ class PlatformOptimizer:
             
             if platform_specific_result.success:
                 applied_optimizations.extend(platform_specific_result.engagement_enhancements)
-            
+
+            # Add engagement optimization details
+            if engagement_result.get("success"):
+                applied_optimizations.extend(engagement_result.get("applied_optimizations", []))
+                applied_optimizations.append("high_value_engagement_optimized")
+
             if caption_paths:
                 applied_optimizations.append("captions_generated")
             
@@ -592,8 +652,136 @@ class PlatformOptimizer:
         
         cache_hash = hashlib.md5(cache_data.encode()).hexdigest()
         return f"{cache_hash}"
-            
-    
+
+    def optimize_with_cpu_batch(
+        self,
+        media_url: str,
+        target_platforms: List[str],
+        brand_context: intelligence_pb2.BrandContext = None,
+        optimization_options: Dict[str, Any] = None,
+    ) -> Dict[str, intelligence_pb2.OptimizeResponse]:
+        """
+        CPU-optimized batch platform optimization with quality preservation
+        Processes one input for multiple platforms in a single FFmpeg pass
+        """
+        temp_files = []
+        results = {}
+
+        try:
+            logger.info(f"🚀 CPU-optimized batch platform optimization: {len(target_platforms)} platforms")
+
+            # Download/prepare media
+            if media_url.startswith('http'):
+                media_path = self.storage_manager.download_media(media_url)
+                if media_path:
+                    temp_files.append(media_path)
+            else:
+                media_path = media_url
+
+            if not os.path.exists(media_path):
+                raise FileNotFoundError(f"Media file not found: {media_path}")
+
+            # Get platform specs
+            platform_specs = {}
+            for platform in target_platforms:
+                spec = self.platform_specs.get_platform_spec(platform)
+                if spec:
+                    platform_specs[platform] = spec
+
+            if not platform_specs:
+                raise ValueError("No valid platform specifications found")
+
+            # Create output paths
+            output_paths = {}
+            for platform in platform_specs:
+                output_path = f"{tempfile.gettempdir()}/batch_optimized_{platform}_{uuid.uuid4().hex}.mp4"
+                output_paths[platform] = output_path
+                temp_files.append(output_path)
+
+            # Use FFmpeg optimizer for single-pass multi-output
+            if self._ffmpeg_optimizer is None:
+                from src.utils.ffmpeg_optimizer import FFmpegOptimizer
+                self._ffmpeg_optimizer = FFmpegOptimizer()
+
+            # Create batch platform optimization command
+            platform_configs = {}
+            for platform, spec in platform_specs.items():
+                platform_configs[platform] = {
+                    "width": spec.preferred_resolution[0],
+                    "height": spec.preferred_resolution[1],
+                    "bitrate": f"{spec.bitrate_range[1]}k",
+                    "fps": spec.frame_rate,
+                    "output_path": output_paths[platform]
+                }
+
+            # Use quality-preserving preset for batch optimization
+            quality_preset = self._ffmpeg_optimizer.get_quality_preserving_preset("very_fast_hq")
+
+            # Create single-pass multi-output command
+            batch_cmd = self._ffmpeg_optimizer.create_single_pass_multi_output_command(
+                input_path=media_path,
+                platform_configs=platform_configs,
+                quality_preset=quality_preset
+            )
+
+            logger.info(f"📊 Executing batch platform optimization with {quality_preset['preset']} preset")
+            result = self._ffmpeg_optimizer.execute_with_monitoring(batch_cmd, timeout=600)
+
+            if result.returncode == 0:
+                # Build success responses for each platform
+                for platform, output_path in output_paths.items():
+                    if os.path.exists(output_path):
+                        # Upload optimized file
+                        cache_key = self.generate_optimization_cache_key(
+                            media_url, platform, brand_context, optimization_options
+                        )
+                        object_name = f"optimized/{platform}/{cache_key}.mp4"
+                        optimized_url = self.storage_manager.upload_file_with_retry(output_path, object_name)
+
+                        results[platform] = intelligence_pb2.OptimizeResponse(
+                            success=True,
+                            media_type="video",
+                            platform=platform,
+                            optimized_url=optimized_url,
+                            applied_optimizations=["cpu_batch_optimized", "quality_preserved", "platform_specific"],
+                            error=""
+                        )
+                    else:
+                        results[platform] = intelligence_pb2.OptimizeResponse(
+                            success=False,
+                            media_type="video",
+                            platform=platform,
+                            optimized_url="",
+                            error=f"Output file not created for {platform}"
+                        )
+            else:
+                # Fallback to sequential processing if batch fails
+                logger.warning("⚠️ Batch processing failed, falling back to sequential processing")
+                for platform in target_platforms:
+                    results[platform] = self.optimize(
+                        media_url, platform, brand_context, optimization_options
+                    )
+
+            return results
+
+        except Exception as e:
+            logger.error(f"❌ Batch platform optimization failed: {str(e)}")
+            # Return error responses for all platforms
+            for platform in target_platforms:
+                results[platform] = intelligence_pb2.OptimizeResponse(
+                    success=False,
+                    media_type="video",
+                    platform=platform,
+                    optimized_url="",
+                    error=f"Batch optimization failed: {str(e)}"
+                )
+            return results
+
+        finally:
+            # Cleanup temporary files
+            for temp_file in temp_files:
+                self._safe_cleanup(temp_file)
+
     def _apply_platform_specific_optimization(
         self,
         media_path: str,

@@ -115,8 +115,8 @@ class NoiseReducer:
             
             # Process noise reduction
             processed_media = self.noise_service.process_with_denoising(
-                media_path=media_path,
-                noise_level=level,
+                video_path=media_path,
+                noise_reduction_level=level,
                 temp_files=temp_files,
                 story_id="noise_reduction"
             )
@@ -151,7 +151,7 @@ class NoiseReducer:
         finally:
             # Cleanup temporary files
             self._cleanup_temp_files(temp_files)
-            self.file_manager.cleanup_all_temp_files(temp_files)
+            self.file_manager.cleanup_all_temp_files()
 
     def generate_noise_cache_key(self, media_url: str, level: str):
         """Generate deterministic cache key"""

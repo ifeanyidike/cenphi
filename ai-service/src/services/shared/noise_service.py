@@ -97,29 +97,28 @@ class NoiseService:
 
     def process_with_denoising(self, video_path: str, noise_reduction_level: str, temp_files: List[str], story_id: str) -> str:
         """
-        Main noise removal method with reliable FFmpeg operations
+        CPU-optimized noise removal method with quality preservation for Cloud Run
         """
-        logger.info(f"🎯 Applying noise removal to {story_id} (level: {noise_reduction_level})")
-        
+        logger.info(f"🚀 CPU-optimized noise removal for {story_id} (level: {noise_reduction_level})")
+
         try:
             if not video_path:
                 logger.warning(f"⚠️ No video path provided for noise removal on story {story_id}")
                 return video_path
-                
+
             # Force high-quality noise removal by default
             if noise_reduction_level == "auto":
                 noise_reduction_level = "high"
-            
+
             # Create output path
-            # output_filename = f"denoised_{uuid.uuid4().hex}.mp4"
-            # output_path = os.path.join(self.temp_dir, output_filename)
             output_path = self.file_manager.create_temp_video("denoised_video")
 
-            noise_level, detected_noise = self.get_proper_noise_level(video_path, noise_reduction_level or 'high')
-            logger.info(f"📊 Optimal noise level is {noise_level} detected noise: {detected_noise:.3f}")
-            
-            # Apply reliable noise reduction
-            success = self._apply_reliable_noise_reduction(
+            # CPU-optimized noise level detection (faster)
+            noise_level, detected_noise = self.get_proper_noise_level_fast(video_path, noise_reduction_level or 'high')
+            logger.info(f"📊 CPU-optimized noise level: {noise_level} detected noise: {detected_noise:.3f}")
+
+            # Apply CPU-optimized noise reduction
+            success = self._apply_cpu_optimized_noise_reduction(
                 input_path=video_path,
                 output_path=output_path,
                 level=noise_level
@@ -367,6 +366,151 @@ class NoiseService:
             return False
         except Exception as e:
             logger.error(f"❌ Reliable noise reduction failed: {e}")
+            return False
+
+    def get_proper_noise_level_fast(self, input_path: str, level: str):
+        """
+        CPU-optimized fast noise level detection for Cloud Run
+        Uses lighter analysis methods to reduce processing time
+        """
+        try:
+            # Quick file size and duration check for noise estimation
+            file_size = os.path.getsize(input_path) if os.path.exists(input_path) else 0
+            if file_size < 1024 * 1024:  # Less than 1MB, likely low noise
+                return "medium", 0.3
+
+            # Simplified noise analysis (faster than full spectrum analysis)
+            import subprocess
+            cmd = ["ffprobe", "-v", "quiet", "-show_entries", "format=duration,bit_rate",
+                   "-of", "csv=p=0", input_path]
+
+            try:
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+                if result.returncode == 0:
+                    parts = result.stdout.strip().split(',')
+                    if len(parts) >= 2:
+                        duration = float(parts[0]) if parts[0] != 'N/A' else 10.0
+                        bit_rate = int(parts[1]) if parts[1] != 'N/A' else 1000000
+
+                        # Estimate noise based on bitrate and file characteristics
+                        noise_estimate = max(0.1, min(0.8, (2000000 - bit_rate) / 2000000))
+                        optimal_level = "high" if noise_estimate > 0.5 else level
+
+                        logger.info(f"🚀 Fast noise analysis: level={optimal_level}, estimate={noise_estimate:.3f}")
+                        return optimal_level, noise_estimate
+            except Exception as e:
+                logger.warning(f"Fast analysis failed: {e}")
+
+            # Fallback to requested level
+            return level, 0.5
+
+        except Exception as e:
+            logger.warning(f"Fast noise detection failed: {e}, using fallback")
+            return level, 0.5
+
+    def _apply_cpu_optimized_noise_reduction(self, input_path: str, output_path: str, level: str) -> bool:
+        """
+        CPU-optimized noise reduction with quality preservation for Cloud Run
+        Uses faster algorithms and thread optimization
+        """
+        try:
+            # Validate inputs
+            if not os.path.exists(input_path):
+                logger.error(f"Input file not found: {input_path}")
+                return False
+
+            # Get stream information
+            has_video, has_audio = self.storage_manager._detect_video_streams(input_path)
+
+            if not has_video and not has_audio:
+                logger.error("No valid streams found")
+                return False
+
+            # CPU-optimized noise profile (lighter processing)
+            cpu_profiles = {
+                "low": {"video_denoise": "1:0.5:2:1", "audio_nr": "8", "audio_nf": "-40"},
+                "medium": {"video_denoise": "2:1:3:2", "audio_nr": "15", "audio_nf": "-35"},
+                "high": {"video_denoise": "3:2:4:3", "audio_nr": "20", "audio_nf": "-30"}
+            }
+
+            profile = cpu_profiles.get(level, cpu_profiles["medium"])
+
+            logger.info(f"🚀 CPU-optimized {level} noise reduction with quality preservation")
+
+            # Build CPU-optimized FFmpeg command
+            cmd = ["ffmpeg", "-y", "-i", input_path]
+
+            # CPU thread optimization for Cloud Run
+            cpu_threads = min(4, os.cpu_count() or 2)
+            cmd.extend(["-threads", str(cpu_threads)])
+
+            filter_complex = []
+            map_args = []
+
+            # Lighter video denoising for CPU optimization
+            if has_video:
+                video_filter = f"hqdn3d={profile['video_denoise']}"
+                filter_complex.append(f"[0:v]{video_filter}[vout]")
+                map_args.extend(["-map", "[vout]"])
+
+            # Optimized audio processing
+            if has_audio:
+                audio_filters = []
+
+                # Lighter audio noise reduction
+                nr_value = profile.get('audio_nr', '15')
+                nf_value = profile.get('audio_nf', '-35')
+                audio_filters.append(f"afftdn=nr={nr_value}:nf={nf_value}")
+
+                # Light voice enhancement (faster)
+                audio_filters.append("equalizer=f=250:t=o:w=150:g=1.2")
+
+                if audio_filters:
+                    audio_filter_chain = ",".join(audio_filters)
+                    filter_complex.append(f"[0:a]{audio_filter_chain}[aout]")
+                    map_args.extend(["-map", "[aout]"])
+
+            # Apply filters if any exist
+            if filter_complex:
+                cmd.extend(["-filter_complex", ";".join(filter_complex)])
+                cmd.extend(map_args)
+            else:
+                cmd.extend(["-c", "copy"])
+
+            # CPU-optimized encoding settings with quality preservation
+            cmd.extend([
+                "-c:v", "libx264", "-preset", "veryfast", "-crf", "19",
+                "-tune", "film",  # Better quality for video content
+                "-c:a", "aac", "-b:a", "128k",
+                "-movflags", "+faststart"
+            ])
+
+            cmd.append(output_path)
+
+            logger.info(f"📊 Executing CPU-optimized noise reduction: {' '.join(cmd[:6])}...")
+
+            # Execute with timeout
+            result = subprocess.run(
+                cmd, capture_output=True, text=True,
+                timeout=300, check=False  # 5 minute timeout
+            )
+
+            if result.returncode == 0:
+                if os.path.exists(output_path) and os.path.getsize(output_path) > 1000:
+                    logger.info("✅ CPU-optimized noise reduction completed successfully")
+                    return True
+                else:
+                    logger.error("❌ Output file empty or missing")
+                    return False
+            else:
+                logger.error(f"❌ CPU-optimized noise reduction failed: {result.stderr}")
+                return False
+
+        except subprocess.TimeoutExpired:
+            logger.error("❌ CPU-optimized noise reduction timed out")
+            return False
+        except Exception as e:
+            logger.error(f"❌ CPU-optimized noise reduction failed: {e}")
             return False
 
     # Legacy compatibility methods with reliable implementations

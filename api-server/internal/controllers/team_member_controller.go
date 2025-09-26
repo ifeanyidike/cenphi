@@ -3,7 +3,6 @@ package controllers
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -124,20 +123,9 @@ func debugContextTimeout(ctx context.Context, logger *zap.Logger, location strin
 // @Failure 404 {object} utils.ErrorResponse
 // @Router /team-member [get]
 func (c *teamMemberController) GetTeamMemberByFirebaseUID(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("calling GetTeamMemberByFirebaseUID")
-	uid := chi.URLParam(r, "id")
-	if uid == "" {
-		c.logger.Error("invalid user firebase uid", zap.String("user firebase uid", uid))
-		utils.RespondWithError(w, http.StatusBadRequest, "Invalid or missing ID")
-		return
-	}
-	fmt.Println("firebase uid", uid)
-
-	debugContextTimeout(r.Context(), c.logger, "controller_start")
-
-	user, err := c.userSvc.FindByUID(r.Context(), uid)
+	user, err := c.userSvc.FindByUID(r.Context())
 	if err != nil {
-		c.logger.Error("failed to get user", zap.String("Firebase UID", uid), zap.Error(err))
+		c.logger.Error("failed to get user", zap.Error(err))
 		utils.RespondWithError(w, http.StatusNotFound, err.Error())
 		return
 	}

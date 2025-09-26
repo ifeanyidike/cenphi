@@ -1,717 +1,128 @@
-# # # # Dockerfile.dev for AI Service - Python 3.12 with pip
-# # # FROM python:3.12-slim
+# Realistic size-optimized Dockerfile with FFmpeg + OpenCV
+# Target: 800MB-1GB (realistic with FFmpeg ~100MB + OpenCV ~300MB + deps) actually still got 1.82GB
 
-# # # # Set environment variables
-# # # ENV PYTHONUNBUFFERED=1 \
-# # #     PYTHONDONTWRITEBYTECODE=1 \
-# # #     PIP_NO_CACHE_DIR=1 \
-# # #     PIP_DISABLE_PIP_VERSION_CHECK=1
+# ================================================================================
+# Stage 1: Builder with practical optimization
+# ================================================================================
 
-# # # # Install system dependencies in a single layer for better caching
-# # # RUN apt-get update && apt-get install -y --no-install-recommends \
-# # #     # Build tools
-# # #     build-essential \
-# # #     cmake \
-# # #     git \
-# # #     wget \
-# # #     curl \
-# # #     pkg-config \
-# # #     # FFmpeg for video/audio processing
-# # #     ffmpeg \
-# # #     # Math libraries for ML packages
-# # #     libhdf5-dev \
-# # #     libopenblas-dev \
-# # #     liblapack-dev \
-# # #     gfortran \
-# # #     # System libraries
-# # #     libffi-dev \
-# # #     libssl-dev \
-# # #     libxml2-dev \
-# # #     libxslt1-dev \
-# # #     # Image processing (build dependencies)
-# # #     libjpeg-dev \
-# # #     libpng-dev \
-# # #     libtiff-dev \
-# # #     libwebp-dev \
-# # #     zlib1g-dev \
-# # #     # Video processing (build dependencies) 
-# # #     libavcodec-dev \
-# # #     libavformat-dev \
-# # #     libswscale-dev \
-# # #     libswresample-dev \
-# # #     # Audio processing (build dependencies)
-# # #     libsndfile1-dev \
-# # #     libportaudio2 \
-# # #     libportaudiocpp0 \
-# # #     portaudio19-dev \
-# # #     libasound2-dev \
-# # #     # GUI and graphics (build dependencies)
-# # #     libgstreamer1.0-dev \
-# # #     libgstreamer-plugins-base1.0-dev \
-# # #     libgtk-3-dev \
-# # #     libcanberra-gtk3-module \
-# # #     # Runtime dependencies for OpenCV and MediaPipe
-# # #     libglib2.0-0 \
-# # #     libsm6 \
-# # #     libxext6 \
-# # #     libxrender-dev \
-# # #     libgl1-mesa-glx \
-# # #     libopenblas0 \
-# # #     liblapack3 \
-# # #     libhdf5-103-1 \
-# # #     libgomp1 \
-# # #     libjpeg62-turbo \
-# # #     libpng16-16 \
-# # #     libtiff6 \
-# # #     libwebp7 \
-# # #     libavcodec59 \
-# # #     libavformat59 \
-# # #     libswscale6 \
-# # #     libswresample4 \
-# # #     libssl3 \
-# # #     libffi8 \
-# # #     && rm -rf /var/lib/apt/lists/*
-
-# # # # Upgrade pip
-# # # RUN pip install --upgrade pip==24.3.1
-
-# # # # Set work directory and create directories
-# # # WORKDIR /app
-# # # RUN mkdir -p /app/src /app/storage /app/logs /models /app/oci-secrets
-
-# # # # Copy requirements.txt first for better Docker layer caching
-# # # COPY requirements.txt ./
-
-# # # # Install PyTorch and torchvision from standard PyPI (most reliable for development)
-# # # # RUN pip install --no-cache-dir torch torchvision
-# # # RUN pip install --no-cache-dir torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1
-
-# # # # Install remaining requirements
-# # # RUN pip install --no-cache-dir -r requirements.txt
-
-# # # # Copy application code AFTER installing dependencies for better caching
-# # # COPY main.py ./
-# # # COPY intelligence_pb2.py ./
-# # # COPY intelligence_pb2_grpc.py ./
-# # # COPY src/ ./src/
-
-# # # # Verify installations
-# # # RUN python -c "import mediapipe as mp; print(f'✅ MediaPipe {mp.__version__} installed successfully')" && \
-# # #     python -c "import torch; print(f'✅ PyTorch {torch.__version__} available')" && \
-# # #     python -c "import cv2; print(f'✅ OpenCV {cv2.__version__} available')" && \
-# # #     python -c "import intelligence_pb2; print('✅ Protobuf files imported successfully')"
-
-# # # # Set proper permissions
-# # # RUN chmod 755 /app /app/src /app/storage /app/logs /models
-
-# # # # Expose gRPC port
-# # # EXPOSE 50052
-
-# # # # Enhanced health check that verifies key dependencies
-# # # HEALTHCHECK --interval=30s --timeout=30s --start-period=120s --retries=3 \
-# # #     CMD python -c "import grpc, mediapipe, torch, cv2, intelligence_pb2; print('✅ All dependencies healthy')" || exit 1
-
-# # # # Default command (will be overridden by docker-compose)
-# # # CMD ["python", "main.py"]
-
-
-# # # Dockerfile.dev for AI Service - Python 3.12 with pip
-# # FROM python:3.10-slim
-
-# # # Set environment variables
-# # ENV PYTHONUNBUFFERED=1 \
-# #     PYTHONDONTWRITEBYTECODE=1 \
-# #     PIP_NO_CACHE_DIR=1 \
-# #     PIP_DISABLE_PIP_VERSION_CHECK=1
-
-# # # Install system dependencies in a single layer for better caching
-# # RUN apt-get update && apt-get install -y --no-install-recommends \
-# #     # Build tools
-# #     build-essential \
-# #     cmake \
-# #     git \
-# #     wget \
-# #     curl \
-# #     pkg-config \
-# #     # FFmpeg for video/audio processing
-# #     ffmpeg \
-# #     # Math libraries for ML packages
-# #     libhdf5-dev \
-# #     libopenblas-dev \
-# #     liblapack-dev \
-# #     gfortran \
-# #     # System libraries
-# #     libffi-dev \
-# #     libssl-dev \
-# #     libxml2-dev \
-# #     libxslt1-dev \
-# #     # Image processing (build dependencies)
-# #     libjpeg-dev \
-# #     libpng-dev \
-# #     libtiff-dev \
-# #     libwebp-dev \
-# #     zlib1g-dev \
-# #     # Video processing (build dependencies) 
-# #     libavcodec-dev \
-# #     libavformat-dev \
-# #     libswscale-dev \
-# #     libswresample-dev \
-# #     # Audio processing (build dependencies)
-# #     libsndfile1-dev \
-# #     libportaudio2 \
-# #     libportaudiocpp0 \
-# #     portaudio19-dev \
-# #     libasound2-dev \
-# #     # GUI and graphics (build dependencies)
-# #     libgstreamer1.0-dev \
-# #     libgstreamer-plugins-base1.0-dev \
-# #     libgtk-3-dev \
-# #     libcanberra-gtk3-module \
-# #     # Runtime dependencies for OpenCV and MediaPipe
-# #     libglib2.0-0 \
-# #     libsm6 \
-# #     libxext6 \
-# #     libxrender-dev \
-# #     libgl1-mesa-glx \
-# #     libopenblas0 \
-# #     liblapack3 \
-# #     libhdf5-103-1 \
-# #     libgomp1 \
-# #     libjpeg62-turbo \
-# #     libpng16-16 \
-# #     libtiff6 \
-# #     libwebp7 \
-# #     libavcodec59 \
-# #     libavformat59 \
-# #     libswscale6 \
-# #     libswresample4 \
-# #     libssl3 \
-# #     libffi8 \
-# #     && rm -rf /var/lib/apt/lists/*
-
-# # # Upgrade pip
-# # RUN pip install --upgrade pip==24.3.1
-
-# # # Set work directory and create directories
-# # WORKDIR /app
-# # RUN mkdir -p /app/src /app/storage /app/logs /models /app/oci-secrets
-
-# # # Copy requirements.txt first for better Docker layer caching
-# # COPY requirements.txt ./
-
-# # # Install PyTorch 1.13 (compatible with AI libraries)
-# # RUN pip install --no-cache-dir torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1
-
-# # # Install remaining requirements
-# # RUN pip install --no-cache-dir -r requirements.txt
-
-# # # Copy application code AFTER installing dependencies for better caching
-# # COPY main.py ./
-# # COPY intelligence_pb2.py ./
-# # COPY intelligence_pb2_grpc.py ./
-# # COPY src/ ./src/
-
-# # # Verify installations
-# # RUN python -c "import mediapipe as mp; print(f'✅ MediaPipe {mp.__version__} installed successfully')" && \
-# #     python -c "import torch; print(f'✅ PyTorch {torch.__version__} available')" && \
-# #     python -c "import torchvision; print(f'✅ TorchVision {torchvision.__version__} available')" && \
-# #     python -c "import cv2; print(f'✅ OpenCV {cv2.__version__} available')" && \
-# #     python -c "import intelligence_pb2; print('✅ Protobuf files imported successfully')"
-
-# # # Optional: Verify AI enhancement libraries (won't fail if missing)
-# # RUN python -c "try:\n  import basicsr, realesrgan, gfpgan\n  print('✅ AI enhancement libraries available')\nexcept ImportError as e:\n  print(f'⚠️  Some AI libraries missing: {e}')" || true
-
-# # # Environment variables for AI models
-# # ENV AI_MODELS_DIR=/app/models \
-# #     GFPGAN_CACHE_DIR=/app/gfpgan \
-# #     BASICSR_CACHE_DIR=/app/models/enhancement \
-# #     FACEXLIB_CACHE_DIR=/app/gfpgan/weights \
-# #     TORCH_HOME=/app/models
-
-# # # Create directories with proper structure for all AI services
-# # # RUN mkdir -p /app/gfpgan/weights \
-# # #     && mkdir -p /app/models/enhancement \
-# # #     && mkdir -p /app/models/facexlib \
-# # #     && mkdir -p /app/models/scene_analysis \
-# # #     && mkdir -p /app/models/audio_separation \
-# # #     && chmod -R 755 /app/gfpgan /app/models
-
-# # # # Copy the updated preloader and test scripts
-# # # COPY scripts/preload_models.py ./scripts/
-# # # COPY scripts/test_gfpgan.py ./scripts/
-# # # COPY scripts/verify_preload.py ./scripts/
-# # # RUN chmod +x scripts/preload_models.py scripts/test_gfpgan.py scripts/verify_preload.py
-
-# # # # Run the preloader with proper environment variables
-# # # RUN GFPGAN_CACHE_DIR=/app/gfpgan \
-# # #     FACEXLIB_CACHE_DIR=/app/gfpgan/weights \
-# # #     BASICSR_CACHE_DIR=/app/models/enhancement \
-# # #     python scripts/preload_models.py || echo "⚠️ Models will download on first request"
-
-# # # # Test that GFPGAN works after preload
-# # # RUN python scripts/test_gfpgan.py || echo "⚠️ GFPGAN test failed, will work on first request"
-
-# # # # Verify final status
-# # # RUN python scripts/verify_preload.py Set proper permissions
-# # RUN chmod 755 /app /app/src /app/storage /app/logs /models
-
-# # # Expose gRPC port
-# # EXPOSE 50052
-
-# # # Enhanced health check that verifies key dependencies
-# # HEALTHCHECK --interval=30s --timeout=30s --start-period=120s --retries=3 \
-# #     CMD python -c "import grpc, mediapipe, torch, cv2, intelligence_pb2; print('✅ All dependencies healthy')" || exit 1
-
-# # # Default command (will be overridden by docker-compose)
-# # CMD ["python", "main.py"]
-
-
-
-# # Development Dockerfile with CUDA Support
-# # Based on the production CUDA dockerfile but optimized for development workflow
-# # Works both with and without GPU
-
-# # Stage 1: Build stage with CUDA development tools
-# FROM nvidia/cuda:12.9.1-devel-ubuntu20.04 AS builder
-
-# # Prevent interactive prompts during apt installs
-# ENV DEBIAN_FRONTEND=noninteractive \
-#     PYTHONUNBUFFERED=1 \
-#     PYTHONDONTWRITEBYTECODE=1 \
-#     PIP_NO_CACHE_DIR=1 \
-#     PIP_DISABLE_PIP_VERSION_CHECK=1
-
-# # Install Python 3.10 and build dependencies - Ubuntu 20.04 with deadsnakes PPA
-# RUN apt-get update && apt-get install -y --no-install-recommends \
-#     # Add deadsnakes PPA for Python 3.10
-#     software-properties-common \
-#     && add-apt-repository ppa:deadsnakes/ppa \
-#     && apt-get update \
-#     && apt-get install -y --no-install-recommends \
-#     python3.10 \
-#     python3.10-dev \
-#     python3.10-venv \
-#     python3.10-distutils \
-#     # Build tools
-#     build-essential \
-#     cmake \
-#     git \
-#     wget \
-#     curl \
-#     pkg-config \
-#     gfortran \
-#     # Math libraries for ML packages
-#     libhdf5-dev \
-#     libopenblas-dev \
-#     liblapack-dev \
-#     # System libraries
-#     libffi-dev \
-#     libssl-dev \
-#     libxml2-dev \
-#     libxslt1-dev \
-#     # Image processing (build dependencies)
-#     libjpeg-dev \
-#     libpng-dev \
-#     libtiff-dev \
-#     libwebp-dev \
-#     zlib1g-dev \
-#     # Video processing (build dependencies) 
-#     libavcodec-dev \
-#     libavformat-dev \
-#     libswscale-dev \
-#     libswresample-dev \
-#     # Audio processing (build dependencies)
-#     libsndfile1-dev \
-#     libportaudio2 \
-#     libportaudiocpp0 \
-#     portaudio19-dev \
-#     libasound2-dev \
-#     # GUI and graphics (build dependencies)
-#     libgstreamer1.0-dev \
-#     libgstreamer-plugins-base1.0-dev \
-#     libgtk-3-dev \
-#     && rm -rf /var/lib/apt/lists/*
-
-# # Install pip properly for Python 3.10
-# RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py \
-#     && python3.10 get-pip.py \
-#     && rm get-pip.py
-
-# # Create virtual environment
-# RUN python3.10 -m venv /opt/venv
-# ENV PATH="/opt/venv/bin:$PATH"
-
-# # Copy requirements and install Python dependencies with staged approach
-# COPY requirements-runpod.txt ./
-
-# # Install PyTorch with CUDA support first
-# RUN pip install --no-cache-dir torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1
-
-# # Install core scientific packages
-# RUN pip install --no-cache-dir \
-#     "numpy>=1.21.0,<1.25.0" \
-#     "scipy>=1.5.0,<1.16.0" \
-#     "pillow>=11.3.0,<12.0.0"
-
-# # Install transformers and core ML packages
-# RUN pip install --no-cache-dir \
-#     transformers==4.53.0 \
-#     "opencv-python>=4.11.0.86,<5.0.0.0" \
-#     mediapipe==0.10.18
-
-# # Install AI enhancement libraries without dependency checking
-# RUN pip install --no-cache-dir --no-deps \
-#     basicsr==1.4.2 \
-#     realesrgan==0.3.0 \
-#     gfpgan==1.3.8 \
-#     facexlib==0.3.0
-
-# # Install remaining packages
-# RUN pip install --no-cache-dir \
-#     runpod==1.7.13 \
-#     demucs==4.0.1 \
-#     "soundfile>=0.12.1,<0.13.0" \
-#     "librosa>=0.11.0,<0.12.0" \
-#     webrtcvad-wheels==2.0.14 \
-#     "oci>=2.155.0,<3.0.0" \
-#     "grpcio>=1.73.1,<2.0.0" \
-#     "grpcio-reflection>=1.60.0,<1.65.0" \
-#     "protobuf>=4.25.3,<5.0.0" \
-#     "openai>=1.93.0,<2.0.0" \
-#     "anthropic>=0.57.1,<0.58.0" \
-#     "elevenlabs>=2.6.0,<3.0.0" \
-#     "together>=1.5.19,<2.0.0" \
-#     "num2words>=0.5.14,<0.6.0" \
-#     "validators>=0.35.0,<0.36.0" \
-#     "psutil>=5.9.0,<6.0.0" \
-#     attrs>=23.1.0 \
-#     absl-py>=1.4.0
-
-# # Stage 2: Development runtime (keeps more tools than production)
-# FROM nvidia/cuda:12.9.1-runtime-ubuntu20.04 AS development
-
-# # Set environment variables for CUDA and Python
-# ENV DEBIAN_FRONTEND=noninteractive \
-#     PYTHONUNBUFFERED=1 \
-#     PYTHONDONTWRITEBYTECODE=1 \
-#     PATH="/opt/venv/bin:$PATH" \
-#     NVIDIA_VISIBLE_DEVICES=all \
-#     NVIDIA_DRIVER_CAPABILITIES=compute,utility
-
-# # Install Python 3.10 and runtime dependencies - Ubuntu 20.04 with deadsnakes PPA
-# RUN apt-get update && apt-get install -y --no-install-recommends \
-#     # Add deadsnakes PPA for Python 3.10
-#     software-properties-common \
-#     && add-apt-repository ppa:deadsnakes/ppa \
-#     && apt-get update \
-#     && apt-get install -y --no-install-recommends \
-#     python3.10 \
-#     python3.10-distutils \
-#     # Development tools (extra for dev)
-#     curl \
-#     wget \
-#     git \
-#     vim \
-#     htop \
-#     # FFmpeg for video/audio processing
-#     ffmpeg \
-#     # Runtime dependencies - Ubuntu 20.04 versions
-#     libglib2.0-0 \
-#     libsm6 \
-#     libxext6 \
-#     libxrender-dev \
-#     libgl1-mesa-glx \
-#     libopenblas0 \
-#     liblapack3 \
-#     libhdf5-103 \
-#     libgomp1 \
-#     libjpeg-turbo8 \
-#     libpng16-16 \
-#     libtiff5 \
-#     libwebp6 \
-#     libstdc++6 \
-#     libgcc-s1 \
-#     libavcodec58 \
-#     libavformat58 \
-#     libswscale5 \
-#     libswresample3 \
-#     libssl1.1 \
-#     libffi7 \
-#     # Audio processing runtime libraries
-#     libsndfile1 \
-#     libportaudio2 \
-#     libportaudiocpp0 \
-#     libasound2 \
-#     libjpeg8 \
-#     # Additional runtime libraries
-#     libxml2 \
-#     libxslt1.1 \
-#     && rm -rf /var/lib/apt/lists/* \
-#     && apt-get autoremove -y \
-#     && apt-get autoclean
-
-# # Copy virtual environment from builder stage
-# COPY --from=builder /opt/venv /opt/venv
-
-# # Set work directory and create directories
-# WORKDIR /app
-# RUN mkdir -p /app/src /app/storage /app/logs /models /app/oci-secrets
-
-# # Environment variables for AI models (same as production but with dev settings)
-# ENV AI_MODELS_DIR=/models \
-#     GFPGAN_CACHE_DIR=/app/gfpgan \
-#     BASICSR_CACHE_DIR=/app/models/enhancement \
-#     FACEXLIB_CACHE_DIR=/app/gfpgan/weights \
-#     TORCH_HOME=/models/torch \
-#     HF_HOME=/models/huggingface \
-#     WHISPER_CACHE=/models/whisper \
-#     NLTK_DATA=/models/nltk_data \
-#     # Development-specific settings
-#     ENV_MODE=development \
-#     LOG_LEVEL=DEBUG \
-#     # CUDA optimizations (will be ignored if no GPU)
-#     CUDA_VISIBLE_DEVICES=0 \
-#     PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128
-
-# # # Create model directories with proper structure
-# # RUN mkdir -p /app/gfpgan/weights \
-# #     && mkdir -p /app/models/enhancement \
-# #     && mkdir -p /app/models/facexlib \
-# #     && mkdir -p /app/models/scene_analysis \
-# #     && mkdir -p /app/models/audio_separation \
-# #     && mkdir -p /models/huggingface \
-# #     && mkdir -p /models/whisper \
-# #     && mkdir -p /models/nltk_data \
-# #     && chmod -R 755 /app/gfpgan /app/models
-
-# # Copy application code (will be overridden by volume mounts in docker-compose)
-# COPY main.py ./
-# COPY intelligence_pb2.py ./
-# COPY intelligence_pb2_grpc.py ./
-# COPY src/ ./src/
-
-# # # Copy the preloader script
-# # COPY scripts/preload_models.py ./scripts/
-# # RUN chmod +x scripts/preload_models.py
-
-# # # Optional: Try to preload models (skip if it fails in dev)
-# # RUN GFPGAN_CACHE_DIR=/app/gfpgan \
-# #     FACEXLIB_CACHE_DIR=/app/gfpgan/weights \
-# #     BASICSR_CACHE_DIR=/app/models/enhancement \
-# #     python scripts/preload_models.py || echo "⚠️ Model preload skipped (will download on first request)"
-
-# # Set proper permissions
-# RUN chmod -R 755 /app /models
-
-# # Expose gRPC port
-# EXPOSE 50052
-
-# # Development health check (more lenient)
-# HEALTHCHECK --interval=30s --timeout=30s --start-period=180s --retries=3 \
-#     CMD python -c "import grpc, mediapipe, torch, cv2, intelligence_pb2; print('✅ All dependencies healthy')" || exit 1
-
-# # Default command for development
-# CMD ["python", "main.py"]
-
-
-# CUDA Development Dockerfile - Optimized for dev workflow
-# Multi-stage build with size optimizations but full dev functionality
-
-# Stage 1: Builder
-FROM nvidia/cuda:12.9.1-devel-ubuntu20.04 AS builder
+FROM python:3.10-slim-bookworm AS ai-service-builder
 
 ENV DEBIAN_FRONTEND=noninteractive \
-    PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_PREFER_BINARY=1 \
+    PYTHONWARNINGS="ignore"
 
-# Install Python 3.10 and build dependencies (consolidated for efficiency)
+# Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    software-properties-common \
-    && add-apt-repository ppa:deadsnakes/ppa \
-    && apt-get update && apt-get install -y --no-install-recommends \
-    python3.10 python3.10-dev python3.10-venv python3.10-distutils \
-    curl wget git build-essential cmake pkg-config gfortran \
-    libhdf5-dev libopenblas-dev liblapack-dev libffi-dev libssl-dev \
-    libxml2-dev libxslt1-dev libjpeg-dev libpng-dev libtiff-dev \
-    libwebp-dev zlib1g-dev libavcodec-dev libavformat-dev libswscale-dev \
-    libswresample-dev libsndfile1-dev portaudio19-dev libasound2-dev \
-    libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libgtk-3-dev \
-    && rm -rf /var/lib/apt/lists/*
+    gcc g++ make \
+    python3-dev \
+    pkg-config \
+    libffi-dev \
+    libjpeg-dev libpng-dev \
+    libsndfile1-dev && \
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 
 # Create virtual environment
-RUN python3.10 -m venv /opt/venv
+RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Copy requirements
-COPY requirements-runpod.txt ./
+COPY requirements-cloudrun.txt ./
 
-# Install packages in stages (proven reliable approach)
-# Stage 1: PyTorch with CUDA
-RUN pip install --upgrade pip \
-    && pip install --no-cache-dir torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1
+# Install packages with size optimization
+RUN pip install --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir -r requirements-cloudrun.txt
 
-# Stage 2: Core scientific packages
-RUN pip install --no-cache-dir \
-    "numpy>=1.21.0,<1.25.0" \
-    "scipy>=1.5.0,<1.16.0" \
-    "pillow>=11.3.0,<12.0.0"
+# AGGRESSIVE cleanup of Python packages (this is where we save the most)
+RUN find /opt/venv -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true && \
+    find /opt/venv -name "*.pyc" -delete && \
+    find /opt/venv -name "*.pyo" -delete && \
+    find /opt/venv -type d -name "tests" -exec rm -rf {} + 2>/dev/null || true && \
+    find /opt/venv -type d -name "test" -exec rm -rf {} + 2>/dev/null || true && \
+    find /opt/venv -name "*.so" -exec strip {} + 2>/dev/null || true && \
+    find /opt/venv -type d -name "docs" -exec rm -rf {} + 2>/dev/null || true && \
+    find /opt/venv -type d -name "examples" -exec rm -rf {} + 2>/dev/null || true && \
+    find /opt/venv -name "*.md" -delete 2>/dev/null || true && \
+    find /opt/venv -name "LICENSE*" -delete 2>/dev/null || true && \
+    find /opt/venv -name "README*" -delete 2>/dev/null || true && \
+    find /opt/venv -type d -name "locale" -exec rm -rf {} + 2>/dev/null || true && \
+    find /opt/venv -name "*.po" -delete 2>/dev/null || true && \
+    find /opt/venv -name "*.pot" -delete 2>/dev/null || true && \
+    find /opt/venv -name "*.h" -delete 2>/dev/null || true && \
+    find /opt/venv -name "*.c" -delete 2>/dev/null || true && \
+    find /opt/venv -name "*.cpp" -delete 2>/dev/null || true
 
-# Stage 3: ML and computer vision
-RUN pip install --no-cache-dir \
-    transformers==4.53.0 \
-    "opencv-python>=4.11.0.86,<5.0.0.0" \
-    mediapipe==0.10.18
+# ================================================================================
+# Stage 2: Runtime with FFmpeg + OpenCV support
+# ================================================================================
+FROM python:3.10-slim-bookworm AS ai-service-runtime
 
-# Stage 4: Communication and APIs
-RUN pip install --no-cache-dir \
-    runpod==1.7.13 \
-    # "grpcio>=1.73.1,<2.0.0" \
-    # "grpcio-reflection>=1.60.0,<1.65.0" \
-    # "protobuf>=4.25.3,<5.0.0" \
-    "openai>=1.93.0,<2.0.0" \
-    "anthropic>=0.57.1,<0.58.0" \
-    "elevenlabs>=2.6.0,<3.0.0" \
-    "together>=1.5.19,<2.0.0"
-
-# Stage 5: Audio and additional ML
-RUN pip install --no-cache-dir \
-    demucs==4.0.1 \
-    "soundfile>=0.12.1,<0.13.0" \
-    "librosa>=0.11.0,<0.12.0" \
-    webrtcvad-wheels==2.0.14
-
-# Stage 6: Cloud and utilities
-RUN pip install --no-cache-dir \
-    "oci>=2.155.0,<3.0.0" \
-    "num2words>=0.5.14,<0.6.0" \
-    "psutil>=5.9.0,<6.0.0" \
-    "fastapi>=0.104.0" \
-    "uvicorn[standard]>=0.24.0" \
-    "pydantic==2.8.2" \
-    "orjson>=3.9.0" \
-    "python-multipart>=0.0.6"
-
-
-# Stage 7: AI enhancement libraries (without dependencies to avoid conflicts)
-RUN pip install --no-cache-dir --no-deps \
-    basicsr==1.4.2 \
-    realesrgan==0.3.0 \
-    gfpgan==1.3.8 \
-    facexlib==0.3.0
-
-# Clean up caches for smaller transfer
-RUN rm -rf /root/.cache \
-    && find /opt/venv -name '__pycache__' -type d -exec rm -rf {} + 2>/dev/null || true \
-    && find /opt/venv -name '*.pyc' -delete
-
-# Stage 2: Development Runtime
-FROM nvidia/cuda:12.9.1-runtime-ubuntu20.04 AS development
-
-ENV DEBIAN_FRONTEND=noninteractive \
-    PYTHONUNBUFFERED=1 \
+ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PATH="/opt/venv/bin:$PATH" \
-    NVIDIA_VISIBLE_DEVICES=all \
-    NVIDIA_DRIVER_CAPABILITIES=compute,utility \
-    ENV_MODE=development \
-    LOG_LEVEL=DEBUG
+    ENV_MODE=production \
+    PYTHONPATH=/app \
+    PYTHONOPTIMIZE=2 \
+    PORT=8080 \
+    CLOUD_RUN=true \
+    USE_AI_DENOISING=false \
+    USE_AI_ENHANCEMENT=false \
+    AI_ENABLED=false \
+    SKIP_TORCH_SERVICES=true \
+    SKIP_EMOTION_ANALYSIS=true \
+    OMP_NUM_THREADS=2 \
+    OPENBLAS_NUM_THREADS=2 \
+    MKL_NUM_THREADS=2 \
+    NUMEXPR_NUM_THREADS=2 \
+    TOKENIZERS_PARALLELISM=false
 
-# Install Python 3.10 and runtime dependencies + dev tools
+# Install runtime dependencies for FFmpeg + OpenCV
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    software-properties-common \
-    && add-apt-repository ppa:deadsnakes/ppa \
-    && apt-get update && apt-get install -y --no-install-recommends \
-    python3.10 python3.10-distutils \
-    # Development tools
-    curl wget git vim htop nano \
-    # Essential runtime
-    # ffmpeg \
-    # Runtime libraries (optimized list)
-    libglib2.0-0 libsm6 libxext6 libxrender1 libgl1-mesa-glx \
-    libopenblas0 liblapack3 libhdf5-103 libgomp1 \
-    libjpeg-turbo8 libjpeg8 libpng16-16 libtiff5 libwebp6 \
-    libavcodec58 libavformat58 libswscale5 libswresample3 \
-    libssl1.1 libffi7 libsndfile1 libportaudio2 libportaudiocpp0 \
-    libasound2 libxml2 libxslt1.1 \
-    # Additional C++ runtime for torchvision
-    libstdc++6 libgcc-s1 \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get autoremove -y \
-    && apt-get autoclean
+    libglib2.0-0 libgomp1 libopenblas0 \
+    libjpeg62-turbo libpng16-16 libtiff6 libwebp7 \
+    libavcodec59 libavformat59 libswscale6 libswresample4 \
+    libsndfile1 libasound2 \
+    libsm6 libxext6 libxrender1 libgl1-mesa-glx \
+    libssl3 libffi8 curl ca-certificates && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* \
+           /var/cache/apt/* \
+           /tmp/* \
+           /var/tmp/* \
+           /usr/share/doc/* \
+           /usr/share/man/* \
+           /usr/share/locale/* \
+           /var/log/*
 
-RUN mkdir -p /opt/ffmpeg/bin
-COPY --from=mwader/static-ffmpeg:7.1.1 /ffmpeg /opt/ffmpeg/bin/ffmpeg
-COPY --from=mwader/static-ffmpeg:7.1.1 /ffprobe /opt/ffmpeg/bin/ffprobe
-RUN chmod +x /opt/ffmpeg/bin/ffmpeg /opt/ffmpeg/bin/ffprobe \
-    && /opt/ffmpeg/bin/ffmpeg -version
+# Install FFmpeg (CRITICAL - keeping as requested)
+COPY --from=mwader/static-ffmpeg:7.1.1 /ffmpeg /usr/local/bin/ffmpeg
+COPY --from=mwader/static-ffmpeg:7.1.1 /ffprobe /usr/local/bin/ffprobe
+RUN chmod +x /usr/local/bin/ffmpeg /usr/local/bin/ffprobe
 
-ENV PATH="/opt/ffmpeg/bin:$PATH"
+# Copy virtual environment from ai-service-builder
+COPY --from=ai-service-builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 
-# Verify that xfade filter is available
-RUN /opt/ffmpeg/bin/ffmpeg -f lavfi -i testsrc -vf "xfade=transition=fade:duration=1" -t 0.1 -f null - 2>/dev/null && echo "✅ xfade filter confirmed working" || echo "❌ xfade filter not available"
-
-# Copy virtual environment from builder
-COPY --from=builder /opt/venv /opt/venv
-
-# Set work directory and create directories
 WORKDIR /app
-RUN mkdir -p src storage logs models oci-secrets
+RUN mkdir -p src storage logs oci-secrets tmp
 
-# Environment variables for AI models (development settings)
-ENV AI_MODELS_DIR=/models \
-    GFPGAN_CACHE_DIR=/app/gfpgan \
-    BASICSR_CACHE_DIR=/app/models/enhancement \
-    FACEXLIB_CACHE_DIR=/app/gfpgan/weights \
-    TORCH_HOME=/models/torch \
-    HF_HOME=/models/huggingface \
-    WHISPER_CACHE=/models/whisper \
-    NLTK_DATA=/models/nltk_data \
-    # CUDA optimizations (graceful fallback if no GPU)
-    CUDA_VISIBLE_DEVICES=0 \
-    PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128 \
-    # Performance settings
-    OMP_NUM_THREADS=4 \
-    TOKENIZERS_PARALLELISM=false \
-    PYTORCH_JIT=0
-
-# Create model directories
-RUN mkdir -p /app/gfpgan/weights \
-    /app/models/enhancement \
-    /models/torch \
-    /models/huggingface \
-    /models/whisper \
-    /models/nltk_data \
-    /models/scene_analysis \
-    /models/audio_separation \
-    && chmod -R 755 /app/gfpgan /app/models
-
-# Copy application code (will be overridden by volume mounts in dev)
-# COPY main.py intelligence_pb2.py intelligence_pb2_grpc.py ./
-COPY main.py ./
-COPY runpod_handler.py ./
-COPY test_validation_errors.py ./
+# Copy application code
+ENV CACHE_BUST=2025-08-12-16:14UTC
 COPY src/ ./src/
+COPY main.py intelligence_pb2.py intelligence_pb2_grpc.py ./
 
-# Copy scripts
-COPY scripts/preload_models.py ./scripts/
-RUN chmod +x scripts/preload_models.py
+# Pre-compile Python bytecode for faster startup
+RUN python -m compileall -b . && \
+    find . -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
 
-# Verification (development-friendly with error handling)
-RUN python -c "import sys, torch, cv2, mediapipe, runpod, fastapi; print(f'✅ Python {sys.version_info.major}.{sys.version_info.minor}, PyTorch {torch.__version__}, CUDA: {torch.cuda.is_available()}, All libraries OK')"
-# Set permissions
-RUN chmod -R 755 /app /models
+# Verification that critical components work
+RUN python -c "import cv2, grpc, numpy, scipy, librosa; print(f'✅ OpenCV: {cv2.__version__}')" && \
+    ffmpeg -version | head -1 && \
+    echo "✅ FFmpeg + OpenCV + Python packages verified"
 
-# Expose gRPC port
-# EXPOSE 50052
-EXPOSE 8000
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:${PORT}/health || exit 1
 
-# Development health check (lenient)
-# HEALTHCHECK --interval=30s --timeout=30s --start-period=120s --retries=3 \
-#     CMD python -c "import grpc, mediapipe, torch, cv2, intelligence_pb2; print('✅ Dev health OK')" || exit 1
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
-
-# Default command for development
-CMD ["python", "main.py"]
+EXPOSE 8080
+CMD ["python", "-u", "main.py"]

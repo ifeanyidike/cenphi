@@ -1,8 +1,3 @@
-// ============================================================================
-// 1. COMPLETE TESTIMONIAL REPOSITORY (internal/repositories/testimonial_repository.go)
-// This can stay as is since it's just data layer - matches your pattern
-// ============================================================================
-
 package repositories
 
 import (
@@ -10,10 +5,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log"
-	"log/slog"
 	"reflect"
-	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -22,69 +15,30 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// type TestimonialRepository interface {
-// 	// Basic CRUD operations
-// 	Create(ctx context.Context, testimonial *models.Testimonial, db *sql.DB) error
-// 	FetchByID(ctx context.Context, id uuid.UUID, db *sql.DB) (*models.Testimonial, error)
-// 	FetchByWorkspaceID(ctx context.Context, workspaceID uuid.UUID, filter models.TestimonialFilter, db *sql.DB) ([]models.Testimonial, error)
-// 	Update(ctx context.Context, testimonial *models.Testimonial, db *sql.DB) error
-// 	Delete(ctx context.Context, id uuid.UUID, db *sql.DB) error
+type TestimonialRepository interface {
+	Repository[models.Testimonial]
+	FetchByID(ctx context.Context, id uuid.UUID, db *sql.DB) (*models.Testimonial, error)
+	FetchForAIProcessing(ctx context.Context, id uuid.UUID, db *sql.DB) (*models.TestimonialAIData, error)
+	FetchByTestimonialAndWorkspaceID(ctx context.Context, testimonial_id, workspace_id uuid.UUID, db *sql.DB) (*models.Testimonial, error)
+	GetContentDataByID(ctx context.Context, testimonialID string, db *sql.DB) (models.TestimonialInput, error)
+	GetContentsByIDs(ctx context.Context, testimonialIDs []string, db *sql.DB) ([]models.TestimonialInput, error)
+	FetchByWorkspaceID(ctx context.Context, workspaceID uuid.UUID, filter models.TestimonialFilter, db *sql.DB) ([]models.Testimonial, error)
+	Search(ctx context.Context, workspaceID uuid.UUID, query string, filter models.TestimonialFilter, db *sql.DB) ([]*models.Testimonial, error)
+	BulkDelete(ctx context.Context, testimonialIDs []uuid.UUID, db *sql.DB) error
+}
 
-// 	// Advanced queries
-// 	Search(ctx context.Context, workspaceID uuid.UUID, query string, filter models.TestimonialFilter, db *sql.DB) ([]*models.Testimonial, error)
-// 	GetStats(ctx context.Context, workspaceID uuid.UUID, db *sql.DB) (*models.TestimonialStats, error)
-// 	GetByStatus(ctx context.Context, workspaceID uuid.UUID, status string, limit int, db *sql.DB) ([]models.Testimonial, error)
-// 	GetByType(ctx context.Context, workspaceID uuid.UUID, testimonialType string, limit int, db *sql.DB) ([]models.Testimonial, error)
-// 	GetByRating(ctx context.Context, workspaceID uuid.UUID, minRating int, db *sql.DB) ([]models.Testimonial, error)
-// 	GetRecent(ctx context.Context, workspaceID uuid.UUID, days int, limit int, db *sql.DB) ([]models.Testimonial, error)
-// 	GetByAuthor(ctx context.Context, workspaceID uuid.UUID, authorEmail string, db *sql.DB) ([]models.Testimonial, error)
-// 	GetByTags(ctx context.Context, workspaceID uuid.UUID, tags []string, db *sql.DB) ([]models.Testimonial, error)
-
-// 	// Bulk operations
-// 	BulkUpdateStatus(ctx context.Context, testimonialIDs []uuid.UUID, status string, db *sql.DB) error
-// 	BulkDelete(ctx context.Context, testimonialIDs []uuid.UUID, db *sql.DB) error
-
-// 	// Aggregation queries
-// 	GetCountByStatus(ctx context.Context, workspaceID uuid.UUID, db *sql.DB) (map[string]int, error)
-// 	GetCountByType(ctx context.Context, workspaceID uuid.UUID, db *sql.DB) (map[string]int, error)
-// 	GetAverageRating(ctx context.Context, workspaceID uuid.UUID, db *sql.DB) (float64, error)
-// 	GetTopAuthors(ctx context.Context, workspaceID uuid.UUID, limit int, db *sql.DB) ([]models.AuthorStats, error)
-
-// 	UpdateAny(ctx context.Context, id uuid.UUID, updates map[string]any, db *sql.DB) error
-// 	UpdateWithTranscript(ctx context.Context, id uuid.UUID, result *models.TranscriptionResult, db *sql.DB) error
-// }
-
-type TestimonialRepository struct {
+type testimonialRepository struct {
 	*BaseRepository[models.Testimonial]
 }
 
 func NewTestimonialRepository(redis *redis.Client) TestimonialRepository {
-	return TestimonialRepository{
-		BaseRepository: NewBaseRepository[models.Testimonial](redis, "testimonial"),
+	return &testimonialRepository{
+		BaseRepository: NewBaseRepository[models.Testimonial](redis, "testimonials"),
 	}
 }
 
 // Basic CRUD Operations - matches your existing FetchByID pattern
-func (r *TestimonialRepository) Create(ctx context.Context, testimonial *models.Testimonial, db *sql.DB) error {
-
-	log.Println("ID", testimonial.ID.String())
-	log.Println("WorkspaceID", testimonial.WorkspaceID.String())
-	log.Println("Author Company", testimonial.AuthorCompany)
-	log.Println("Author Name", testimonial.AuthorName)
-	log.Println("Author Email", testimonial.AuthorEmail)
-	log.Println("Author Title", testimonial.AuthorTitle)
-	log.Println("Author Avatar", testimonial.AuthorAvatarURL)
-	log.Println(" Type", testimonial.Type)
-	log.Println(" Status", testimonial.Status)
-	log.Println(" Format", testimonial.Format)
-	log.Println(" Content", testimonial.Content)
-	log.Println(" MediaURL", testimonial.MediaURL)
-	log.Println(" TranscriptSegments", testimonial.TranscriptSegments)
-	log.Println(" CollectionMethod", testimonial.CollectionMethod)
-	log.Println(" Metadata", testimonial.Metadata)
-	log.Println(" Tags", testimonial.Tags)
-	log.Println(" ProcessingStatus", testimonial.ProcessingStatus)
-	log.Println(" ProcessingMetadata", testimonial.ProcessingMetadata)
+func (r *testimonialRepository) Create(ctx context.Context, testimonial *models.Testimonial, db DB) error {
 
 	query := `
 		INSERT INTO testimonials (
@@ -139,15 +93,31 @@ func (r *TestimonialRepository) Create(ctx context.Context, testimonial *models.
 		tags = pq.Array([]string(testimonial.Tags))
 	}
 
+	// Marshal Metadata to JSON
+	var metadataJSON []byte
 	if testimonial.Metadata == nil {
-		testimonial.Metadata = make(models.JSONMap)
+		metadataJSON = []byte("{}")
+	} else {
+		var err error
+		metadataJSON, err = json.Marshal(testimonial.Metadata)
+		if err != nil {
+			return fmt.Errorf("failed to marshal metadata: %w", err)
+		}
 	}
 
+	// Marshal ProcessingMetadata to JSON
+	var processingMetadataJSON []byte
 	if testimonial.ProcessingMetadata == nil {
-		testimonial.ProcessingMetadata = make(models.JSONMap)
+		processingMetadataJSON = []byte("{}")
+	} else {
+		var err error
+		processingMetadataJSON, err = json.Marshal(testimonial.ProcessingMetadata)
+		if err != nil {
+			return fmt.Errorf("failed to marshal processing metadata: %w", err)
+		}
 	}
 
-	var transcript_segments any
+	var transcript_segments []byte
 	if testimonial.TranscriptSegments == nil {
 		transcript_segments = []byte("[]")
 	} else if len(*testimonial.TranscriptSegments) == 0 {
@@ -173,13 +143,13 @@ func (r *TestimonialRepository) Create(ctx context.Context, testimonial *models.
 		testimonial.Format,             // $10
 		content,                        // $11
 		mediaURL,                       // $12
-		transcript_segments,            // $13
+		string(transcript_segments),    // $13
 		testimonial.CollectionMethod,   // $14
-		testimonial.Metadata,           // $15
+		string(metadataJSON),           // $15
 		testimonial.Rating,             // $16
 		tags,                           // $17
 		testimonial.ProcessingStatus,   // $18
-		testimonial.ProcessingMetadata, // $19
+		string(processingMetadataJSON), // $19
 		testimonial.CreatedAt,          // $20
 		testimonial.UpdatedAt,          // $21
 	)
@@ -203,8 +173,8 @@ func (r *TestimonialRepository) Create(ctx context.Context, testimonial *models.
 	return nil
 }
 
-func (r *TestimonialRepository) FetchByID(ctx context.Context, id uuid.UUID, db *sql.DB) (*models.Testimonial, error) {
-	query := `
+func (r *testimonialRepository) FetchByID(ctx context.Context, id uuid.UUID, db *sql.DB) (*models.Testimonial, error) {
+	query := `-- FetchByID
 		SELECT id, workspace_id, author_name, author_email, author_company,
 			   author_title, author_avatar_url, type, status, content, sentiment_score,
 			   media_url, transcript_segments, collection_method, metadata,
@@ -213,7 +183,6 @@ func (r *TestimonialRepository) FetchByID(ctx context.Context, id uuid.UUID, db 
 		FROM testimonials WHERE id = $1
 	`
 
-	var transcriptSegmentsJSON []byte
 	var testimonial models.Testimonial
 
 	err := db.QueryRowContext(ctx, query, id).Scan(
@@ -229,7 +198,7 @@ func (r *TestimonialRepository) FetchByID(ctx context.Context, id uuid.UUID, db 
 		&testimonial.Content,
 		&testimonial.SentimentScore,
 		&testimonial.MediaURL,
-		&transcriptSegmentsJSON,
+		&testimonial.TranscriptSegments,
 		&testimonial.CollectionMethod,
 		&testimonial.Metadata,
 		&testimonial.Rating,
@@ -250,7 +219,33 @@ func (r *TestimonialRepository) FetchByID(ctx context.Context, id uuid.UUID, db 
 	return &testimonial, nil
 }
 
-func (r *TestimonialRepository) FetchByTestimonialAndWorkspaceID(ctx context.Context, testimonial_id, workspace_id uuid.UUID, db *sql.DB) (*models.Testimonial, error) {
+func (r *testimonialRepository) FetchForAIProcessing(ctx context.Context, id uuid.UUID, db *sql.DB) (*models.TestimonialAIData, error) {
+	query := `
+		SELECT id, workspace_id, content, media_url, transcript_segments
+		FROM testimonials WHERE id = $1
+	`
+
+	var testimonial models.TestimonialAIData
+
+	err := db.QueryRowContext(ctx, query, id).Scan(
+		&testimonial.ID,
+		&testimonial.WorkspaceID,
+		&testimonial.Content,
+		&testimonial.MediaURL,
+		&testimonial.TranscriptSegments,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("testimonial not found (ID: %s): %w", id, err)
+		}
+		return nil, fmt.Errorf("failed to fetch testimonial for AI processing (ID: %s): %w", id, err)
+	}
+
+	return &testimonial, nil
+}
+
+func (r *testimonialRepository) FetchByTestimonialAndWorkspaceID(ctx context.Context, testimonial_id, workspace_id uuid.UUID, db *sql.DB) (*models.Testimonial, error) {
 	fmt.Println("calling FetchByTestimonialAndWorkspaceID")
 	query := `
 		SELECT 
@@ -412,48 +407,135 @@ func (r *TestimonialRepository) FetchByTestimonialAndWorkspaceID(ctx context.Con
 	return testimonial, nil
 }
 
-func (r *TestimonialRepository) FetchByWorkspaceID(ctx context.Context, workspaceID uuid.UUID, filter models.TestimonialFilter, db *sql.DB) ([]models.Testimonial, error) {
+func (r *testimonialRepository) GetContentDataByID(ctx context.Context, testimonialID string, db *sql.DB) (models.TestimonialInput, error) {
 	query := `
-		SELECT id, workspace_id, author_name, author_email, author_company,
-			   author_title, author_avatar_url, type, status, content, sentiment_score,
-			   media_url, transcript_segments, collection_method, metadata,
-			   rating, tags, processing_status, processing_metadata,
-			   created_at, updated_at
-		FROM testimonials 
-		WHERE workspace_id = $1
+		SELECT 
+			-- Testimonial by content
+			author_name, author_company, author_title, rating, content
+		FROM testimonials
+		WHERE id = $1
+	`
+	var data models.TestimonialInput
+	var rating *int // Database rating is *int
+
+	if err := db.QueryRowContext(ctx, query, testimonialID).Scan(&data.Author, &data.Company, &data.Title, &rating, &data.Text); err != nil {
+		if err == sql.ErrNoRows {
+			return data, fmt.Errorf("testimonial by content (ID: %s): %w", testimonialID, err)
+		}
+		return data, fmt.Errorf("failed to fetch by content (ID: %s): %w", testimonialID, err)
+	}
+
+	// Convert *int rating to *float64
+	if rating != nil {
+		floatRating := float64(*rating)
+		data.Rating = &floatRating
+	}
+
+	return data, nil
+}
+
+func (r *testimonialRepository) GetContentsByIDs(ctx context.Context, testimonialIDs []string, db *sql.DB) ([]models.TestimonialInput, error) {
+	if len(testimonialIDs) == 0 {
+		return nil, nil
+	}
+
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	type res struct {
+		idx  int
+		data models.TestimonialInput
+		err  error
+	}
+
+	resChan := make(chan res, len(testimonialIDs))
+	var wg sync.WaitGroup
+
+	for i, id := range testimonialIDs {
+		wg.Add(1)
+		go func(i int, id string) {
+			defer wg.Done()
+			data, err := r.GetContentDataByID(ctx, id, db)
+
+			select {
+			case resChan <- res{i, data, err}:
+			case <-ctx.Done():
+			}
+
+			if err != nil {
+				cancel()
+			}
+		}(i, id)
+	}
+
+	go func() {
+		wg.Wait()
+		close(resChan)
+	}()
+
+	results := make([]models.TestimonialInput, len(testimonialIDs))
+	for rcv := range resChan {
+		if rcv.err != nil {
+			// return first error seen
+			return results, fmt.Errorf("error fetching id %s: %w", testimonialIDs[rcv.idx], rcv.err)
+		}
+		results[rcv.idx] = rcv.data
+	}
+
+	return results, nil
+}
+
+func (r *testimonialRepository) FetchByWorkspaceID(ctx context.Context, workspaceID uuid.UUID, filter models.TestimonialFilter, db *sql.DB) ([]models.Testimonial, error) {
+	query := `
+		SELECT 
+			-- Testimonial fields
+			t.id, t.workspace_id, t.author_name, t.author_email, t.author_company,
+			t.author_title, t.author_avatar_url, t.type, t.status, t.content, t.sentiment_score,
+			t.media_url, t.collection_method, t.metadata,
+			t.rating, t.tags, t.processing_status, t.processing_metadata,
+			t.created_at, t.updated_at,
+			-- Artifact fields (nullable due to LEFT JOIN)
+			a.id, a.testimonial_id, a.workspace_id, a.processing_type, a.result_category,
+			a.text_content, a.data, a.asset_url, a.content_type, a.platform, a.format,
+			a.is_user_saved, a.is_streamed, a.processing_metadata, a.created_at, a.updated_at
+		FROM testimonials t
+		LEFT JOIN testimonial_artifacts a ON t.id = a.testimonial_id 
+			AND a.processing_type = 'highlight_extraction' 
+			AND a.workspace_id = $1
+		WHERE t.workspace_id = $1
 	`
 
 	args := []interface{}{workspaceID}
 	argIndex := 2
 
-	// Apply filters
+	// Apply filters to testimonials
 	if filter.Status != "" {
-		query += fmt.Sprintf(" AND status = $%d", argIndex)
+		query += fmt.Sprintf(" AND t.status = $%d", argIndex)
 		args = append(args, filter.Status)
 		argIndex++
 	}
 
 	if filter.Type != "" {
-		query += fmt.Sprintf(" AND type = $%d", argIndex)
+		query += fmt.Sprintf(" AND t.type = $%d", argIndex)
 		args = append(args, filter.Type)
 		argIndex++
 	}
 
 	if filter.MinRating != nil {
-		query += fmt.Sprintf(" AND rating >= $%d", argIndex)
+		query += fmt.Sprintf(" AND t.rating >= $%d", argIndex)
 		args = append(args, *filter.MinRating)
 		argIndex++
 	}
 
-	// Add ordering
+	// Add ordering by testimonial fields
 	if filter.SortBy != "" {
 		direction := "DESC"
 		if filter.SortOrder == "asc" {
 			direction = "ASC"
 		}
-		query += fmt.Sprintf(" ORDER BY %s %s", filter.SortBy, direction)
+		query += fmt.Sprintf(" ORDER BY t.%s %s, a.created_at DESC", filter.SortBy, direction)
 	} else {
-		query += " ORDER BY created_at DESC"
+		query += " ORDER BY t.created_at DESC, a.created_at DESC"
 	}
 
 	// Add pagination
@@ -470,30 +552,151 @@ func (r *TestimonialRepository) FetchByWorkspaceID(ctx context.Context, workspac
 
 	rows, err := db.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to fetch testimonials with highlight artifacts: %w", err)
 	}
 	defer rows.Close()
 
-	var testimonials []models.Testimonial
+	// Use a map to group testimonials and their artifacts
+	testimonialMap := make(map[uuid.UUID]*models.Testimonial)
+	var testimonialOrder []uuid.UUID // To maintain order
+
 	for rows.Next() {
 		var t models.Testimonial
+		// var transcriptSegmentsJSON []byte
+
+		// Artifact fields (all nullable since LEFT JOIN)
+		var artifactID sql.NullString
+		var artifactTestimonialID sql.NullString
+		var artifactWorkspaceID sql.NullString
+		var artifactProcessingType sql.NullString
+		var artifactResultCategory sql.NullString
+		var artifactTextContent sql.NullString
+		var artifactData sql.NullString
+		var artifactAssetURL sql.NullString
+		var artifactContentType sql.NullString
+		var artifactPlatform sql.NullString
+		var artifactFormat sql.NullString
+		var artifactIsUserSaved sql.NullBool
+		var artifactIsStreamed sql.NullBool
+		var artifactProcessingMetadata sql.NullString
+		var artifactCreatedAt sql.NullTime
+		var artifactUpdatedAt sql.NullTime
+
 		err := rows.Scan(
+			// Testimonial fields
 			&t.ID, &t.WorkspaceID, &t.AuthorName, &t.AuthorEmail, &t.AuthorCompany,
 			&t.AuthorTitle, &t.AuthorAvatarURL, &t.Type, &t.Status, &t.Content, &t.SentimentScore,
-			&t.MediaURL, &t.TranscriptSegments, &t.CollectionMethod, &t.Metadata,
+			&t.MediaURL,
+			// &transcriptSegmentsJSON,
+			&t.CollectionMethod, &t.Metadata,
 			&t.Rating, &t.Tags, &t.ProcessingStatus, &t.ProcessingMetadata,
 			&t.CreatedAt, &t.UpdatedAt,
+			// Artifact fields (nullable)
+			&artifactID, &artifactTestimonialID, &artifactWorkspaceID, &artifactProcessingType,
+			&artifactResultCategory, &artifactTextContent, &artifactData, &artifactAssetURL,
+			&artifactContentType, &artifactPlatform, &artifactFormat, &artifactIsUserSaved,
+			&artifactIsStreamed, &artifactProcessingMetadata, &artifactCreatedAt, &artifactUpdatedAt,
 		)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to scan testimonial row: %w", err)
 		}
-		testimonials = append(testimonials, t)
+
+		// Check if this testimonial is already in our map
+		existingTestimonial, exists := testimonialMap[t.ID]
+		if !exists {
+			// New testimonial - add to map and order slice
+			testimonialMap[t.ID] = &t
+			testimonialOrder = append(testimonialOrder, t.ID)
+			existingTestimonial = &t
+		}
+
+		// If there's an artifact, add it to the testimonial
+		if artifactID.Valid {
+			artifactUUID, err := uuid.Parse(artifactID.String)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse artifact UUID: %w", err)
+			}
+
+			workspaceUUID, err := uuid.Parse(artifactWorkspaceID.String)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse artifact workspace UUID: %w", err)
+			}
+
+			artifact := models.TestimonialArtifact{
+				ID:             artifactUUID,
+				WorkspaceID:    workspaceUUID,
+				ProcessingType: artifactProcessingType.String,
+				ResultCategory: artifactResultCategory.String,
+				ContentType:    artifactContentType.String,
+				IsUserSaved:    artifactIsUserSaved.Bool,
+				IsStreamed:     artifactIsStreamed.Bool,
+				CreatedAt:      artifactCreatedAt.Time,
+				UpdatedAt:      artifactUpdatedAt.Time,
+			}
+
+			// Handle nullable testimonial_id
+			if artifactTestimonialID.Valid {
+				testimonialUUID, err := uuid.Parse(artifactTestimonialID.String)
+				if err != nil {
+					return nil, fmt.Errorf("failed to parse artifact testimonial UUID: %w", err)
+				}
+				artifact.TestimonialID = &testimonialUUID
+			}
+
+			// Handle nullable text content
+			if artifactTextContent.Valid {
+				artifact.TextContent = &artifactTextContent.String
+			}
+
+			// Handle nullable asset URL
+			if artifactAssetURL.Valid {
+				artifact.AssetURL = &artifactAssetURL.String
+			}
+
+			// Handle nullable platform
+			if artifactPlatform.Valid {
+				artifact.Platform = &artifactPlatform.String
+			}
+
+			// Handle nullable format
+			if artifactFormat.Valid {
+				artifact.Format = &artifactFormat.String
+			}
+
+			// Handle JSONB data field
+			if artifactData.Valid {
+				if err := artifact.Data.Scan(artifactData.String); err != nil {
+					return nil, fmt.Errorf("failed to unmarshal artifact data: %w", err)
+				}
+			}
+
+			// Handle JSONB processing metadata
+			if artifactProcessingMetadata.Valid {
+				if err := artifact.ProcessingMetadata.Scan(artifactProcessingMetadata.String); err != nil {
+					return nil, fmt.Errorf("failed to unmarshal artifact processing metadata: %w", err)
+				}
+			}
+
+			existingTestimonial.Artifacts = append(existingTestimonial.Artifacts, artifact)
+		}
 	}
 
-	return testimonials, rows.Err()
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
+	// Convert map back to slice in original order
+	testimonials := make([]models.Testimonial, 0, len(testimonialOrder))
+	for _, id := range testimonialOrder {
+		if testimonial := testimonialMap[id]; testimonial != nil {
+			testimonials = append(testimonials, *testimonial)
+		}
+	}
+
+	return testimonials, nil
 }
 
-func (r *TestimonialRepository) Update(ctx context.Context, testimonial *models.Testimonial, db *sql.DB) error {
+func (r *testimonialRepository) Update(ctx context.Context, testimonial *models.Testimonial, id uuid.UUID, db DB) error {
 	query := `
 		UPDATE testimonials SET
 			author_name = $2, author_email = $3, author_company = $4,
@@ -557,7 +760,7 @@ func (r *TestimonialRepository) Update(ctx context.Context, testimonial *models.
 	return nil
 }
 
-func (r *TestimonialRepository) Delete(ctx context.Context, id uuid.UUID, db *sql.DB) error {
+func (r *testimonialRepository) Delete(ctx context.Context, id uuid.UUID, db DB) error {
 	query := `DELETE FROM testimonials WHERE id = $1`
 	result, err := db.ExecContext(ctx, query, id)
 	if err != nil {
@@ -577,7 +780,7 @@ func (r *TestimonialRepository) Delete(ctx context.Context, id uuid.UUID, db *sq
 }
 
 // Search method returning slice of pointers to match your pattern
-func (r *TestimonialRepository) Search(ctx context.Context, workspaceID uuid.UUID, query string, filter models.TestimonialFilter, db *sql.DB) ([]*models.Testimonial, error) {
+func (r *testimonialRepository) Search(ctx context.Context, workspaceID uuid.UUID, query string, filter models.TestimonialFilter, db *sql.DB) ([]*models.Testimonial, error) {
 	searchQuery := `
 		SELECT id, workspace_id, author_name, author_email, author_company,
 			   author_title, author_avatar_url, type, status, content, sentiment_score,
@@ -655,80 +858,7 @@ func (r *TestimonialRepository) Search(ctx context.Context, workspaceID uuid.UUI
 	return testimonials, rows.Err()
 }
 
-func (r *TestimonialRepository) GetStats(ctx context.Context, workspaceID uuid.UUID, db *sql.DB) (*models.TestimonialStats, error) {
-	statsQuery := `
-		SELECT 
-			COUNT(*) as total,
-			COUNT(CASE WHEN status = 'published' THEN 1 END) as published,
-			COUNT(CASE WHEN status = 'draft' THEN 1 END) as draft,
-			COUNT(CASE WHEN status = 'archived' THEN 1 END) as archived,
-			COUNT(CASE WHEN type = 'video' THEN 1 END) as video_count,
-			COUNT(CASE WHEN type = 'text' THEN 1 END) as text_count,
-			AVG(CASE WHEN rating IS NOT NULL THEN rating END) as avg_rating,
-			COUNT(CASE WHEN created_at >= NOW() - INTERVAL '30 days' THEN 1 END) as recent_count,
-			COUNT(CASE WHEN created_at >= NOW() - INTERVAL '7 days' THEN 1 END) as weekly_count
-		FROM testimonials 
-		WHERE workspace_id = $1
-	`
-
-	var stats models.TestimonialStats
-	err := db.QueryRowContext(ctx, statsQuery, workspaceID).Scan(
-		&stats.Total,
-		&stats.Published,
-		&stats.Draft,
-		&stats.Archived,
-		&stats.VideoCount,
-		&stats.TextCount,
-		&stats.AvgRating,
-		&stats.RecentCount,
-		&stats.WeeklyCount,
-	)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return &stats, nil
-}
-
-// Bulk operations
-func (r *TestimonialRepository) BulkUpdateStatus(ctx context.Context, testimonialIDs []uuid.UUID, status string, db *sql.DB) error {
-	if len(testimonialIDs) == 0 {
-		return fmt.Errorf("no testimonial IDs provided for bulk status update")
-	}
-
-	// Convert UUIDs to strings for PostgreSQL array
-	ids := make([]string, len(testimonialIDs))
-	for i, id := range testimonialIDs {
-		ids[i] = id.String()
-	}
-
-	query := `
-		UPDATE testimonials 
-		SET status = $1, updated_at = NOW() 
-		WHERE id = ANY($2::uuid[])
-	`
-
-	result, err := db.ExecContext(ctx, query, status, pq.Array(ids))
-	if err != nil {
-		return fmt.Errorf("failed to bulk update testimonial status to %s (IDs: %v): %w",
-			status, testimonialIDs, err)
-	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("failed to get rows affected for bulk status update: %w", err)
-	}
-
-	if rowsAffected != int64(len(testimonialIDs)) {
-		return fmt.Errorf("bulk status update affected %d rows, expected %d",
-			rowsAffected, len(testimonialIDs))
-	}
-
-	return nil
-}
-
-func (r *TestimonialRepository) BulkDelete(ctx context.Context, testimonialIDs []uuid.UUID, db *sql.DB) error {
+func (r *testimonialRepository) BulkDelete(ctx context.Context, testimonialIDs []uuid.UUID, db *sql.DB) error {
 	if len(testimonialIDs) == 0 {
 		return nil
 	}
@@ -738,252 +868,7 @@ func (r *TestimonialRepository) BulkDelete(ctx context.Context, testimonialIDs [
 	return err
 }
 
-// Additional helper methods for your use cases
-func (r *TestimonialRepository) GetByStatus(ctx context.Context, workspaceID uuid.UUID, status string, limit int, db *sql.DB) ([]models.Testimonial, error) {
-	filter := models.TestimonialFilter{
-		Status: status,
-		Limit:  limit,
-	}
-	return r.FetchByWorkspaceID(ctx, workspaceID, filter, db)
-}
-
-func (r *TestimonialRepository) GetByType(ctx context.Context, workspaceID uuid.UUID, testimonialType string, limit int, db *sql.DB) ([]models.Testimonial, error) {
-	filter := models.TestimonialFilter{
-		Type:  testimonialType,
-		Limit: limit,
-	}
-	return r.FetchByWorkspaceID(ctx, workspaceID, filter, db)
-}
-
-func (r *TestimonialRepository) GetByRating(ctx context.Context, workspaceID uuid.UUID, minRating int, db *sql.DB) ([]models.Testimonial, error) {
-	filter := models.TestimonialFilter{
-		MinRating: &minRating,
-	}
-	return r.FetchByWorkspaceID(ctx, workspaceID, filter, db)
-}
-
-func (r *TestimonialRepository) GetRecent(ctx context.Context, workspaceID uuid.UUID, days int, limit int, db *sql.DB) ([]models.Testimonial, error) {
-	query := `
-		SELECT id, workspace_id, author_name, author_email, author_company,
-			   author_title, author_avatar_url, type, status, content,
-			   media_url, transcript_segments, collection_method, metadata,
-			   rating, tags, processing_status, processing_metadata,
-			   created_at, updated_at
-		FROM testimonials 
-		WHERE workspace_id = $1 AND created_at >= NOW() - INTERVAL '%d days'
-		ORDER BY created_at DESC
-		LIMIT $2
-	`
-
-	rows, err := db.QueryContext(ctx, fmt.Sprintf(query, days), workspaceID, limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var testimonials []models.Testimonial
-	for rows.Next() {
-		var t models.Testimonial
-		err := rows.Scan(
-			&t.ID, &t.WorkspaceID, &t.AuthorName, &t.AuthorEmail, &t.AuthorCompany,
-			&t.AuthorTitle, &t.AuthorAvatarURL, &t.Type, &t.Status, &t.Content,
-			&t.MediaURL, &t.TranscriptSegments, &t.CollectionMethod, &t.Metadata,
-			&t.Rating, &t.Tags, &t.ProcessingStatus, &t.ProcessingMetadata,
-			&t.CreatedAt, &t.UpdatedAt,
-		)
-		if err != nil {
-			return nil, err
-		}
-		testimonials = append(testimonials, t)
-	}
-
-	return testimonials, rows.Err()
-}
-
-func (r *TestimonialRepository) GetByAuthor(ctx context.Context, workspaceID uuid.UUID, authorEmail string, db *sql.DB) ([]models.Testimonial, error) {
-	query := `
-		SELECT id, workspace_id, author_name, author_email, author_company,
-			   author_title, author_avatar_url, type, status, content,
-			   media_url, transcript_segments, collection_method, metadata,
-			   rating, tags, processing_status, processing_metadata,
-			   created_at, updated_at
-		FROM testimonials 
-		WHERE workspace_id = $1 AND author_email = $2
-		ORDER BY created_at DESC
-	`
-
-	rows, err := db.QueryContext(ctx, query, workspaceID, authorEmail)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var testimonials []models.Testimonial
-	for rows.Next() {
-		var t models.Testimonial
-		err := rows.Scan(
-			&t.ID, &t.WorkspaceID, &t.AuthorName, &t.AuthorEmail, &t.AuthorCompany,
-			&t.AuthorTitle, &t.AuthorAvatarURL, &t.Type, &t.Status, &t.Content,
-			&t.MediaURL, &t.TranscriptSegments, &t.CollectionMethod, &t.Metadata,
-			&t.Rating, &t.Tags, &t.ProcessingStatus, &t.ProcessingMetadata,
-			&t.CreatedAt, &t.UpdatedAt,
-		)
-		if err != nil {
-			return nil, err
-		}
-		testimonials = append(testimonials, t)
-	}
-
-	return testimonials, rows.Err()
-}
-
-func (r *TestimonialRepository) GetByTags(ctx context.Context, workspaceID uuid.UUID, tags []string, db *sql.DB) ([]models.Testimonial, error) {
-	query := `
-		SELECT id, workspace_id, author_name, author_email, author_company,
-			   author_title, author_avatar_url, type, status, content,
-			   media_url, transcript_segments, collection_method, metadata,
-			   rating, tags, processing_status, processing_metadata,
-			   created_at, updated_at
-		FROM testimonials 
-		WHERE workspace_id = $1 AND tags && $2
-		ORDER BY created_at DESC
-	`
-
-	rows, err := db.QueryContext(ctx, query, workspaceID, pq.Array(tags))
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var testimonials []models.Testimonial
-	for rows.Next() {
-		var t models.Testimonial
-		err := rows.Scan(
-			&t.ID, &t.WorkspaceID, &t.AuthorName, &t.AuthorEmail, &t.AuthorCompany,
-			&t.AuthorTitle, &t.AuthorAvatarURL, &t.Type, &t.Status, &t.Content,
-			&t.MediaURL, &t.TranscriptSegments, &t.CollectionMethod, &t.Metadata,
-			&t.Rating, &t.Tags, &t.ProcessingStatus, &t.ProcessingMetadata,
-			&t.CreatedAt, &t.UpdatedAt,
-		)
-		if err != nil {
-			return nil, err
-		}
-		testimonials = append(testimonials, t)
-	}
-
-	return testimonials, rows.Err()
-}
-
-// Aggregation queries
-func (r *TestimonialRepository) GetCountByStatus(ctx context.Context, workspaceID uuid.UUID, db *sql.DB) (map[string]int, error) {
-	query := `
-		SELECT status, COUNT(*) 
-		FROM testimonials 
-		WHERE workspace_id = $1 
-		GROUP BY status
-	`
-
-	rows, err := db.QueryContext(ctx, query, workspaceID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	counts := make(map[string]int)
-	for rows.Next() {
-		var status string
-		var count int
-		err := rows.Scan(&status, &count)
-		if err != nil {
-			return nil, err
-		}
-		counts[status] = count
-	}
-
-	return counts, rows.Err()
-}
-
-func (r *TestimonialRepository) GetCountByType(ctx context.Context, workspaceID uuid.UUID, db *sql.DB) (map[string]int, error) {
-	query := `
-		SELECT type, COUNT(*) 
-		FROM testimonials 
-		WHERE workspace_id = $1 
-		GROUP BY type
-	`
-
-	rows, err := db.QueryContext(ctx, query, workspaceID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	counts := make(map[string]int)
-	for rows.Next() {
-		var testimonialType string
-		var count int
-		err := rows.Scan(&testimonialType, &count)
-		if err != nil {
-			return nil, err
-		}
-		counts[testimonialType] = count
-	}
-
-	return counts, rows.Err()
-}
-
-func (r *TestimonialRepository) GetAverageRating(ctx context.Context, workspaceID uuid.UUID, db *sql.DB) (float64, error) {
-	query := `
-		SELECT COALESCE(AVG(rating), 0) 
-		FROM testimonials 
-		WHERE workspace_id = $1 AND rating IS NOT NULL
-	`
-
-	var avgRating float64
-	err := db.QueryRowContext(ctx, query, workspaceID).Scan(&avgRating)
-	return avgRating, err
-}
-
-func (r *TestimonialRepository) GetTopAuthors(ctx context.Context, workspaceID uuid.UUID, limit int, db *sql.DB) ([]models.AuthorStats, error) {
-	query := `
-		SELECT 
-			author_name, 
-			author_email, 
-			author_company,
-			COUNT(*) as testimonial_count,
-			AVG(CASE WHEN rating IS NOT NULL THEN rating END) as avg_rating
-		FROM testimonials 
-		WHERE workspace_id = $1 AND author_email IS NOT NULL
-		GROUP BY author_name, author_email, author_company
-		ORDER BY testimonial_count DESC, avg_rating DESC
-		LIMIT $2
-	`
-
-	rows, err := db.QueryContext(ctx, query, workspaceID, limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var authors []models.AuthorStats
-	for rows.Next() {
-		var author models.AuthorStats
-		err := rows.Scan(
-			&author.AuthorName,
-			&author.AuthorEmail,
-			&author.AuthorCompany,
-			&author.TestimonialCount,
-			&author.AvgRating,
-		)
-		if err != nil {
-			return nil, err
-		}
-		authors = append(authors, author)
-	}
-
-	return authors, rows.Err()
-}
-
-func (r *TestimonialRepository) UpdateWithTranscript(ctx context.Context, id uuid.UUID, result *models.TranscriptionResult, db *sql.DB) error {
+func (r *testimonialRepository) UpdateWithTranscript(ctx context.Context, id uuid.UUID, result *models.TranscriptionResult, db *sql.DB) error {
 	// Serialize segments to JSON
 	segmentsJSON, err := json.Marshal(result.Segments)
 	if err != nil {
@@ -1019,89 +904,89 @@ func (r *TestimonialRepository) UpdateWithTranscript(ctx context.Context, id uui
 	return nil
 }
 
-// UpdateAny allows updating specific fields dynamically
-func (r *TestimonialRepository) UpdateAny(ctx context.Context, id uuid.UUID, updates map[string]any, db *sql.DB) error {
-	if len(updates) == 0 {
-		return fmt.Errorf("no fields to update")
-	}
+// // UpdateAny allows updating specific fields dynamically
+// func (r *testimonialRepository) UpdateAny(ctx context.Context, id uuid.UUID, updates map[string]any, db *sql.DB) error {
+// 	if len(updates) == 0 {
+// 		return fmt.Errorf("no fields to update")
+// 	}
 
-	// Always update the updated_at field
-	updates["updated_at"] = time.Now()
+// 	// Always update the updated_at field
+// 	updates["updated_at"] = time.Now()
 
-	// Build dynamic query
-	setParts := make([]string, 0, len(updates))
-	args := make([]interface{}, 0, len(updates)+1)
-	argIndex := 1
+// 	// Build dynamic query
+// 	setParts := make([]string, 0, len(updates))
+// 	args := make([]interface{}, 0, len(updates)+1)
+// 	argIndex := 1
 
-	for field, value := range updates {
-		slog.Debug("Processing field for update",
-			slog.String("attr", field),
-			slog.String("value_type", fmt.Sprintf("%T", value)),
-			slog.Bool("needs_json", needsJSONSerialization(value)))
+// 	for field, value := range updates {
+// 		slog.Debug("Processing field for update",
+// 			slog.String("attr", field),
+// 			slog.String("value_type", fmt.Sprintf("%T", value)),
+// 			slog.Bool("needs_json", needsJSONSerialization(value)))
 
-		// Handle special types that need JSON serialization
-		if needsJSONSerialization(value) {
-			// Dereference pointer if it's a pointer
-			actualValue := value
-			if reflect.ValueOf(value).Kind() == reflect.Ptr {
-				if reflect.ValueOf(value).IsNil() {
-					actualValue = nil
-				} else {
-					actualValue = reflect.ValueOf(value).Elem().Interface()
-				}
-			}
+// 		// Handle special types that need JSON serialization
+// 		if needsJSONSerialization(value) {
+// 			// Dereference pointer if it's a pointer
+// 			actualValue := value
+// 			if reflect.ValueOf(value).Kind() == reflect.Ptr {
+// 				if reflect.ValueOf(value).IsNil() {
+// 					actualValue = nil
+// 				} else {
+// 					actualValue = reflect.ValueOf(value).Elem().Interface()
+// 				}
+// 			}
 
-			if actualValue != nil {
-				jsonBytes, err := json.Marshal(actualValue)
-				if err != nil {
-					return fmt.Errorf("failed to marshal field %s: %w", field, err)
-				}
-				value = jsonBytes
-				slog.Debug("Serialized field to JSON",
-					slog.String("field", field),
-					slog.String("json", string(jsonBytes)))
-			}
-		} else {
-			// Handle pointers to basic types
-			if reflect.ValueOf(value).Kind() == reflect.Ptr {
-				if reflect.ValueOf(value).IsNil() {
-					value = nil
-				} else {
-					value = reflect.ValueOf(value).Elem().Interface()
-				}
-			}
-		}
+// 			if actualValue != nil {
+// 				jsonBytes, err := json.Marshal(actualValue)
+// 				if err != nil {
+// 					return fmt.Errorf("failed to marshal field %s: %w", field, err)
+// 				}
+// 				value = jsonBytes
+// 				slog.Debug("Serialized field to JSON",
+// 					slog.String("field", field),
+// 					slog.String("json", string(jsonBytes)))
+// 			}
+// 		} else {
+// 			// Handle pointers to basic types
+// 			if reflect.ValueOf(value).Kind() == reflect.Ptr {
+// 				if reflect.ValueOf(value).IsNil() {
+// 					value = nil
+// 				} else {
+// 					value = reflect.ValueOf(value).Elem().Interface()
+// 				}
+// 			}
+// 		}
 
-		setParts = append(setParts, fmt.Sprintf("%s = $%d", field, argIndex))
-		args = append(args, value)
-		argIndex++
-	}
+// 		setParts = append(setParts, fmt.Sprintf("%s = $%d", field, argIndex))
+// 		args = append(args, value)
+// 		argIndex++
+// 	}
 
-	// Add ID as the last argument
-	args = append(args, id)
+// 	// Add ID as the last argument
+// 	args = append(args, id)
 
-	query := fmt.Sprintf(`
-		UPDATE testimonials 
-		SET %s 
-		WHERE id = $%d
-	`, strings.Join(setParts, ", "), argIndex)
+// 	query := fmt.Sprintf(`
+// 		UPDATE testimonials
+// 		SET %s
+// 		WHERE id = $%d
+// 	`, strings.Join(setParts, ", "), argIndex)
 
-	result, err := db.ExecContext(ctx, query, args...)
-	if err != nil {
-		return fmt.Errorf("failed to update testimonial (ID: %s): %w", id, err)
-	}
+// 	result, err := db.ExecContext(ctx, query, args...)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to update testimonial (ID: %s): %w", id, err)
+// 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("failed to get rows affected: %w", err)
-	}
+// 	rowsAffected, err := result.RowsAffected()
+// 	if err != nil {
+// 		return fmt.Errorf("failed to get rows affected: %w", err)
+// 	}
 
-	if rowsAffected == 0 {
-		return fmt.Errorf("testimonial not found (ID: %s)", id)
-	}
+// 	if rowsAffected == 0 {
+// 		return fmt.Errorf("testimonial not found (ID: %s)", id)
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 func needsJSONSerialization(value interface{}) bool {
 	if value == nil {

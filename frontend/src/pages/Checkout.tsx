@@ -1,234 +1,438 @@
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { loadStripe } from "@stripe/stripe-js";
-import { Elements } from "@stripe/react-stripe-js";
+import React, { useState } from "react";
+import { motion } from "framer-motion";
 import {
-  ChevronRightIcon,
-  ShieldCheckIcon,
-  ArrowUpRightIcon,
+  Lock,
+  Check,
+  CreditCard,
+  Calendar,
+  ArrowLeft,
+  Shield,
+  Users,
+  MessageSquare,
+  Zap,
 } from "lucide-react";
-import { plans } from "@/components/pricing/data";
-import StepIndicators from "@/components/checkout/StepIndicators";
-import PlanCard from "@/components/checkout/PlanCard";
-import OrderSummary from "@/components/checkout/OrderSummary";
-import PaymentForm from "@/components/checkout/PaymentForm";
-import SuccessPage from "@/components/checkout/SuccessPage";
-import { useSearchParams } from "react-router-dom";
-import { observer } from "mobx-react-lite";
-import { authStore } from "@/stores/authStore";
-import { appService } from "@/services/appService";
-import { Plan } from "@/types/workspace";
-import { notification } from "antd";
 
-// Stripe promise initialization
-const stripePromise = loadStripe("your_publishable_key");
+interface CheckoutProps {
+  selectedPlan?: {
+    id: string;
+    name: string;
+    monthlyPrice: number;
+    yearlyPrice: number;
+    features: string[];
+  };
+}
 
-// Main checkout component
-const Checkout = observer(() => {
-  const [searchParams] = useSearchParams();
-
-  const planId = searchParams.get("plan");
-  const selectedPlan = plans.find((p) => p.id === planId);
-  const [currentStep, setCurrentStep] = useState(0);
+const CheckoutPage: React.FC<CheckoutProps> = ({ selectedPlan }) => {
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">(
     "yearly"
   );
+  const [paymentMethod, setPaymentMethod] = useState<"card" | "paypal">("card");
+  const [formData, setFormData] = useState({
+    email: "",
+    firstName: "",
+    lastName: "",
+    company: "",
+    cardNumber: "",
+    expiryDate: "",
+    cvv: "",
+    billingAddress: "",
+    city: "",
+    zipCode: "",
+    country: "US",
+  });
 
-  // Visual effect when changing billing cycle
-  const cycleVariants = {
-    monthly: { x: 0 },
-    yearly: { x: "100%" },
+  // Default to Professional plan if none selected
+  const plan = selectedPlan || {
+    id: "professional",
+    name: "Professional",
+    monthlyPrice: 99,
+    yearlyPrice: 990,
+    features: [
+      "200 testimonials/month",
+      "500 AI processing credits",
+      "Up to 10 team members",
+      "Full AI suite access",
+      "Priority support",
+    ],
   };
 
-  async function onComplete() {
-    const user = authStore.currentUser;
+  const price =
+    billingCycle === "yearly" ? plan.yearlyPrice : plan.monthlyPrice * 12;
+  const monthlyPrice =
+    billingCycle === "yearly"
+      ? Math.floor(plan.yearlyPrice / 12)
+      : plan.monthlyPrice;
+  const savings =
+    billingCycle === "yearly" ? plan.monthlyPrice * 12 - plan.yearlyPrice : 0;
 
-    if (!user?.emailVerified) {
-      notification.error({
-        message: "Email verification error",
-        description:
-          "Your email is not verified. Plesae verify your email or contact the admin to get started.",
-      });
+  const handleInputChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
 
-      return;
-    }
-
-    await appService.onboard_partial(user?.uid || "", planId as Plan);
-    setCurrentStep(2);
-  }
-
-  if (!selectedPlan) return;
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Handle checkout logic
+    console.log("Processing checkout...", { plan, billingCycle, formData });
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white to-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-extrabold text-gray-900 mb-2">
-            Complete Your Purchase
-          </h1>
-          <p className="text-gray-600">
-            Unlock powerful testimonial management tools for your business
-          </p>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-6xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <button className="flex items-center text-gray-600 hover:text-gray-900 transition-colors duration-200">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to pricing
+              </button>
+            </div>
+            <div className="flex items-center text-sm text-gray-600">
+              <Lock className="w-4 h-4 mr-2" />
+              Secure checkout
+            </div>
+          </div>
         </div>
+      </div>
 
-        <StepIndicators currentStep={currentStep} />
+      <div className="max-w-6xl mx-auto px-6 py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+          {/* Checkout Form */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <div className="bg-white rounded-xl border border-gray-200 p-8">
+              <h1 className="text-2xl font-semibold text-gray-900 mb-8">
+                Complete your subscription
+              </h1>
 
-        <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
-          <div className="p-8">
-            <AnimatePresence mode="wait">
-              {currentStep === 0 && (
-                <motion.div
-                  key="plan-selection"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                >
-                  <div className="flex justify-between items-center mb-8">
-                    <h2 className="text-xl font-bold text-gray-800">
-                      Review Your Plan
-                    </h2>
-
-                    <div className="relative inline-block">
-                      <div className="w-56 h-10 bg-gray-100 rounded-xl p-1 relative">
-                        <motion.div
-                          className="absolute top-1 bottom-1 w-1/2 rounded-lg bg-white shadow-sm"
-                          variants={cycleVariants}
-                          animate={
-                            billingCycle === "monthly" ? "monthly" : "yearly"
-                          }
-                          transition={{
-                            type: "spring",
-                            stiffness: 400,
-                            damping: 25,
-                          }}
-                        />
-                        <div className="relative flex h-full">
-                          <button
-                            className={`flex-1 flex items-center justify-center text-sm font-medium z-10 ${
-                              billingCycle === "monthly"
-                                ? "text-gray-900"
-                                : "text-gray-500"
-                            }`}
-                            onClick={() => setBillingCycle("monthly")}
-                          >
-                            Monthly
-                          </button>
-                          <button
-                            className={`flex-1 flex items-center justify-center text-sm font-medium z-10 ${
-                              billingCycle === "yearly"
-                                ? "text-gray-900"
-                                : "text-gray-500"
-                            }`}
-                            onClick={() => setBillingCycle("yearly")}
-                          >
-                            Yearly
-                            <span className="ml-1 text-xs font-bold text-green-600">
-                              Save 20%
-                            </span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="md:col-span-2">
-                      <PlanCard
-                        plan={selectedPlan}
-                        billingCycle={billingCycle}
-                      />
-
-                      <div className="mt-6 space-y-4">
-                        <h3 className="font-semibold text-gray-800">
-                          Key Benefits:
-                        </h3>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div className="flex items-start p-4 bg-indigo-50 rounded-xl">
-                            <div className="p-2 bg-indigo-100 rounded-lg mr-3">
-                              <ShieldCheckIcon className="w-5 h-5 text-indigo-600" />
-                            </div>
-                            <div>
-                              <h4 className="font-medium text-indigo-800 text-sm">
-                                Advanced Security
-                              </h4>
-                              <p className="text-xs text-indigo-600 mt-1">
-                                Enterprise-grade protection for your data
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-start p-4 bg-purple-50 rounded-xl">
-                            <div className="p-2 bg-purple-100 rounded-lg mr-3">
-                              <ArrowUpRightIcon className="w-5 h-5 text-purple-600" />
-                            </div>
-                            <div>
-                              <h4 className="font-medium text-purple-800 text-sm">
-                                Seamless Integration
-                              </h4>
-                              <p className="text-xs text-purple-600 mt-1">
-                                Connect with your existing tools
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Account Information */}
+                <div>
+                  <h3 className="text-sm font-medium text-gray-900 mb-4">
+                    Account Information
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <OrderSummary
-                        plan={selectedPlan}
-                        billingCycle={billingCycle}
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        First Name
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.firstName}
+                        onChange={(e) =>
+                          handleInputChange("firstName", e.target.value)
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Last Name
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.lastName}
+                        onChange={(e) =>
+                          handleInputChange("lastName", e.target.value)
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
                       />
                     </div>
                   </div>
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) =>
+                        handleInputChange("email", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Company (optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.company}
+                      onChange={(e) =>
+                        handleInputChange("company", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
 
-                  <div className="mt-8 flex justify-end">
+                {/* Payment Method */}
+                <div>
+                  <h3 className="text-sm font-medium text-gray-900 mb-4">
+                    Payment Method
+                  </h3>
+                  <div className="flex space-x-4 mb-4">
                     <button
-                      onClick={() => setCurrentStep(1)}
-                      className="inline-flex items-center px-6 py-3 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200"
+                      type="button"
+                      onClick={() => setPaymentMethod("card")}
+                      className={`flex items-center px-4 py-2 border rounded-lg transition-colors duration-200 ${
+                        paymentMethod === "card"
+                          ? "border-blue-500 bg-blue-50 text-blue-700"
+                          : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                      }`}
                     >
-                      Continue to Payment
-                      <ChevronRightIcon className="w-4 h-4 ml-2" />
+                      <CreditCard className="w-4 h-4 mr-2" />
+                      Credit Card
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod("paypal")}
+                      className={`flex items-center px-4 py-2 border rounded-lg transition-colors duration-200 ${
+                        paymentMethod === "paypal"
+                          ? "border-blue-500 bg-blue-50 text-blue-700"
+                          : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                      }`}
+                    >
+                      PayPal
                     </button>
                   </div>
-                </motion.div>
-              )}
 
-              {currentStep === 1 && (
-                <motion.div
-                  key="payment-form"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                >
-                  <Elements stripe={stripePromise}>
-                    <PaymentForm
-                      plan={selectedPlan}
-                      billingCycle={billingCycle}
-                      onBack={() => setCurrentStep(0)}
-                      onComplete={onComplete}
-                    />
-                  </Elements>
-                </motion.div>
-              )}
+                  {paymentMethod === "card" && (
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Card Number
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.cardNumber}
+                          onChange={(e) =>
+                            handleInputChange("cardNumber", e.target.value)
+                          }
+                          placeholder="1234 5678 9012 3456"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          required
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Expiry Date
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.expiryDate}
+                            onChange={(e) =>
+                              handleInputChange("expiryDate", e.target.value)
+                            }
+                            placeholder="MM/YY"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            CVV
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.cvv}
+                            onChange={(e) =>
+                              handleInputChange("cvv", e.target.value)
+                            }
+                            placeholder="123"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            required
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
 
-              {currentStep === 2 && (
-                <motion.div
-                  key="success"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                >
-                  <SuccessPage plan={selectedPlan} />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+                {/* Billing Address */}
+                <div>
+                  <h3 className="text-sm font-medium text-gray-900 mb-4">
+                    Billing Address
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Address
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.billingAddress}
+                        onChange={(e) =>
+                          handleInputChange("billingAddress", e.target.value)
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          City
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.city}
+                          onChange={(e) =>
+                            handleInputChange("city", e.target.value)
+                          }
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          ZIP Code
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.zipCode}
+                          onChange={(e) =>
+                            handleInputChange("zipCode", e.target.value)
+                          }
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Submit Button */}
+                <div className="pt-4">
+                  <button
+                    type="submit"
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center"
+                  >
+                    <Lock className="w-4 h-4 mr-2" />
+                    Start 14-day Free Trial
+                  </button>
+                  <p className="text-xs text-gray-500 text-center mt-2">
+                    You won't be charged until your trial ends
+                  </p>
+                </div>
+              </form>
+            </div>
+          </motion.div>
+
+          {/* Order Summary */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <div className="bg-white rounded-xl border border-gray-200 p-8 sticky top-8">
+              <h2 className="text-lg font-semibold text-gray-900 mb-6">
+                Order Summary
+              </h2>
+
+              {/* Plan Details */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium text-gray-900">
+                    {plan.name} Plan
+                  </span>
+                </div>
+
+                {/* Billing Cycle Toggle */}
+                <div className="flex items-center space-x-4 mb-4 p-3 bg-gray-50 rounded-lg">
+                  <button
+                    onClick={() => setBillingCycle("monthly")}
+                    className={`text-sm ${billingCycle === "monthly" ? "font-medium text-gray-900" : "text-gray-600"}`}
+                  >
+                    Monthly
+                  </button>
+                  <div className="flex-1 relative">
+                    <div className="h-px bg-gray-300"></div>
+                  </div>
+                  <button
+                    onClick={() => setBillingCycle("yearly")}
+                    className={`text-sm ${billingCycle === "yearly" ? "font-medium text-gray-900" : "text-gray-600"}`}
+                  >
+                    Yearly
+                    {savings > 0 && (
+                      <span className="ml-1 px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded-full">
+                        Save ${savings}
+                      </span>
+                    )}
+                  </button>
+                </div>
+
+                {/* Price Display */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">
+                      {billingCycle === "yearly"
+                        ? "Annual subscription"
+                        : "Monthly subscription"}
+                    </span>
+                    <span className="font-medium">${price}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm text-gray-500">
+                    <span>Effective monthly cost</span>
+                    <span>${monthlyPrice}/month</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Features */}
+              <div className="mb-6">
+                <h4 className="text-sm font-medium text-gray-900 mb-3">
+                  What's included:
+                </h4>
+                <div className="space-y-2">
+                  {[
+                    { icon: MessageSquare, text: "200 testimonials/month" },
+                    { icon: Zap, text: "500 AI processing credits" },
+                    { icon: Users, text: "Up to 10 team members" },
+                    { icon: Shield, text: "Priority support" },
+                  ].map((feature, index) => (
+                    <div key={index} className="flex items-center text-sm">
+                      <Check className="w-4 h-4 text-green-500 mr-3 flex-shrink-0" />
+                      <feature.icon className="w-4 h-4 text-gray-400 mr-2 flex-shrink-0" />
+                      <span className="text-gray-700">{feature.text}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Trial Info */}
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200 mb-6">
+                <div className="flex items-center mb-2">
+                  <Calendar className="w-4 h-4 text-blue-600 mr-2" />
+                  <span className="text-sm font-medium text-blue-900">
+                    14-day free trial
+                  </span>
+                </div>
+                <p className="text-xs text-blue-800">
+                  Start using all features immediately. Cancel anytime during
+                  your trial at no cost.
+                </p>
+              </div>
+
+              {/* Security Notice */}
+              <div className="flex items-center justify-center text-xs text-gray-500">
+                <Shield className="w-3 h-3 mr-1" />
+                <span>256-bit SSL encryption</span>
+              </div>
+            </div>
+          </motion.div>
         </div>
       </div>
     </div>
   );
-});
+};
 
-export default Checkout;
+export default CheckoutPage;

@@ -101,7 +101,7 @@ class AuthStore {
    * @returns {Promise<void>}
    * @throws An error if processing the redirect result fails.
    */
-  private async handleRedirectResult() {
+  private async handleRedirectResult(): Promise<void> {
     try {
       const result = await getRedirectResult(auth);
       if (result) {
@@ -111,6 +111,8 @@ class AuthStore {
           this.user.displayName || "",
           this.user.email!
         );
+        console.log("registration successful redirect....");
+        // Navigate to onboarding after successful redirect
       }
     } catch (error: any) {
       this.setError(FirebaseErrorHandler.checkFirebaseErrorsAndThrow(error));
@@ -154,6 +156,8 @@ class AuthStore {
         creds.user.displayName!,
         creds.user.email!
       );
+      console.log("registration successful redirect in social login....");
+      window.location.href = "/onboarding";
       return creds;
     } catch (error: any) {
       this.setError(FirebaseErrorHandler.checkFirebaseErrorsAndThrow(error));
@@ -217,7 +221,8 @@ class AuthStore {
   private async registerUser(
     cred: UserCredential,
     name: string,
-    email: string
+    email: string,
+    isEmailPassword = false
   ) {
     try {
       const response = await fetch(`${this.server}/users/register`, {
@@ -231,15 +236,17 @@ class AuthStore {
       });
 
       if (!response.ok) {
-        console.log("response.status", response.statusText);
-        this.setError({
-          message: response.statusText,
-        });
-        return;
+        if (isEmailPassword || response.status != 409) {
+          console.log("response.status", response.statusText);
+          this.setError({
+            message: response.statusText,
+          });
+        }
+        return false;
       }
       const result = await response.json();
       console.log("result", result);
-      return result;
+      return true;
     } catch (error: any) {
       this.setError({
         message: error.message,
@@ -286,7 +293,7 @@ class AuthStore {
       console.log("credential", cred);
       sendEmailVerification(cred.user);
 
-      await this.registerUser(cred, name, email);
+      await this.registerUser(cred, name, email, true);
       return cred;
     } catch (error: any) {
       this.setError(FirebaseErrorHandler.checkFirebaseErrorsAndThrow(error));
@@ -529,6 +536,74 @@ class AuthStore {
     } catch (error: any) {
       return { error: error.message };
     }
+  }
+
+  /**
+   * Clear errors for specific fields when user starts typing
+   * This should be called from form input handlers
+   */
+  public clearFieldError(field: AuthErrorField) {
+    if (this.errors[field]) {
+      delete this.errors[field];
+    }
+    // Also clear generic errors when user interacts with form
+    if (this.errors.generic && field !== "generic") {
+      delete this.errors.generic;
+    }
+  }
+
+  /**
+   * Check if there are any errors
+   */
+  public get hasErrors(): boolean {
+    return Object.keys(this.errors).length > 0;
+  }
+
+  /**
+   * Get error message for a specific field
+   */
+  public getErrorMessage(field: AuthErrorField): string | undefined {
+    return this.errors[field]?.message;
+  }
+
+  /**
+   * Get current user with proper waiting for auth state
+   */
+  public async getCurrentUser(): Promise<User | null> {
+    // If auth is still loading, wait for it to complete
+    if (this.loading) {
+      return new Promise((resolve) => {
+        const checkAuth = () => {
+          if (!this.loading) {
+            resolve(this.user);
+          } else {
+            // Check again in 100ms
+            setTimeout(checkAuth, 100);
+          }
+        };
+        checkAuth();
+      });
+    }
+    return this.user;
+  }
+
+  /**
+   * Get Firebase token for API calls
+   */
+  public async getToken(): Promise<{ token: string; currentUser: User }> {
+    const currentUser = await this.getCurrentUser();
+
+    if (!currentUser) {
+      throw new Error("No current user found");
+    }
+
+    const token = await currentUser.getIdToken();
+
+    if (!token) {
+      throw new Error("Could not get Firebase token");
+    }
+
+    return { token, currentUser };
   }
 }
 

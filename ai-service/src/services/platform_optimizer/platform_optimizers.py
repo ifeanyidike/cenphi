@@ -102,8 +102,8 @@ class InstagramOptimizer:
             filters.append("crop=1080:1920")
             
             # 2. Add subtle zoom for engagement (Stories perform better with slight motion)
-            # Fixed: Proper zoompan syntax for engagement
-            filters.append("zoompan=z='if(eq(on,1),1.0,min(zoom+0.001,1.2))':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=25:s=1080x1920:fps=30")
+            # REVERTED: Keep simple, working zoom
+            filters.append("zoompan=z='min(zoom+0.0015,1.5)':d=25:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1080x1920")
             enhancements.append("engagement_zoom")
             
             # 3. Optimize for mobile viewing (enhance contrast for small screens)
@@ -171,9 +171,12 @@ class InstagramOptimizer:
             filters.append("scale=1080:1920:force_original_aspect_ratio=increase")
             filters.append("crop=1080:1920")
             
-            # 2. Reels-specific engagement optimization (faster cuts, higher energy)
-            filters.append("eq=contrast=1.15:saturation=1.2:brightness=0.08")
+            # 2. Reels-specific engagement optimization - FIXED: Use compatible filters
+            filters.append("eq=contrast=1.15:saturation=1.3:brightness=0.05")
+            # Using curves for color enhancement instead of vibrance (more compatible)
+            filters.append("curves=all='0/0 0.1/0.12 0.9/0.88 1/1'")
             enhancements.append("high_energy_colors")
+            enhancements.append("color_richness_boost")
             
             # 3. Optimize duration for Reels algorithm (30-60 seconds is sweet spot)
             duration = min(60, max(15, self.storage_manager.get_video_duration(media_path)))
@@ -185,14 +188,15 @@ class InstagramOptimizer:
             filters.append("deshake")
             enhancements.append("mobile_stabilization")
             
-            # Build command
+            # Build command - FIXED: Simplified and compatible
             cmd = [
                 "ffmpeg", "-i", media_path,
                 "-vf", ",".join(filters),
-                "-c:v", "libx264", "-preset", "fast", "-crf", "21",
+                "-c:v", "libx264", "-preset", "faster", "-crf", "23",  # Faster preset for reliability
                 "-maxrate", "3500k", "-bufsize", "7000k",
                 "-c:a", "aac", "-b:a", "128k", "-ar", "44100",
                 "-movflags", "+faststart",
+                "-threads", "4",  # Explicit thread count
                 "-y", output_path
             ]
             
@@ -207,7 +211,7 @@ class InstagramOptimizer:
                 success=True,
                 optimized_path=output_path,
                 platform_features={
-                    "format": "instagram_reel",
+                    "format": "instagram_reels",
                     "aspect_ratio": "9:16",
                     "optimized_duration": duration,
                     "algorithm_features": ["high_energy", "mobile_first"]

@@ -10,6 +10,8 @@ import (
 
 	repositories "github.com/ifeanyidike/cenphi/internal/repositories"
 
+	sql "database/sql"
+
 	uuid "github.com/google/uuid"
 )
 
@@ -175,11 +177,39 @@ func (_m *UserRepository) GetByID(ctx context.Context, id uuid.UUID, db reposito
 }
 
 // GetWorkspaceByUID provides a mock function with given fields: ctx, uid, db
-func (_m *UserRepository) GetWorkspaceByUID(ctx context.Context, uid string, db repositories.DB) (uuid.UUID, error) {
+func (_m *UserRepository) GetWorkspaceByUID(ctx context.Context, uid string, db repositories.DB) (models.Workspace, error) {
 	ret := _m.Called(ctx, uid, db)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetWorkspaceByUID")
+	}
+
+	var r0 models.Workspace
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, repositories.DB) (models.Workspace, error)); ok {
+		return rf(ctx, uid, db)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, repositories.DB) models.Workspace); ok {
+		r0 = rf(ctx, uid, db)
+	} else {
+		r0 = ret.Get(0).(models.Workspace)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, repositories.DB) error); ok {
+		r1 = rf(ctx, uid, db)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetWorkspaceIDByUID provides a mock function with given fields: ctx, uid, db
+func (_m *UserRepository) GetWorkspaceIDByUID(ctx context.Context, uid string, db repositories.DB) (uuid.UUID, error) {
+	ret := _m.Called(ctx, uid, db)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetWorkspaceIDByUID")
 	}
 
 	var r0 uuid.UUID
@@ -222,12 +252,30 @@ func (_m *UserRepository) Update(ctx context.Context, entity *models.User, id uu
 	return r0
 }
 
-// UpdateAny provides a mock function with given fields: ctx, updates, uid, db
-func (_m *UserRepository) UpdateAny(ctx context.Context, updates map[string]interface{}, uid string, db repositories.DB) error {
-	ret := _m.Called(ctx, updates, uid, db)
+// UpdateAny provides a mock function with given fields: ctx, id, updates, db
+func (_m *UserRepository) UpdateAny(ctx context.Context, id uuid.UUID, updates map[string]interface{}, db *sql.DB) error {
+	ret := _m.Called(ctx, id, updates, db)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateAny")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, map[string]interface{}, *sql.DB) error); ok {
+		r0 = rf(ctx, id, updates, db)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// UpdateAnyByUid provides a mock function with given fields: ctx, updates, uid, db
+func (_m *UserRepository) UpdateAnyByUid(ctx context.Context, updates map[string]interface{}, uid string, db repositories.DB) error {
+	ret := _m.Called(ctx, updates, uid, db)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateAnyByUid")
 	}
 
 	var r0 error

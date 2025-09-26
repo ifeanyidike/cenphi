@@ -4,6 +4,7 @@ package services
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"maps"
 	"mime/multipart"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/ifeanyidike/cenphi/internal/ai"
 	"github.com/ifeanyidike/cenphi/internal/mailing"
 	"github.com/ifeanyidike/cenphi/internal/models"
 	"github.com/ifeanyidike/cenphi/internal/queue"
@@ -25,17 +27,19 @@ import (
 
 // TestimonialCollectionService handles testimonial collection and initial AI processing
 type TestimonialCollectionService struct {
-	repo              repositories.TestimonialRepository
-	jobRepo           repositories.JobRepository
-	storageService    *storage.StorageFactory
-	documentProcessor *DocumentProcessor
-	driveService      *DriveService
-	fileProcessor     *FileProcessor
-	mailingService    *mailing.Service
-	queueService      queue.Service
-	db                *sql.DB
-	redis             *redis.Client
-	logger            *zap.Logger
+	repo                      repositories.TestimonialRepository
+	jobRepo                   repositories.JobRepository
+	storageService            *storage.StorageFactory
+	documentProcessor         *DocumentProcessor
+	driveService              *DriveService
+	fileProcessor             *FileProcessor
+	mailingService            *mailing.Service
+	queueService              queue.Service
+	audioTranscriptionService ai.AudioTranscriptionService
+
+	db     *sql.DB
+	redis  *redis.Client
+	logger *zap.Logger
 }
 
 func NewTestimonialCollectionService(
@@ -45,6 +49,7 @@ func NewTestimonialCollectionService(
 	driveService *DriveService,
 	mailingService *mailing.Service,
 	queueService queue.Service,
+	audioTranscriptionService ai.AudioTranscriptionService,
 	db *sql.DB,
 	redis *redis.Client,
 	logger *zap.Logger,
@@ -52,17 +57,19 @@ func NewTestimonialCollectionService(
 	fileProcessor := NewFileProcessor(logger)
 	documentProcessor := NewDocumentProcessor(logger)
 	return TestimonialCollectionService{
-		repo:              repo,
-		jobRepo:           jobRepo,
-		storageService:    storageService,
-		fileProcessor:     fileProcessor,
-		driveService:      driveService,
-		mailingService:    mailingService,
-		documentProcessor: documentProcessor,
-		queueService:      queueService,
-		db:                db,
-		redis:             redis,
-		logger:            logger,
+		repo:                      repo,
+		jobRepo:                   jobRepo,
+		storageService:            storageService,
+		fileProcessor:             fileProcessor,
+		driveService:              driveService,
+		mailingService:            mailingService,
+		documentProcessor:         documentProcessor,
+		queueService:              queueService,
+		audioTranscriptionService: audioTranscriptionService,
+
+		db:     db,
+		redis:  redis,
+		logger: logger,
 	}
 }
 
@@ -173,16 +180,24 @@ func (tcs TestimonialCollectionService) processVideo(
 		ProcessingStatus: "pending",
 		Rating:           data.Rating,
 		Tags:             data.Tags,
-		Metadata: models.JSONMap{
-			"original_filename": header.Filename,
-			"file_size":         header.Size,
-			"content_type":      contentType,
-			"video_source":      videoSource,
-			"submitted_at":      time.Now().Unix(),
-		},
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		CreatedAt:        time.Now(),
+		UpdatedAt:        time.Now(),
 	}
+
+	metadata := models.JSONMap{
+		"original_filename": strings.ReplaceAll(header.Filename, "\x00", ""), // Remove null bytes
+		"file_size":         header.Size,
+		"content_type":      contentType,
+		"video_source":      videoSource,
+		"submitted_at":      time.Now().Unix(),
+	}
+
+	// Validate JSON before assignment
+	if _, err := json.Marshal(metadata); err != nil {
+		return nil, fmt.Errorf("invalid metadata JSON: %w", err)
+	}
+
+	testimonial.Metadata = metadata
 
 	// Save testimonial to database
 	if err := tcs.repo.Create(ctx, testimonial, tcs.db); err != nil {
@@ -494,6 +509,51 @@ func (tcs TestimonialCollectionService) CollectFromForm(ctx context.Context, dat
 		zap.String("workspace_id", data.WorkspaceID.String()))
 
 	return testimonial, nil
+}
+
+func (tcs TestimonialCollectionService) ValidateVideoFile(
+	ctx context.Context,
+	file multipart.File,
+	header *multipart.FileHeader,
+) (*ai.ValidationResult, error) {
+	// Basic validation first
+	contentType := header.Header.Get("Content-Type")
+	if !tcs.isValidVideoType(contentType) {
+		return nil, fmt.Errorf("invalid video format: %s. Supported formats: MP4, AVI, MOV, WMV, FLV, WebM", contentType)
+	}
+
+	// File size check
+	maxSize := int64(500 << 20) // 500MB
+	if header.Size > maxSize {
+		return nil, fmt.Errorf("video file too large: %d MB. Maximum size is %d MB", header.Size/(1<<20), maxSize/(1<<20))
+	}
+
+	if header.Size < 1024 { // Less than 1KB
+		return nil, fmt.Errorf("video file too small, likely corrupt")
+	}
+
+	// Audio content validation using AI service
+	validationResult, err := tcs.audioTranscriptionService.ValidateVideoFile(ctx, file, header)
+	if err != nil {
+		tcs.logger.Error("Failed to validate video audio content",
+			zap.String("filename", header.Filename),
+			zap.Error(err))
+		return nil, fmt.Errorf("unable to validate video audio content: %v", err)
+	}
+
+	if !validationResult.IsValid {
+		tcs.logger.Info("Video rejected due to poor audio quality",
+			zap.String("filename", header.Filename),
+			zap.String("reason", validationResult.ErrorMessage))
+		return nil, fmt.Errorf("%s", validationResult.ErrorMessage)
+	}
+
+	tcs.logger.Info("Video validation passed",
+		zap.String("filename", header.Filename),
+		zap.Float64("quality_score", validationResult.Quality.Score),
+		zap.Bool("has_speech", validationResult.Quality.HasSpeech))
+
+	return validationResult, nil
 }
 
 // ProcessVideoUpload handles video file uploads

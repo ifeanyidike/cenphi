@@ -98,9 +98,10 @@ class VideoEnhancer:
         self._audio_buffer = np.empty((44100 * 10,), dtype=np.float32)  # 10 second buffer
         
     def enhance(self, input_path: str, output_path: str, quality: str = "professional",
-            custom_enhancements: Optional[List[str]] = None, 
-            target_platform: Optional[str] = None, 
-            remove_noise: bool = False) -> Dict[str, Any]:
+            custom_enhancements: Optional[List[str]] = None,
+            target_platform: Optional[str] = None,
+            remove_noise: bool = False,
+            enable_grayscale: bool = False) -> Dict[str, Any]:
         """
         🤖 MAIN ENHANCEMENT METHOD with integrated noise removal
         """
@@ -349,14 +350,13 @@ class VideoEnhancer:
         duration = video_info.get("duration", 0)
         resolution = width * height
         
-        # SAFE: Start with your proven spectacular filters as baseline
+        # BALANCED: More natural enhancement filters to prevent grayscale appearance
         base_filters = [
-            "eq=contrast=1.5:saturation=1.2:brightness=0.03:gamma=1.05",
-            "colorbalance=rs=0.06:gs=0.03:bs=-0.04",
-            "vibrance=intensity=0.18",
-            "unsharp=5:5:0.7:5:5:0.0",
-            # "unsharp=4:4:0.7:4:4:0.0",    # Changed from 5:5:0.7:5:5:0.0
-            "curves=all='0/0 0.08/0.12 0.92/0.88 1/1'"
+            "eq=contrast=1.25:saturation=1.3:brightness=0.02:gamma=1.02",  # Reduced contrast, increased saturation
+            "colorbalance=rs=0.04:gs=0.02:bs=-0.02",  # More subtle color balance
+            "vibrance=intensity=0.25",  # Increased vibrance to maintain color richness
+            "unsharp=5:5:0.6:5:5:0.0",  # Slightly reduced sharpening
+            "curves=all='0/0 0.05/0.08 0.95/0.92 1/1'"  # Gentler S-curve
         ]
         
         # SAFE: Content-aware optimizations that don't conflict with existing services
@@ -376,6 +376,11 @@ class VideoEnhancer:
         if duration > 1800:  # 30+ minutes
             optimized_filters.insert(0, "yadif=mode=0:parity=-1:deint=0")
             logger.debug("Added deinterlacing check for long-form content")
+
+        # Add grayscale conversion if requested
+        if enable_grayscale:
+            optimized_filters.append("format=gray")
+            logger.info("Added grayscale conversion filter")
         
         return optimized_filters
     

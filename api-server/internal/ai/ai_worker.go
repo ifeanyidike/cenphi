@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -16,9 +17,22 @@ import (
 	"github.com/ifeanyidike/cenphi/internal/models"
 	"github.com/ifeanyidike/cenphi/internal/queue"
 	"github.com/ifeanyidike/cenphi/internal/repositories"
+	"github.com/ifeanyidike/cenphi/internal/sse"
 	"github.com/ifeanyidike/cenphi/pb"
 	"go.uber.org/zap"
 )
+
+type SourceParam struct {
+	mediaURL           string
+	testimonialID      uuid.UUID
+	artifactID         uuid.UUID
+	artifact           *models.TestimonialArtifact
+	content            string
+	transcriptSegments models.TranscriptSegments
+	processedSegments  []*pb.ProcessedSegment
+	startTime          *float64
+	endTime            *float64
+}
 
 // CircuitBreaker prevents infinite retries
 type CircuitBreaker struct {
@@ -91,8 +105,6 @@ func (cb *CircuitBreaker) Call(fn func() error) error {
 	return nil
 }
 
-// Import NonRetryableError from queue package
-
 type AIQueueWorker struct {
 	queueService queue.Service
 	queues       []string
@@ -114,6 +126,7 @@ type AIQueueWorker struct {
 	jobRepo               repositories.JobRepository
 	activeCancelFunctions map[string]context.CancelFunc
 	mu                    sync.RWMutex
+	sseNotifier           *sse.SSEManager
 }
 
 func NewAIQueueWorker(ctx context.Context,
@@ -126,7 +139,9 @@ func NewAIQueueWorker(ctx context.Context,
 	testimonialRepo repositories.TestimonialRepository,
 	artifactRepo repositories.TestimonialArtifactRepository,
 	jobRepo repositories.JobRepository,
-	logger *zap.Logger) *AIQueueWorker {
+	logger *zap.Logger,
+	sseNotifier *sse.SSEManager,
+) *AIQueueWorker {
 	workerCtx, cancel := context.WithCancel(ctx)
 
 	return &AIQueueWorker{
@@ -142,20 +157,21 @@ func NewAIQueueWorker(ctx context.Context,
 		testimonialRepo:   testimonialRepo,
 		jobRepo:           jobRepo,
 		artifactRepo:      artifactRepo,
-		circuitBreaker:    NewCircuitBreaker(5, 5*time.Minute, logger), // 3 failures, 5 min timeout
+
+		circuitBreaker: NewCircuitBreaker(5, 5*time.Minute, logger), // 3 failures, 5 min timeout
 		queues: []string{
 			"enhancement",
-			"emotion",
 			"narration",
 			"clipping",
 			"platform_optimizer",
-			"thumbnail",
 			"story_video",
+			"remove_noise",
 
 			"transcription",
 			"sentiment_analysis",
 			"highlight_extraction",
 		},
+		sseNotifier: sseNotifier,
 	}
 }
 
@@ -251,18 +267,16 @@ func (qw *AIQueueWorker) startWorker(name string) error {
 			switch m.Type {
 			case "enhancement":
 				return qw.handleEnhancementJob(ctx, m)
-			case "emotion":
-				return qw.handleEmotionJob(ctx, m)
 			case "narration":
 				return qw.handleNarrationJob(ctx, m)
 			case "clipping":
 				return qw.handleClippingJob(ctx, m)
 			case "platform_optimizer":
 				return qw.handlePlatformOptimization(ctx, m)
-			case "thumbnail":
-				return qw.handleThumbnailSelection(ctx, m)
 			case "story_video":
 				return qw.handleStoryVideoGeneration(ctx, m)
+			case "remove_noise":
+				return qw.handleNoiseRemoval(ctx, m)
 			case "transcription":
 				return qw.handleTestimonialTranscription(ctx, m)
 			case "sentiment_analysis":
@@ -295,974 +309,13 @@ func (qw *AIQueueWorker) startWorker(name string) error {
 	})
 }
 
-func (qw *AIQueueWorker) handleEnhancementJob(ctx context.Context, msg queue.Message) error {
-	var req struct {
-		WorkspaceID string `json:"workspace_id"`
-		pb.EnhanceRequest
-		JobID string `json:"job_id"`
-	}
-
-	data, _ := json.Marshal(msg.Payload)
-	if err := json.Unmarshal(data, &req); err != nil {
-		return &queue.NonRetryableError{
-			Message: fmt.Sprintf("failed to unmarshal enhancement job: %v", err),
-		}
-	}
-
-	if req.JobID == "" {
-		req.JobID = msg.ID
-	}
-
-	serviceID := "enhance-media"
-	// CHECK: See if job was cancelled before starting
-	if qw.isJobCancelled(ctx, req.JobID) {
-		qw.updateJobStatusWithService(ctx, req.JobID, serviceID, "cancelled", 100, nil, nil)
-		return &queue.NonRetryableError{Message: "Job was cancelled before processing"}
-	}
-
-	// CREATE: Cancellable context for this job
-	jobCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	// TRACK: Store cancel function in Redis for later use
-	qw.setJobCancelFunction(ctx, req.JobID, cancel)
-	defer qw.clearJobCancelFunction(ctx, req.JobID)
-
-	// MONITOR: Start background cancellation checker
-	go qw.monitorJobCancellation(jobCtx, req.JobID, cancel)
-
-	testimonialID, err := uuid.Parse(req.TestimonialId)
-	if err != nil {
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "invalid testimonial ID", err)
-	}
-
-	workspaceID, err := uuid.Parse(req.WorkspaceID)
-	if err != nil {
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "invalid workspace ID", err)
-	}
-
-	testimonial, err := qw.testimonialRepo.FetchByID(ctx, testimonialID, qw.db)
-	if err != nil {
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "invalid testimonial", err)
-	}
-
-	if testimonial.MediaURL == nil {
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "enhancement job failed - no media url ", nil)
-	}
-
-	brandContext, err := qw.workspaceRepo.GetPbBrandContext(ctx, workspaceID, qw.db)
-	if err != nil {
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "Failed to get highlight moments", err)
-	}
-
-	// CHECK: Cancellation point before major processing
-	select {
-	case <-jobCtx.Done():
-		return qw.respondWithCancellation(ctx, serviceID, req.JobID)
-	default:
-	}
-
-	qw.updateJobStatusWithService(ctx, req.JobID, serviceID, "processing", 25, nil, nil)
-
-	pbReq := &req.EnhanceRequest
-	pbReq.MediaUrl = *testimonial.MediaURL
-	pbReq.UploadToCloud = true
-	pbReq.LogoUrl = brandContext.LogoUrl
-	pbReq.JobId = req.JobID
-
-	if len(brandContext.ColorSlice) > 0 {
-		pbReq.BrandColor = brandContext.ColorSlice[0]
-	}
-
-	result, err := qw.mediaIntelligence.EnhanceMedia(ctx, pbReq)
-	// if err != nil {
-	// 	return qw.respondWithFailure(ctx, serviceID, req.JobID, "enhancements failed", err)
-	// }
-	// CHECK: Final cancellation check
-	select {
-	case <-jobCtx.Done():
-		return qw.respondWithCancellation(ctx, serviceID, req.JobID)
-	default:
-		if err != nil {
-			return qw.respondWithFailure(ctx, serviceID, req.JobID, "enhancement failed", err)
-		}
-	}
-
-	_, err = qw.aiService.SaveResponseToArtifacts(ctx, "enhancement", workspaceID, &testimonialID, models.JSONMap{
-		"enhanced_url":         result.EnhancedUrl,
-		"applied_enhancements": result.AppliedEnhancements,
-		"quality_score":        result.QualityScore,
-	})
-
-	if err != nil {
-		qw.logger.Error("Failed to save enhancement artifact", zap.Error(err))
-	}
-
-	enhancedResult := map[string]any{
-		"enhanced_url":         result.EnhancedUrl,
-		"applied_enhancements": result.AppliedEnhancements,
-		"quality_score":        result.QualityScore,
-	}
-
-	qw.updateJobStatusWithService(ctx, req.JobID, serviceID, "completed", 100, enhancedResult, nil)
-
-	return nil
-}
-
-func (qw *AIQueueWorker) handleEmotionJob(ctx context.Context, msg queue.Message) error {
-	var req struct {
-		WorkspaceID string `json:"workspace_id"`
-		pb.EmotionRequest
-		JobID string `json:"job_id"`
-	}
-
-	data, _ := json.Marshal(msg.Payload)
-	if err := json.Unmarshal(data, &req); err != nil {
-		return &queue.NonRetryableError{
-			Message: fmt.Sprintf("failed to unmarshal emotion job: %v", err),
-		}
-	}
-
-	if req.JobID == "" {
-		req.JobID = msg.ID
-	}
-
-	serviceID := "analyze-emotions"
-	testimonialID, err := uuid.Parse(req.TestimonialId)
-	if err != nil {
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "invalid testimonial ID", err)
-	}
-
-	workspaceID, err := uuid.Parse(req.WorkspaceID)
-	if err != nil {
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "invalid workspace ID", err)
-	}
-
-	testimonial, err := qw.testimonialRepo.FetchByID(ctx, testimonialID, qw.db)
-	if err != nil {
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "invalid testimonial", err)
-	}
-
-	if testimonial.MediaURL == nil {
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "emotions analysis job failed - no media url ", nil)
-	}
-
-	pbReq := &req.EmotionRequest
-	pbReq.MediaUrl = *testimonial.MediaURL
-	pbReq.JobId = req.JobID
-
-	qw.updateJobStatusWithService(ctx, req.JobID, serviceID, "processing", 30, nil, nil)
-
-	response, err := qw.mediaIntelligence.AnalyzeEmotion(ctx, pbReq)
-	if err != nil {
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "emotion analysis failed", err)
-	}
-
-	result_data := models.JSONMap{
-		"segments":             response.Segments,
-		"overall_confidence":   response.OverallConfidence,
-		"emotion_distribution": response.EmotionDistribution,
-	}
-
-	_, err = qw.aiService.SaveResponseToArtifacts(ctx, "emotions_analysis", workspaceID, &testimonialID, result_data)
-
-	if err != nil {
-		qw.logger.Error("Failed to save emotions artifact", zap.Error(err))
-	}
-
-	qw.updateJobStatusWithService(ctx, req.JobID, serviceID, "completed", 100, result_data, nil)
-
-	return nil
-}
-
-func (qw *AIQueueWorker) handleNarrationJob(ctx context.Context, msg queue.Message) error {
-	var req struct {
-		WorkspaceID string `json:"workspace_id"`
-		pb.NarrationRequest
-		JobID string `json:"job_id"`
-	}
-
-	data, _ := json.Marshal(msg.Payload)
-	if err := json.Unmarshal(data, &req); err != nil {
-		return &queue.NonRetryableError{
-			Message: fmt.Sprintf("failed to unmarshal narration job: %v", err),
-		}
-	}
-
-	if req.JobID == "" {
-		req.JobID = msg.ID
-	}
-
-	qw.logger.Info("🎙️ Processing voice narration",
-		zap.String("jobId", req.JobID),
-		zap.String("voiceId", req.VoiceId),
-		zap.Int("textLength", len(req.Text)))
-
-	serviceID := "generate-narration"
-
-	testimonialID, err := uuid.Parse(req.TestimonialId)
-	if err != nil {
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "invalid testimonial ID", err)
-	}
-
-	workspaceID, err := uuid.Parse(req.WorkspaceID)
-	if err != nil {
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "invalid workspace ID", err)
-	}
-
-	testimonial, err := qw.testimonialRepo.FetchByID(ctx, testimonialID, qw.db)
-	if err != nil {
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "invalid testimonial", err)
-	}
-
-	if testimonial.Content == nil {
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "testimonial has no text content", err)
-	}
-
-	pbReq := &req.NarrationRequest
-	pbReq.JobId = req.JobID
-	if pbReq.Text == "" {
-		pbReq.Text = *testimonial.Content
-	}
-
-	qw.updateJobStatusWithService(ctx, req.JobID, serviceID, "processing", 40, nil, nil)
-
-	result, err := qw.mediaIntelligence.GenerateNarration(ctx, &req.NarrationRequest)
-	if err != nil {
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "narration generation failed", err)
-	}
-
-	response_data := models.JSONMap{
-		"audio_url": result.AudioUrl,
-		"voice_id":  req.VoiceId,
-	}
-	_, err = qw.aiService.SaveResponseToArtifacts(ctx, "narration", workspaceID, &testimonialID, response_data)
-
-	if err != nil {
-		qw.logger.Error("Failed to save narration artifact", zap.Error(err))
-	}
-
-	qw.logger.Info("✅ Narration completed",
-		zap.String("jobId", req.JobID),
-		zap.String("audioUrl", result.AudioUrl))
-
-	qw.updateJobStatusWithService(ctx, req.JobID, serviceID, "completed", 100, response_data, nil)
-
-	return nil
-}
-
-func (qw *AIQueueWorker) handleClippingJob(ctx context.Context, msg queue.Message) error {
-	var req struct {
-		WorkspaceID string `json:"workspace_id"`
-		pb.ClippingRequest
-		JobID string `json:"job_id"`
-	}
-
-	data, _ := json.Marshal(msg.Payload)
-	if err := json.Unmarshal(data, &req); err != nil {
-		return &queue.NonRetryableError{
-			Message: fmt.Sprintf("failed to unmarshal clipping job: %v", err),
-		}
-	}
-
-	if req.JobID == "" {
-		req.JobID = msg.ID
-	}
-
-	serviceID := "smart-clips"
-	qw.updateJobStatusWithService(ctx, req.JobID, serviceID, "processing", 20, nil, nil)
-
-	// if req.TestimonialId == "" || req.MediaUrl == "" {
-	// 	return qw.respondWithFailure(ctx, serviceID, req.JobID, "clipping failed - no media url or testimonial id", nil)
-	// }
-	if req.TestimonialId == "" {
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "clipping failed - testimonial id", nil)
-	}
-
-	testimonialID, err := uuid.Parse(req.TestimonialId)
-	if err != nil {
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "invalid testimonial ID", err)
-	}
-
-	workspaceID, err := uuid.Parse(req.WorkspaceID)
-	if err != nil {
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "invalid workspace ID", err)
-	}
-
-	testimonial, err := qw.testimonialRepo.FetchByID(ctx, testimonialID, qw.db)
-	if err != nil {
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "invalid testimonial", err)
-	}
-
-	if testimonial.MediaURL == nil {
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "clipping failed - no media url ", nil)
-	}
-
-	moments := req.HighlightMoments
-	if len(moments) == 0 {
-		moments, err = qw.getStoryHighlightSegments(ctx, testimonialID, testimonial)
-		if err != nil {
-			return qw.respondWithFailure(ctx, serviceID, req.JobID, "invalid testimonial", err)
-		}
-
-		if len(moments) != 0 {
-			for i := range moments {
-				fmt.Printf("start time %.f", moments[i].StartTime)
-				fmt.Printf("end time %.f", moments[i].EndTime)
-				moments[i] = &pb.HighlightMoment{
-					StartTime:          moments[i].StartTime,
-					EndTime:            moments[i].EndTime,
-					Theme:              moments[i].Theme,
-					Text:               moments[i].Text,
-					IncludeLogo:        true,
-					IncludeSubtitle:    true,
-					IncludeWatermark:   true,
-					AddBackgroundMusic: true,
-					IncludeTheme:       true,
-					RemoveNoise:        true,
-					// SocialMediaOptimize: true,
-					// EnhanceClip:         true,
-				}
-			}
-		}
-	}
-
-	// var branding = req.Branding
-	branding := &pb.BrandingOptions{}
-	// if branding == nil {
-	context, err := qw.workspaceRepo.GetPbBrandContext(ctx, workspaceID, qw.db)
-	if err != nil {
-		qw.logger.Error("failed to get brand context", zap.Error(err))
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "Failed to get brand context", err)
-	}
-	if context.LogoUrl != "" {
-		branding.LogoUrl = context.LogoUrl
-	}
-
-	var brandColor string
-	for k := range context.BrandColors {
-		brandColor = context.BrandColors[k]
-		break
-	}
-
-	if brandColor != "" {
-		branding.BrandColor = brandColor
-	}
-
-	// }
-
-	pbReq := pb.ClippingRequest{
-		JobId:            req.JobID,
-		TestimonialId:    testimonial.ID.String(),
-		MediaUrl:         *testimonial.MediaURL,
-		HighlightMoments: moments,
-		// BackgroundMusic:  req.BackgroundMusic,
-		// MusicVolume:      req.MusicVolume,
-		Branding: branding,
-	}
-
-	qw.updateJobStatusWithService(ctx, req.JobID, serviceID, "processing", 40, nil, nil)
-
-	clips, err := qw.mediaIntelligence.GenerateClips(ctx, &pbReq)
-	if err != nil {
-		// Check if it's a non-retryable error
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "clip generation failed", err)
-	}
-
-	result := models.JSONMap{
-		"generated_clips": clips,
-	}
-
-	if _, err := qw.aiService.SaveResponseToArtifacts(ctx, "clipping", workspaceID, &testimonialID, result); err != nil {
-		qw.logger.Error("Failed to save clipping artifact", zap.Error(err))
-	}
-
-	qw.updateJobStatusWithService(ctx, req.JobID, serviceID, "completed", 100, result, nil)
-
-	return nil
-}
-
-func (qw *AIQueueWorker) handlePlatformOptimization(ctx context.Context, msg queue.Message) error {
-	var req struct {
-		WorkspaceID string `json:"workspace_id"`
-		Prompt      string `json:"prompt"`
-		pb.OptimizeRequest
-		JobID string `json:"job_id"`
-	}
-
-	fmt.Printf("platform optimization payload %#v", msg)
-
-	data, _ := json.Marshal(msg.Payload)
-	if err := json.Unmarshal(data, &req); err != nil {
-		return &queue.NonRetryableError{
-			Message: fmt.Sprintf("failed to unmarshal platform optimization job: %v", err),
-		}
-	}
-
-	if req.JobID == "" {
-		req.JobID = msg.ID
-	}
-
-	serviceID := "optimize-platform"
-	testimonialID, err := uuid.Parse(req.TestimonialId)
-	if err != nil {
-		qw.logger.Info("invalid testimonial id", zap.String("testimonialID", req.TestimonialId))
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "invalid testimonial ID", err)
-	}
-
-	workspaceID, err := uuid.Parse(req.WorkspaceID)
-	if err != nil {
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "invalid workspace ID", err)
-	}
-
-	testimonial, err := qw.testimonialRepo.FetchByID(ctx, testimonialID, qw.db)
-	if err != nil {
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "invalid testimonial", err)
-	}
-
-	if testimonial.MediaURL == nil {
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "optimization failed - no media url ", nil)
-	}
-
-	brandContext := &pb.BrandContext{}
-
-	if req.BrandContext != nil {
-		brandContext = req.BrandContext
-	} else {
-		context, err := qw.workspaceRepo.GetPbBrandContext(ctx, workspaceID, qw.db)
-		if err != nil {
-			return qw.respondWithFailure(ctx, serviceID, req.JobID, "Failed to get highlight moments", err)
-		}
-		brandContext = context
-	}
-
-	qw.updateJobStatusWithService(ctx, req.JobID, serviceID, "processing", 30, nil, nil)
-
-	// if testimonial.Content != nil {
-	// 	result, err := qw.aiService.PlatformOptimizerService.OptimizeForPlatform(ctx, req.WorkspaceID, *testimonial.Content, brandContext, req.TargetPlatform, req.Prompt)
-	// 	if err != nil {
-	// 		qw.logger.Error("Failed to optimize text", zap.Error(err))
-	// 	}
-	// 	optimized_transcript = result.Content
-	// }
-	log.Printf("brand context %#v", brandContext)
-
-	pbReq := &req.OptimizeRequest
-	pbReq.BrandContext = brandContext
-	pbReq.MediaUrl = *testimonial.MediaURL
-	pbReq.Transcript = *testimonial.Content
-	pbReq.JobId = req.JobID
-	pbReq.TranscriptSegments, _ = qw.convertModelSegmenttoPb(*testimonial.TranscriptSegments)
-
-	mediaOptResult, err := qw.mediaIntelligence.OptimizeMediaForPlatform(ctx, pbReq)
-	if err != nil {
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "platform optimization failed", err)
-	}
-
-	optimized_transcript := *testimonial.Content
-
-	if testimonial.Content != nil {
-		textOptResult, err := qw.aiService.PlatformOptimizerService.OptimizeForPlatform(ctx, req.WorkspaceID, *testimonial.Content, brandContext, req.TargetPlatform, req.Prompt)
-		if err != nil {
-			qw.logger.Error("Failed to optimize text", zap.Error(err))
-		} else if textOptResult != nil {
-			optimized_transcript = textOptResult.Content
-		}
-	}
-
-	result_data := models.JSONMap{
-		"optimized_url": mediaOptResult.OptimizedUrl,
-		"text":          optimized_transcript,
-	}
-
-	_, err = qw.aiService.SaveResponseToArtifacts(ctx, "video_platform_optization", workspaceID, &testimonialID, result_data)
-
-	if err != nil {
-		qw.logger.Error("Failed to save optimized url", zap.Error(err))
-	}
-
-	fmt.Printf("platform optimization result %#v", mediaOptResult)
-
-	qw.updateJobStatusWithService(ctx, req.JobID, serviceID, "completed", 100, result_data, nil)
-
-	return nil
-}
-
-func (qw *AIQueueWorker) handleThumbnailSelection(ctx context.Context, msg queue.Message) error {
-	fmt.Print("Thumbnail selection request worker begins")
-	var req struct {
-		WorkspaceID string `json:"workspace_id"`
-		pb.ThumbnailRequest
-		JobID string `json:"job_id"`
-	}
-
-	fmt.Printf("thumbnail selection payload %#v", msg)
-
-	data, _ := json.Marshal(msg.Payload)
-	if err := json.Unmarshal(data, &req); err != nil {
-		return &queue.NonRetryableError{
-			Message: fmt.Sprintf("failed to unmarshal thumbnail selection job: %v", err),
-		}
-	}
-
-	if req.JobID == "" {
-		req.JobID = msg.ID
-	}
-
-	serviceID := "select-thumbnail"
-	testimonialID, err := uuid.Parse(req.TestimonialId)
-	if err != nil {
-		qw.logger.Info("invalid testimonial id", zap.String("testimonialID", req.TestimonialId))
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "invalid testimonial ID", err)
-	}
-
-	workspaceID, err := uuid.Parse(req.WorkspaceID)
-	if err != nil {
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "invalid workspace ID", err)
-	}
-
-	testimonial, err := qw.testimonialRepo.FetchByID(ctx, testimonialID, qw.db)
-	if err != nil {
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "invalid testimonial", err)
-	}
-
-	if testimonial.MediaURL == nil {
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "optimization failed - no media url ", nil)
-	}
-
-	qw.updateJobStatusWithService(ctx, req.JobID, serviceID, "processing", 30, nil, nil)
-
-	pbReq := &req.ThumbnailRequest
-	pbReq.MediaUrl = *testimonial.MediaURL
-	pbReq.JobId = req.JobID
-
-	result, err := qw.mediaIntelligence.SelectThumbnail(ctx, pbReq)
-	if err != nil {
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "thumbnail selection failed", err)
-	}
-
-	result_data := models.JSONMap{
-		"thumbnail_urls": result.ThumbnailUrls,
-	}
-
-	if _, err := qw.aiService.SaveResponseToArtifacts(ctx, "thumbnail_selection", workspaceID, &testimonialID, result_data); err != nil {
-		qw.logger.Error("Failed to get thumbnail", zap.Error(err))
-	}
-	fmt.Printf("thumbnail selection result %#v", result)
-
-	qw.updateJobStatusWithService(ctx, req.JobID, serviceID, "completed", 100, map[string]interface{}{
-		"thumbnail_urls": result.ThumbnailUrls,
-	}, nil)
-
-	return nil
-}
-
-func (qw *AIQueueWorker) handleStoryVideoGeneration(ctx context.Context, msg queue.Message) error {
-	var req struct {
-		WorkspaceID string `json:"workspace_id"`
-		pb.StoryModeRequest
-		JobID string `json:"job_id"`
-	}
-
-	fmt.Printf("story video generation payload %#v", msg)
-
-	data, _ := json.Marshal(msg.Payload)
-	if err := json.Unmarshal(data, &req); err != nil {
-		return &queue.NonRetryableError{
-			Message: fmt.Sprintf("failed to unmarshal story video generation job: %v", err),
-		}
-	}
-
-	if req.JobID == "" {
-		req.JobID = msg.ID
-	}
-
-	serviceID := "story-video"
-
-	workspaceID, err := uuid.Parse(req.WorkspaceID)
-	if err != nil {
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "invalid workspace ID", err)
-	}
-
-	qw.updateJobStatusWithService(ctx, req.JobID, serviceID, "processing", 20, nil, nil)
-
-	segments := []*pb.TestimonialSegment{}
-	for _, s := range req.TestimonialSegments {
-		fmt.Println("testimonial ID", s.TestimonialId)
-		if s.MediaUrl == "" && s.TestimonialId == "" {
-			continue
-		}
-
-		if s.Highlights == nil && s.TestimonialId == "" {
-			continue
-		}
-
-		highlights := s.Highlights
-
-		if s.Highlights == nil && s.TestimonialId != "" {
-			testimonialID, err := uuid.Parse(s.TestimonialId)
-			if err != nil {
-				return qw.respondWithFailure(ctx, serviceID, req.JobID, "invalid testimonial ID", err)
-			}
-
-			testimonial, err := qw.testimonialRepo.FetchByID(ctx, testimonialID, qw.db)
-			if err != nil {
-				return qw.respondWithFailure(ctx, serviceID, req.JobID, "invalid testimonial", err)
-			}
-			if testimonial.MediaURL == nil {
-				qw.logger.Info("testimonial has no media URL", zap.String("testimonialID", s.TestimonialId))
-				continue
-			}
-			s.MediaUrl = *testimonial.MediaURL
-
-			highlights, err = qw.getStoryHighlightSegments(ctx, testimonialID, testimonial)
-			if err != nil {
-				return qw.respondWithFailure(ctx, serviceID, req.JobID, "Failed to get highlight moments", err)
-			}
-
-			for i := range highlights {
-				highlights[i].IncludeLogo = true
-				highlights[i].IncludeWatermark = true
-				highlights[i].IncludeTheme = true
-			}
-		}
-
-		s.Highlights = highlights
-		segments = append(segments, s)
-	}
-
-	brandContext := &pb.BrandContext{}
-
-	if req.BrandContext != nil {
-		brandContext = req.BrandContext
-	} else {
-		context, err := qw.workspaceRepo.GetPbBrandContext(ctx, workspaceID, qw.db)
-		if err != nil {
-			return qw.respondWithFailure(ctx, serviceID, req.JobID, "Failed to get highlight moments", err)
-		}
-		brandContext = context
-	}
-
-	pbReq := pb.StoryModeRequest{
-		JobId:               req.JobID,
-		TestimonialSegments: segments,
-		BrandContext:        brandContext,
-		OutputFormat:        req.OutputFormat,
-		AddBackgroundMusic:  true,
-		// BackgroundMusic:     req.BackgroundMusic,
-		MusicVolume: req.BackgroundMusic,
-		Prompt:      req.Prompt,
-		// IntroImageUrl:      "https://images.unsplash.com/photo-1497366216548-37526070297c?w=1920&h=1080&fit=crop",
-		// OutroImageUrl:      "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1920&h=1080&fit=crop",
-		// AddBackgroundMusic: true,
-		CompanyName: "Cenphi",
-	}
-
-	qw.updateJobStatusWithService(ctx, req.JobID, serviceID, "processing", 40, nil, nil)
-
-	result, err := qw.mediaIntelligence.GenerateStoryVideo(ctx, &pbReq)
-	if err != nil {
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "story video generation failed", err)
-	}
-
-	response_data := models.JSONMap{"story_video_url": result.StoryVideoUrl}
-
-	_, err = qw.aiService.SaveResponseToArtifacts(ctx, "story_mode_generation", workspaceID, nil, response_data)
-
-	if err != nil {
-		qw.logger.Error("Failed to save video generation artifact", zap.Error(err))
-	}
-
-	fmt.Printf("story video generation result %#v", result)
-	qw.updateJobStatusWithService(ctx, req.JobID, serviceID, "completed", 100, response_data, nil)
-
-	return nil
-}
-
-func (qw *AIQueueWorker) handleTestimonialTranscription(ctx context.Context, msg queue.Message) error {
-	var req struct {
-		TestimonialID string `json:"testimonial_id"`
-		MediaURL      string `json:"media_url"`
-		JobID         string `json:"job_id"`
-	}
-
-	data, _ := json.Marshal(msg.Payload)
-	if err := json.Unmarshal(data, &req); err != nil {
-		return &queue.NonRetryableError{
-			Message: fmt.Sprintf("failed to unmarshal transcription job: %v", err),
-		}
-	}
-
-	if req.JobID == "" {
-		req.JobID = msg.ID
-	}
-
-	serviceID := "transcription"
-
-	// Update job status to processing
-	qw.updateJobStatusWithService(ctx, req.JobID, serviceID, "processing", 10, nil, nil)
-
-	qw.logger.Info("🎙️ Starting testimonial transcription",
-		zap.String("job_id", req.JobID),
-		zap.String("testimonial_id", req.TestimonialID),
-		zap.String("media_url", req.MediaURL))
-
-	// Call transcription service
-	transcriptionResult, err := qw.aiService.AudioTranscriptionService.TranscribeAudio(req.MediaURL) //use background context
-
-	if err != nil {
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "transcription failed when transcribing audio", err)
-	}
-
-	testimonialID, err := uuid.Parse(req.TestimonialID)
-	if err != nil {
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "transcription failed when parsing testimonial UUID", err)
-	}
-
-	if err := qw.testimonialRepo.UpdateAny(ctx, testimonialID, map[string]any{
-		"content":             transcriptionResult.Transcript,
-		"transcript_segments": transcriptionResult.Segments,
-	}, qw.db); err != nil {
-		qw.logger.Error("Failed to update testimonial with transcript", zap.Error(err))
-	}
-
-	qw.updateJobStatusWithService(ctx, req.JobID, serviceID, "completed", 100, map[string]any{
-		"transcription": transcriptionResult,
-	}, nil)
-
-	qw.logger.Info("✅ Testimonial transcription completed",
-		zap.String("job_id", req.JobID),
-		zap.String("testimonial_id", req.TestimonialID))
-
-	return nil
-}
-
-func (qw *AIQueueWorker) handleTestimonialSentimentAnalysis(ctx context.Context, msg queue.Message) error {
-	var req struct {
-		WorkspaceID   string `json:"workspace_id"`
-		TestimonialID string `json:"testimonial_id"`
-		Content       string `json:"content,omitempty"`
-		Type          string `json:"type"`
-		DependsOn     string `json:"depends_on,omitempty"`
-		JobID         string `json:"job_id"`
-	}
-
-	data, _ := json.Marshal(msg.Payload)
-	if err := json.Unmarshal(data, &req); err != nil {
-		return &queue.NonRetryableError{
-			Message: fmt.Sprintf("failed to unmarshal sentiment job: %v", err),
-		}
-	}
-
-	if req.JobID == "" {
-		req.JobID = msg.ID
-	}
-
-	serviceID := "sentiment-analysis"
-
-	if req.DependsOn != "" {
-		dependencyReady, err := qw.checkJobDependency(ctx, req.DependsOn)
-		if err != nil {
-			return qw.respondWithFailure(ctx, serviceID, req.JobID, "invalid testimonial ID", err)
-		}
-
-		if !dependencyReady {
-			// Dependency not ready yet - this is RETRYABLE
-			qw.logger.Info("Sentiment analysis waiting for transcription",
-				zap.String("job_id", req.JobID),
-				zap.String("depends_on", req.DependsOn),
-				zap.String("testimonial_id", req.TestimonialID))
-
-			return fmt.Errorf("dependency job %s not complete yet, retrying", req.DependsOn)
-		}
-	}
-
-	// Update job status to processing
-	qw.updateJobStatusWithService(ctx, req.JobID, serviceID, "processing", 10, nil, nil)
-
-	qw.logger.Info("💭 Starting testimonial sentiment analysis",
-		zap.String("job_id", req.JobID),
-		zap.String("testimonial_id", req.TestimonialID),
-		zap.String("type", req.Type))
-
-	testimonialID, err := uuid.Parse(req.TestimonialID)
-	if err != nil {
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "invalid testimonial ID", err)
-	}
-
-	workspaceID, err := uuid.Parse(req.WorkspaceID)
-	if err != nil {
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "invalid workspace ID", err)
-	}
-
-	// Get testimonial content (either from payload or from database)
-	var content string
-	if req.Content != "" {
-		content = req.Content
-	} else {
-		// For video, get the transcript from the testimonial
-		testimonial, err := qw.testimonialRepo.FetchByID(ctx, testimonialID, qw.db)
-		if err != nil {
-			return qw.respondWithFailure(ctx, serviceID, req.JobID, "failed to get testimonial", err)
-		}
-
-		if testimonial.Content == nil || *testimonial.Content == "" {
-			return qw.respondWithFailure(ctx, serviceID, req.JobID, "no content available for sentiment analysis", err)
-		}
-		content = *testimonial.Content
-	}
-
-	// Call sentiment analysis service
-	result, err := qw.aiService.SentimentService.AnalyzeSentiment(ctx, content, nil, "")
-	if err != nil {
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "sentiment analysis failed", err)
-	}
-	// qw.aiService.
-	artifact_id, err := qw.aiService.SaveResponseToArtifacts(ctx, "sentiment_analysis", workspaceID, &testimonialID, models.JSONMap{
-		"sentiment_score":          result.SentimentScore,
-		"label":                    result.Label,
-		"emotions":                 result.Emotions,
-		"business_recommendations": result.BusinessRecommendations,
-	})
-
-	if err != nil {
-		qw.logger.Error("Failed to save sentiment artifact", zap.Error(err))
-	}
-
-	if err := qw.testimonialRepo.UpdateAny(ctx, testimonialID, map[string]any{
-		"sentiment_score": result.SentimentScore,
-	}, qw.db); err != nil {
-		qw.logger.Error("Failed to update testimonial with sentiment score", zap.Error(err))
-	}
-
-	response := map[string]interface{}{
-		"sentiment_result": result,
-		"artifact_id":      artifact_id,
-	}
-
-	qw.updateJobStatusWithService(ctx, req.JobID, serviceID, "completed", 100, response, nil)
-
-	qw.logger.Info("✅ Testimonial sentiment analysis completed",
-		zap.String("job_id", req.JobID),
-		zap.String("testimonial_id", req.TestimonialID),
-		zap.String("label", result.Label))
-
-	return nil
-}
-
-// NEW: Testimonial highlight extraction handler
-func (qw *AIQueueWorker) handleTestimonialHighlightExtraction(ctx context.Context, msg queue.Message) error {
-	var req struct {
-		TestimonialID      string  `json:"testimonial_id"`
-		WorkspaceID        string  `json:"workspace_id"`
-		MaxHighlights      int     `json:"max_highlights"`
-		MinImportanceScore float64 `json:"min_importance_score"`
-		DependsOn          string  `json:"depends_on,omitempty"`
-		JobID              string  `json:"job_id"`
-	}
-
-	data, _ := json.Marshal(msg.Payload)
-	if err := json.Unmarshal(data, &req); err != nil {
-		return &queue.NonRetryableError{
-			Message: fmt.Sprintf("failed to unmarshal highlight job: %v", err),
-		}
-	}
-
-	if req.JobID == "" {
-		req.JobID = msg.ID
-	}
-
-	serviceID := "highlight-extraction"
-
-	if req.DependsOn != "" {
-		dependencyReady, err := qw.checkJobDependency(ctx, req.DependsOn)
-		if err != nil {
-			return qw.respondWithFailure(ctx, serviceID, req.JobID, "invalid testimonial ID", err)
-		}
-
-		if !dependencyReady {
-			// Dependency not ready yet - this is RETRYABLE
-			qw.logger.Info("Highlight extraction waiting for transcription",
-				zap.String("job_id", req.JobID),
-				zap.String("depends_on", req.DependsOn),
-				zap.String("testimonial_id", req.TestimonialID))
-
-			return fmt.Errorf("dependency job %s not complete yet, retrying", req.DependsOn)
-		}
-	}
-
-	// Update job status to processing
-	qw.updateJobStatusWithService(ctx, req.JobID, serviceID, "processing", 10, nil, nil)
-
-	qw.logger.Info("⭐ Starting testimonial highlight extraction",
-		zap.String("job_id", req.JobID),
-		zap.String("testimonial_id", req.TestimonialID))
-
-	testimonialID, err := uuid.Parse(req.TestimonialID)
-	if err != nil {
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "invalid testimonial ID", err)
-	}
-
-	workspaceID, err := uuid.Parse(req.WorkspaceID)
-	if err != nil {
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "invalid workspace ID", err)
-	}
-
-	// // Get testimonial content
-	// testimonial, err := qw.testimonialRepo.FetchByID(ctx, testimonialID, qw.db)
-	// if err != nil {
-	// 	return qw.respondWithFailure(ctx, serviceID, req.JobID, "failed to get testimonial", err)
-	// }
-
-	// if testimonial.Content == nil || *testimonial.Content == "" {
-	// 	return qw.respondWithFailure(ctx, serviceID, req.JobID, "testimonial has no content for highlight extraction", err)
-	// }
-
-	// // Convert transcript segments for highlight service
-	// var segments = testimonial.TranscriptSegments
-
-	// Extract highlights
-	// highlights, err := qw.aiService.HighlightService.ExtractHighlights(ctx, *testimonial.Content, *segments, "")
-	highlightRequest := HighlightRequest{
-		// Text:          *testimonial.Content,
-		// Segments:      *segments,
-		TestimonialID: testimonialID,
-		HighlightType: HighlightType("general"),
-	}
-
-	highlights, err := qw.aiService.HighlightService.ExtractHighlightsByType(ctx, highlightRequest)
-	if err != nil {
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "highlight extraction failed", err)
-	}
-
-	// Save highlights artifact
-	artifact_id, err := qw.aiService.SaveResponseToArtifacts(ctx, "highlight_extraction", workspaceID, &testimonialID, models.JSONMap{
-		"highlights":           highlights,
-		"max_highlights":       req.MaxHighlights,
-		"min_importance_score": req.MinImportanceScore,
-	})
-
-	if err != nil {
-		qw.logger.Error("Failed to save highlights artifact", zap.Error(err), zap.String("testimonialID", req.TestimonialID))
-	}
-
-	response := map[string]interface{}{
-		"highlights":  highlights,
-		"artifact_id": artifact_id,
-	}
-
-	qw.updateJobStatusWithService(ctx, req.JobID, serviceID, "completed", 100, response, nil)
-
-	qw.logger.Info("✅ Testimonial highlight extraction completed",
-		zap.String("job_id", req.JobID),
-		zap.String("testimonial_id", req.TestimonialID),
-		zap.Int("highlights_count", len(highlights)))
-
-	return nil
-}
-
 // isNonRetryableError determines if an error should not be retried
 func (qw *AIQueueWorker) isNonRetryableError(err error) bool {
+	// Add nil check
+	if err == nil {
+		return false
+	}
+
 	errorStr := err.Error()
 
 	// Configuration/deployment errors - don't retry
@@ -1326,69 +379,9 @@ func (qw *AIQueueWorker) checkJobDependency(ctx context.Context, dependsOnJobID 
 	}
 }
 
-func (qw *AIQueueWorker) getStoryHighlightSegments(ctx context.Context, testimonialId uuid.UUID, testimonial *models.Testimonial) ([]*pb.HighlightMoment, error) {
-	artifacts, err := qw.artifactRepo.GetByTestimonialID(ctx, testimonialId, qw.db)
-
-	if err != nil {
-		return nil, err
-	}
-
-	var latest_artifact *models.TestimonialArtifact
-	for i := range artifacts {
-		a := &artifacts[i]
-		if a.ProcessingType == "highlight_extraction" &&
-			(latest_artifact == nil || a.CreatedAt.After(latest_artifact.CreatedAt)) {
-			latest_artifact = a
-		}
-	}
-
-	var highlights []*pb.HighlightMoment
-	if latest_artifact != nil && latest_artifact.Data != nil {
-		// if val, ok := latest_artifact.Data["highlights"].([]*pb.HighlightMoment); ok {
-		// 	highlights = val
-		// }
-		if raw, ok := latest_artifact.Data["highlights"]; ok {
-			b, err := json.Marshal(raw)
-			if err == nil {
-				if err := json.Unmarshal(b, &highlights); err != nil {
-					log.Printf("failed to unmarshal highlights from artifact: %v", err)
-				}
-			} else {
-				log.Printf("failed to marshal highlights raw: %v", err)
-			}
-		}
-	}
-
-	if len(highlights) == 0 {
-		if testimonial.Content == nil || testimonial.TranscriptSegments == nil {
-			return nil, fmt.Errorf("testimonial content/transcript is nil; cannot extract highlights")
-		}
-
-		highlights, err = qw.aiService.HighlightService.ExtractHighlights(ctx, *testimonial.Content, *testimonial.TranscriptSegments, "")
-		if err != nil {
-			return nil, err
-		}
-		artifact := &models.TestimonialArtifact{
-			ID:             uuid.New(),
-			TestimonialID:  &testimonialId,
-			ProcessingType: "highlight_extraction",
-			ResultCategory: "content",
-			Data:           models.JSONMap{"highlights": highlights},
-			ContentType:    "highlights",
-			IsStreamed:     false,
-		}
-
-		err = qw.artifactRepo.Create(ctx, artifact, qw.db)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return highlights, nil
-
-}
-
 func (qw *AIQueueWorker) updateJobStatusWithService(ctx context.Context, jobID, serviceID, status string, progress int, result interface{}, err error) {
 	// Enhance result with metadata
+
 	enhancedResult := result
 	if result != nil {
 		if resultMap, ok := result.(map[string]interface{}); ok {
@@ -1405,6 +398,19 @@ func (qw *AIQueueWorker) updateJobStatusWithService(ctx context.Context, jobID, 
 			"service_id": serviceID,
 		}
 	}
+
+	jobResult := queue.JobResult{
+		ID:        jobID,
+		Status:    status,
+		Progress:  progress,
+		Result:    enhancedResult,
+		UpdatedAt: time.Now(),
+	}
+	if err != nil {
+		jobResult.Error = err.Error()
+	}
+
+	qw.sseNotifier.NotifyClients(jobResult)
 
 	// ONLY update Redis - remove all database updates
 	qw.queueService.SetJobStatus(ctx, jobID, status, progress, enhancedResult, func(j *queue.JobResult) {
@@ -1480,4 +486,170 @@ func (qw *AIQueueWorker) monitorJobCancellation(jobCtx context.Context, jobID st
 func (qw *AIQueueWorker) respondWithCancellation(ctx context.Context, serviceID, jobID string) error {
 	qw.updateJobStatusWithService(ctx, jobID, serviceID, "cancelled", 100, nil, nil)
 	return &queue.NonRetryableError{Message: "Job was cancelled"}
+}
+
+func (qw *AIQueueWorker) getSourceData(ctx context.Context, source models.CreateArtifactSourceParams) (SourceParam, error) {
+	s := SourceParam{}
+	switch source.Type {
+	case models.TestimonialTypeSource:
+		// processing on original testimonial
+		tID, err := uuid.Parse(source.Data.(string))
+		if err != nil {
+			return SourceParam{}, fmt.Errorf("invalid testimonial ID %v", err)
+		}
+		s.testimonialID = tID
+
+		testimonial, err := qw.testimonialRepo.FetchForAIProcessing(ctx, tID, qw.db)
+		if err != nil {
+			return SourceParam{}, fmt.Errorf("testimonial not found %v", err)
+		}
+		s.mediaURL = *testimonial.MediaURL
+		s.content = *testimonial.Content
+		s.transcriptSegments = *testimonial.TranscriptSegments
+
+	case models.ArtifactTypeSource:
+		// processing on existing artifact (e.g., clip)
+		artifactID, err := uuid.Parse(source.Data.(string))
+		fmt.Println("artifactID", artifactID)
+		if err != nil {
+			return SourceParam{}, fmt.Errorf("invalid artifact ID %v", err)
+		}
+
+		var artifact *models.TestimonialArtifact
+		if source.RawData != nil {
+			// If raw data is provided, use it directly
+			b, _ := json.Marshal(source.RawData)
+			var a models.TestimonialArtifact
+			if err := json.Unmarshal(b, &a); err != nil {
+				return SourceParam{}, fmt.Errorf("failed to unmarshal raw artifact data: %w", err)
+			}
+			artifact = &a
+
+			if artifact.TestimonialID == nil && source.ParentTestimonialId != "" {
+				parentID, err := uuid.Parse(source.ParentTestimonialId)
+				if err == nil {
+					artifact.TestimonialID = &parentID
+				}
+			}
+
+			fmt.Println("Using raw artifact data:")
+		} else {
+			artifact, err := qw.artifactRepo.GetByID(ctx, artifactID, qw.db)
+			fmt.Println("artifact", artifact)
+			if err != nil {
+				return SourceParam{}, fmt.Errorf("artifact not found %v", err)
+			}
+		}
+
+		log.Printf("asset url %v", *artifact.AssetURL)
+
+		if artifact.AssetURL != nil {
+			s.mediaURL = *artifact.AssetURL
+		} else {
+			return SourceParam{}, fmt.Errorf("artifact asset url is required but missing")
+		}
+
+		if artifact.TestimonialID != nil {
+			s.testimonialID = *artifact.TestimonialID
+		} else {
+			// check processing metadata for testimonial ID
+			if testimonialIDs, ok := artifact.ProcessingMetadata["testimonial_ids"].([]string); ok {
+				if len(testimonialIDs) > 0 {
+					if tid, err := uuid.Parse(testimonialIDs[0]); err == nil {
+						s.testimonialID = tid
+					}
+				}
+			} else {
+				return SourceParam{}, fmt.Errorf("artifact testimonial ID is required but missing")
+			}
+
+		}
+
+		if artifact.TextContent != nil {
+			s.content = *artifact.TextContent
+		} else {
+			// For media-only artifacts, text content might not be available
+			s.content = ""
+		}
+		s.artifactID = artifactID
+		s.artifact = artifact
+
+		fmt.Println("mediaURL", *artifact.AssetURL)
+		if start_time, ok := artifact.ProcessingMetadata["start_time"].(float64); ok {
+			s.startTime = &start_time
+
+			if end_time, ok := artifact.ProcessingMetadata["end_time"].(float64); ok {
+				s.endTime = &end_time
+			}
+		}
+
+		if processed_segments, ok := artifact.ProcessingMetadata["processed_segments"].([]*pb.ProcessedSegment); ok {
+			s.processedSegments = processed_segments
+		}
+
+	case models.ClipTypeSource:
+		// processing on specific clip
+		var clipData models.ClipSource
+		switch data := source.Data.(type) {
+		case models.ClipSource:
+			clipData = data
+		case map[string]any:
+			b, _ := json.Marshal(data)
+			if err := json.Unmarshal(b, &clipData); err != nil {
+				return SourceParam{}, fmt.Errorf("failed to unmarshal ClipSource: %w", err)
+			}
+		default:
+			return SourceParam{}, fmt.Errorf("unexpected data type for source.Data: %T", source.Data)
+		}
+
+		artifact, err := qw.artifactRepo.GetByID(ctx, clipData.ArtifactID, qw.db)
+		if err != nil {
+			return SourceParam{}, fmt.Errorf("clip artifact not found %v", err)
+		}
+
+		if artifact.TestimonialID == nil {
+			return SourceParam{}, fmt.Errorf("clip artifact testimonial ID is required but missing")
+		}
+		s.testimonialID = *artifact.TestimonialID
+
+		// Find the specific clip and extract its data
+		var clipStartTimeMs, clipEndTimeMs float64
+		var clipText string
+		var foundClip bool
+
+		if data, ok := artifact.Data["generated_clips"]; ok {
+			var resp pb.ClippingResponse
+			if b, err := json.Marshal(data); err == nil {
+				if err := json.Unmarshal(b, &resp); err == nil {
+					for _, clip := range resp.Clips {
+						if clip.Id == clipData.ClipID.String() {
+							s.mediaURL = clip.Url
+							clipText = clip.Text
+							clipStartTimeMs = clip.StartTime
+							clipEndTimeMs = clip.EndTime
+							foundClip = true
+							break
+						}
+					}
+				}
+			}
+		}
+
+		if !foundClip {
+			return SourceParam{}, fmt.Errorf("clip not found in artifact data")
+		}
+
+		// Set basic clip info (no transcript segments here - handled by specific services that need them)
+		s.content = clipText
+		s.startTime = &clipStartTimeMs // Original testimonial timing
+		s.endTime = &clipEndTimeMs     // Original testimonial timing
+
+		fmt.Printf("Clip source data: %s - %.0fms-%.0fms, content length: %d\n",
+			clipData.ClipID.String(), clipStartTimeMs, clipEndTimeMs, len(clipText))
+
+	default:
+		return SourceParam{}, errors.New("unsupported source type")
+	}
+
+	return s, nil
 }

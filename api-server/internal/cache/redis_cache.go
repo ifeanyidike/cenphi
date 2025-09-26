@@ -30,22 +30,29 @@ func (c *RedisCache) Close() error {
 }
 
 // Set sets a value in the cache
-func (c *RedisCache) Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error {
-	// Convert value to JSON if it's not a string
-	var strValue string
-	switch v := value.(type) {
-	case string:
-		strValue = v
-	default:
-		jsonBytes, err := json.Marshal(value)
-		if err != nil {
-			return fmt.Errorf("failed to marshal value to JSON: %w", err)
-		}
-		strValue = string(jsonBytes)
+func (c *RedisCache) Set(ctx context.Context, key string, value interface{}, expiration ...time.Duration) error {
+	// // Convert value to JSON if it's not a string
+	// var strValue string
+	// switch v := value.(type) {
+	// case string:
+	// 	strValue = v
+	// default:
+	// 	jsonBytes, err := json.Marshal(value)
+	// 	if err != nil {
+	// 		return fmt.Errorf("failed to marshal value to JSON: %w", err)
+	// 	}
+	// 	strValue = string(jsonBytes)
+	// }
+
+	// // Set in Redis
+	// return c.client.Set(ctx, key, strValue, expiration).Err()
+
+	var ttl time.Duration
+	if len(expiration) > 0 {
+		ttl = expiration[0]
 	}
 
-	// Set in Redis
-	return c.client.Set(ctx, key, strValue, expiration).Err()
+	return c.SetWithTTL(ctx, key, value, ttl)
 }
 
 // Get gets a value from the cache
@@ -109,4 +116,30 @@ func (c *RedisCache) Publish(ctx context.Context, channel string, message interf
 // Subscribe subscribes to a channel
 func (c *RedisCache) Subscribe(ctx context.Context, channel string) *redis.PubSub {
 	return c.client.Subscribe(ctx, channel)
+}
+
+func (r *RedisCache) SetWithTTL(ctx context.Context, key string, value interface{}, ttl time.Duration) error {
+	var data []byte
+	var err error
+
+	// Handle different value types
+	switch v := value.(type) {
+	case string:
+		data = []byte(v)
+	case []byte:
+		data = v
+	default:
+		data, err = json.Marshal(value)
+		if err != nil {
+			return fmt.Errorf("failed to marshal value: %w", err)
+		}
+	}
+
+	// Set with TTL
+	err = r.client.Set(ctx, key, data, ttl).Err()
+	if err != nil {
+		return fmt.Errorf("failed to set key with TTL: %w", err)
+	}
+
+	return nil
 }

@@ -119,7 +119,7 @@ class NarrationGenerator:
                         results.append({
                             "testimonial_id": option.get('testimonial_id', 'unknown'),
                             "audio_url": result.get("audio_url", ""),
-                            "audio_duration_seconds": result.get("audio_duration_seconds", 0.0),
+                            "duration": result.get("duration", 0.0),
                             "voice_provider": result.get("voice_provider", "elevenlabs"),
                             "quality_score": result.get("quality_score", 0.0),
                             "processed_text": result.get("processed_text", ""),
@@ -131,7 +131,7 @@ class NarrationGenerator:
                         results.append({
                             "testimonial_id": option.get('testimonial_id', 'unknown'),
                             "audio_url": "",
-                            "audio_duration_seconds": 0.0,
+                            "duration": 0.0,
                             "voice_provider": "elevenlabs",
                             "quality_score": 0.0,
                             "processed_text": "",
@@ -197,7 +197,7 @@ class NarrationGenerator:
                     logger.info(f"✅ Using cached intro URL: {cache_path}")
                     return {
                         "audio_url": cache_url,
-                        "audio_duration_seconds": self.storage_manager.get_video_duration(cache_url),
+                        "duration": self.storage_manager.get_video_duration(cache_url),
                         "voice_provider": "",
                         "quality_score": "",
                         "processed_text": "",
@@ -269,7 +269,7 @@ class NarrationGenerator:
             
             return {
                 "audio_url": audio_url,
-                "audio_duration_seconds": duration,
+                "duration": duration,
                 "voice_provider": "elevenlabs",
                 "quality_score": quality_score,
                 "processed_text": optimized_text,
@@ -493,7 +493,7 @@ class NarrationGenerator:
         """Create standardized error response"""
         return {
             "audio_url": "",
-            "audio_duration_seconds": 0.0,
+            "duration": 0.0,
             "voice_provider": "elevenlabs",
             "quality_score": 0.0,
             "processed_text": "",

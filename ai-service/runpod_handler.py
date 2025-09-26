@@ -179,7 +179,6 @@ def handle_optimization(input_data):
             brand_context=input_data.get("brand_context"),
             transcript=input_data.get("transcript"),
             optimization_quality=input_data.get("optimization_quality"),
-            max_moments=input_data.get("max_moments"),
             enable_transitions=input_data.get("enable_transitions", True),
             add_branding=input_data.get("add_branding", True),
             background_music=input_data.get("background_music"),

@@ -4,9 +4,8 @@ import { Testimonial } from "@/types/testimonial";
 import { makeAutoObservable, runInAction } from "mobx";
 import { WorkspaceOrchestrator } from "../workspace_hub";
 import { MemberManager } from "./member";
-import { mockTestimonials } from "@/utils/mock";
-import { authStateManager } from "./auth_state_manager";
 import axios from "axios";
+import { authStore } from "@/stores/authStore";
 
 /**
  * Manages testimonial-related operations within a workspace.
@@ -43,7 +42,6 @@ export class TestimonialManager {
   async getTestimonials() {
     // Start loading
     this.loading_testimonials = true;
-    console.log("In here");
 
     try {
       // const workspaceID = this.memberManager.member?.workspace_id;
@@ -55,8 +53,7 @@ export class TestimonialManager {
       // console.log("workspaceID", workspaceID);
 
       // const url = `${this.workspaceOrchestrator.server}/${workspaceID}/testimonials`;
-      const { token } = await authStateManager.getToken();
-      console.log("In here 2");
+      const { token } = await authStore.getToken();
 
       // const response = await fetch(this.server_addr, {
       //   method: "GET",
@@ -85,7 +82,6 @@ export class TestimonialManager {
       console.error("Error fetching testimonials:", error);
       throw error;
     } finally {
-      console.log("out here");
       this.loading_testimonials = false;
     }
   }
@@ -122,7 +118,7 @@ export class TestimonialManager {
       if (!id) return;
 
       const url = `${this.server_addr}/${id}`;
-      const { token } = await authStateManager.getToken();
+      const { token } = await authStore.getToken();
 
       // const response = await fetch(url, {
       //   method: "GET",
@@ -159,16 +155,30 @@ export class TestimonialManager {
     }
   }
 
-  getMockTestimonial(id: string) {
-    // Mock data generation based on ID
-    // In a real app, this would come from your API
-    const type = id.includes("video")
-      ? "video"
-      : id.includes("audio")
-        ? "audio"
-        : id.includes("image")
-          ? "image"
-          : "text";
-    return mockTestimonials.find((m) => m.format === type);
+  /**
+   * Gets artifacts that were created from multiple testimonials
+   * (content_generation, text_polishing, translation)
+   */
+  getMultiTestimonialArtifacts() {
+    if (!this.testimonials) return [];
+
+    const multiTypes = ["content_generation", "text_polishing", "translation"];
+    const allArtifacts = this.testimonials.flatMap(testimonial =>
+      (testimonial.artifacts || []).filter(artifact =>
+        multiTypes.includes(artifact.processing_type) &&
+        artifact.data &&
+        typeof artifact.data === 'object' &&
+        'testimonial_ids' in artifact.data &&
+        Array.isArray((artifact.data as any).testimonial_ids) &&
+        (artifact.data as any).testimonial_ids.length > 0
+      )
+    );
+
+    // Remove duplicates by ID
+    const uniqueArtifacts = allArtifacts.filter((artifact, index, self) =>
+      index === self.findIndex(a => a.id === artifact.id)
+    );
+
+    return uniqueArtifacts;
   }
 }

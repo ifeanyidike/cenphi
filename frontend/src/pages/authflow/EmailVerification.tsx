@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { getAuth, applyActionCode, sendEmailVerification } from "firebase/auth";
 import { CheckCircle, AlertTriangle, Loader2 } from "lucide-react";
 import confetti from "canvas-confetti";
+import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/nav";
 import Footer from "@/components/custom/footer";
 import { FirebaseErrorHandler } from "@/services/error";
@@ -17,6 +18,7 @@ type Props = {
 };
 
 const EmailVerificationPage: React.FC<Props> = observer((props) => {
+  const navigate = useNavigate();
   const [status, setStatus] = useState<VerificationStatus>("loading");
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [countdown, setCountdown] = useState<number>(5);
@@ -59,7 +61,7 @@ const EmailVerificationPage: React.FC<Props> = observer((props) => {
             if (prev <= 1) {
               clearInterval(timer);
               // Redirect to onboarding
-              window.location.href = "/pricing?workflow=onboarding";
+              navigate("/pricing?workflow=onboarding");
               return 0;
             }
             return prev - 1;
@@ -125,7 +127,7 @@ const EmailVerificationPage: React.FC<Props> = observer((props) => {
                   </div>
                   <button
                     onClick={() =>
-                      (window.location.href = "/pricing?workflow=onboarding")
+                      navigate("/pricing?workflow=onboarding")
                     }
                     className="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
                   >
@@ -158,7 +160,7 @@ const EmailVerificationPage: React.FC<Props> = observer((props) => {
                       Resend Verification Email
                     </button>
                     <button
-                      onClick={() => (window.location.href = "/support")}
+                      onClick={() => navigate("/support")}
                       className="w-full bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium py-3 px-4 rounded-lg transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50"
                     >
                       Contact Support

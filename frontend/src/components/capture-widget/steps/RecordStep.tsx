@@ -2,49 +2,24 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useTestimonial } from "../contexts/TestimonialContext";
 import BrowserCompatibilityCheck from "./BrowserCompatibilityCheck";
-import { useWebSocket } from "../hooks/useWebSocket";
 import { useMediaRecorder } from "../hooks/useMediaRecorder";
 import Button from "../ui/Button";
 import Icon from "../ui/Icon";
-import { TestimonialStep, ConnectionStatus } from "../types";
-import { formatTime, generateSessionId } from "../utils/formatting";
+import { TestimonialStep } from "../types";
+import { formatTime } from "../utils/formatting";
 import { setupAudioVisualization } from "../utils/media";
 import { useThemeVariables } from "../hooks/useThemeVariables";
 
-interface SessionState {
-  currentQuestion: string;
-  questionIndex: number;
-  totalQuestions: number;
-  isInterviewComplete: boolean;
-  recordingStartTime: number | null;
-  allResponses: string[];
-}
-
 const RecordStep: React.FC = () => {
   const { state, dispatch } = useTestimonial();
-  const { config, mediaType, userCameraChoice, transcriptText } = state;
+  const { config, mediaType, userCameraChoice } = state;
   const { getBrandBackground } = useThemeVariables();
 
-  // Session management
-  const [sessionId] = useState(() => generateSessionId());
-  const [sessionState, setSessionState] = useState<SessionState>({
-    currentQuestion:
-      "What problem were you trying to solve before using our solution?",
-    questionIndex: 0,
-    totalQuestions: 3,
-    isInterviewComplete: false,
-    recordingStartTime: null,
-    allResponses: [],
-  });
-
-  // UI state
+  // Simple UI state
   const [showCountdown, setShowCountdown] = useState(false);
   const [countdownValue, setCountdownValue] = useState(3);
-  const [aiHint, setAiHint] = useState<string | null>(null);
-  const [connectionStatus, setConnectionStatus] =
-    useState<ConnectionStatus>("disconnected");
 
-  // Audio visualization
+  // Audio visualization for audio testimonials
   const [visualizerBars, setVisualizerBars] = useState<number[]>(
     Array(30).fill(10)
   );
@@ -54,116 +29,41 @@ const RecordStep: React.FC = () => {
     getAverageVolume: () => number;
   } | null>(null);
 
-  // Refs for stable references
-  const sessionStateRef = useRef<SessionState>(sessionState);
-  const isConnectedRef = useRef<boolean>(false);
+  // Countdown interval ref
   const countdownIntervalRef = useRef<number | null>(null);
 
-  // Update ref when state changes
-  useEffect(() => {
-    sessionStateRef.current = sessionState;
-  }, [sessionState]);
+  // Simple data available handler - no streaming, just collect chunks
+  const handleDataAvailable = (_chunk: Blob) => {
+    // Just let the media recorder collect the chunks
+  };
 
-  // WebSocket message handler
-  const handleWebSocketMessage = useCallback(
-    (data: any) => {
-      console.log("📨 Received WebSocket message:", data.type, data);
+  // Simple recording finished handler
+  const handleRecordingFinished = (finalChunks: Blob[]) => {
+    if (finalChunks.length === 0) {
+      dispatch({
+        type: "SET_ERROR",
+        payload: "Recording failed to capture any media. Please try again.",
+      });
+      return;
+    }
 
-      switch (data.type) {
-        case "welcome":
-          console.log("✅ Connected to interview session");
-          if (data.data?.question) {
-            setSessionState((prev) => ({
-              ...prev,
-              currentQuestion: data.data.question,
-              questionIndex: 0,
-            }));
-          }
-          if (data.data?.session) {
-            const session = data.data.session;
-            setSessionState((prev) => ({
-              ...prev,
-              totalQuestions: session.max_questions || 3,
-            }));
-          }
-          break;
+    const totalSize = finalChunks.reduce((size, chunk) => size + chunk.size, 0);
+    if (totalSize === 0) {
+      dispatch({
+        type: "SET_ERROR",
+        payload: "Recording produced empty media. Please try again.",
+      });
+      return;
+    }
 
-        case "transcript":
-          console.log("📝 Transcript update:", data.data?.text);
-          if (data.data?.text) {
-            dispatch({ type: "SET_TRANSCRIPT", payload: data.data.text });
-          }
-          break;
+    // Store the recorded chunks for review
+    dispatch({ type: "SET_RECORDED_CHUNKS", payload: finalChunks });
 
-        case "next_question":
-          console.log("❓ Next question:", data.data?.question);
-          if (data.data?.question) {
-            // Save current response before moving to next question
-            setSessionState((prev) => ({
-              ...prev,
-              currentQuestion: data.data.question,
-              questionIndex: prev.questionIndex + 1,
-              allResponses: [...prev.allResponses, transcriptText || ""],
-            }));
-            // Reset transcript for new question but keep recording going
-            dispatch({ type: "SET_TRANSCRIPT", payload: "" });
-          }
-          break;
-
-        case "interview_complete":
-          console.log("✅ Interview completed");
-          setSessionState((prev) => ({
-            ...prev,
-            isInterviewComplete: true,
-          }));
-          // Transition to review step
-          setTimeout(() => {
-            dispatch({ type: "SET_STEP", payload: TestimonialStep.Review });
-          }, 1000);
-          break;
-
-        case "hint":
-          if (data.data?.text && config.showAIHints) {
-            setAiHint(data.data.text);
-            setTimeout(() => setAiHint(null), 5000);
-          }
-          break;
-
-        case "error":
-          console.error("❌ WebSocket error:", data.data?.message);
-          break;
-
-        // Ignore internal messages like pong
-        case "pong":
-          // This is handled internally by the WebSocket hook
-          break;
-
-        default:
-          console.log("⚠️ Unknown message type:", data.type);
-      }
-    },
-    [config.showAIHints, dispatch]
-  );
-
-  // WebSocket connection
-  const wsClient = useWebSocket(config.websocketBaseUrl, {
-    onMessage: handleWebSocketMessage,
-    onConnect: () => {
-      console.log("🔌 WebSocket connected to interview session");
-      setConnectionStatus("connected");
-      isConnectedRef.current = true;
-    },
-    onDisconnect: () => {
-      console.log("🔌 WebSocket disconnected from interview session");
-      setConnectionStatus("disconnected");
-      isConnectedRef.current = false;
-    },
-    onError: (error) => {
-      console.error("🔌 WebSocket connection error:", error);
-      setConnectionStatus("disconnected");
-    },
-    heartbeatInterval: 30000, // 30 seconds between pings
-  });
+    // Move to review step after brief delay
+    setTimeout(() => {
+      dispatch({ type: "SET_STEP", payload: TestimonialStep.Review });
+    }, 1500);
+  };
 
   // Media recorder with improved reliability
   const {
@@ -177,7 +77,7 @@ const RecordStep: React.FC = () => {
     mediaStream,
     videoRef,
     error: recorderError,
-    isInitialized,
+    isInitialized: _isInitialized,
   } = useMediaRecorder(mediaType, userCameraChoice, {
     onDataAvailable: handleDataAvailable,
     onStop: handleRecordingFinished,
@@ -185,60 +85,11 @@ const RecordStep: React.FC = () => {
     maxDuration: config.maxDuration,
   });
 
-  // Initialize WebSocket connection
+  // Set up audio visualizer for audio testimonials
   useEffect(() => {
-    if (sessionId && config.campaignId) {
-      const path = `/ws/interview/${config.campaignId}?session=${sessionId}`;
-      console.log("🔌 Connecting to WebSocket:", path);
-      wsClient.connect(path);
-    }
+    if (mediaType === "video") return; // Only for audio testimonials
 
-    return () => {
-      wsClient.disconnect();
-      if (visualizerRef.current) {
-        visualizerRef.current.stop();
-      }
-    };
-  }, [sessionId, config.campaignId]);
-
-  // Send author info when connected
-  useEffect(() => {
-    if (connectionStatus === "connected" && !isConnectedRef.current) {
-      isConnectedRef.current = true;
-
-      const clientInfo = {
-        type: "client_info",
-        sessionId: sessionId,
-        data: {
-          authorInfo: {
-            name: state.authorInfo.name || "",
-            email: state.authorInfo.email || "",
-            company: state.authorInfo.company || "",
-            position: state.authorInfo.position || "",
-          },
-          campaignId: config.campaignId,
-          mediaType: mediaType,
-        },
-        timestamp: Date.now(),
-      };
-
-      console.log("📤 Sending client info:", clientInfo);
-      wsClient.send(clientInfo);
-    }
-  }, [
-    connectionStatus,
-    sessionId,
-    state.authorInfo,
-    config.campaignId,
-    mediaType,
-    wsClient,
-  ]);
-
-  // Set up audio visualizer
-  useEffect(() => {
-    if (mediaType === "audio" && mediaStream && isRecording) {
-      console.log("🎵 Setting up audio visualizer");
-
+    if (mediaStream && isRecording) {
       const visualizer = setupAudioVisualization(mediaStream, (dataArray) => {
         const newBars = Array(30)
           .fill(0)
@@ -254,91 +105,15 @@ const RecordStep: React.FC = () => {
       visualizer.start();
 
       return () => {
-        console.log("🧹 Cleaning up audio visualizer");
         visualizer.stop();
       };
     }
   }, [mediaType, mediaStream, isRecording]);
 
-  // Data available handler
-  function handleDataAvailable(chunk: Blob) {
-    // Send chunk to WebSocket for real-time processing
-    if (isConnectedRef.current && chunk.size > 0) {
-      sendMediaChunkToWebSocket(chunk, false);
-    }
-  }
 
-  // Recording finished handler
-  function handleRecordingFinished(finalChunks: Blob[]) {
-    console.log("🎬 Recording finished with", finalChunks.length, "chunks");
-
-    if (finalChunks.length === 0) {
-      console.error("❌ No chunks received!");
-      dispatch({
-        type: "SET_ERROR",
-        payload: "Recording failed to capture any media. Please try again.",
-      });
-      return;
-    }
-
-    const totalSize = finalChunks.reduce((size, chunk) => size + chunk.size, 0);
-    console.log(`📊 Total recorded data: ${totalSize} bytes`);
-
-    if (totalSize === 0) {
-      console.error("❌ All chunks have zero size!");
-      dispatch({
-        type: "SET_ERROR",
-        payload: "Recording failed to capture media data. Please try again.",
-      });
-      return;
-    }
-
-    // Set chunks in state
-    dispatch({ type: "SET_RECORDED_CHUNKS", payload: finalChunks });
-
-    // Send final chunk with completion flag
-    if (isConnectedRef.current && finalChunks.length > 0) {
-      const lastChunk = finalChunks[finalChunks.length - 1];
-      sendMediaChunkToWebSocket(lastChunk, true);
-    }
-
-    // Stop audio visualizer
-    if (visualizerRef.current) {
-      visualizerRef.current.stop();
-    }
-  }
-
-  // Send media chunk to WebSocket
-  async function sendMediaChunkToWebSocket(chunk: Blob, isLastChunk: boolean) {
-    try {
-      const reader = new FileReader();
-      reader.onloadend = function () {
-        const base64data = (reader.result as string).split(",")[1];
-
-        const message = {
-          type: "media_chunk",
-          sessionId: sessionId,
-          data: {
-            data: base64data,
-            mediaType: mediaType,
-            isLastChunk: isLastChunk,
-            timestamp: Date.now(),
-          },
-          timestamp: Date.now(),
-        };
-
-        wsClient.send(message);
-      };
-      reader.readAsDataURL(chunk);
-    } catch (err) {
-      console.error("❌ Error sending media chunk:", err);
-    }
-  }
 
   // Start recording with countdown
   const handleStartRecording = useCallback(() => {
-    console.log("🎬 Starting recording process...");
-
     setShowCountdown(true);
     setCountdownValue(3);
 
@@ -351,11 +126,6 @@ const RecordStep: React.FC = () => {
           }
           setShowCountdown(false);
           startRecording();
-          // Mark recording start time
-          setSessionState((prevState) => ({
-            ...prevState,
-            recordingStartTime: Date.now(),
-          }));
           return 0;
         }
         return prev - 1;
@@ -372,61 +142,11 @@ const RecordStep: React.FC = () => {
     };
   }, []);
 
-  // Question navigation
-  const handleNextQuestion = useCallback(() => {
-    if (isConnectedRef.current) {
-      // Send current response and request next question
-      wsClient.send({
-        type: "recording_complete",
-        sessionId: sessionId,
-        data: {
-          duration: recordingTime,
-          transcript: transcriptText,
-          skipped: false,
-        },
-        timestamp: Date.now(),
-      });
-    }
-  }, [sessionId, recordingTime, transcriptText, wsClient]);
-
-  const handleSkipQuestion = useCallback(() => {
-    if (isConnectedRef.current) {
-      // Skip current question
-      wsClient.send({
-        type: "recording_complete",
-        sessionId: sessionId,
-        data: {
-          duration: 0,
-          transcript: "",
-          skipped: true,
-        },
-        timestamp: Date.now(),
-      });
-    }
-  }, [sessionId, wsClient]);
-
+  // Simple recording controls
   const handleEndRecording = useCallback(() => {
-    // Stop recording and go to review
+    // Stop recording - the media recorder will call handleRecordingFinished
     stopRecording();
-
-    // Send completion message
-    if (isConnectedRef.current) {
-      wsClient.send({
-        type: "interview_complete",
-        sessionId: sessionId,
-        data: {
-          early_completion: true,
-          final_transcript: transcriptText,
-        },
-        timestamp: Date.now(),
-      });
-    }
-
-    // Go to review step after a short delay
-    setTimeout(() => {
-      dispatch({ type: "SET_STEP", payload: TestimonialStep.Review });
-    }, 500);
-  }, [stopRecording, sessionId, transcriptText, wsClient, dispatch]);
+  }, [stopRecording]);
 
   const handleQuitProcess = useCallback(() => {
     // Stop recording and close modal
@@ -434,18 +154,9 @@ const RecordStep: React.FC = () => {
       stopRecording();
     }
 
-    // Disconnect WebSocket
-    wsClient.disconnect();
-
     // Close modal
     dispatch({ type: "CLOSE_MODAL" });
-  }, [isRecording, stopRecording, wsClient, dispatch]);
-
-  // Get progress
-  const progress =
-    sessionState.totalQuestions > 0
-      ? (sessionState.questionIndex / sessionState.totalQuestions) * 100
-      : 0;
+  }, [isRecording, stopRecording, dispatch]);
 
   // Determine recorder class
   const recorderClass =
@@ -496,21 +207,13 @@ const RecordStep: React.FC = () => {
           }}
         >
           <span className="tw-label" style={{ fontSize: "14px" }}>
-            Question {sessionState.questionIndex + 1} of{" "}
-            {sessionState.totalQuestions}
+            {isRecording ? "Recording in progress..." : "Ready to record"}
           </span>
-          <span className="tw-label" style={{ fontSize: "14px" }}>
-            {Math.round(progress)}% Complete
-          </span>
-        </div>
-        <div
-          className="tw-progress"
-          style={{ height: "4px", borderRadius: "2px" }}
-        >
-          <div
-            className="tw-progress-inner"
-            style={{ width: `${progress}%`, borderRadius: "2px" }}
-          />
+          {recordingTime > 0 && (
+            <span className="tw-label" style={{ fontSize: "14px" }}>
+              {formatTime(recordingTime)}
+            </span>
+          )}
         </div>
       </div>
 
@@ -526,15 +229,13 @@ const RecordStep: React.FC = () => {
           />
         )}
 
-        {/* Question overlay */}
+        {/* Recording status overlay */}
         <div className="tw-recorder-overlay">
-          <div className="tw-question">{sessionState.currentQuestion}</div>
+          <div className="tw-question">Share your testimonial</div>
           <div className={`tw-recorder-hint ${isRecording ? "active" : ""}`}>
-            {sessionState.isInterviewComplete
-              ? "Interview complete! Preparing your testimonial..."
-              : isRecording
-                ? `Recording question ${sessionState.questionIndex + 1} of ${sessionState.totalQuestions} - Click "Next Question" to continue or "End & Submit" when done`
-                : "Click record to start your testimonial interview"}
+            {isRecording
+              ? "Recording... Click 'Stop' when finished"
+              : "Click 'Start Recording' to begin sharing your experience"}
           </div>
         </div>
 
@@ -566,29 +267,10 @@ const RecordStep: React.FC = () => {
           </div>
         )}
 
-        {/* AI hint */}
-        {aiHint && (
-          <div className="tw-ai-hint visible">
-            <Icon name="lightbulb" width={16} height={16} />
-            <span>{aiHint}</span>
-          </div>
-        )}
-
-        {/* Connection status */}
-        <div className={`tw-connection-status ${connectionStatus} visible`}>
-          <div className="tw-connection-indicator" />
-          <span>
-            {connectionStatus === "connected"
-              ? "Connected"
-              : connectionStatus === "connecting"
-                ? "Connecting..."
-                : "Disconnected"}
-          </span>
-        </div>
       </div>
 
       {/* Recording controls */}
-      {!sessionState.isInterviewComplete && (
+      {(
         <div
           className="tw-controls"
           style={{ flexDirection: "column", gap: "16px" }}
@@ -651,7 +333,7 @@ const RecordStep: React.FC = () => {
                 </button>
               </div>
 
-              {/* Question navigation and completion */}
+              {/* Recording completion */}
               <div
                 style={{
                   display: "flex",
@@ -661,30 +343,6 @@ const RecordStep: React.FC = () => {
                 }}
               >
                 <Button
-                  variant="secondary"
-                  onClick={handleSkipQuestion}
-                  disabled={
-                    sessionState.questionIndex >=
-                    sessionState.totalQuestions - 1
-                  }
-                  style={{ fontSize: "14px", padding: "8px 16px" }}
-                >
-                  Skip Question
-                </Button>
-
-                <Button
-                  variant="primary"
-                  onClick={handleNextQuestion}
-                  disabled={
-                    sessionState.questionIndex >=
-                    sessionState.totalQuestions - 1
-                  }
-                  style={{ fontSize: "14px", padding: "8px 16px" }}
-                >
-                  Next Question
-                </Button>
-
-                <Button
                   variant="primary"
                   onClick={handleEndRecording}
                   style={{
@@ -693,7 +351,7 @@ const RecordStep: React.FC = () => {
                     backgroundColor: "#059669",
                   }}
                 >
-                  End & Submit
+                  Finish Recording
                 </Button>
 
                 <Button
@@ -709,13 +367,12 @@ const RecordStep: React.FC = () => {
         </div>
       )}
 
-      {/* Transcript display */}
+      {/* Recording status */}
       {config.showTranscription && (
         <div className={`tw-transcript ${isRecording ? "active" : ""}`}>
-          {transcriptText ||
-            (isRecording
-              ? "Your speech will appear here as you speak..."
-              : "Start recording to see live transcription")}
+          {isRecording
+            ? "Recording in progress... Your testimonial is being captured."
+            : "Ready to record your testimonial"}
         </div>
       )}
 

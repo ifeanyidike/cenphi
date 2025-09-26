@@ -1,621 +1,98 @@
 // components/ai-studio/Services.tsx
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { categories } from "./constants";
 import { AI_SERVICES } from "./definitions";
 import {
   Heart,
   Play,
   Settings,
   Target,
-  X,
-  FileText,
-  Languages,
-  Wand2,
-  Sparkles,
+  Clock,
+  ArrowRight,
+  Brain,
 } from "lucide-react";
-
-// Content types for content generation
-const CONTENT_TYPES = [
-  {
-    id: "email",
-    name: "Email Campaign",
-    description:
-      "Professional email campaigns to engage customers and drive conversions",
-  },
-  {
-    id: "blog",
-    name: "Blog Post",
-    description:
-      "SEO-optimized blog articles that showcase customer success stories",
-  },
-  {
-    id: "case_study",
-    name: "Case Study",
-    description:
-      "Detailed analysis showcasing how your solution solved customer challenges",
-  },
-  {
-    id: "fundraising_talking_points",
-    name: "Fundraising Talking Points",
-    description:
-      "Compelling points for investor presentations and funding discussions",
-  },
-  {
-    id: "white_paper",
-    name: "White Paper",
-    description:
-      "In-depth technical documents that establish thought leadership",
-  },
-  {
-    id: "sales_deck",
-    name: "Sales Deck",
-    description:
-      "Persuasive presentation materials for sales meetings and demos",
-  },
-  {
-    id: "roi_analysis",
-    name: "ROI Analysis",
-    description:
-      "Financial impact reports showing value delivered to customers",
-  },
-  {
-    id: "competitive_analysis",
-    name: "Competitive Analysis",
-    description:
-      "Market positioning content highlighting your competitive advantages",
-  },
-  {
-    id: "business_proposal",
-    name: "Business Proposal",
-    description: "Professional proposals for new business opportunities",
-  },
-  {
-    id: "thought_leadership",
-    name: "Thought Leadership Article",
-    description: "Industry insights and expert commentary to build authority",
-  },
-  {
-    id: "customer_success_story",
-    name: "Customer Success Story",
-    description: "Narrative-driven content showcasing customer achievements",
-  },
-  {
-    id: "market_research_report",
-    name: "Market Research Report",
-    description: "Data-driven reports on industry trends and customer insights",
-  },
-  {
-    id: "sales_enablement_guide",
-    name: "Sales Enablement Guide",
-    description: "Training materials and resources for sales teams",
-  },
-  {
-    id: "implementation_guide",
-    name: "Implementation Guide",
-    description: "Step-by-step guides for successful product implementation",
-  },
-  {
-    id: "quarterly_business_review",
-    name: "Quarterly Business Review",
-    description: "Performance summaries and strategic planning documents",
-  },
-];
-
-// Target languages for translation
-const LANGUAGES = [
-  { code: "es", name: "Spanish", flag: "🇪🇸" },
-  { code: "fr", name: "French", flag: "🇫🇷" },
-  { code: "de", name: "German", flag: "🇩🇪" },
-  { code: "it", name: "Italian", flag: "🇮🇹" },
-  { code: "pt", name: "Portuguese", flag: "🇵🇹" },
-  { code: "zh", name: "Chinese", flag: "🇨🇳" },
-  { code: "ja", name: "Japanese", flag: "🇯🇵" },
-  { code: "ko", name: "Korean", flag: "🇰🇷" },
-  { code: "ru", name: "Russian", flag: "🇷🇺" },
-  { code: "ar", name: "Arabic", flag: "🇸🇦" },
-  { code: "nl", name: "Dutch", flag: "🇳🇱" },
-  { code: "sv", name: "Swedish", flag: "🇸🇪" },
-];
-
-// Text polishing styles
-const POLISHING_STYLES = [
-  {
-    id: "professional",
-    name: "Professional",
-    description: "Formal, authoritative tone suitable for business contexts",
-  },
-  {
-    id: "casual",
-    name: "Casual",
-    description: "Friendly, approachable tone for informal communications",
-  },
-  {
-    id: "marketing",
-    name: "Marketing",
-    description: "Persuasive, engaging tone designed to drive action",
-  },
-  {
-    id: "technical",
-    name: "Technical",
-    description: "Precise, detailed tone for technical documentation",
-  },
-  {
-    id: "executive",
-    name: "Executive",
-    description: "Concise, strategic tone for leadership communications",
-  },
-];
+import TranslationModal from "./service-config/TextTranslationConfig";
+import ContentGenerationModal from "./service-config/ContentGeneratorConfig";
+import TextPolishingModal from "./service-config/TextPolishingConfig";
+import { workspaceHub } from "@/repo/workspace_hub";
+import { observer } from "mobx-react-lite";
+import { preset_manager } from "@/repo/managers/preset_manager";
+import { ServiceType } from "@/types/ai-service";
 
 type Props = {
-  handleProcessImmediate: (serviceId: string) => void;
-  handleCustomizeProcess: (serviceId: string) => void;
-  handleStreamingProcess?: (serviceId: string, config: any) => void; // NEW
+  handleProcessImmediate: (serviceId: ServiceType) => void;
+  handleCustomizeProcess: (serviceId: ServiceType) => void;
+  handleStreamingProcess?: (serviceId: ServiceType, config: any) => void;
   selectedCategory: string;
   setSelectedCategory: React.Dispatch<React.SetStateAction<string>>;
-  defaultPresets: Record<string, any>;
+  // defaultPresets: Record<string, any>;
   selectedTestimonials: string[];
-};
-
-// Content Generation Modal
-const ContentGenerationModal: React.FC<{
-  isOpen: boolean;
-  onClose: () => void;
-  onGenerate: (serviceId: string, config: any) => void;
-  selectedTestimonials: string[];
-}> = ({ isOpen, onClose, onGenerate, selectedTestimonials }) => {
-  const [selectedType, setSelectedType] = useState<string>("");
-  const [customPrompt, setCustomPrompt] = useState<string>("");
-  const [searchTerm, setSearchTerm] = useState<string>("");
-
-  const filteredTypes = CONTENT_TYPES.filter(
-    (type) =>
-      type.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      type.description.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const handleGenerate = () => {
-    if (selectedType) {
-      onGenerate("content_generator", {
-        contentType: selectedType,
-        customPrompt: customPrompt.trim() || null,
-      });
-      onClose();
-    }
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden"
-      >
-        <div className="p-6 border-b bg-gradient-to-r from-pink-50 to-rose-50">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-pink-600 to-rose-600 flex items-center justify-center">
-                <FileText className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900">
-                  Generate Content
-                </h2>
-                <p className="text-sm text-gray-600">
-                  Create marketing content from {selectedTestimonials.length}{" "}
-                  testimonial{selectedTestimonials.length > 1 ? "s" : ""}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
-          {/* Search */}
-          <div className="mb-6">
-            <input
-              type="text"
-              placeholder="Search content types..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-            />
-          </div>
-
-          {/* Content Types Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-            {filteredTypes.map((type) => (
-              <button
-                key={type.id}
-                onClick={() => setSelectedType(type.id)}
-                className={`p-4 text-left rounded-lg border-2 transition-all hover:border-pink-300 ${
-                  selectedType === type.id
-                    ? "border-pink-500 bg-pink-50"
-                    : "border-gray-200 hover:bg-gray-50"
-                }`}
-              >
-                <div className="font-medium text-gray-900 mb-1">
-                  {type.name}
-                </div>
-                <div className="text-sm text-gray-600">{type.description}</div>
-              </button>
-            ))}
-          </div>
-
-          {/* Custom Prompt */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-900 mb-2">
-              Custom Instructions (Optional)
-            </label>
-            <textarea
-              value={customPrompt}
-              onChange={(e) => setCustomPrompt(e.target.value)}
-              placeholder="Add specific requirements or style preferences for the generated content..."
-              rows={3}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent resize-none"
-            />
-          </div>
-        </div>
-
-        <div className="p-6 border-t bg-gray-50 flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleGenerate}
-            disabled={!selectedType}
-            className="px-6 py-2 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-lg hover:from-pink-700 hover:to-rose-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
-          >
-            <Sparkles className="h-4 w-4" />
-            Generate Content
-          </button>
-        </div>
-      </motion.div>
-    </div>
-  );
-};
-
-// Translation Modal
-const TranslationModal: React.FC<{
-  isOpen: boolean;
-  onClose: () => void;
-  onTranslate: (serviceId: string, config: any) => void;
-  selectedTestimonials: string[];
-}> = ({ isOpen, onClose, onTranslate, selectedTestimonials }) => {
-  const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
-  const [customPrompt, setCustomPrompt] = useState<string>("");
-  const [searchTerm, setSearchTerm] = useState<string>("");
-
-  const filteredLanguages = LANGUAGES.filter((lang) =>
-    lang.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const toggleLanguage = (langCode: string) => {
-    setSelectedLanguages((prev) =>
-      prev.includes(langCode)
-        ? prev.filter((code) => code !== langCode)
-        : [...prev, langCode]
-    );
-  };
-
-  const handleTranslate = () => {
-    if (selectedLanguages.length > 0) {
-      onTranslate("translation", {
-        targetLanguages: selectedLanguages,
-        customPrompt: customPrompt.trim() || null,
-      });
-      onClose();
-    }
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-hidden"
-      >
-        <div className="p-6 border-b bg-gradient-to-r from-teal-50 to-cyan-50">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-teal-600 to-cyan-600 flex items-center justify-center">
-                <Languages className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900">
-                  Translate Content
-                </h2>
-                <p className="text-sm text-gray-600">
-                  Translate {selectedTestimonials.length} testimonial
-                  {selectedTestimonials.length > 1 ? "s" : ""} to multiple
-                  languages
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
-          {/* Search */}
-          <div className="mb-6">
-            <input
-              type="text"
-              placeholder="Search languages..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-            />
-          </div>
-
-          {/* Selected Languages Summary */}
-          {selectedLanguages.length > 0 && (
-            <div className="mb-6 p-4 bg-teal-50 rounded-lg">
-              <div className="text-sm font-medium text-teal-900 mb-2">
-                Selected Languages ({selectedLanguages.length}):
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {selectedLanguages.map((code) => {
-                  const lang = LANGUAGES.find((l) => l.code === code);
-                  return (
-                    <span
-                      key={code}
-                      className="inline-flex items-center gap-1 px-3 py-1 bg-teal-100 text-teal-800 rounded-full text-sm"
-                    >
-                      <span>{lang?.flag}</span>
-                      <span>{lang?.name}</span>
-                    </span>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Languages Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-6">
-            {filteredLanguages.map((lang) => (
-              <button
-                key={lang.code}
-                onClick={() => toggleLanguage(lang.code)}
-                className={`p-3 text-center rounded-lg border-2 transition-all hover:border-teal-300 ${
-                  selectedLanguages.includes(lang.code)
-                    ? "border-teal-500 bg-teal-50"
-                    : "border-gray-200 hover:bg-gray-50"
-                }`}
-              >
-                <div className="text-2xl mb-1">{lang.flag}</div>
-                <div className="text-sm font-medium text-gray-900">
-                  {lang.name}
-                </div>
-              </button>
-            ))}
-          </div>
-
-          {/* Custom Prompt */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-900 mb-2">
-              Translation Instructions (Optional)
-            </label>
-            <textarea
-              value={customPrompt}
-              onChange={(e) => setCustomPrompt(e.target.value)}
-              placeholder="Add specific translation requirements, cultural adaptations, or style preferences..."
-              rows={3}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none"
-            />
-          </div>
-        </div>
-
-        <div className="p-6 border-t bg-gray-50 flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleTranslate}
-            disabled={selectedLanguages.length === 0}
-            className="px-6 py-2 bg-gradient-to-r from-teal-600 to-cyan-600 text-white rounded-lg hover:from-teal-700 hover:to-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
-          >
-            <Languages className="h-4 w-4" />
-            Translate ({selectedLanguages.length})
-          </button>
-        </div>
-      </motion.div>
-    </div>
-  );
-};
-
-// Text Polishing Modal
-const TextPolishingModal: React.FC<{
-  isOpen: boolean;
-  onClose: () => void;
-  onPolish: (serviceId: string, config: any) => void;
-  selectedTestimonials: string[];
-}> = ({ isOpen, onClose, onPolish, selectedTestimonials }) => {
-  const [targetStyle, setTargetStyle] = useState<string>("");
-  const [preserveAuthenticity, setPreserveAuthenticity] =
-    useState<boolean>(true);
-  const [customPrompt, setCustomPrompt] = useState<string>("");
-
-  const handlePolish = () => {
-    if (targetStyle) {
-      onPolish("text_polishing", {
-        targetStyle,
-        preserveAuthenticity,
-        customPrompt: customPrompt.trim() || null,
-      });
-      onClose();
-    }
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden"
-      >
-        <div className="p-6 border-b bg-gradient-to-r from-violet-50 to-purple-50">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 flex items-center justify-center">
-                <Wand2 className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900">
-                  Polish Text
-                </h2>
-                <p className="text-sm text-gray-600">
-                  Enhance {selectedTestimonials.length} testimonial
-                  {selectedTestimonials.length > 1 ? "s" : ""} while preserving
-                  authenticity
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
-          {/* Target Style */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-900 mb-3">
-              Target Writing Style *
-            </label>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {POLISHING_STYLES.map((style) => (
-                <button
-                  key={style.id}
-                  onClick={() => setTargetStyle(style.id)}
-                  className={`p-4 text-left rounded-lg border-2 transition-all hover:border-violet-300 ${
-                    targetStyle === style.id
-                      ? "border-violet-500 bg-violet-50"
-                      : "border-gray-200 hover:bg-gray-50"
-                  }`}
-                >
-                  <div className="font-medium text-gray-900 mb-1">
-                    {style.name}
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    {style.description}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Preserve Authenticity */}
-          <div className="mb-6 p-4 bg-amber-50 rounded-lg border border-amber-200">
-            <label className="flex items-start gap-3">
-              <input
-                type="checkbox"
-                checked={preserveAuthenticity}
-                onChange={(e) => setPreserveAuthenticity(e.target.checked)}
-                className="mt-1 w-4 h-4 text-violet-600 border-gray-300 rounded focus:ring-violet-500"
-              />
-              <div>
-                <div className="font-medium text-gray-900">
-                  Preserve Authenticity
-                </div>
-                <div className="text-sm text-gray-600">
-                  Maintain the original voice and personality while improving
-                  clarity and grammar
-                </div>
-              </div>
-            </label>
-          </div>
-
-          {/* Custom Prompt */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-900 mb-2">
-              Custom Enhancement Instructions (Optional)
-            </label>
-            <textarea
-              value={customPrompt}
-              onChange={(e) => setCustomPrompt(e.target.value)}
-              placeholder="Add specific instructions for how you want the text to be enhanced..."
-              rows={3}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent resize-none"
-            />
-          </div>
-        </div>
-
-        <div className="p-6 border-t bg-gray-50 flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handlePolish}
-            disabled={!targetStyle}
-            className="px-6 py-2 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-lg hover:from-violet-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
-          >
-            <Wand2 className="h-4 w-4" />
-            Polish Text
-          </button>
-        </div>
-      </motion.div>
-    </div>
-  );
+  selectedArtifacts?: string[];
+  artifactMode?: boolean;
 };
 
 const Services: React.FC<Props> = ({
   handleCustomizeProcess,
   handleProcessImmediate,
-  handleStreamingProcess, // NEW
+  handleStreamingProcess,
   selectedCategory,
   setSelectedCategory,
-  defaultPresets,
+  // defaultPresets,
   selectedTestimonials,
+  selectedArtifacts = [],
+  artifactMode = false,
 }) => {
   const [activeModal, setActiveModal] = useState<string | null>(null);
+  const [hoveredCard, setHoveredCard] = useState<string | null>(null);
 
-  // Services that use streamlined approach
+  const allTestimonials = workspaceHub.testimonialManager.testimonials;
+  const testimonials =
+    allTestimonials?.filter((t) => selectedTestimonials.includes(t.id)) || [];
+  const unique_types = new Set(testimonials.map((t) => t.type));
+
+  let matching_services = AI_SERVICES;
+  if (
+    (unique_types.has("text") && unique_types.has("video")) ||
+    unique_types.has("text")
+  ) {
+    matching_services = AI_SERVICES.filter((c) => c.category !== "video");
+  }
+
+  if (testimonials.length > 1) {
+    matching_services = matching_services.filter(
+      (s) => s.id !== "story_mode" && s.id !== "clipping"
+    );
+  }
+
+  const categories = [
+    { id: "all", label: "All", count: matching_services.length },
+    {
+      id: "video",
+      label: "Video",
+      count: matching_services.filter((s) => s.category === "video").length,
+    },
+    {
+      id: "content",
+      label: "Content",
+      count: matching_services.filter((s) => s.category === "content").length,
+    },
+  ];
+
   const streamlinedServices = [
-    "content_generator",
+    "content_generation",
     "text_polishing",
     "translation",
   ];
 
   const filteredServices =
     selectedCategory === "all"
-      ? AI_SERVICES
-      : AI_SERVICES.filter((service) => service.category === selectedCategory);
+      ? matching_services
+      : matching_services.filter(
+          (service) => service.category === selectedCategory
+        );
 
   const handleServiceAction = (
-    serviceId: string,
+    serviceId: ServiceType,
     action: "immediate" | "customize" | "streamlined"
   ) => {
     if (streamlinedServices.includes(serviceId)) {
@@ -629,132 +106,194 @@ const Services: React.FC<Props> = ({
     }
   };
 
-  const handleStreamlineProcess = (serviceId: string, config: any) => {
+  const handleStreamlineProcess = (serviceId: ServiceType, config: any) => {
     if (handleStreamingProcess) {
       handleStreamingProcess(serviceId, config);
     }
     setActiveModal(null);
   };
 
+  const getComplexityColor = (complexity_score: number) => {
+    if (complexity_score > 6) {
+      return "text-rose-600 bg-rose-50";
+    } else if (complexity_score > 3.5) {
+      return "text-amber-600 bg-amber-50";
+    } else if (complexity_score > 1) {
+      return "text-emerald-600 bg-emerald-50";
+    }
+    return "text-gray-600 bg-gray-50";
+  };
+
+  const hasSelection =
+    selectedTestimonials.length > 0 || selectedArtifacts.length > 0;
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-7">
       {/* Header */}
-      <div>
-        <h2 className="text-xl font-bold text-gray-900">AI Services</h2>
-        <p className="text-gray-600 mt-1 text-sm">
-          Select the AI service to apply to your testimonials
-        </p>
+      <div className="relative">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-50/30 to-purple-50/30 rounded-lg -m-4"></div>
+        <div className="relative p-4">
+          <h2 className="text-xl font-semibold text-gray-900 tracking-tight">
+            AI Services
+          </h2>
+          <p className="text-gray-600 mt-1 text-sm">
+            Transform your testimonials with intelligent processing
+          </p>
+        </div>
       </div>
 
-      <nav className="flex space-x-8 overflow-x-auto">
-        {categories.map((category) => (
-          <button
-            key={category.id}
-            onClick={() => setSelectedCategory(category.id)}
-            className={`flex items-center space-x-2 py-3 px-1 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
-              selectedCategory === category.id
-                ? "border-purple-600 text-purple-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
-          >
-            <span>{category.label}</span>
-            <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs">
-              {category.count}
-            </span>
-          </button>
-        ))}
-      </nav>
+      {/* Category Navigation */}
+      <div className="flex items-center gap-6">
+        <div className="flex space-x-1 bg-gray-100/60 p-1 rounded-lg">
+          {categories.map((category) => (
+            <button
+              key={category.id}
+              onClick={() => setSelectedCategory(category.id)}
+              className={`relative px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
+                selectedCategory === category.id
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              {category.label}
+              <span className="ml-1.5 text-xs opacity-60">
+                ({category.count})
+              </span>
+            </button>
+          ))}
+        </div>
+        <div className="flex-1 h-px bg-gradient-to-r from-gray-200 to-transparent"></div>
+      </div>
+
+      {/* Selection prompt */}
+      {!hasSelection && (
+        <div className="text-center py-16">
+          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Brain className="w-8 h-8 text-gray-400" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            {artifactMode
+              ? "Select Content to Process"
+              : "Select Testimonials to Begin"}
+          </h3>
+          <p className="text-gray-600 max-w-md mx-auto">
+            {artifactMode
+              ? "Choose clips or videos above to process with AI services."
+              : "Choose one or more testimonials above to unlock AI services and start processing your content."}
+          </p>
+        </div>
+      )}
 
       {/* Services Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
         {filteredServices.map((service, index) => {
           const IconComponent = service.icon;
           const config =
-            defaultPresets[service.id]?.config || service.defaultSettings;
+            preset_manager.defaultPresets[service.id]?.config ||
+            service.defaultSettings;
           const isStreamlined = streamlinedServices.includes(service.id);
+          const isHovered = hoveredCard === service.id;
 
           return (
             <motion.div
               key={service.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
+              transition={{ delay: index * 0.05 }}
+              onHoverStart={() => setHoveredCard(service.id)}
+              onHoverEnd={() => setHoveredCard(null)}
+              className="group cursor-pointer"
             >
-              <div className="bg-white rounded-lg border shadow-sm hover:shadow-lg transition-all duration-200 hover:scale-[1.02] h-full flex flex-col">
-                <div className="p-6 flex-1 flex flex-col">
-                  <div className="flex items-start justify-between mb-4">
-                    <div
-                      className={`w-6 h-6 rounded-xl bg-gradient-to-r ${service.gradient} flex items-center justify-center shadow-lg`}
-                    >
-                      <IconComponent className="h-3 w-3 text-white" />
+              <div className="relative bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-all duration-300 h-full flex flex-col overflow-hidden">
+                {/* Subtle gradient overlay on hover */}
+                <div
+                  className={`absolute inset-0 bg-gradient-to-br ${service.gradient} opacity-0 group-hover:opacity-[0.02] transition-opacity duration-500`}
+                ></div>
+
+                {/* Header Section */}
+                <div className="relative p-5 border-b border-gray-100">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-9 h-9 rounded-lg bg-gradient-to-br ${service.gradient} flex items-center justify-center shadow-sm`}
+                      >
+                        <IconComponent className="h-4 w-4 text-white" />
+                      </div>
+                      <h3 className="font-semibold text-gray-900 leading-tight">
+                        {service.title}
+                      </h3>
                     </div>
-                    <div className="flex flex-col gap-1">
-                      {!service.isQueued && (
-                        <div className="px-2 py-1 text-xs bg-orange-50 text-orange-700 border border-orange-200 rounded-full">
-                          Instant
-                        </div>
-                      )}
+
+                    {/* Status indicators */}
+                    <div className="flex items-center gap-2">
                       {service.supportsStreaming && (
-                        <div className="px-2 py-1 text-xs bg-green-50 text-green-700 border border-green-200 rounded-full">
-                          Streaming
-                        </div>
+                        <div className="w-2 h-2 bg-emerald-400 rounded-full pulse"></div>
                       )}
-                      {defaultPresets[service.id] && (
-                        <div className="px-2 py-1 text-xs bg-red-50 text-red-700 border border-red-200 rounded-full flex items-center gap-1">
-                          <Heart className="h-3 w-3 fill-current" />
-                          Default
-                        </div>
+                      {preset_manager.defaultPresets[service.id] && (
+                        <Heart className="h-4 w-4 text-rose-500 fill-current" />
                       )}
                     </div>
                   </div>
 
-                  <h3 className="text-lg font-bold text-gray-900 mb-2">
-                    {service.title}
-                  </h3>
-                  <p className="text-sm text-gray-600 mb-4 flex-1">
+                  <p className="text-sm text-gray-600 leading-relaxed">
                     {service.description}
                   </p>
+                </div>
 
-                  <div className="space-y-3 mb-4">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-500">Processing time:</span>
-                      <div className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded border">
-                        {service.estimatedTime}
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-500">Complexity:</span>
-                      <div className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded border">
-                        {service.complexity}
-                      </div>
+                {/* Content Section */}
+                <div className="relative flex-1 p-5">
+                  {/* Features as inline pills */}
+                  <div className="mb-4">
+                    <div className="flex flex-wrap gap-1.5">
+                      {service.features.slice(0, 4).map((feature, idx) => (
+                        <span
+                          key={idx}
+                          className="inline-flex items-center px-2 py-1 text-xs text-gray-600 bg-gray-50 rounded-md border"
+                        >
+                          {feature}
+                        </span>
+                      ))}
                     </div>
                   </div>
 
-                  {/* Current Settings Display - Only for traditional services */}
-                  {!isStreamlined && (
-                    <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="text-xs font-medium text-gray-700">
-                          Current Settings:
-                        </h4>
-                        {defaultPresets[service.id] && (
-                          <span className="text-xs text-red-600 font-medium">
-                            {defaultPresets[service.id].name}
+                  {/* Metrics bar */}
+                  <div className="flex items-center justify-between text-xs text-gray-500 mb-4 py-2 px-3 bg-gray-50/50 rounded-md">
+                    <div className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      <span>{service.estimatedTime}</span>
+                    </div>
+                    <div className="w-px h-3 bg-gray-300"></div>
+                    <div
+                      className={`px-2 py-0.5 rounded text-xs font-medium ${getComplexityColor(service.complexity_score)}`}
+                    >
+                      {service.business_impact}
+                    </div>
+                  </div>
+
+                  {/* Configuration preview for non-streamlined */}
+                  {!isStreamlined && config && (
+                    <div className="mb-4">
+                      <div className="text-xs text-gray-500 mb-2 flex items-center gap-1">
+                        <Settings className="h-3 w-3" />
+                        Configuration
+                        {preset_manager.defaultPresets[service.id] && (
+                          <span className="text-rose-600 font-medium">
+                            ({preset_manager.defaultPresets[service.id].name})
                           </span>
                         )}
                       </div>
                       <div className="space-y-1">
-                        {Object.entries(config || {})
-                          .slice(0, 3)
+                        {Object.entries(config)
+                          .slice(0, 2)
                           .map(([key, value]) => (
                             <div
                               key={key}
                               className="flex justify-between text-xs"
                             >
                               <span className="text-gray-600 capitalize">
-                                {key.replace(/([A-Z])/g, " $1").toLowerCase()}:
+                                {key.replace(/([A-Z])/g, " $1").toLowerCase()}
                               </span>
-                              <span className="text-gray-800 truncate ml-2">
+                              <span className="text-gray-800 font-medium max-w-16 truncate">
                                 {Array.isArray(value)
                                   ? value.join(", ")
                                   : String(value)}
@@ -764,69 +303,96 @@ const Services: React.FC<Props> = ({
                       </div>
                     </div>
                   )}
+                </div>
 
-                  {/* Button Layout */}
-                  <div className="gap-2 flex items-center">
-                    {isStreamlined ? (
-                      // Single button for streamlined services
+                {/* Action Section */}
+                <div className="relative p-5 pt-0">
+                  {isStreamlined ? (
+                    <button
+                      onClick={() =>
+                        handleServiceAction(service.id, "streamlined")
+                      }
+                      disabled={
+                        artifactMode
+                          ? selectedArtifacts.length === 0
+                          : selectedTestimonials.length === 0
+                      }
+                      className="w-full h-9 px-4 bg-gray-900 hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-md transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium group"
+                    >
+                      <span>Start Processing</span>
+                      <ArrowRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+                    </button>
+                  ) : (
+                    <div className="flex gap-2">
                       <button
                         onClick={() =>
-                          handleServiceAction(service.id, "streamlined")
+                          handleServiceAction(service.id, "immediate")
                         }
-                        disabled={selectedTestimonials.length === 0}
-                        className="w-full h-full text-sm px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+                        disabled={
+                          artifactMode
+                            ? selectedArtifacts.length === 0
+                            : selectedTestimonials.length === 0
+                        }
+                        className="flex-1 h-9 px-3 bg-gray-900 hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-md transition-all duration-200 flex items-center justify-center gap-1.5 text-sm font-medium"
                       >
                         <Play className="h-3 w-3" />
-                        Start Processing
+                        Process
                       </button>
-                    ) : (
-                      // Two buttons for traditional services
-                      <>
-                        <button
-                          onClick={() =>
-                            handleServiceAction(service.id, "immediate")
-                          }
-                          disabled={selectedTestimonials.length === 0}
-                          className="w-full h-full text-sm px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center justify-center gap-2"
-                        >
-                          <Play className="h-3 w-3" />
-                          Process Immediately
-                        </button>
-                        <button
-                          onClick={() =>
-                            handleServiceAction(service.id, "customize")
-                          }
-                          disabled={selectedTestimonials.length === 0}
-                          className="px-3 h-full py-2 border border-gray-300 hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed text-gray-700 rounded-lg transition-colors flex items-center justify-center gap-2"
-                        >
-                          <Settings className="h-4 w-4" />
-                        </button>
-                      </>
-                    )}
-                  </div>
+                      <button
+                        onClick={() =>
+                          handleServiceAction(service.id, "customize")
+                        }
+                        disabled={
+                          artifactMode
+                            ? selectedArtifacts.length === 0
+                            : selectedTestimonials.length === 0
+                        }
+                        className="px-3 h-9 border border-gray-300 hover:border-gray-400 hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed text-gray-700 rounded-md transition-all duration-200 flex items-center justify-center"
+                      >
+                        <Settings className="h-3 w-3" />
+                      </button>
+                    </div>
+                  )}
                 </div>
+
+                {/* Hover indicator */}
+                <div
+                  className={`absolute left-0 top-0 w-0.5 h-full bg-gradient-to-b ${service.gradient} transition-opacity duration-300 ${isHovered ? "opacity-100" : "opacity-0"}`}
+                ></div>
               </div>
             </motion.div>
           );
         })}
       </div>
 
-      {selectedTestimonials.length === 0 && (
-        <div className="text-center py-8 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <Target className="h-8 w-8 text-yellow-600 mx-auto mb-2" />
-          <h3 className="font-medium text-yellow-800">
-            Select testimonials first
-          </h3>
-          <p className="text-sm text-yellow-700 mt-1">
-            Choose testimonials from the previous tab to enable processing
-          </p>
+      {/* Empty State */}
+      {(artifactMode
+        ? selectedArtifacts.length === 0
+        : selectedTestimonials.length === 0) && (
+        <div className="text-center py-12 relative">
+          <div className="absolute inset-0 bg-gradient-to-br from-gray-50/50 to-blue-50/30 rounded-lg"></div>
+          <div className="relative">
+            <div className="w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+              <Target className="w-7 h-7 text-gray-500" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              {artifactMode
+                ? "Select Content First"
+                : "Select Testimonials First"}
+            </h3>
+            <p className="text-gray-600 max-w-sm mx-auto text-sm leading-relaxed">
+              {artifactMode
+                ? "Choose clips or artifacts to unlock AI processing services."
+                : "Choose testimonials to unlock AI processing services."}
+            </p>
+          </div>
         </div>
       )}
 
       {/* Modals */}
       <AnimatePresence>
         <ContentGenerationModal
-          isOpen={activeModal === "content_generator"}
+          isOpen={activeModal === "content_generation"}
           onClose={() => setActiveModal(null)}
           onGenerate={handleStreamlineProcess}
           selectedTestimonials={selectedTestimonials}
@@ -844,8 +410,18 @@ const Services: React.FC<Props> = ({
           selectedTestimonials={selectedTestimonials}
         />
       </AnimatePresence>
+
+      <style>{`
+        .pulse {
+          animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+      `}</style>
     </div>
   );
 };
 
-export default Services;
+export default observer(Services);

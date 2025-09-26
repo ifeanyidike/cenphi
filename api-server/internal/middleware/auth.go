@@ -126,7 +126,7 @@ func NewAuthMiddleware(projectID string, logger *zap.Logger) (*AuthMiddleware, e
 	}
 
 	// Test connection to Google API before proceeding
-	testCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	testCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	testReq, _ := http.NewRequestWithContext(testCtx, "HEAD",
 		"https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com", nil)
@@ -195,7 +195,9 @@ func (am *AuthMiddleware) VerifyToken(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Get token from Authorization header
 		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
+		sseToken := r.URL.Query().Get("token")
+		if authHeader == "" && sseToken == "" {
+			// check if it's sse route
 			http.Error(w, "Authorization header is required", http.StatusUnauthorized)
 			return
 		}
@@ -206,9 +208,12 @@ func (am *AuthMiddleware) VerifyToken(next http.Handler) http.Handler {
 			idToken = authHeader[7:]
 		}
 
+		if authHeader == "" {
+			idToken = sseToken
+		}
+
 		// Verify the token
 		token, err := am.verifyTokenWithRetry(r.Context(), idToken, 3)
-		fmt.Println("token", token)
 		if err != nil {
 			am.logging.Error("failed to verify token",
 				zap.Error(err),
@@ -230,7 +235,7 @@ func (am *AuthMiddleware) verifyTokenWithRetry(ctx context.Context, idToken stri
 
 	for attempt := 0; attempt <= maxRetries; attempt++ {
 		// Create a new context for each attempt to avoid cancellation propagation
-		attemptCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		attemptCtx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 
 		token, err := am.client.VerifyIDToken(attemptCtx, idToken)
 		cancel()

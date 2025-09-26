@@ -158,7 +158,6 @@ class CaptionGenerator:
     
     def _validate_segment_consistency(self, transcript_segments: List[intelligence_pb2.TranscriptSegment], media_duration: float):
         """Validate transcript segment timing consistency (handles millisecond timing)"""
-        
         if not transcript_segments:
             raise ValueError("Empty transcript segments")
         
@@ -171,10 +170,12 @@ class CaptionGenerator:
         for i, segment in enumerate(transcript_segments):
             # Validate segment has required fields
             if not hasattr(segment, 'text') or not segment.text.strip():
+                logger.warning(f"Segment {i}: Empty text")
                 issues.append(f"Segment {i}: Empty text")
                 continue
             
             if not hasattr(segment, 'start_time') or not hasattr(segment, 'end_time'):
+                logger.warning(f"Segment {i}: Missing timing")
                 issues.append(f"Segment {i}: Missing timing")
                 continue
             
@@ -185,12 +186,16 @@ class CaptionGenerator:
             end_time = end_time_ms / 1000.0
             
             if start_time < 0:
+                logger.warning(f"Segment {i}: Negative start time {start_time_ms}ms ({start_time:.2f}s)")
                 issues.append(f"Segment {i}: Negative start time {start_time_ms}ms ({start_time:.2f}s)")
             
             if end_time <= start_time:
+                logger.warning(f"Segment {i}: Invalid duration {start_time_ms}ms-{end_time_ms}ms ({start_time:.2f}s-{end_time:.2f}s)")
                 issues.append(f"Segment {i}: Invalid duration {start_time_ms}ms-{end_time_ms}ms ({start_time:.2f}s-{end_time:.2f}s)")
             
-            if end_time > media_duration + 1.0:  # Allow 1s tolerance
+            tolerance = min(1.0, media_duration * 0.05) # 5% of duration or 1s max
+            if end_time > media_duration + tolerance:
+                logger.warning(f"Segment {i}: Extends beyond media {end_time:.2f}s > {media_duration:.2f}s")
                 issues.append(f"Segment {i}: Extends beyond media {end_time:.2f}s > {media_duration:.2f}s")
             
             # Check gap to next segment
@@ -214,6 +219,23 @@ class CaptionGenerator:
                 logger.error(f"  ... and {len(issues) - 5} more issues")
             raise ValueError(f"Segment validation failed: {len(issues)} issues found")
         
+
+        if media_duration < 10.0:  # Likely a clip
+            logger.info(f"🎬 CLIP MODE: Validating {len(transcript_segments)} segments for {media_duration:.2f}s clip")
+            
+            # Log segment coverage for clips
+            if transcript_segments:
+                first_start = float(transcript_segments[0].start_time) / 1000.0
+                last_end = float(transcript_segments[-1].end_time) / 1000.0
+                
+                logger.info(f"📊 Clip segment coverage: {first_start:.3f}s - {last_end:.3f}s of {media_duration:.3f}s")
+                
+                if first_start > 0.1:
+                    logger.warning(f"⚠️ Segments start late: {first_start:.3f}s delay")
+                if last_end < media_duration - 0.1:
+                    logger.warning(f"⚠️ Segments end early: {media_duration - last_end:.3f}s gap")
+                    
+        
         # Overall timing analysis (convert to seconds)
         first_start_ms = float(transcript_segments[0].start_time)
         last_end_ms = float(transcript_segments[-1].end_time)
@@ -226,10 +248,13 @@ class CaptionGenerator:
         logger.info(f"   Time span (ms): {first_start_ms:.0f}ms - {last_end_ms:.0f}ms")
         logger.info(f"   Time span (sec): {first_start:.1f}s - {last_end:.1f}s")
         logger.info(f"   Coverage: {coverage:.1f}% of media")
+
+        expected_min = 60 if media_duration < 5.0 else 70  # Lower expectation for short clips
+        expected_max = 110 if media_duration < 5.0 else 105  # Higher tolerance for clips
         
-        if coverage < 70:
+        if coverage < expected_min:
             logger.warning(f"Low coverage: {coverage:.1f}% - speech might extend beyond segments")
-        elif coverage > 105:
+        elif coverage > expected_max:
             logger.warning(f"High coverage: {coverage:.1f}% - segments might extend beyond media")
     
     def _process_transcript_segments(
@@ -266,13 +291,13 @@ class CaptionGenerator:
                 logger.error(f"Segment {i} has invalid duration after conversion: {start_time_ms}ms-{end_time_ms}ms -> {start_time:.3f}s-{end_time:.3f}s")
                 continue
             
-            logger.debug(f"Segment {i}: {start_time_ms}ms-{end_time_ms}ms -> {start_time:.2f}s-{end_time:.2f}s ({duration:.2f}s)")
+            logger.info(f"Segment {i}: {start_time_ms}ms-{end_time_ms}ms -> {start_time:.2f}s-{end_time:.2f}s ({duration:.2f}s)")
             
             # Check if segment needs splitting for platform
             if (duration > platform_config['max_duration'] or 
                 len(text.split()) > platform_config['max_words']):
                 
-                logger.debug(f"Splitting long segment {i}: {duration:.1f}s, {len(text.split())} words")
+                logger.info(f"Splitting long segment {i}: {duration:.1f}s, {len(text.split())} words")
                 split_segments = self._split_long_segment(segment, platform_config)
                 caption_segments.extend(split_segments)
                 
@@ -293,6 +318,8 @@ class CaptionGenerator:
                 })
         
         logger.info(f"Processed into {len(caption_segments)} caption segments")
+        from pprint import pformat
+        logger.info(f"caption: {pformat(caption_segments, indent=2)}")
         
         # Validate no timing gaps
         self._validate_caption_timing(caption_segments)
@@ -357,7 +384,7 @@ class CaptionGenerator:
         text = segment.text.strip()
         total_duration = end_time - start_time
         
-        logger.debug(f"Splitting segment: {start_time_ms}ms-{end_time_ms}ms -> {start_time:.2f}s-{end_time:.2f}s")
+        logger.info(f"Splitting segment: {start_time_ms}ms-{end_time_ms}ms -> {start_time:.2f}s-{end_time:.2f}s")
         
         # Check if we have word-level timing for precise splits
         if hasattr(segment, 'words') and segment.words:

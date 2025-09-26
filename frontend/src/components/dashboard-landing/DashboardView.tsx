@@ -10,10 +10,11 @@ import {
   ChevronDown,
   ChevronUp,
   BarChart3,
+  Sparkles,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { observer } from "mobx-react-lite";
 import { itemVariants } from "./constants";
 import { StatCard } from "./components";
@@ -21,9 +22,62 @@ import { EmptyStateView } from "./EmptyView";
 import { Testimonial } from "@/types/testimonial";
 import { workspaceHub } from "@/repo/workspace_hub";
 import TestimonialList from "./TestimonialList";
+import AIFeaturesDashboard from "./AIFeaturesDashboard";
+import { useNavigate } from "react-router-dom";
+
+// AI Generated Content Card Component
+const AIGeneratedContentCard: React.FC<{ onNavigate: () => void }> = observer(({ onNavigate }) => {
+  const multiArtifacts = workspaceHub.testimonialManager.getMultiTestimonialArtifacts();
+
+  if (multiArtifacts.length === 0) {
+    return null; // Don't show the card if there are no multi-testimonial artifacts
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+    >
+      <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-lg bg-purple-600 flex items-center justify-center">
+              <Sparkles className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">
+                AI-Generated Content
+              </h3>
+              <p className="text-sm text-gray-600">
+                You have {multiArtifacts.length} piece{multiArtifacts.length !== 1 ? 's' : ''} of content created from multiple testimonials
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <div className="text-2xl font-bold text-purple-600">
+                {multiArtifacts.length}
+              </div>
+              <div className="text-xs text-gray-500">Ready to use</div>
+            </div>
+            <Button
+              onClick={onNavigate}
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+            >
+              View All
+              <ChevronUp className="h-4 w-4 ml-2 rotate-90" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+});
 
 const DashboardView: React.FC = observer(() => {
   const [isStatsOpen, setIsStatsOpen] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     (async () => {
@@ -32,7 +86,6 @@ const DashboardView: React.FC = observer(() => {
   }, []);
 
   const testimonials = workspaceHub.testimonialManager.testimonials;
-  console.log("testimonials", testimonials);
   const isLoading = workspaceHub.testimonialManager.loading_testimonials;
 
   const hasTestimonials = testimonials?.length;
@@ -41,7 +94,7 @@ const DashboardView: React.FC = observer(() => {
     0
   );
   const avgRating = testimonials?.length
-    ? totalRating! / testimonials.length
+    ? (totalRating! / testimonials.length).toFixed(1)
     : "";
   const conversionRate = testimonials?.reduce(
     (acc: number, curr: Testimonial) => acc + (curr.conversion_count || 0),
@@ -185,6 +238,20 @@ const DashboardView: React.FC = observer(() => {
           />
         </div>
       </motion.div>
+
+      {hasTestimonials && (
+        <motion.div variants={itemVariants} className="mb-8">
+          <AIFeaturesDashboard
+            onNavigateToAIStudio={() => navigate(`/studio`)}
+          />
+        </motion.div>
+      )}
+
+      {hasTestimonials && (
+        <motion.div variants={itemVariants} className="mb-8">
+          <AIGeneratedContentCard onNavigate={() => navigate(`/ai-content`)} />
+        </motion.div>
+      )}
 
       {/* Main Content Area */}
       {hasTestimonials ? <TestimonialList /> : <EmptyStateView />}

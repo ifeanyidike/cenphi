@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/ifeanyidike/cenphi/internal/cache"
 	"github.com/ifeanyidike/cenphi/internal/config"
 	"github.com/ifeanyidike/cenphi/internal/models"
@@ -90,10 +89,11 @@ type AIServiceManager struct {
 	FillerDetectionService    FillerDetectionService
 	TranslationService        TranslationService
 	SentimentService          SentimentService
-	db                        *sql.DB
-	artifactsRepo             repositories.TestimonialArtifactRepository
-	workspaceRepo             repositories.WorkspaceRepository
-	jobRepo                   repositories.JobRepository
+	DB                        *sql.DB
+	TestimonialRepo           repositories.TestimonialRepository
+	ArtifactsRepo             repositories.TestimonialArtifactRepository
+	WorkspaceRepo             repositories.WorkspaceRepository
+	JobRepo                   repositories.JobRepository
 	logger                    *zap.Logger
 }
 
@@ -120,10 +120,11 @@ func NewAIServiceManager(cfg config.Config, cacheService cache.RedisCache, aiCli
 		FillerDetectionService:    fillerService,
 		TranslationService:        translationService,
 		SentimentService:          sentimentService,
-		db:                        db,
-		artifactsRepo:             artifactsRepo,
-		workspaceRepo:             workspaceRepo,
-		jobRepo:                   jobRepo,
+		DB:                        db,
+		TestimonialRepo:           testimonialRepo,
+		ArtifactsRepo:             artifactsRepo,
+		WorkspaceRepo:             workspaceRepo,
+		JobRepo:                   jobRepo,
 		logger:                    logger,
 	}
 }
@@ -317,30 +318,9 @@ func (s AIClient) makeClaudeCall(ctx context.Context, prompt, systemPrompt strin
 	return resp, nil
 }
 
-func (s AIServiceManager) SaveResponseToArtifacts(ctx context.Context, name string, workspaceID uuid.UUID, testimonialID *uuid.UUID, data models.JSONMap) (string, error) {
-	artifact := &models.TestimonialArtifact{
-		ID:             uuid.New(),
-		WorkspaceID:    workspaceID,
-		TestimonialID:  testimonialID,
-		ProcessingType: name,
-		ResultCategory: "analysis",
-		Data:           data,
-		IsStreamed:     false,
-		ProcessingMetadata: models.JSONMap{
-			"processed_at": time.Now(),
-		},
-	}
-
-	err := s.artifactsRepo.Create(ctx, artifact, s.db)
-	if err != nil {
-		return "", err
-	}
-	return artifact.ID.String(), nil
-}
-
 func (s AIServiceManager) CreateJob(ctx context.Context, job *models.Job) error {
 
-	if err := s.jobRepo.Create(ctx, job, s.db); err != nil {
+	if err := s.JobRepo.Create(ctx, job, s.DB); err != nil {
 		return fmt.Errorf("failed to save job to database: %w", err)
 	}
 

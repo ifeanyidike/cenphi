@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strings"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -16,6 +14,7 @@ import (
 	"github.com/ifeanyidike/cenphi/internal/cache"
 	"github.com/ifeanyidike/cenphi/internal/models"
 	"github.com/ifeanyidike/cenphi/internal/queue"
+	"github.com/ifeanyidike/cenphi/internal/sse"
 	"github.com/ifeanyidike/cenphi/pb"
 	"go.uber.org/zap"
 )
@@ -24,7 +23,7 @@ import (
 type AITestController struct {
 	ai.AIServiceManager
 	queueService queue.Service
-	sseManager   *SSEManager
+	sseManager   *sse.SSEManager
 	logger       *zap.Logger
 }
 
@@ -35,241 +34,241 @@ func NewAITestController(
 	logger *zap.Logger,
 	cacheService cache.RedisCache,
 ) *AITestController {
-	ctx, cancel := context.WithCancel(context.Background())
+	// ctx, cancel := context.WithCancel(context.Background())
 
-	sseManager := &SSEManager{
-		clients:      make(map[string]chan queue.JobResult),
-		logger:       logger,
-		cacheService: cacheService,
-		ctx:          ctx,
-		cancel:       cancel,
-	}
+	// sseManager := &SSEManager{
+	// 	clients:      make(map[string]chan queue.JobResult),
+	// 	logger:       logger,
+	// 	cacheService: cacheService,
+	// 	ctx:          ctx,
+	// 	cancel:       cancel,
+	// }
 
 	controller := &AITestController{
 		AIServiceManager: aiService,
 		queueService:     queueService,
-		sseManager:       sseManager,
-		logger:           logger,
+		// sseManager:       sseManager,
+		logger: logger,
 	}
 
 	// Start the SSE notification system
-	go controller.startSSENotificationSystem()
+	// go controller.startSSENotificationSystem()
 
 	return controller
 }
 
-// ============================================================================
-// SSE IMPLEMENTATION
-// ============================================================================
+// // ============================================================================
+// // SSE IMPLEMENTATION
+// // ============================================================================
 
-// StreamJobStatus handles SSE connections for real-time job updates
-func (c *AITestController) StreamJobStatus(w http.ResponseWriter, r *http.Request) {
-	// Set SSE headers
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Headers", "Cache-Control")
+// // StreamJobStatus handles SSE connections for real-time job updates
+// func (c *AITestController) StreamJobStatus(w http.ResponseWriter, r *http.Request) {
+// 	// Set SSE headers
+// 	w.Header().Set("Content-Type", "text/event-stream")
+// 	w.Header().Set("Cache-Control", "no-cache")
+// 	w.Header().Set("Connection", "keep-alive")
+// 	w.Header().Set("Access-Control-Allow-Origin", "*")
+// 	w.Header().Set("Access-Control-Allow-Headers", "Cache-Control")
 
-	// Check if response writer supports flushing
-	flusher, ok := w.(http.Flusher)
-	if !ok {
-		c.logger.Error("SSE not supported by this response writer")
-		http.Error(w, "SSE not supported", http.StatusInternalServerError)
-		return
-	}
+// 	// Check if response writer supports flushing
+// 	flusher, ok := w.(http.Flusher)
+// 	if !ok {
+// 		c.logger.Error("SSE not supported by this response writer")
+// 		http.Error(w, "SSE not supported", http.StatusInternalServerError)
+// 		return
+// 	}
 
-	// Generate unique client ID
-	clientID := fmt.Sprintf("client_%d", time.Now().UnixNano())
-	c.logger.Info("New SSE client connected", zap.String("clientID", clientID))
+// 	// Generate unique client ID
+// 	clientID := fmt.Sprintf("client_%d", time.Now().UnixNano())
+// 	c.logger.Info("New SSE client connected", zap.String("clientID", clientID))
 
-	// Create channel for this client
-	clientChan := make(chan queue.JobResult, 100)
+// 	// Create channel for this client
+// 	clientChan := make(chan queue.JobResult, 100)
 
-	// Register client
-	c.sseManager.mu.Lock()
-	c.sseManager.clients[clientID] = clientChan
-	c.sseManager.mu.Unlock()
+// 	// Register client
+// 	c.sseManager.mu.Lock()
+// 	c.sseManager.clients[clientID] = clientChan
+// 	c.sseManager.mu.Unlock()
 
-	// Send initial connection message
-	c.writeSSEEvent(w, "connected", map[string]interface{}{
-		"message":   "SSE connection established",
-		"client_id": clientID,
-		"timestamp": time.Now().Unix(),
-	})
-	flusher.Flush()
+// 	// Send initial connection message
+// 	c.writeSSEEvent(w, "connected", map[string]interface{}{
+// 		"message":   "SSE connection established",
+// 		"client_id": clientID,
+// 		"timestamp": time.Now().Unix(),
+// 	})
+// 	flusher.Flush()
 
-	// Handle client disconnection
-	defer func() {
-		c.sseManager.mu.Lock()
-		delete(c.sseManager.clients, clientID)
-		close(clientChan)
-		c.sseManager.mu.Unlock()
-		c.logger.Info("SSE client disconnected", zap.String("clientID", clientID))
-	}()
+// 	// Handle client disconnection
+// 	defer func() {
+// 		c.sseManager.mu.Lock()
+// 		delete(c.sseManager.clients, clientID)
+// 		close(clientChan)
+// 		c.sseManager.mu.Unlock()
+// 		c.logger.Info("SSE client disconnected", zap.String("clientID", clientID))
+// 	}()
 
-	// Listen for messages or client disconnect
-	for {
-		select {
-		case <-r.Context().Done():
-			// Client disconnected
-			return
-		case jobResult := <-clientChan:
-			// Send job update to client
-			eventType := "job_update"
-			switch jobResult.Status {
-			case "completed":
-				eventType = "job_completed"
-			case "failed", "cancelled":
-				eventType = "job_failed"
-			}
+// 	// Listen for messages or client disconnect
+// 	for {
+// 		select {
+// 		case <-r.Context().Done():
+// 			// Client disconnected
+// 			return
+// 		case jobResult := <-clientChan:
+// 			// Send job update to client
+// 			eventType := "job_update"
+// 			switch jobResult.Status {
+// 			case "completed":
+// 				eventType = "job_completed"
+// 			case "failed", "cancelled":
+// 				eventType = "job_failed"
+// 			}
 
-			c.writeSSEEvent(w, eventType, map[string]interface{}{
-				"job_id":     jobResult.ID,
-				"status":     jobResult.Status,
-				"progress":   jobResult.Progress,
-				"result":     jobResult.Result,
-				"error":      jobResult.Error,
-				"timestamp":  time.Now().Unix(),
-				"service_id": c.extractServiceIdFromJobId(jobResult.ID),
-			})
-			flusher.Flush()
+// 			c.writeSSEEvent(w, eventType, map[string]interface{}{
+// 				"job_id":     jobResult.ID,
+// 				"status":     jobResult.Status,
+// 				"progress":   jobResult.Progress,
+// 				"result":     jobResult.Result,
+// 				"error":      jobResult.Error,
+// 				"timestamp":  time.Now().Unix(),
+// 				"service_id": c.extractServiceIdFromJobId(jobResult.ID),
+// 			})
+// 			flusher.Flush()
 
-		case <-time.After(30 * time.Second):
-			// Send heartbeat every 30 seconds
-			c.writeSSEEvent(w, "heartbeat", map[string]interface{}{
-				"timestamp": time.Now().Unix(),
-			})
-			flusher.Flush()
-		}
-	}
-}
+// 		case <-time.After(30 * time.Second):
+// 			// Send heartbeat every 30 seconds
+// 			c.writeSSEEvent(w, "heartbeat", map[string]interface{}{
+// 				"timestamp": time.Now().Unix(),
+// 			})
+// 			flusher.Flush()
+// 		}
+// 	}
+// }
 
-// writeSSEEvent formats and writes an SSE event
-func (c *AITestController) writeSSEEvent(w http.ResponseWriter, eventType string, data interface{}) {
-	if eventType == "" {
-		eventType = "message"
-	}
+// // writeSSEEvent formats and writes an SSE event
+// func (c *AITestController) writeSSEEvent(w http.ResponseWriter, eventType string, data interface{}) {
+// 	if eventType == "" {
+// 		eventType = "message"
+// 	}
 
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		c.logger.Error("Failed to marshal SSE data", zap.Error(err))
-		fmt.Fprintf(w, "event: error\n")
-		fmt.Fprintf(w, "data: {\"error\": \"Failed to marshal data\"}\n\n")
-		return
-	}
+// 	jsonData, err := json.Marshal(data)
+// 	if err != nil {
+// 		c.logger.Error("Failed to marshal SSE data", zap.Error(err))
+// 		fmt.Fprintf(w, "event: error\n")
+// 		fmt.Fprintf(w, "data: {\"error\": \"Failed to marshal data\"}\n\n")
+// 		return
+// 	}
 
-	fmt.Fprintf(w, "event: %s\n", eventType)
-	fmt.Fprintf(w, "data: %s\n\n", jsonData)
-}
+// 	fmt.Fprintf(w, "event: %s\n", eventType)
+// 	fmt.Fprintf(w, "data: %s\n\n", jsonData)
+// }
 
-// extractServiceIdFromJobId extracts service ID from job ID or job result
-func (c *AITestController) extractServiceIdFromJobId(jobID string) string {
-	// Try to get service ID from job result metadata
-	ctx := context.Background()
-	var jobResult queue.JobResult
-	if err := c.sseManager.cacheService.Get(ctx, fmt.Sprintf("job_status:%s", jobID), &jobResult); err == nil {
-		if jobResult.Result != nil {
-			if resultMap, ok := jobResult.Result.(map[string]interface{}); ok {
-				if serviceID, exists := resultMap["service_id"]; exists {
-					if serviceIDStr, ok := serviceID.(string); ok {
-						return serviceIDStr
-					}
-				}
-			}
-		}
-	}
+// // extractServiceIdFromJobId extracts service ID from job ID or job result
+// func (c *AITestController) extractServiceIdFromJobId(jobID string) string {
+// 	// Try to get service ID from job result metadata
+// 	ctx := context.Background()
+// 	var jobResult queue.JobResult
+// 	if err := c.sseManager.cacheService.Get(ctx, fmt.Sprintf("job_status:%s", jobID), &jobResult); err == nil {
+// 		if jobResult.Result != nil {
+// 			if resultMap, ok := jobResult.Result.(map[string]interface{}); ok {
+// 				if serviceID, exists := resultMap["service_id"]; exists {
+// 					if serviceIDStr, ok := serviceID.(string); ok {
+// 						return serviceIDStr
+// 					}
+// 				}
+// 			}
+// 		}
+// 	}
 
-	// Fallback: extract from job ID pattern if it contains service info
-	if strings.Contains(jobID, "_") {
-		parts := strings.Split(jobID, "_")
-		if len(parts) >= 3 {
-			return parts[2] // Assuming format: job_timestamp_serviceId
-		}
-	}
+// 	// Fallback: extract from job ID pattern if it contains service info
+// 	if strings.Contains(jobID, "_") {
+// 		parts := strings.Split(jobID, "_")
+// 		if len(parts) >= 3 {
+// 			return parts[2] // Assuming format: job_timestamp_serviceId
+// 		}
+// 	}
 
-	return ""
-}
+// 	return ""
+// }
 
-// startSSENotificationSystem monitors job status changes and notifies SSE clients
-func (c *AITestController) startSSENotificationSystem() {
-	c.logger.Info("Starting SSE notification system")
+// // startSSENotificationSystem monitors job status changes and notifies SSE clients
+// func (c *AITestController) startSSENotificationSystem() {
+// 	c.logger.Info("Starting SSE notification system")
 
-	ticker := time.NewTicker(2 * time.Second) // Check every 2 seconds
-	defer ticker.Stop()
+// 	ticker := time.NewTicker(2 * time.Second) // Check every 2 seconds
+// 	defer ticker.Stop()
 
-	trackedJobs := make(map[string]queue.JobResult)
+// 	trackedJobs := make(map[string]queue.JobResult)
 
-	for {
-		select {
-		case <-c.sseManager.ctx.Done():
-			c.logger.Info("SSE notification system stopped")
-			return
-		case <-ticker.C:
-			c.checkJobUpdates(trackedJobs)
-		}
-	}
-}
+// 	for {
+// 		select {
+// 		case <-c.sseManager.ctx.Done():
+// 			c.logger.Info("SSE notification system stopped")
+// 			return
+// 		case <-ticker.C:
+// 			c.checkJobUpdates(trackedJobs)
+// 		}
+// 	}
+// }
 
-// checkJobUpdates checks for job status changes and notifies clients
-func (c *AITestController) checkJobUpdates(trackedJobs map[string]queue.JobResult) {
-	c.sseManager.mu.RLock()
-	clientCount := len(c.sseManager.clients)
-	c.sseManager.mu.RUnlock()
+// // checkJobUpdates checks for job status changes and notifies clients
+// func (c *AITestController) checkJobUpdates(trackedJobs map[string]queue.JobResult) {
+// 	c.sseManager.mu.RLock()
+// 	clientCount := len(c.sseManager.clients)
+// 	c.sseManager.mu.RUnlock()
 
-	if clientCount == 0 {
-		return // No clients connected
-	}
+// 	if clientCount == 0 {
+// 		return // No clients connected
+// 	}
 
-	// Get all active job keys from Redis
-	ctx := context.Background()
-	keys, err := c.sseManager.cacheService.GetKeys(ctx, "job_status:*")
-	if err != nil {
-		c.logger.Error("Failed to get job keys", zap.Error(err))
-		return
-	}
+// 	// Get all active job keys from Redis
+// 	ctx := context.Background()
+// 	keys, err := c.sseManager.cacheService.GetKeys(ctx, "job_status:*")
+// 	if err != nil {
+// 		c.logger.Error("Failed to get job keys", zap.Error(err))
+// 		return
+// 	}
 
-	for _, key := range keys {
-		jobID := key[11:] // Remove "job_status:" prefix
+// 	for _, key := range keys {
+// 		jobID := key[11:] // Remove "job_status:" prefix
 
-		var currentStatus queue.JobResult
-		if err := c.sseManager.cacheService.Get(ctx, key, &currentStatus); err != nil {
-			continue // Skip if can't get job status
-		}
+// 		var currentStatus queue.JobResult
+// 		if err := c.sseManager.cacheService.Get(ctx, key, &currentStatus); err != nil {
+// 			continue // Skip if can't get job status
+// 		}
 
-		// Check if this job status has changed
-		if lastStatus, exists := trackedJobs[jobID]; !exists ||
-			lastStatus.Status != currentStatus.Status ||
-			lastStatus.Progress != currentStatus.Progress {
+// 		// Check if this job status has changed
+// 		if lastStatus, exists := trackedJobs[jobID]; !exists ||
+// 			lastStatus.Status != currentStatus.Status ||
+// 			lastStatus.Progress != currentStatus.Progress {
 
-			// Job status changed, notify all clients
-			c.notifyClients(currentStatus)
-			trackedJobs[jobID] = currentStatus
-		}
+// 			// Job status changed, notify all clients
+// 			c.notifyClients(currentStatus)
+// 			trackedJobs[jobID] = currentStatus
+// 		}
 
-		// Clean up completed/failed jobs from tracking after some time
-		if (currentStatus.Status == "completed" || currentStatus.Status == "failed" || currentStatus.Status == "cancelled") &&
-			time.Since(currentStatus.UpdatedAt) > 5*time.Minute {
-			delete(trackedJobs, jobID)
-		}
-	}
-}
+// 		// Clean up completed/failed jobs from tracking after some time
+// 		if (currentStatus.Status == "completed" || currentStatus.Status == "failed" || currentStatus.Status == "cancelled") &&
+// 			time.Since(currentStatus.UpdatedAt) > 5*time.Minute {
+// 			delete(trackedJobs, jobID)
+// 		}
+// 	}
+// }
 
-// notifyClients sends job updates to all connected SSE clients
-func (c *AITestController) notifyClients(jobResult queue.JobResult) {
-	c.sseManager.mu.RLock()
-	defer c.sseManager.mu.RUnlock()
+// // notifyClients sends job updates to all connected SSE clients
+// func (c *AITestController) notifyClients(jobResult queue.JobResult) {
+// 	c.sseManager.mu.RLock()
+// 	defer c.sseManager.mu.RUnlock()
 
-	for clientID, clientChan := range c.sseManager.clients {
-		select {
-		case clientChan <- jobResult:
-			// Successfully sent
-		default:
-			// Channel is full, skip this client
-			c.logger.Warn("SSE client channel full, skipping", zap.String("clientID", clientID))
-		}
-	}
-}
+// 	for clientID, clientChan := range c.sseManager.clients {
+// 		select {
+// 		case clientChan <- jobResult:
+// 			// Successfully sent
+// 		default:
+// 			// Channel is full, skip this client
+// 			c.logger.Warn("SSE client channel full, skipping", zap.String("clientID", clientID))
+// 		}
+// 	}
+// }
 
 // ============================================================================
 // STANDARD AI SERVICES (Go-based, immediate response)
@@ -790,12 +789,12 @@ func (c *AITestController) OptimizeForPlatform(w http.ResponseWriter, r *http.Re
 			return
 		}
 
-		workspaceID, _ := uuid.Parse(req.WorkspaceID)
-		testimonialID, _ := uuid.Parse(req.TestimonialId)
+		// workspaceID, _ := uuid.Parse(req.WorkspaceID)
+		// testimonialID, _ := uuid.Parse(req.TestimonialId)
 
-		c.SaveResponseToArtifacts(r.Context(), "textonly-platform-optimization", workspaceID, &testimonialID, map[string]any{
-			"optimized_text": result,
-		})
+		// c.SaveResponseToArtifacts(r.Context(), "textonly-platform-optimization", workspaceID, &testimonialID, map[string]any{
+		// 	"optimized_text": result,
+		// })
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(result)
@@ -1080,11 +1079,11 @@ func (c *AITestController) HandleStreamingOptions(w http.ResponseWriter, r *http
 }
 
 // Cleanup resources when the controller is destroyed
-func (c *AITestController) Cleanup() {
-	if c.sseManager != nil {
-		c.sseManager.cancel()
-	}
-}
+// func (c *AITestController) Cleanup() {
+// 	if c.sseManager != nil {
+// 		c.sseManager.cancel()
+// 	}
+// }
 
 func (c *AITestController) streamResponse(w http.ResponseWriter, r *http.Request, streamFunc func(context.Context) (<-chan ai.StreamChunk, error)) {
 	w.Header().Set("Content-Type", "text/event-stream")

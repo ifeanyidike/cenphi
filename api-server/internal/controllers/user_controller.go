@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -17,8 +18,10 @@ import (
 
 type UserController interface {
 	GetUser(w http.ResponseWriter, r *http.Request)
+	GetUserByUID(w http.ResponseWriter, r *http.Request)
 	RegisterUser(w http.ResponseWriter, r *http.Request)
 	UpdateUser(w http.ResponseWriter, r *http.Request)
+	GetWorkspace(w http.ResponseWriter, r *http.Request)
 }
 
 type userController struct {
@@ -67,6 +70,54 @@ func (c *userController) GetUser(w http.ResponseWriter, r *http.Request) {
 	utils.RespondWithJSON(w, http.StatusOK, user)
 }
 
+// GetUser retrieves a user by ID.
+// @Summary Get User
+// @Description Fetch a user by their ID.
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param id path string true "User ID"
+// @Success 200 {object} models.User
+// @Failure 400 {object} utils.ErrorResponse
+// @Failure 404 {object} utils.ErrorResponse
+// @Router /users/ [get]
+func (c *userController) GetUserByUID(w http.ResponseWriter, r *http.Request) {
+	params := chi.RouteContext(r.Context())
+	c.logger.Info("URL Params", zap.Any("params", params))
+
+	user, err := c.service.FindByUID(r.Context())
+	if err != nil {
+		c.logger.Error("failed to get user", zap.Error(err))
+		utils.RespondWithError(w, http.StatusNotFound, err.Error())
+		return
+	}
+
+	utils.RespondWithJSON(w, http.StatusOK, user)
+}
+
+// GetWorkspace retrieves the workspace by the user uid.
+// @Summary Get Workspace
+// @Description Fetch a workspace by their ID.
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param id path string true "User ID"
+// @Success 200 {object} models.User
+// @Failure 400 {object} utils.ErrorResponse
+// @Failure 404 {object} utils.ErrorResponse
+// @Router /users/workspace [get]
+func (c *userController) GetWorkspace(w http.ResponseWriter, r *http.Request) {
+
+	workspace, err := c.service.GetWorkspaceDataByUser(r.Context())
+	if err != nil {
+		c.logger.Error("failed to get workspace using context data", zap.Error(err))
+		utils.RespondWithError(w, http.StatusNotFound, err.Error())
+		return
+	}
+
+	utils.RespondWithJSON(w, http.StatusOK, workspace)
+}
+
 // RegisterUser registers a new user.
 // @Summary Register User
 // @Description Register a new user.
@@ -98,7 +149,12 @@ func (c *userController) RegisterUser(w http.ResponseWriter, r *http.Request) {
 
 	if err := c.service.RegisterUser(ctx, &user); err != nil {
 		c.logger.Error("failed to register user", zap.Error(err))
-		utils.RespondWithError(w, http.StatusInternalServerError, "Failed to register user")
+		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
+			utils.RespondWithError(w, http.StatusConflict, "user_exists")
+		} else {
+			utils.RespondWithError(w, http.StatusInternalServerError, "Failed to register user")
+		}
+
 		return
 	}
 

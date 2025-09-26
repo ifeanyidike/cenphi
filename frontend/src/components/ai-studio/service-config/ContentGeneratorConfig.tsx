@@ -1,278 +1,141 @@
+import { useState } from "react";
+import { CONTENT_GENERATION_TYPES } from "../definitions";
+import { motion } from "framer-motion";
+import { FileText, Sparkles, X } from "lucide-react";
+import ModalPortal from "@/utils/ModalPortal";
+import { ContentConfig, ServiceType } from "@/types/ai-service";
+import { observer } from "mobx-react-lite";
+
 // components/ai-studio/service-config/ContentGeneratorConfig.tsx
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle, Heart, Search, Type } from "lucide-react";
+const ContentGenerationModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  onGenerate: (serviceId: ServiceType, config: ContentConfig) => void;
+  selectedTestimonials: string[];
+}> = ({ isOpen, onClose, onGenerate, selectedTestimonials }) => {
+  const [selectedType, setSelectedType] = useState<string>("");
+  const [customPrompt, setCustomPrompt] = useState<string>("");
+  const [searchTerm, setSearchTerm] = useState<string>("");
 
-type Props = {
-  updateConfig: (key: string, value: any) => void;
-  config: any;
-};
-const ContentGeneratorConfig = ({ updateConfig, config }: Props) => {
+  const filteredTypes = CONTENT_GENERATION_TYPES.filter(
+    (type) =>
+      type.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      type.description.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handleGenerate = () => {
+    if (selectedType) {
+      onGenerate("content_generation", {
+        content_type: selectedType,
+        prompt: customPrompt.trim() || null,
+      });
+      onClose();
+    }
+  };
+
   return (
-    <div className="space-y-12">
-      {/* Content Types Section */}
-      <div className="bg-gradient-to-r from-pink-50/60 to-rose-50/60 rounded-2xl p-8 border border-pink-50">
-        <div className="flex items-center gap-3 mb-4">
-          <div>
-            <h3 className="text-lg font-bold text-gray-900">Content Types</h3>
-            <p className="text-sm text-gray-600">
-              Select the types of content to generate
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {[
-            "Email Campaign",
-            "Blog Post",
-            "Case Study",
-            "Social Media Posts",
-            "Sales Deck",
-            "Whitepaper",
-            "Press Release",
-            "Landing Page Copy",
-            "Testimonial Wall",
-          ].map((type) => (
-            <button
-              key={type}
-              className={`p-4 text-left rounded-xl border-2 transition-all ${
-                config.contentTypes?.includes(type)
-                  ? "border-pink-500 bg-pink-50"
-                  : "border-gray-200 hover:border-gray-300"
-              }`}
-              onClick={() => {
-                const current = config.contentTypes || [];
-                if (current.includes(type)) {
-                  updateConfig(
-                    "contentTypes",
-                    current.filter((t: string) => t !== type)
-                  );
-                } else {
-                  updateConfig("contentTypes", [...current, type]);
-                }
-              }}
-            >
-              <div className="flex items-center justify-between">
-                <span className="font-medium text-sm">{type}</span>
-                {config.contentTypes?.includes(type) && (
-                  <CheckCircle className="h-4 w-4 text-pink-600" />
-                )}
+    <ModalPortal isOpen={isOpen}>
+      <div className="fixed top-0 left-0 right-0 bottom-0 w-screen h-screen bg-black/50 flex items-center justify-center z-50 m-0 p-0">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          className="bg-white rounded-xl shadow-xl max-w-4xl w-full mx-4 my-8 max-h-[calc(100vh-4rem)] overflow-hidden"
+        >
+          <div className="px-6 py-4 border-b border-gray-50 bg-gray-50/50">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center">
+                  <FileText className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    Generate Content
+                  </h2>
+                  <p className="text-xs text-gray-500">
+                    Create marketing content from {selectedTestimonials.length}{" "}
+                    testimonial{selectedTestimonials.length > 1 ? "s" : ""}
+                  </p>
+                </div>
               </div>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Style & Tone Section */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-8 border border-blue-100">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 flex items-center justify-center">
-            <Type className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <h3 className="text-xl font-bold text-gray-900">Style & Tone</h3>
-            <p className="text-sm text-gray-600">
-              Configure the writing style and target audience
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="space-y-6">
-            <div>
-              <label className="text-base font-semibold text-gray-900 mb-3 block">
-                Tone & Style
-              </label>
-              <select
-                value={config.tone}
-                onChange={(e) => updateConfig("tone", e.target.value)}
-                className="w-full h-12 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
               >
-                <option value="professional">
-                  Professional - Formal and authoritative
-                </option>
-                <option value="casual">
-                  Casual - Friendly and approachable
-                </option>
-                <option value="persuasive">
-                  Persuasive - Compelling and action-oriented
-                </option>
-                <option value="technical">
-                  Technical - Detailed and precise
-                </option>
-                <option value="friendly">Friendly - Warm and personal</option>
-              </select>
+                <X className="h-4 w-4 text-gray-500" />
+              </button>
             </div>
+          </div>
 
-            <div>
-              <label className="text-base font-semibold text-gray-900 mb-3 block">
-                Content Length
-              </label>
-              <select
-                value={config.contentLength}
-                onChange={(e) => updateConfig("contentLength", e.target.value)}
-                className="w-full h-12 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="short">Short - Concise and punchy</option>
-                <option value="medium">Medium - Detailed overview</option>
-                <option value="long">Long - Comprehensive and thorough</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="text-base font-semibold text-gray-900 mb-3 block">
-                Target Audience
-              </label>
+          <div className="p-6 overflow-y-auto flex-1">
+            {/* Search */}
+            <div className="mb-6">
               <input
                 type="text"
-                placeholder="e.g., potential customers, existing clients, industry professionals"
-                value={config.targetAudience || ""}
-                onChange={(e) => updateConfig("targetAudience", e.target.value)}
-                className="w-full h-12 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Search content types..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-gray-400 text-sm placeholder:text-gray-400"
+              />
+            </div>
+
+            {/* Content Types Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
+              {filteredTypes.map((type) => (
+                <button
+                  key={type.id}
+                  onClick={() => setSelectedType(type.id)}
+                  className={`p-4 text-left rounded-lg border transition-all ${
+                    selectedType === type.id
+                      ? "border-gray-900 bg-gray-50"
+                      : "border-gray-200 hover:border-gray-300 hover:bg-gray-50/50"
+                  }`}
+                >
+                  <div className="font-medium text-gray-900 text-sm mb-1">
+                    {type.name}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {type.description}
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* Custom Prompt */}
+            <div className="mb-6">
+              <label className="text-xs font-medium text-gray-600 uppercase tracking-wide block mb-2">
+                Custom Instructions (Optional)
+              </label>
+              <textarea
+                value={customPrompt}
+                onChange={(e) => setCustomPrompt(e.target.value)}
+                placeholder="Add specific requirements or style preferences for the generated content..."
+                rows={3}
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-gray-400 text-sm placeholder:text-gray-400 resize-none"
               />
             </div>
           </div>
 
-          <div className="space-y-4">
-            {[
-              {
-                key: "autoSelectPositive",
-                label: "Auto-Select Positive Reviews",
-                desc: "Automatically choose the most positive testimonials",
-              },
-              {
-                key: "includeMetrics",
-                label: "Include Metrics & Data",
-                desc: "Add quantifiable results and statistics",
-              },
-              {
-                key: "seoOptimization",
-                label: "SEO Optimization",
-                desc: "Optimize content for search engines",
-              },
-              {
-                key: "includeCTA",
-                label: "Include Call-to-Action",
-                desc: "Add compelling calls to action",
-              },
-            ].map((option) => (
-              <div
-                key={option.key}
-                className="flex items-center justify-between p-5 bg-white rounded-xl border border-gray-200 hover:border-blue-300 transition-all"
-              >
-                <div>
-                  <label className="text-base font-semibold text-gray-900">
-                    {option.label}
-                  </label>
-                  <p className="text-sm text-gray-600">{option.desc}</p>
-                </div>
-                <Switch
-                  checked={config[option.key]}
-                  onCheckedChange={(checked) =>
-                    updateConfig(option.key, checked)
-                  }
-                  className="data-[state=checked]:bg-blue-600"
-                />
-              </div>
-            ))}
+          <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex justify-end gap-3">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors text-sm font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleGenerate}
+              disabled={!selectedType}
+              className="px-6 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2 text-sm font-medium"
+            >
+              <Sparkles className="h-4 w-4" />
+              Generate Content
+            </button>
           </div>
-        </div>
+        </motion.div>
       </div>
-
-      {/* Brand Voice Section */}
-      <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-8 border border-purple-100">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 flex items-center justify-center">
-            <Heart className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <h3 className="text-xl font-bold text-gray-900">
-              Brand Voice & Guidelines
-            </h3>
-            <p className="text-sm text-gray-600">
-              Define your brand's personality and communication style
-            </p>
-          </div>
-        </div>
-
-        <div className="space-y-6">
-          <div>
-            <Label className="text-base font-semibold text-gray-900 mb-3 block">
-              Brand Voice & Guidelines
-            </Label>
-            <Textarea
-              placeholder="Describe your brand's personality, communication style, and any specific guidelines..."
-              value={config.brandVoice || ""}
-              onChange={(e) => updateConfig("brandVoice", e.target.value)}
-              rows={4}
-              className="resize-none"
-            />
-          </div>
-
-          <div>
-            <Label className="text-base font-semibold text-gray-900 mb-3 block">
-              Custom Requirements (Optional)
-            </Label>
-            <Textarea
-              placeholder="Any specific requirements, keywords to include, or formatting preferences..."
-              value={config.customRequirements || ""}
-              onChange={(e) =>
-                updateConfig("customRequirements", e.target.value)
-              }
-              rows={4}
-              className="resize-none"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* SEO Configuration */}
-      {config.seoOptimization && (
-        <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-8 border border-green-100">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 flex items-center justify-center">
-              <Search className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-gray-900">
-                SEO Configuration
-              </h3>
-              <p className="text-sm text-gray-600">
-                Optimize content for search engine visibility
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div>
-              <Label className="text-base font-semibold text-gray-900 mb-3 block">
-                Target Keywords (comma separated)
-              </Label>
-              <Input
-                placeholder="testimonial management, customer reviews, social proof"
-                value={config.seoKeywords || ""}
-                onChange={(e) => updateConfig("seoKeywords", e.target.value)}
-                className="h-12"
-              />
-            </div>
-            <div>
-              <Label className="text-base font-semibold text-gray-900 mb-3 block">
-                Focus Keyword
-              </Label>
-              <Input
-                placeholder="Primary keyword for content optimization"
-                value={config.focusKeyword || ""}
-                onChange={(e) => updateConfig("focusKeyword", e.target.value)}
-                className="h-12"
-              />
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+    </ModalPortal>
   );
 };
 
-export default ContentGeneratorConfig;
+export default observer(ContentGenerationModal);

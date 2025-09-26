@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simplified Testimonial Widget Example</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 3rem;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .content {
+            background: white;
+            border-radius: 1rem;
+            padding: 2rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .feature {
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+        }
+
+        .feature h3 {
+            color: #1a202c;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .feature p {
+            color: #4a5568;
+            font-size: 0.9rem;
+            margin: 0;
+        }
+
+        .config-example {
+            background: #1a202c;
+            color: #e2e8f0;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.85rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+
+        .highlight {
+            background: linear-gradient(135deg, #4F46E5, #8B5CF6);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>📝 Simplified Testimonial Widget</h1>
+            <p>A clean, modern, and professional testimonial capture widget that focuses on what matters most - capturing authentic customer experiences through video and text.</p>
+        </header>
+
+        <div class="content">
+            <h2>✨ Key Features</h2>
+            <p>The simplified widget removes complexity and focuses on essential functionality:</p>
+
+            <div class="feature-grid">
+                <div class="feature">
+                    <h3>🎥 Video Testimonials</h3>
+                    <p>Record videos directly using device camera with portrait orientation, or upload existing video files.</p>
+                </div>
+
+                <div class="feature">
+                    <h3>✍️ Text Testimonials</h3>
+                    <p>Simple text input for written testimonials with character counting and validation.</p>
+                </div>
+
+                <div class="feature">
+                    <h3>🎨 Professional Design</h3>
+                    <p>Minimal, elegant interface with customizable colors, positioning, and branding options.</p>
+                </div>
+
+                <div class="feature">
+                    <h3>📱 Mobile Optimized</h3>
+                    <p>Works seamlessly across all devices with responsive design and touch-friendly controls.</p>
+                </div>
+
+                <div class="feature">
+                    <h3>⚡ Simple Integration</h3>
+                    <p>Easy to embed with just a script tag and minimal configuration required.</p>
+                </div>
+
+                <div class="feature">
+                    <h3>🚀 Fast & Lightweight</h3>
+                    <p>Removed complex features like WebSockets, AI, and multi-step flows for better performance.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="content">
+            <h2>🛠️ Configuration Example</h2>
+            <p>Configure the widget by setting <span class="highlight">window.testimonialWidgetConfig</span> before loading the script:</p>
+
+            <div class="config-example">
+&lt;script&gt;
+  window.testimonialWidgetConfig = {
+    campaignId: 'your-campaign-id',
+    apiBaseUrl: 'https://your-api.com/api',
+    companyName: 'Your Company',
+    companyLogo: 'https://your-logo-url.com/logo.png',
+    buttonText: 'Share Your Experience',
+    question: 'What has your experience been like with our product?',
+    primaryColor: '#4F46E5',
+    secondaryColor: '#8B5CF6',
+    position: 'bottom-right',
+    maxDuration: 120,
+    darkMode: false,
+    brandMode: 'gradient',
+    roundedCorners: 'rounded'
+  };
+&lt;/script&gt;
+&lt;script src="https://your-cdn.com/testimonial-widget.js"&gt;&lt;/script&gt;
+            </div>
+        </div>
+
+        <div class="content">
+            <h2>🎯 What Was Removed</h2>
+            <p>To create a more focused and maintainable widget, we removed:</p>
+            <ul>
+                <li><strong>Multi-step flows</strong> - Simplified to single-page interactions</li>
+                <li><strong>Profile picture uploads</strong> - Removed unnecessary complexity</li>
+                <li><strong>Audio-only testimonials</strong> - Focus on video and text only</li>
+                <li><strong>Image testimonials</strong> - Streamlined to core formats</li>
+                <li><strong>AI features and live translation</strong> - Removed real-time processing</li>
+                <li><strong>WebSocket connections</strong> - Eliminated streaming dependencies</li>
+                <li><strong>Complex navigation</strong> - Single modal with clear flow</li>
+                <li><strong>Excessive configuration options</strong> - Focused on essential settings</li>
+            </ul>
+        </div>
+
+        <div class="content">
+            <h2>📋 Supported Formats</h2>
+            <div class="feature-grid">
+                <div class="feature">
+                    <h3>Video Formats</h3>
+                    <p><strong>Recording:</strong> WebM format with VP9/Opus codecs<br>
+                    <strong>Upload:</strong> MP4, WebM, MOV, AVI (up to 1GB)</p>
+                </div>
+
+                <div class="feature">
+                    <h3>Text Input</h3>
+                    <p>Plain text with 1000 character limit, automatic validation and word counting.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Example configuration - this would typically be set by the user
+        window.testimonialWidgetConfig = {
+            campaignId: 'demo-campaign-123',
+            apiBaseUrl: 'https://api.example.com',
+            companyName: 'Demo Company',
+            companyLogo: null,
+            buttonText: 'Share Your Story',
+            question: 'What has your experience been like with our product?',
+            primaryColor: '#4F46E5',
+            secondaryColor: '#8B5CF6',
+            position: 'bottom-right',
+            maxDuration: 120,
+            darkMode: false,
+            brandMode: 'gradient',
+            roundedCorners: 'rounded'
+        };
+
+        // Widget would be loaded here
+        // <script src="path/to/testimonial-widget.js"></script>
+
+        console.log('Testimonial Widget Configuration:', window.testimonialWidgetConfig);
+    </script>
+</body>
+</html>

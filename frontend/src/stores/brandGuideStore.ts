@@ -32,9 +32,155 @@ class BrandGuideStore {
   }
 
   init() {
-    // Load data from localStorage
+    // Load data from localStorage and workspace if available
     this.loadBrandData();
     this.loadRecentColors();
+  }
+
+  /**
+   * Initialize brand data from workspace brand_context
+   */
+  initializeFromWorkspace(workspaceBrandContext: Record<string, any>) {
+    try {
+      const updatedData = cloneDeep(defaultBrandData);
+
+      // Map workspace brand_context to brand guide structure
+      if (workspaceBrandContext.tagline) {
+        updatedData.tagline = workspaceBrandContext.tagline;
+      }
+
+      if (workspaceBrandContext.about_info) {
+        updatedData.description = workspaceBrandContext.about_info;
+      }
+
+      if (workspaceBrandContext.logo_url) {
+        updatedData.logo.main = workspaceBrandContext.logo_url;
+      }
+
+      // Map brand colors if they exist
+      if (
+        workspaceBrandContext.brand_colors &&
+        Object.keys(workspaceBrandContext.brand_colors).length > 0
+      ) {
+        const colors = workspaceBrandContext.brand_colors;
+        if (colors.primary) updatedData.colors.primary = colors.primary;
+        if (colors.secondary) updatedData.colors.secondary = colors.secondary;
+        if (colors.accent) updatedData.colors.accent = colors.accent;
+      }
+
+      // Map fonts if they exist
+      if (
+        workspaceBrandContext.brand_fonts &&
+        workspaceBrandContext.brand_fonts.primary
+      ) {
+        const primaryFont = workspaceBrandContext.brand_fonts.primary[0];
+        if (primaryFont && primaryFont !== "var(--body-fontFamily)") {
+          // Convert CSS font family to our font system
+          const fontName = this.mapCSSFontToSystemFont(primaryFont);
+          updatedData.typography.headingFont = fontName;
+          updatedData.typography.bodyFont = fontName;
+        }
+      }
+
+      // Map tone to brand voice/description if available
+      if (workspaceBrandContext.tone) {
+        updatedData.voice = {
+          ...updatedData.voice,
+          tone: workspaceBrandContext.tone,
+        };
+      }
+
+      // Map mission statement
+      if (workspaceBrandContext.mission_statement) {
+        updatedData.mission = workspaceBrandContext.mission_statement;
+      }
+
+      // Map target audience
+      if (workspaceBrandContext.target_audience) {
+        updatedData.audience = workspaceBrandContext.target_audience;
+      }
+
+      // Map industry
+      if (workspaceBrandContext.industry) {
+        updatedData.voice = updatedData.voice || {};
+        updatedData.voice.attributes = updatedData.voice.attributes || [];
+        if (
+          !updatedData.voice.attributes.includes(workspaceBrandContext.industry)
+        ) {
+          updatedData.voice.attributes.push(workspaceBrandContext.industry);
+        }
+      }
+
+      // Map tone
+      if (workspaceBrandContext.tone) {
+        updatedData.voice = updatedData.voice || {};
+        updatedData.voice.tone = workspaceBrandContext.tone;
+      }
+
+      // Map values array
+      if (
+        workspaceBrandContext.values &&
+        Array.isArray(workspaceBrandContext.values)
+      ) {
+        updatedData.voice = updatedData.voice || {};
+        updatedData.voice.personality = workspaceBrandContext.values;
+      }
+
+      // Map brand colors from brand_context
+      if (
+        workspaceBrandContext.brand_colors &&
+        Array.isArray(workspaceBrandContext.brand_colors)
+      ) {
+        if (workspaceBrandContext.brand_colors[0]) {
+          updatedData.colors.primary = workspaceBrandContext.brand_colors[0];
+        }
+        if (workspaceBrandContext.brand_colors[1]) {
+          updatedData.colors.secondary = workspaceBrandContext.brand_colors[1];
+        }
+      }
+
+      updatedData.updated_at = new Date();
+
+      runInAction(() => {
+        this.brandData = updatedData;
+        this.isSaved = false; // Mark as unsaved since we have new data
+      });
+
+      console.log(
+        "Initialized brand guide from workspace context:",
+        updatedData
+      );
+    } catch (e) {
+      console.error("Failed to initialize from workspace context", e);
+      this.error = "Failed to load workspace brand data";
+    }
+  }
+
+  /**
+   * Map CSS font family names to our simplified font system
+   */
+  private mapCSSFontToSystemFont(cssFont: string): string {
+    const fontMap: Record<string, string> = {
+      Inter: "inter",
+      Poppins: "poppins",
+      Roboto: "roboto",
+      "Open Sans": "open-sans",
+      Montserrat: "montserrat",
+      "Source Sans Pro": "source-sans-pro",
+      Lato: "lato",
+      "Playfair Display": "playfair-display",
+      Merriweather: "merriweather",
+    };
+
+    // Try to find a match in our supported fonts
+    for (const [cssName, systemName] of Object.entries(fontMap)) {
+      if (cssFont.toLowerCase().includes(cssName.toLowerCase())) {
+        return systemName;
+      }
+    }
+
+    // Default to system if no match found
+    return "system";
   }
 
   loadBrandData() {
@@ -86,31 +232,50 @@ class BrandGuideStore {
   }
 
   /**
-   * Save all changes to localStorage and (in a real app) to the server
+   * Save all changes to localStorage and backend via workspace update
    */
   async saveChanges() {
     this.isSaving = true;
     this.error = null;
 
     try {
-      // In a real app, this would be an API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Import workspace hub dynamically to avoid circular dependency
+      const { workspaceHub } = await import("@/repo/workspace_hub");
 
-      // Save to localStorage
-      localStorage.setItem(
-        "brandGuideData",
-        JSON.stringify(toJS(this.brandData))
-      );
+      // Convert brand guide data back to workspace brand_context format
+      const brandContext = this.convertToWorkspaceFormat(this.brandData);
 
-      runInAction(() => {
-        this.isSaved = true;
+      // Save to backend via workspace update
+      const success = await workspaceHub.update({
+        brand_context: brandContext,
       });
 
-      return true;
-    } catch (e) {
+      if (success) {
+        // Also save to localStorage as backup
+        localStorage.setItem(
+          "brandGuideData",
+          JSON.stringify(toJS(this.brandData))
+        );
+
+        // Update the workspace in memory
+        if (workspaceHub.workspace) {
+          runInAction(() => {
+            workspaceHub.workspace!.brand_context = brandContext;
+          });
+        }
+
+        runInAction(() => {
+          this.isSaved = true;
+        });
+
+        return true;
+      } else {
+        throw new Error("Failed to save to backend");
+      }
+    } catch (e: any) {
       console.error("Failed to save brand data", e);
       runInAction(() => {
-        this.error = "Failed to save changes";
+        this.error = e.message || "Failed to save changes";
       });
       throw e;
     } finally {
@@ -118,6 +283,108 @@ class BrandGuideStore {
         this.isSaving = false;
       });
     }
+  }
+
+  /**
+   * Convert brand guide data back to workspace brand_context format
+   */
+  private convertToWorkspaceFormat(brandData: any): Record<string, any> {
+    const brandContext: Record<string, any> = {};
+
+    // Map back to workspace format
+    if (brandData.tagline) {
+      brandContext.tagline = brandData.tagline;
+    }
+
+    if (brandData.description) {
+      brandContext.about_info = brandData.description;
+    }
+
+    if (brandData.logo?.main) {
+      brandContext.logo_url = brandData.logo.main;
+    }
+
+    // Map colors back
+    if (brandData.colors) {
+      brandContext.brand_colors = {
+        primary: brandData.colors.primary,
+        secondary: brandData.colors.secondary,
+        accent: brandData.colors.accent,
+      };
+    }
+
+    // Map fonts back
+    if (brandData.typography) {
+      const fontName = this.convertSystemFontToCSSFont(
+        brandData.typography.headingFont
+      );
+      brandContext.brand_fonts = {
+        primary: [fontName],
+        total_found: 1,
+      };
+    }
+
+    // Map other fields
+    if (brandData.voice?.tone) {
+      brandContext.tone = brandData.voice.tone;
+    }
+
+    // Map values/personality back
+    if (
+      brandData.voice?.personality &&
+      Array.isArray(brandData.voice.personality)
+    ) {
+      brandContext.values = brandData.voice.personality;
+    }
+
+    // Map industry back from voice attributes
+    if (
+      brandData.voice?.attributes &&
+      Array.isArray(brandData.voice.attributes)
+    ) {
+      if (brandData.voice.attributes.length > 0) {
+        brandContext.industry = brandData.voice.attributes[0]; // Use first attribute as industry
+      }
+    }
+
+    // Map mission and audience back
+    if (brandData.mission) {
+      brandContext.mission_statement = brandData.mission;
+    }
+
+    if (brandData.audience) {
+      brandContext.target_audience = brandData.audience;
+    }
+
+    // Map brand colors array format
+    if (brandData.colors) {
+      brandContext.brand_colors = [
+        brandData.colors.primary,
+        brandData.colors.secondary,
+      ];
+    }
+
+    return brandContext;
+  }
+
+  /**
+   * Convert our font system back to CSS font names
+   */
+  private convertSystemFontToCSSFont(systemFont: string): string {
+    const reverseMap: Record<string, string> = {
+      inter: "Inter",
+      poppins: "Poppins",
+      roboto: "Roboto",
+      "open-sans": "Open Sans",
+      montserrat: "Montserrat",
+      "source-sans-pro": "Source Sans Pro",
+      lato: "Lato",
+      "playfair-display": "Playfair Display",
+      merriweather: "Merriweather",
+      system: "var(--body-fontFamily)",
+    };
+
+    return reverseMap[systemFont] || "var(--body-fontFamily)";
   }
 
   /**
@@ -380,61 +647,6 @@ class BrandGuideStore {
 
   toggleAiSuggestions = () => {
     this.showAiSuggestions = !this.showAiSuggestions;
-  };
-
-  generateAiSuggestions = async () => {
-    this.aiGenerating = true;
-    this.showAiSuggestions = true;
-
-    try {
-      // Simulate AI generation
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      // In a real implementation, you would call an AI API here
-      // Example AI-enhanced voice suggestions
-      runInAction(() => {
-        this.brandData.voice = {
-          ...this.brandData.voice,
-          tone: "conversational",
-          values: ["Authentic", "Trustworthy", "Innovative"],
-          examples: [
-            "Our customers are at the heart of everything we do.",
-            "We're committed to delivering exceptional experiences.",
-            "Join thousands of satisfied customers who trust our solutions.",
-          ],
-          ctas: [
-            "Share your story",
-            "Tell us about your experience",
-            "How did we do?",
-          ],
-          channels: {
-            ...this.brandData.voice.channels,
-            email: {
-              ...(this.brandData?.voice?.channels?.email || {}),
-              requestTemplate:
-                "Hi {{name}},\n\nWe hope you're enjoying your experience with {{brand}}! We would love to hear your thoughts. Would you mind taking a moment to share your feedback?\n\nBest,\n{{brand}} Team",
-              thankYouTemplate:
-                "Thank you for your feedback, {{name}}! We appreciate your input and look forward to serving you better.",
-            },
-          },
-        };
-
-        this.isDirty = true;
-        this.isSaved = false;
-        this.aiGenerating = false;
-
-        // Add to history
-        this.addToHistory(this.brandData);
-      });
-
-      return Promise.resolve();
-    } catch (error) {
-      runInAction(() => {
-        this.aiGenerating = false;
-      });
-
-      return Promise.reject(error);
-    }
   };
 }
 

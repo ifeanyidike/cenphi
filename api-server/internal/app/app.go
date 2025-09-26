@@ -6,6 +6,8 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
@@ -21,6 +23,7 @@ import (
 	"github.com/ifeanyidike/cenphi/internal/routes"
 	"github.com/ifeanyidike/cenphi/internal/services"
 	"github.com/ifeanyidike/cenphi/internal/sharing"
+	"github.com/ifeanyidike/cenphi/internal/sse"
 	"github.com/ifeanyidike/cenphi/internal/storage"
 
 	"github.com/redis/go-redis/v9"
@@ -58,6 +61,7 @@ type App struct {
 	GoogleDriveController           controllers.GoogleDriveController
 	SSETestimonialMonitor           *controllers.SSETestimonialMonitor
 	AIProcessorController           controllers.AIProcessorController
+	PresetController                controllers.PresetController
 	TestController                  controllers.TestController
 	// Services
 	StorageService storage.StorageFactory
@@ -103,6 +107,7 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 	}
 
 	// Initialize repositories
+	repo := repositories.NewRepositoryManager(redisClient)
 	userRepo := repositories.NewUserRepository(redisClient)
 	teamMemberRepo := repositories.NewTeamMemberRepository(redisClient)
 	testimonialRepo := repositories.NewTestimonialRepository(redisClient)
@@ -111,14 +116,16 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 	socialPostRepository := repositories.NewSocialPostRepository(redisClient)
 	testimonialReqRepo := repositories.NewTestimonialRequestRepository(db)
 	jobRepo := repositories.NewJobRepository(redisClient)
-	artifactsRepo := repositories.NewTestimonialArtifactRepository(redisClient)
+	artifactsRepo := repositories.NewTestimonialArtifactRepository(redisClient, logger)
 	driveRepo := repositories.NewGoogleDriveRepository(redisClient)
+	presetRepo := repositories.NewPresetRepository(redisClient)
 
+	sseManager := sse.NewSSEManager(cacheService, logger)
 	aiServiceManager := ai.NewAIServiceManager(cfg, cacheService, aiClient, audioExtractor, artifactsRepo, workspaceRepo, testimonialRepo, jobRepo, db, logger)
 	testimonialService := services.NewTestimonialService(testimonialRepo, userRepo, storageService, db, redisClient, logger)
-	userService := services.NewUserService(userRepo, db, logger)
+	userService := services.NewUserService(repo, db, logger)
 	teamMemberService := services.NewTeamMemberService(teamMemberRepo, db, logger)
-	onboardingService := services.NewOnboardingService(db, logger, aiServiceManager)
+	onboardingService := services.NewOnboardingService(db, logger, repo, aiServiceManager)
 	workspaceService := services.NewWorkspaceService(workspaceRepo, teamMemberRepo, testimonialRepo, db, redisClient, logger)
 	linkedinService := sharing.NewLinkedInClient(cfg.Social, logger, cacheService)
 	sharingService := sharing.NewSharingClient(
@@ -151,7 +158,9 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 	)
 	driveService := services.NewDriveService(cfg.Google.Drive, cacheService, driveRepo, db, logger)
 	testimonialCollService := services.NewTestimonialCollectionService(
-		testimonialRepo, jobRepo, storageService, driveService, &mailingService, queueService, db, redisClient, logger)
+		testimonialRepo, jobRepo, storageService, driveService, &mailingService, queueService,
+		aiServiceManager.AudioTranscriptionService, db, redisClient, logger)
+	presetService := services.NewPresetService(db, logger, presetRepo)
 
 	// Initialize WebSocket hub
 	// wsHub := services.NewWSHub(logger, aiClient, testimonialService)
@@ -176,14 +185,16 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 	testimonialReqController := controllers.NewTestimonialRequestController(mailingService, logger)
 
 	googleDriveController := controllers.NewGoogleDriveController(cfg, driveService, testimonialCollService, logger)
-	testimonialCollController := controllers.NewTestimonialCollectionController(testimonialCollService, *driveService, logger)
+	testimonialCollController := controllers.NewTestimonialCollectionController(testimonialCollService, *driveService, aiServiceManager.AudioTranscriptionService, logger)
 	sseTestimonialMonitor := controllers.NewSSETestimonialMonitor(cacheService, logger)
-	aiProcessorController := controllers.NewAIProcessorController(aiServiceManager, queueService, logger, cacheService)
+	aiProcessorController := controllers.NewAIProcessorController(aiServiceManager, queueService, logger, cacheService, sseManager)
+	presetController := controllers.NewPresetController(presetService, logger)
+
 	// testimonialCollController := controllers.NewTestimonialCollectionController(testimonialCollService, logger)
 	testController := controllers.NewTestController(driveService, sharingService, logger)
 	var queueWorkers []queue.Worker
 	aiWorkers := ai.NewAIQueueWorker(ctx, queueService, aiServiceManager,
-		media_intelligence, cacheService, db, workspaceRepo, testimonialRepo, artifactsRepo, jobRepo, logger)
+		media_intelligence, cacheService, db, workspaceRepo, testimonialRepo, artifactsRepo, jobRepo, logger, sseManager)
 
 	sharingWorker := sharing.NewSharingWorker(
 		cfg.Social,
@@ -220,6 +231,7 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 		GoogleDriveController:           googleDriveController,
 		SSETestimonialMonitor:           sseTestimonialMonitor,
 		AIProcessorController:           *aiProcessorController,
+		PresetController:                presetController,
 		AITestController:                *aiTestController,
 		TestController:                  testController,
 		StorageService:                  *storageService,
@@ -286,6 +298,16 @@ func (app *App) Mount() http.Handler {
 
 	// r.Use(middleware.Timeout(240 * time.Second))
 	// r.Use(middleware.Timeout(900 * time.Second))
+	// r.Use(middleware.Timeout(30 * time.Second))
+	r.Use(func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.Contains(r.URL.Path, "/upload") {
+				middleware.Timeout(5*time.Minute)(h).ServeHTTP(w, r)
+				return
+			}
+			middleware.Timeout(30*time.Second)(h).ServeHTTP(w, r)
+		})
+	})
 
 	routes.RegisterRoutes(r,
 		app.AuthMiddleware,
@@ -303,6 +325,7 @@ func (app *App) Mount() http.Handler {
 		*app.SSETestimonialMonitor,
 		app.GoogleDriveController,
 		app.AIProcessorController,
+		app.PresetController,
 		app.TestController,
 		*app.RateLimiter,
 	)

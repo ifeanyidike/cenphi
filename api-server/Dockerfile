@@ -3,7 +3,7 @@ FROM golang:1.24-alpine AS builder
 ENV CGO_ENABLED=0
 
 # Install build dependencies
-RUN apk add --no-cache make git tzdata ca-certificates curl
+RUN apk add --no-cache make git ffmpeg tzdata ca-certificates curl
 
 # Set working directory
 WORKDIR /app
@@ -35,7 +35,7 @@ RUN mkdir -p /app/certs && \
 FROM alpine:latest
 
 # Install only essential packages
-RUN apk add --no-cache curl tzdata bind-tools
+RUN apk add --no-cache curl tzdata bind-tools ffmpeg
 
 # Create app directories
 RUN mkdir -p /app/certs /app/data

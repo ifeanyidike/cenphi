@@ -25,14 +25,33 @@ class MediaProcessor:
                 "profile": "baseline"
             },
             "balanced": {
-                "preset": "fast", 
+                "preset": "fast",
                 "crf": "23",
                 "profile": "main"
             },
             "high_quality": {
                 "preset": "fast",
-                "crf": "20", 
+                "crf": "20",
                 "profile": "high"
+            },
+            # CloudRun-optimized presets - balanced speed and quality
+            "very_fast_hq": {
+                "preset": "veryfast",
+                "crf": "21",  # Slightly higher CRF for better compression speed
+                "profile": "main",
+                "tune": "fastdecode"  # Better for CloudRun CPU constraints
+            },
+            "ultra_fast_hq": {
+                "preset": "ultrafast",
+                "crf": "23",  # Balanced quality/speed trade-off
+                "profile": "baseline",  # Faster encoding profile
+                "tune": "fastdecode"
+            },
+            "fast_hq": {
+                "preset": "faster",  # Changed from "fast" for better CloudRun performance
+                "crf": "20",  # Slightly increased for speed
+                "profile": "main",  # Changed from "high" for compatibility
+                "tune": "film"
             }
         }
         
@@ -266,12 +285,30 @@ class MediaProcessor:
         strategy["use_smart_crop"] = options.get("use_smart_crop", True)
         strategy["analysis_frames"] = options.get("analysis_frames", 5)
         
-        # Frame rate strategy
+        # Frame rate strategy - improved handling for low-res videos
         source_fps = primary_video.get("fps", 30)
         target_fps = target_spec.get("fps", 30)
-        
-        if abs(source_fps - target_fps) > 1:
-            strategy["needs_fps_conversion"] = True
+
+        # More conservative fps conversion to prevent video freezing issues
+        # Especially important for low-resolution videos which are more sensitive
+        is_low_resolution = primary_video.get("width", 1920) <= 720 or primary_video.get("height", 1080) <= 480
+
+        if is_low_resolution:
+            # For low-res videos, only convert fps if there's a significant difference
+            # and prefer to keep original fps if reasonable
+            if abs(source_fps - target_fps) > 5 and source_fps > 0:
+                if target_fps <= 30 and source_fps <= 30:
+                    strategy["needs_fps_conversion"] = True
+                    strategy["safe_fps_conversion"] = True
+                else:
+                    # Skip fps conversion for problematic combinations
+                    strategy["preserve_original_fps"] = True
+            else:
+                strategy["preserve_original_fps"] = True
+        else:
+            # Standard fps conversion for higher resolution videos
+            if abs(source_fps - target_fps) > 1:
+                strategy["needs_fps_conversion"] = True
         
         # Quality enhancement strategy
         if primary_video.get("interlaced"):
@@ -288,9 +325,21 @@ class MediaProcessor:
         if color_space != target_spec.get("color_space", "bt709"):
             strategy["needs_color_correction"] = True
         
-        # Encoding strategy
-        strategy["encoding_preset"] = options.get("quality", "balanced")
+        # CPU-optimized encoding strategy for Cloud Run
+        if options.get("use_cpu_optimization", False):
+            # Use quality-preserving CPU presets
+            quality_preset = options.get("quality_preset", "very_fast_hq")
+            if quality_preset in self.encoding_presets:
+                strategy["encoding_preset"] = quality_preset
+                logger.info(f"🚀 Using CPU-optimized preset: {quality_preset}")
+            else:
+                strategy["encoding_preset"] = "very_fast_hq"  # Default fallback
+        else:
+            # Traditional encoding strategy
+            strategy["encoding_preset"] = options.get("quality", "balanced")
+
         strategy["use_hw_accel"] = options.get("use_hw_accel", False)
+        strategy["threads"] = options.get("threads", min(4, os.cpu_count() or 2))
         
         return strategy
 
@@ -408,8 +457,11 @@ class MediaProcessor:
             if strategy.get("needs_stabilization"):
                 filters.append("deshake")
             
-            if strategy.get("needs_color_correction"):
+            # Skip color correction if colors are already enhanced to preserve quality
+            if strategy.get("needs_color_correction") and not options.get("preserve_colors", False):
                 filters.append("colorbalance=rs=0.1:gs=0.1:bs=-0.1")
+            elif options.get("preserve_colors", False):
+                logger.info("Skipping color correction to preserve enhanced colors")
             
             # Apply video filters
             if filters:
@@ -421,7 +473,7 @@ class MediaProcessor:
             else:
                 cmd.extend(["-an"])
             
-            # Video encoding settings
+            # Video encoding settings with CPU optimization
             preset_config = self.encoding_presets[strategy.get("encoding_preset", "balanced")]
             cmd.extend([
                 "-c:v", "libx264",
@@ -430,10 +482,35 @@ class MediaProcessor:
                 "-profile:v", preset_config["profile"],
                 "-pix_fmt", "yuv420p"
             ])
+
+            # Add tune parameter for quality-preserving presets
+            if "tune" in preset_config:
+                cmd.extend(["-tune", preset_config["tune"]])
+
+            # CloudRun-optimized CPU settings
+            cpu_count = os.cpu_count() or 2
+            # CloudRun typically has 1-4 vCPUs, optimize accordingly
+            if cpu_count <= 2:
+                threads = 2  # Use all available cores for small instances
+                cmd.extend(["-threads", "2", "-thread_type", "frame"])  # Frame-level threading
+            else:
+                threads = min(4, cpu_count)  # Cap at 4 for larger instances
+                cmd.extend(["-threads", str(threads), "-thread_type", "slice"])  # Slice-level threading for multi-core
+
+            # Add CloudRun-specific optimizations
+            cmd.extend(["-max_muxing_queue_size", "1024"])  # Prevent buffer overrun
             
-            # Frame rate
-            if strategy.get("needs_fps_conversion"):
-                cmd.extend(["-r", str(target_spec.get("fps", 30))])
+            # Frame rate - improved handling to prevent freezing
+            if strategy.get("needs_fps_conversion") and not strategy.get("preserve_original_fps"):
+                if strategy.get("safe_fps_conversion"):
+                    # Use more conservative fps conversion for low-res videos
+                    cmd.extend(["-r", str(min(target_spec.get("fps", 30), 30))])
+                    cmd.extend(["-vsync", "1"])  # Ensure frame sync consistency
+                else:
+                    cmd.extend(["-r", str(target_spec.get("fps", 30))])
+            elif strategy.get("preserve_original_fps"):
+                # Preserve original fps for low-res videos to prevent issues
+                logger.info("Preserving original frame rate for low-resolution video")
             
             # Bitrate control
             if "max_bitrate" in target_spec:

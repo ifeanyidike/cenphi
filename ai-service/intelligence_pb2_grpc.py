@@ -785,3 +785,109 @@ class NoiseReducerService(object):
             intelligence__pb2.BatchNoiseReductionResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+
+class ViralAnalysisServiceStub(object):
+    """============================================================================
+    Viral Content Analysis Service
+    ============================================================================
+
+    """
+
+    def __init__(self, channel):
+        """Constructor.
+
+        Args:
+            channel: A grpc.Channel.
+        """
+        self.AnalyzeViralPotential = channel.unary_unary(
+                '/intelligence.ViralAnalysisService/AnalyzeViralPotential',
+                request_serializer=intelligence__pb2.ViralAnalysisRequest.SerializeToString,
+                response_deserializer=intelligence__pb2.ViralAnalysisResponse.FromString,
+                )
+        self.BatchAnalyzeViralPotential = channel.unary_unary(
+                '/intelligence.ViralAnalysisService/BatchAnalyzeViralPotential',
+                request_serializer=intelligence__pb2.BatchViralAnalysisRequest.SerializeToString,
+                response_deserializer=intelligence__pb2.BatchViralAnalysisResponse.FromString,
+                )
+
+
+class ViralAnalysisServiceServicer(object):
+    """============================================================================
+    Viral Content Analysis Service
+    ============================================================================
+
+    """
+
+    def AnalyzeViralPotential(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def BatchAnalyzeViralPotential(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+
+def add_ViralAnalysisServiceServicer_to_server(servicer, server):
+    rpc_method_handlers = {
+            'AnalyzeViralPotential': grpc.unary_unary_rpc_method_handler(
+                    servicer.AnalyzeViralPotential,
+                    request_deserializer=intelligence__pb2.ViralAnalysisRequest.FromString,
+                    response_serializer=intelligence__pb2.ViralAnalysisResponse.SerializeToString,
+            ),
+            'BatchAnalyzeViralPotential': grpc.unary_unary_rpc_method_handler(
+                    servicer.BatchAnalyzeViralPotential,
+                    request_deserializer=intelligence__pb2.BatchViralAnalysisRequest.FromString,
+                    response_serializer=intelligence__pb2.BatchViralAnalysisResponse.SerializeToString,
+            ),
+    }
+    generic_handler = grpc.method_handlers_generic_handler(
+            'intelligence.ViralAnalysisService', rpc_method_handlers)
+    server.add_generic_rpc_handlers((generic_handler,))
+
+
+ # This class is part of an EXPERIMENTAL API.
+class ViralAnalysisService(object):
+    """============================================================================
+    Viral Content Analysis Service
+    ============================================================================
+
+    """
+
+    @staticmethod
+    def AnalyzeViralPotential(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/intelligence.ViralAnalysisService/AnalyzeViralPotential',
+            intelligence__pb2.ViralAnalysisRequest.SerializeToString,
+            intelligence__pb2.ViralAnalysisResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def BatchAnalyzeViralPotential(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/intelligence.ViralAnalysisService/BatchAnalyzeViralPotential',
+            intelligence__pb2.BatchViralAnalysisRequest.SerializeToString,
+            intelligence__pb2.BatchViralAnalysisResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

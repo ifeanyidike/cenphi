@@ -173,9 +173,9 @@ class MediaEnhancer:
                     })
         
     
-    def enhance(self, media_url: str, quality: str = "high", 
-                upload_to_cloud: bool = True, 
-                custom_enhancements: Optional[List[str]] = None, 
+    def enhance(self, media_url: str, quality: str = "high",
+                upload_to_cloud: bool = True,
+                custom_enhancements: Optional[List[str]] = None,
                 logo_url: Optional[str] = None,
                 watermark_text: Optional[str] = None,
                 watermark_position: Optional[str] = None,
@@ -184,6 +184,7 @@ class MediaEnhancer:
                 target_platform: Optional[str] = None,
                 remove_noise: bool = True,
                 clean_up: bool = True,
+                enable_grayscale: bool = False,  # Option for grayscale output
                 testimonial_id: Optional[str] = None
                 ) -> Dict[str, Any]:
         """
@@ -279,7 +280,7 @@ class MediaEnhancer:
                 try:
                     # Use the enhanced video enhancer (combines perfect noise reduction + excellent video enhancement)
                     result = self.video_enhancer.enhance(
-                        input_file, output_file, quality, custom_enhancements, target_platform, remove_noise
+                        input_file, output_file, quality, custom_enhancements, target_platform, remove_noise, enable_grayscale
                     )
                 except Exception as e:
                     logger.error(f"Enhanced professional enhancement failed with exception: {e}")
@@ -372,19 +373,6 @@ class MediaEnhancer:
                     "file_size_original": file_size,
                     "file_size_enhanced": file_size_enhanced,
                     "timestamp": datetime.now().isoformat(),
-                    
-                    # Enhanced professional enhancement metadata
-                    "enhanced_professional_processing": True,
-                    "perfect_noise_removal": result.get("dramatic_noise_reduction", False),
-                    "excellent_video_enhancement": result.get("excellent_video_enhancement", False),
-                    "professional_sharpening": True,
-                    "professional_color_grading": True,
-                    "professional_stabilization": True,
-                    "cinematic_quality": result.get("cinematic_quality", False),
-                    "perfect_voice_preservation": result.get("voice_preserved", True),
-                    "professional_grade": result.get("professional_processing", False),
-                    "natural_enhancement": True,
-                    "quality_tier": "enhanced_professional"
                 }
                 
                 return response

@@ -1,82 +1,58 @@
-import React, { useEffect, useState, useRef } from "react";
+// components/TestimonialDetail/index.tsx - Final Ultra-Premium Version
+import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { observer } from "mobx-react-lite";
-import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
   Star,
-  Calendar,
-  User,
-  Building2,
-  Mail,
   Play,
   Pause,
   Volume2,
   VolumeX,
   Download,
   Share2,
-  Heart,
   MessageSquare,
   Sparkles,
   Brain,
-  Video,
-  Scissors,
-  Palette,
-  FileText,
-  Zap,
-  Target,
-  Globe,
-  ChevronRight,
-  ExternalLink,
-  Copy,
-  Check,
-  MoreVertical,
-  Clock,
-  TrendingUp,
-  Award,
-  Mic,
-  Plus,
-  SkipForward,
-  SkipBack,
   Maximize,
-  Settings,
-  ThumbsUp,
-  Eye,
   EyeOff,
-  Music,
-  PenTool,
-  Wand2,
-  Languages,
-  RefreshCw,
   BarChart3,
-  Layers,
-  ImageIcon,
-  SpeakerIcon,
-  Edit3,
-  Save,
-  X,
-  AlertCircle,
   Lightbulb,
-  ArrowUpRight,
-  PlayCircle,
-  Instagram,
-  Youtube,
-  Facebook,
-  Twitter,
-  Linkedin,
-  Smartphone,
-  Monitor,
-  Square,
 } from "lucide-react";
+import AIFeaturesDiscovery from "./AIFeaturesDiscovery";
+import MainTabs from "./MainTabs";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
 import { workspaceHub } from "@/repo/workspace_hub";
-import { Testimonial } from "@/types/testimonial";
+
+// Import enhanced components
+import PlatformOptimization from "./PlatformOptimization";
+import TranslationTab from "./TranslationTab";
+import HighlightsTab from "./HighlightsTab";
+import AuthorStats from "./AuthorStats";
+import {
+  renderClippingArtifacts,
+  renderStoryVideoArtifacts,
+  renderEnhancementArtifacts,
+  renderNarrationArtifacts,
+  renderTextPolishingArtifacts,
+  renderContentGenerationArtifacts,
+  renderViralAnalysisArtifacts,
+} from "./TabRenderers";
+import { TestimonialNotFound } from "@/utils/ErrorState";
+import { cn } from "@/lib/utils";
+import EditableTextTestimonial from "./EditableTextTestimonial";
+import FeatureHint from "./FeatureHint";
+import VideoPreviewModal from "./VideoPreviewModal";
+import ProcessingLineageModal from "./ServiceLineageModal";
+import { aiStudioManager } from "@/repo/managers/ai_studio_manager";
+import { ServiceType } from "@/types/ai-service";
+import { preset_manager } from "@/repo/managers/preset_manager";
+import { AI_SERVICES } from "../ai-studio/definitions";
 
 // Enhanced types for specific artifact data structures
 interface SentimentData {
@@ -91,115 +67,43 @@ interface SentimentData {
   }>;
 }
 
-interface HighlightData {
-  highlights?: Array<{
-    start_time: number;
-    end_time: number;
-    text: string;
-    theme: string;
-    importance_score: number;
-    engagement_score: number;
-    title: string;
-    keywords: string[];
-    emotional_intensity: number;
-  }>;
-  emotional?: Array<{
-    start_time: number;
-    end_time: number;
-    text: string;
-    emotion: string;
-    intensity: number;
-    title: string;
-  }>;
-  before_after?: Array<{
-    start_time: number;
-    end_time: number;
-    text: string;
-    transformation_type: string;
-    impact_score: number;
-    title: string;
-  }>;
-  detection_method: "automatic" | "manual";
-}
-
-interface ClippingData {
-  generated_clips: {
-    clips: Array<{
-      url: string;
-      theme: string;
-      title: string;
-      end_time: number;
-      start_time: number;
-      duration_seconds: number;
-      engagement_score: number;
-      transcript?: string;
-      metadata?: any;
-    }>;
-    detection_method: "automatic" | "manual";
-  };
-}
-
-interface PlatformOptimizationData {
-  text: string;
-  optimized_url: string;
-  platform: string;
-  aspect_ratio: string;
-  hashtags?: string[];
-  caption?: string;
-  optimal_posting_time?: string;
-  target_audience?: string;
-  applied_optimizations?: string[];
-}
-
-interface StoryVideoData {
-  story_video_url: string;
-}
-
-interface EnhancementData {
-  enhanced_url: string;
-  applied_enhancements: string[];
-  quality_score: number;
-  media_type: string;
-}
-
-interface NarrationData {
-  audio_url: string;
-  audio_duration_seconds: number;
-  voice_provider: string;
-  quality_score: number;
-}
-
-interface NoiseReductionData {
-  denoised_url: string;
-}
-
-interface TextPolishingData {
-  content: string;
-  word_count: number;
-  created_at: string;
-  format: "markdown" | "text" | "html";
-}
-
-interface TextTranslationData {
-  content: string;
-  word_count: number;
-  created_at: string;
-  format: "markdown" | "text" | "html";
+interface TranslationData {
+  original_text: string;
+  translated_text: string;
   source_language: string;
   target_language: string;
+  confidence_score: number;
+  word_count: number;
+  created_at: string;
+  translation_method: string;
 }
 
-interface ContentGenerationData {
-  generated_content: Array<{
-    content_type: string;
-    title: string;
-    content: string;
-    word_count: number;
-    created_at: string;
-    format: "markdown" | "text" | "html";
-  }>;
-  source_testimonials: string[];
-}
+const getCompletedFeaturesCount = (
+  artifacts: any[],
+  testimonialType: "video" | "text"
+) => {
+  const videoFeatures = [
+    "clipping",
+    "story_mode",
+    "enhancement",
+    "platform_optimizer",
+  ];
+  const textFeatures = ["text_polishing", "narration", "content_generation"];
+  const relevantFeatures =
+    testimonialType === "video" ? videoFeatures : textFeatures;
+
+  return relevantFeatures.filter((feature) =>
+    artifacts.some(
+      (artifact) =>
+        artifact.processing_type.includes(feature) ||
+        feature.includes(artifact.processing_type.split("_")[0])
+    )
+  ).length;
+};
+
+const getTotalFeaturesCount = (testimonialType: "video" | "text") => {
+  return testimonialType === "video" ? 4 : 3; // Number of available features
+};
 
 const TestimonialDetail = observer(() => {
   const { testimonialId } = useParams<{ testimonialId: string }>();
@@ -213,18 +117,28 @@ const TestimonialDetail = observer(() => {
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(100);
   const [copiedItems, setCopiedItems] = useState<Set<string>>(new Set());
-  const [selectedHighlight, setSelectedHighlight] = useState<any>(null);
+  // const [selectedHighlight, setSelectedHighlight] = useState<any>(null);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [showTranscript, setShowTranscript] = useState(true);
   const [editingContent, setEditingContent] = useState<{
     [key: string]: string;
   }>({});
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [, setIsFullscreen] = useState(false);
+  const [selectedClips, setSelectedClips] = useState<string[]>([]);
+  const [clipSelectionMode, setClipSelectionMode] = useState(false);
+  const [videoPreviewModal, setVideoPreviewModal] = useState<{
+    open: boolean;
+    videoUrl: string;
+    title: string;
+    metadata?: any;
+  }>({ open: false, videoUrl: "", title: "" });
+  const [lineageModal, setLineageModal] = useState<{
+    open: boolean;
+    sourceContent: any;
+  }>({ open: false, sourceContent: null });
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const fullscreenRef = useRef<HTMLDivElement>(null);
-
-  console.log("testimonialId", testimonialId);
 
   useEffect(() => {
     if (!testimonialId) return;
@@ -236,6 +150,29 @@ const TestimonialDetail = observer(() => {
 
   const testimonial = workspaceHub.testimonialManager.testimonial;
   const isLoading = workspaceHub.testimonialManager.isLoading;
+
+  const isVideo = testimonial?.type === "video";
+
+  const handleVideoPreview = (
+    videoUrl: string,
+    title: string,
+    metadata?: any
+  ) => {
+    setVideoPreviewModal({ open: true, videoUrl, title, metadata });
+  };
+
+  const handleViewLineage = (content: any) => {
+    setLineageModal({
+      open: true,
+      sourceContent: {
+        id: content.id,
+        type: "clip",
+        title: content.theme || content.title,
+        url: content.url,
+        metadata: content.metadata,
+      },
+    });
+  };
 
   // Video control handlers
   const handlePlayPause = () => {
@@ -326,23 +263,67 @@ const TestimonialDetail = observer(() => {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const jumpToHighlight = (startTime: number) => {
-    handleSeek(startTime);
-    setSelectedHighlight(startTime);
-  };
-
   const startEditing = (contentId: string, currentContent: string) => {
     setEditingContent((prev) => ({ ...prev, [contentId]: currentContent }));
   };
 
   const saveContent = async (contentId: string, artifactId: string) => {
     // TODO: Implement save content API call
+    console.log("artifactId", artifactId);
     console.log("Saving content:", contentId, editingContent[contentId]);
     setEditingContent((prev) => {
       const newState = { ...prev };
       delete newState[contentId];
       return newState;
     });
+  };
+
+  const saveTestimonialContent = async (newContent: string) => {
+    try {
+      // TODO: Implement API call to save testimonial content
+      console.log("Saving testimonial content:", newContent);
+
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // Update local state (you might want to refetch from API instead)
+      if (testimonial) {
+        testimonial.content = newContent;
+      }
+
+      // You could also trigger a refetch here:
+      // await workspaceHub.testimonialManager.fetchTestimonial(testimonialId);
+    } catch (error) {
+      console.error("Failed to save testimonial content:", error);
+      throw error; // Re-throw to show error state in component
+    }
+  };
+
+  const saveAuthorData = async (authorData: {
+    author_name?: string;
+    author_title?: string;
+    author_company?: string;
+    author_avatar_url?: string;
+    author_email?: string;
+  }) => {
+    try {
+      // TODO: Implement API call to save author data
+      console.log("Saving author data:", authorData);
+
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // Update local state (you might want to refetch from API instead)
+      if (testimonial) {
+        Object.assign(testimonial, authorData);
+      }
+
+      // You could also trigger a refetch here:
+      // await workspaceHub.testimonialManager.fetchTestimonial(testimonialId);
+    } catch (error) {
+      console.error("Failed to save author data:", error);
+      throw error; // Re-throw to show error state in component
+    }
   };
 
   const cancelEditing = (contentId: string) => {
@@ -353,125 +334,109 @@ const TestimonialDetail = observer(() => {
     });
   };
 
-  const openInCapCut = (videoUrl: string, artifactType: string = "video") => {
-    // CapCut integration guide:
-    // 1. CapCut Web API integration (if available)
-    // 2. Deep linking with capcut:// protocol
-    // 3. Fallback to manual import instructions
-
-    const capCutDeepLink = `capcut://import?url=${encodeURIComponent(videoUrl)}`;
-
-    // Try deep link first
-    const linkElement = document.createElement("a");
-    linkElement.href = capCutDeepLink;
-    linkElement.click();
-
-    // Fallback: Show instructions modal or redirect
-    setTimeout(() => {
-      const userWantsInstructions = confirm(
-        "CapCut app not detected. Would you like to see manual import instructions?"
-      );
-
-      if (userWantsInstructions) {
-        showCapCutInstructions(videoUrl, artifactType);
-      }
-    }, 1000);
-  };
-
-  const showCapCutInstructions = (videoUrl: string, artifactType: string) => {
-    const instructions = `
-CapCut Integration Guide:
-
-1. **Download CapCut** (if not installed):
-   - iOS: App Store → Search "CapCut"
-   - Android: Google Play → Search "CapCut"
-   - Desktop: capcut.com
-
-2. **Import Video**:
-   - Copy this URL: ${videoUrl}
-   - Open CapCut
-   - Tap "New Project"
-   - Tap "Import" → "From URL" (if available)
-   - Or download the video first, then import from gallery
-
-3. **Recommended Edits for ${artifactType}**:
-   ${artifactType === "clip" ? "- Add captions/subtitles\n- Apply trending transitions\n- Add background music" : ""}
-   ${artifactType === "story" ? "- Add intro/outro animations\n- Apply brand colors\n- Include call-to-action text" : ""}
-   ${artifactType === "platform" ? "- Optimize for platform requirements\n- Add platform-specific effects\n- Ensure proper aspect ratio" : ""}
-
-4. **Export Settings**:
-   - Resolution: 1080p or higher
-   - Frame rate: 30fps or 60fps
-   - Format: MP4
-   - Quality: High
-
-Need help? Contact our support team for detailed integration assistance.
-    `;
-
-    // In a real implementation, this would open a modal
-    alert(instructions);
-  };
-
   const goToAIStudio = (artifactType: string) => {
     // Navigate to AI Studio with specific artifact type
     navigate(`/ai-studio?type=${artifactType}&testimonialId=${testimonialId}`);
   };
 
-  const getPlatformIcon = (platform: string) => {
-    switch (platform.toLowerCase()) {
-      case "instagram":
-        return Instagram;
-      case "youtube":
-        return Youtube;
-      case "facebook":
-        return Facebook;
-      case "twitter":
-        return Twitter;
-      case "linkedin":
-        return Linkedin;
-      case "tiktok":
-        return Video; // Using Video as TikTok icon
-      default:
-        return Globe;
+  const handleProcessMultipleClips = async (
+    clips: any[],
+    serviceType: ServiceType
+  ) => {
+    // Navigate to AI Studio with multiple clips
+    const artifactData = {
+      type: "clips" as const,
+      data: clips,
+      serviceType,
+      parentTestimonialId: testimonial?.id,
+    };
+
+    console.log("service type", serviceType);
+
+    const config = await preset_manager.getConfig(serviceType);
+    const service = AI_SERVICES.find((s) => s.id === serviceType);
+
+    const jobId = await aiStudioManager.startJob(
+      serviceType as ServiceType,
+      [`clips-${Date.now()}`],
+      artifactData,
+      config,
+      service
+    );
+    navigate(`/detail/${testimonialId}?jobId=${jobId}`);
+
+    // try {
+    //   localStorage.setItem("ai-studio-artifact", JSON.stringify(artifactData));
+    //   const url = new URL("/studio", window.location.origin);
+    //   url.searchParams.set("service", serviceType);
+    //   url.searchParams.set("mode", "artifact");
+    //   window.location.href = url.toString();
+    // } catch (error) {
+    //   console.error("Failed to navigate to AI Studio with clips:", error);
+    // }
+  };
+
+  const handleClipSelectionChange = (selected: string[]) => {
+    setSelectedClips(selected);
+  };
+
+  const handleSelectionModeChange = (mode: boolean) => {
+    setClipSelectionMode(mode);
+    if (!mode) {
+      setSelectedClips([]); // Clear selection when exiting selection mode
     }
   };
 
-  const getAspectRatioIcon = (aspectRatio: string) => {
-    switch (aspectRatio) {
-      case "9:16":
-        return Smartphone;
-      case "16:9":
-        return Monitor;
-      case "1:1":
-        return Square;
-      default:
-        return Monitor;
+  const handleFeatureClick = (featureId: string) => {
+    // Navigate to specific feature in artifacts tab
+    setActiveTab("artifacts");
+
+    // Map feature IDs to artifact tabs
+    const featureToTabMap: { [key: string]: string } = {
+      clipping: "clipping",
+      story_mode: "story",
+      enhancement: "enhancement",
+      platform_optimizer: "optimization",
+      text_polishing: "polishing",
+      narration: "narration",
+      content_generation: "generation",
+    };
+
+    const targetTab = featureToTabMap[featureId];
+    if (targetTab) {
+      setTimeout(() => {
+        setActiveArtifactTab(targetTab);
+      }, 100);
     }
+  };
+
+  const handleViewAllFeatures = () => {
+    setActiveTab("artifacts");
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case "high":
-        return "bg-red-100 text-red-800 border-red-200";
+        return "bg-red-50 text-red-700 border-red-200";
       case "medium":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200";
+        return "bg-amber-50 text-amber-700 border-amber-200";
       case "low":
-        return "bg-green-100 text-green-800 border-green-200";
+        return "bg-emerald-50 text-emerald-700 border-emerald-200";
       default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
+        return "bg-slate-50 text-slate-700 border-slate-200";
     }
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
+      <div className="min-h-screen bg-slate-50 p-6">
         <div className="max-w-7xl mx-auto">
           <div className="animate-pulse space-y-6">
-            <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-            <div className="h-64 bg-gray-200 rounded"></div>
+            <div className="h-8 bg-slate-200 rounded w-1/4"></div>
+            <div className="h-64 bg-slate-200 rounded"></div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 h-96 bg-gray-200 rounded"></div>
-              <div className="h-96 bg-gray-200 rounded"></div>
+              <div className="lg:col-span-2 h-96 bg-slate-200 rounded"></div>
+              <div className="h-96 bg-slate-200 rounded"></div>
             </div>
           </div>
         </div>
@@ -480,23 +445,7 @@ Need help? Contact our support team for detailed integration assistance.
   }
 
   if (!testimonial) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Card className="p-8 text-center max-w-md">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">
-            Testimonial Not Found
-          </h2>
-          <p className="text-gray-600 mb-4">
-            The testimonial you're looking for doesn't exist or has been
-            removed.
-          </p>
-          <Button onClick={() => navigate("/dashboard")} variant="outline">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Dashboard
-          </Button>
-        </Card>
-      </div>
-    );
+    return <TestimonialNotFound />;
   }
 
   const isVideoTestimonial = testimonial.type === "video";
@@ -519,7 +468,7 @@ Need help? Contact our support team for detailed integration assistance.
     (a) => a.processing_type === "enhancement"
   );
   const platformVideoArtifacts = artifacts.filter(
-    (a) => a.processing_type === "video_platform_optization"
+    (a) => a.processing_type === "video_platform_optimization"
   );
   const platformTextArtifacts = artifacts.filter(
     (a) => a.processing_type === "text_platform_optization"
@@ -533,35 +482,44 @@ Need help? Contact our support team for detailed integration assistance.
   const narrationArtifacts = artifacts.filter(
     (a) => a.processing_type === "narration"
   );
+  const translationArtifacts = artifacts.filter(
+    (a) => a.processing_type === "translation"
+  );
+  const viralAnalysisArtifacts = artifacts.filter(
+    (a) => a.processing_type === "viral_analysis"
+  );
 
   const sentiment = sentimentArtifact?.data as SentimentData | undefined;
 
   const getSentimentColor = (label: string) => {
     if (label.includes("positive"))
-      return "bg-green-100 text-green-800 border-green-200";
+      return "bg-emerald-50 text-emerald-700 border-emerald-200";
     if (label.includes("negative"))
-      return "bg-red-100 text-red-800 border-red-200";
+      return "bg-red-50 text-red-700 border-red-200";
     if (label.includes("neutral"))
-      return "bg-gray-100 text-gray-800 border-gray-200";
-    return "bg-blue-100 text-blue-800 border-blue-200";
+      return "bg-slate-50 text-slate-700 border-slate-200";
+    return "bg-blue-50 text-blue-700 border-blue-200";
   };
 
+  // Render sentiment analysis
   const renderSentimentAnalysis = () => {
     if (!sentiment) {
       return (
-        <Card>
-          <CardContent className="p-8 text-center">
-            <Brain className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+        <Card className="border-0 shadow-lg shadow-slate-100 bg-gradient-to-br from-white to-slate-50/30">
+          <CardContent className="p-12 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-6">
+              <Brain className="h-8 w-8 text-slate-400" />
+            </div>
+            <h3 className="text-xl font-semibold text-slate-900 mb-3">
               No Sentiment Analysis
             </h3>
-            <p className="text-gray-600 mb-4">
+            <p className="text-slate-600 mb-8 max-w-md mx-auto leading-relaxed">
               Generate AI-powered sentiment analysis to understand the emotional
               tone and business impact.
             </p>
             <Button
               onClick={() => goToAIStudio("sentiment_analysis")}
-              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
+              className="bg-slate-900 hover:bg-slate-800 text-white shadow-lg px-8 py-3"
             >
               <Sparkles className="h-4 w-4 mr-2" />
               Generate Sentiment Analysis
@@ -572,36 +530,40 @@ Need help? Contact our support team for detailed integration assistance.
     }
 
     return (
-      <div className="space-y-6">
+      <div className="space-y-8">
         {/* Overall Sentiment */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Brain className="h-5 w-5 text-purple-600" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <Card className="border-0 shadow-lg shadow-slate-100 bg-gradient-to-br from-white to-slate-50/30">
+            <CardHeader className="pb-6">
+              <CardTitle className="flex items-center gap-3 text-lg">
+                <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
+                  <Brain className="h-5 w-5 text-slate-600" />
+                </div>
                 Overall Sentiment
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="text-center">
                 <div
-                  className={`inline-flex items-center px-6 py-3 rounded-full text-lg font-semibold border ${getSentimentColor(sentiment.label)}`}
+                  className={`inline-flex items-center px-8 py-4 rounded-2xl text-lg font-semibold border shadow-sm ${getSentimentColor(sentiment.label)}`}
                 >
                   {sentiment.label?.replace("_", " ")?.toUpperCase()}
                 </div>
-                <p className="text-sm text-gray-600 mt-3">
+                <p className="text-sm text-slate-600 mt-4 font-medium">
                   Confidence: {Math.round(sentiment.sentiment_score * 100)}%
                 </p>
               </div>
 
-              <div className="space-y-3">
-                <h4 className="font-medium text-gray-900">Detected Emotions</h4>
+              <div className="space-y-4">
+                <h4 className="font-semibold text-slate-900">
+                  Detected Emotions
+                </h4>
                 <div className="flex flex-wrap gap-2">
                   {sentiment.emotions.map((emotion, index) => (
                     <Badge
                       key={index}
                       variant="secondary"
-                      className="text-sm capitalize"
+                      className="text-sm px-3 py-1 bg-slate-100 text-slate-700 border-0 font-medium capitalize"
                     >
                       {emotion}
                     </Badge>
@@ -611,31 +573,34 @@ Need help? Contact our support team for detailed integration assistance.
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5 text-purple-600" />
+          <Card className="border-0 shadow-lg shadow-slate-100 bg-gradient-to-br from-white to-slate-50/30">
+            <CardHeader className="pb-6">
+              <CardTitle className="flex items-center gap-3 text-lg">
+                <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
+                  <BarChart3 className="h-5 w-5 text-slate-600" />
+                </div>
                 Sentiment Score
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">
+                  <span className="text-sm font-semibold text-slate-700">
                     Sentiment Strength
                   </span>
-                  <span className="text-sm text-gray-600">
+                  <span className="text-sm text-slate-600 font-medium">
                     {Math.round(sentiment.sentiment_score * 100)}%
                   </span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-3">
+                <div className="w-full bg-slate-200 rounded-full h-4">
                   <div
-                    className="bg-gradient-to-r from-purple-500 to-indigo-500 h-3 rounded-full transition-all duration-300"
+                    className="bg-gradient-to-r from-slate-600 to-slate-700 h-4 rounded-full transition-all duration-500 shadow-sm"
                     style={{ width: `${sentiment.sentiment_score * 100}%` }}
                   />
                 </div>
-                <p className="text-xs text-gray-500">
-                  Higher scores indicate stronger emotional sentiment
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Higher scores indicate stronger emotional sentiment and more
+                  definitive customer opinion
                 </p>
               </div>
             </CardContent>
@@ -643,36 +608,44 @@ Need help? Contact our support team for detailed integration assistance.
         </div>
 
         {/* Business Recommendations */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Lightbulb className="h-5 w-5 text-purple-600" />
+        <Card className="border-0 shadow-lg shadow-slate-100 bg-gradient-to-br from-white to-slate-50/30">
+          <CardHeader className="pb-6">
+            <CardTitle className="flex items-center gap-3 text-lg">
+              <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
+                <Lightbulb className="h-5 w-5 text-slate-600" />
+              </div>
               Business Recommendations (
               {sentiment.business_recommendations.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {sentiment.business_recommendations.map((rec, index) => (
-                <Card key={index} className="border-l-4 border-l-purple-500">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between mb-2">
+                <Card
+                  key={index}
+                  className="border-l-4 border-l-slate-400 shadow-sm bg-white/60"
+                >
+                  <CardContent className="p-5">
+                    <div className="flex items-start justify-between mb-3">
                       <Badge
-                        className={`text-xs border ${getPriorityColor(rec.priority)}`}
+                        className={`text-xs border font-medium ${getPriorityColor(rec.priority)}`}
                         variant="outline"
                       >
                         {rec.priority?.toUpperCase()}
                       </Badge>
-                      <Badge variant="secondary" className="text-xs">
+                      <Badge
+                        variant="secondary"
+                        className="text-xs bg-slate-100 text-slate-700 border-0"
+                      >
                         {rec.category}
                       </Badge>
                     </div>
 
-                    <h4 className="font-medium text-gray-900 mb-2 text-sm">
+                    <h4 className="font-semibold text-slate-900 mb-3 text-sm leading-relaxed">
                       {rec.action}
                     </h4>
 
-                    <p className="text-xs text-gray-600 leading-relaxed">
+                    <p className="text-xs text-slate-600 leading-relaxed">
                       {rec.reasoning}
                     </p>
                   </CardContent>
@@ -685,1058 +658,148 @@ Need help? Contact our support team for detailed integration assistance.
     );
   };
 
-  const renderClippingArtifacts = () => {
-    if (clippingArtifacts.length === 0) {
-      return (
-        <Card>
-          <CardContent className="p-8 text-center">
-            <Scissors className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              No Clips Generated
-            </h3>
-            <p className="text-gray-600 mb-4">
-              Create engaging video clips from key moments in this testimonial.
-            </p>
-            <Button
-              onClick={() => goToAIStudio("clipping")}
-              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
-            >
-              <Scissors className="h-4 w-4 mr-2" />
-              Generate Clips
-            </Button>
-          </CardContent>
-        </Card>
-      );
-    }
+  // NEW HANDLERS FOR ARTIFACT PROCESSING
+  const handleProcessClip = async (clip: any, serviceType: ServiceType) => {
+    // Navigate to AI Studio with clip data
+    console.log("clip data", clip);
+    const artifactData = {
+      type: "clip" as const,
+      data: clip,
 
-    return (
-      <div className="space-y-6">
-        {clippingArtifacts.map((artifact) => {
-          const data = artifact.data as ClippingData;
-          const clips = data?.generated_clips?.clips || [];
+      serviceType,
+      parentTestimonialId: testimonial.id,
+    };
+    console.log("artifactData data", artifactData);
 
-          return (
-            <Card key={artifact.id}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Scissors className="h-5 w-5 text-purple-600" />
-                  Generated Clips ({clips.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {clips.map((clip, index) => (
-                    <Card
-                      key={index}
-                      className="hover:shadow-md transition-shadow"
-                    >
-                      <CardContent className="p-4 space-y-3">
-                        <div className="aspect-video bg-black rounded-lg overflow-hidden relative">
-                          <video
-                            src={clip.url}
-                            controls
-                            className="w-full h-full object-cover"
-                          />
-                          <div className="absolute top-2 right-2">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="bg-black/50 text-white hover:bg-black/70"
-                              onClick={() => openInCapCut(clip.url, "clip")}
-                            >
-                              <Edit3 className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </div>
+    const config = await preset_manager.getConfig(serviceType);
+    const service = AI_SERVICES.find((s) => s.id === serviceType);
 
-                        <div>
-                          <h4 className="font-medium text-gray-900 text-sm">
-                            {clip.title}
-                          </h4>
-                          <div className="flex items-center gap-2 text-xs text-gray-600 mt-1">
-                            <Badge variant="outline" className="text-xs">
-                              {clip.theme}
-                            </Badge>
-                            <span>{formatTime(clip.duration_seconds)}</span>
-                            <span className="flex items-center gap-1">
-                              <TrendingUp className="h-3 w-3" />
-                              {Math.round(clip.engagement_score * 100)}%
-                            </span>
-                          </div>
-                        </div>
-
-                        {clip.transcript && (
-                          <div className="p-2 bg-gray-50 rounded text-xs text-gray-700">
-                            <p className="line-clamp-3">{clip.transcript}</p>
-                          </div>
-                        )}
-
-                        <div className="flex items-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() =>
-                              downloadVideo(clip.url, `${clip.title}.mp4`)
-                            }
-                            className="flex-1"
-                          >
-                            <Download className="h-3 w-3 mr-1" />
-                            Download
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() =>
-                              copyToClipboard(clip.url, `clip-${index}`)
-                            }
-                          >
-                            {copiedItems.has(`clip-${index}`) ? (
-                              <Check className="h-3 w-3 text-green-600" />
-                            ) : (
-                              <Copy className="h-3 w-3" />
-                            )}
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+    const jobId = await aiStudioManager.startJob(
+      serviceType as ServiceType,
+      [clip.artifactId],
+      artifactData,
+      config,
+      service
     );
+    navigate(`/detail/${testimonialId}?jobId=${jobId}`);
+
+    // try {
+    //   localStorage.setItem("ai-studio-artifact", JSON.stringify(artifactData));
+    //   const url = new URL("/studio", window.location.origin);
+    //   url.searchParams.set("service", serviceType);
+    //   url.searchParams.set("mode", "artifact");
+    //   window.location.href = url.toString();
+    // } catch (error) {
+    //   console.error("Failed to navigate to AI Studio with clip:", error);
+    // }
   };
 
-  const renderPlatformOptimizationArtifacts = () => {
-    const allPlatformArtifacts = [
-      ...platformVideoArtifacts,
-      ...platformTextArtifacts,
-    ];
+  const handleProcessArtifact = async (
+    artifact: any,
+    serviceType: ServiceType,
+    from?: string
+  ) => {
+    // Navigate to AI Studio with artifact data
+    const artifactData = {
+      type: "artifact" as const,
+      from,
+      data: artifact,
+      serviceType,
+      parentTestimonialId: testimonial.id,
+    };
 
-    if (allPlatformArtifacts.length === 0) {
-      return (
-        <Card>
-          <CardContent className="p-8 text-center">
-            <Globe className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              No Platform Content
-            </h3>
-            <p className="text-gray-600 mb-4">
-              Optimize this testimonial for different social media platforms.
-            </p>
-            <Button
-              onClick={() => goToAIStudio("platform_optimization")}
-              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
-            >
-              <Globe className="h-4 w-4 mr-2" />
-              Optimize for Platforms
-            </Button>
-          </CardContent>
-        </Card>
-      );
-    }
+    const config = await preset_manager.getConfig(serviceType);
+    const service = AI_SERVICES.find((s) => s.id === serviceType);
 
-    return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {allPlatformArtifacts.map((artifact) => {
-            const data = artifact.data as PlatformOptimizationData;
-            const AspectIcon = getAspectRatioIcon(data.aspect_ratio || "9:16");
-            const PlatformIcon = getPlatformIcon(
-              data.platform || "instagram_reel"
-            );
-
-            // Determine container class based on aspect ratio
-            const getAspectContainerClass = (aspectRatio: string) => {
-              switch (aspectRatio) {
-                case "9:16":
-                  return "aspect-[9/16] max-w-[200px] mx-auto"; // Vertical video, constrained width
-                case "1:1":
-                  return "aspect-square max-w-[300px] mx-auto"; // Square video
-                case "16:9":
-                default:
-                  return "aspect-video w-full"; // Horizontal video
-              }
-            };
-
-            return (
-              <Card
-                key={artifact.id}
-                className="hover:shadow-lg transition-all duration-200"
-              >
-                <CardContent className="p-6 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-purple-100 to-indigo-100 flex items-center justify-center">
-                        <PlatformIcon className="h-5 w-5 text-purple-600" />
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-gray-900 capitalize">
-                          {data?.platform?.replace("_", " ")}
-                        </h4>
-                        <div className="flex items-center gap-1 text-xs text-gray-500">
-                          <AspectIcon className="h-3 w-3" />
-                          <span>{data.aspect_ratio}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() =>
-                        openInCapCut(data.optimized_url, "platform")
-                      }
-                      className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
-                    >
-                      <Edit3 className="h-3 w-3 mr-1" />
-                      CapCut
-                    </Button>
-                  </div>
-
-                  {data.optimized_url && (
-                    <div
-                      className={`bg-black rounded-lg overflow-hidden relative ${getAspectContainerClass(data.aspect_ratio)}`}
-                    >
-                      <video
-                        src={data.optimized_url}
-                        controls
-                        className="w-full h-full object-cover"
-                        poster=""
-                      />
-                      <div className="absolute inset-0 bg-black/0 hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 hover:opacity-100">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm"
-                          onClick={() =>
-                            openInCapCut(data.optimized_url, "platform")
-                          }
-                        >
-                          <Edit3 className="h-4 w-4 mr-1" />
-                          Edit in CapCut
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="space-y-3">
-                    <div className="p-3 bg-gray-50 rounded-lg">
-                      <p className="text-sm text-gray-700 leading-relaxed">
-                        {data.text}
-                      </p>
-                    </div>
-
-                    {data.applied_optimizations &&
-                      data.applied_optimizations.length > 0 && (
-                        <div>
-                          <span className="text-xs font-medium text-gray-600 block mb-2">
-                            Applied Optimizations:
-                          </span>
-                          <div className="flex flex-wrap gap-1">
-                            {data.applied_optimizations.map(
-                              (optimization, idx) => (
-                                <Badge
-                                  key={idx}
-                                  variant="outline"
-                                  className="text-xs"
-                                >
-                                  {optimization}
-                                </Badge>
-                              )
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                    {data.hashtags && data.hashtags.length > 0 && (
-                      <div>
-                        <span className="text-xs font-medium text-gray-600 block mb-2">
-                          Hashtags:
-                        </span>
-                        <div className="flex flex-wrap gap-1">
-                          {data.hashtags.slice(0, 4).map((tag, idx) => (
-                            <Badge
-                              key={idx}
-                              variant="secondary"
-                              className="text-xs"
-                            >
-                              #{tag}
-                            </Badge>
-                          ))}
-                          {data.hashtags.length > 4 && (
-                            <Badge variant="secondary" className="text-xs">
-                              +{data.hashtags.length - 4}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {(data.optimal_posting_time || data.target_audience) && (
-                      <div className="grid grid-cols-1 gap-2 text-xs">
-                        {data.optimal_posting_time && (
-                          <div className="flex items-center gap-2 text-gray-600">
-                            <Clock className="h-3 w-3" />
-                            <span>Best time: {data.optimal_posting_time}</span>
-                          </div>
-                        )}
-                        {data.target_audience && (
-                          <div className="flex items-center gap-2 text-gray-600">
-                            <Target className="h-3 w-3" />
-                            <span>Audience: {data.target_audience}</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-2 pt-2 border-t">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() =>
-                        downloadVideo(
-                          data.optimized_url,
-                          `${data.platform}-optimized.mp4`
-                        )
-                      }
-                      className="flex-1"
-                    >
-                      <Download className="h-3 w-3 mr-1" />
-                      Download
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() =>
-                        copyToClipboard(
-                          data.optimized_url,
-                          `platform-${artifact.id}`
-                        )
-                      }
-                    >
-                      {copiedItems.has(`platform-${artifact.id}`) ? (
-                        <Check className="h-3 w-3 text-green-600" />
-                      ) : (
-                        <Copy className="h-3 w-3" />
-                      )}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => window.open(data.optimized_url, "_blank")}
-                    >
-                      <ExternalLink className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      </div>
+    const jobId = await aiStudioManager.startJob(
+      serviceType as ServiceType,
+      [artifact.id],
+      artifactData,
+      config,
+      service
     );
+    navigate(`/detail/${testimonialId}?jobId=${jobId}`);
   };
 
-  const renderContentGenerationArtifacts = () => {
-    if (contentGenArtifacts.length === 0) {
-      return (
-        <Card>
-          <CardContent className="p-8 text-center">
-            <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              No Generated Content
-            </h3>
-            <p className="text-gray-600 mb-4">
-              Generate marketing content like case studies, blog posts, and
-              social media content.
-            </p>
-            <Button
-              onClick={() => goToAIStudio("content_generation")}
-              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
-            >
-              <FileText className="h-4 w-4 mr-2" />
-              Generate Content
-            </Button>
-          </CardContent>
-        </Card>
+  // Viral Clip Generation Handler
+  const handleViralClipGeneration = async () => {
+    if (!testimonial) return;
+
+    try {
+      const config = await preset_manager.getConfig("clipping");
+      const service = AI_SERVICES.find((s) => s.id === "clipping");
+
+      // Create special viral clipping configuration
+      const viralConfig = {
+        ...config,
+        enable_viral_mode: true, // This will trigger viral analysis in the backend
+        viral_optimization: true,
+        target_platforms: ["tiktok", "instagram_reels", "youtube_shorts"],
+      };
+
+      const jobId = await aiStudioManager.startJob(
+        "clipping" as ServiceType,
+        [testimonial.id],
+        { type: "testimonial" as const, data: testimonial },
+        viralConfig as any,
+        service
       );
+
+      navigate(`/detail/${testimonialId}?jobId=${jobId}`);
+    } catch (error) {
+      console.error("Failed to start viral clip generation:", error);
     }
-
-    return (
-      <div className="space-y-6">
-        {contentGenArtifacts.map((artifact) => {
-          const data = artifact.data as ContentGenerationData;
-          const content = data?.generated_content || [];
-
-          return (
-            <div key={artifact.id} className="space-y-4">
-              {content.map((item, index) => {
-                const contentId = `${artifact.id}-${index}`;
-                const isEditing = editingContent.hasOwnProperty(contentId);
-
-                return (
-                  <Card key={index}>
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <CardTitle className="text-lg">
-                            {item.title}
-                          </CardTitle>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Badge variant="secondary" className="text-xs">
-                              {item.content_type}
-                            </Badge>
-                            <span className="text-xs text-gray-500">
-                              {item.word_count} words
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              {new Date(item.created_at).toLocaleDateString()}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          {isEditing ? (
-                            <>
-                              <Button
-                                size="sm"
-                                onClick={() =>
-                                  saveContent(contentId, artifact.id)
-                                }
-                                className="bg-green-600 hover:bg-green-700"
-                              >
-                                <Save className="h-4 w-4 mr-1" />
-                                Save
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => cancelEditing(contentId)}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </>
-                          ) : (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() =>
-                                startEditing(contentId, item.content)
-                              }
-                            >
-                              <Edit3 className="h-4 w-4 mr-1" />
-                              Edit
-                            </Button>
-                          )}
-
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() =>
-                              copyToClipboard(item.content, `content-${index}`)
-                            }
-                          >
-                            {copiedItems.has(`content-${index}`) ? (
-                              <Check className="h-3 w-3 text-green-600" />
-                            ) : (
-                              <Copy className="h-3 w-3" />
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      {isEditing ? (
-                        <textarea
-                          value={editingContent[contentId]}
-                          onChange={(e) =>
-                            setEditingContent((prev) => ({
-                              ...prev,
-                              [contentId]: e.target.value,
-                            }))
-                          }
-                          className="w-full min-h-[300px] p-3 border border-gray-300 rounded-md font-mono text-sm resize-vertical focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                          placeholder="Edit your content here..."
-                        />
-                      ) : (
-                        <div className="prose prose-gray max-w-none">
-                          {item.format === "markdown" ? (
-                            <div
-                              className="whitespace-pre-wrap"
-                              dangerouslySetInnerHTML={{
-                                __html: item.content
-                                  ?.replace(/\n/g, "<br>")
-                                  ?.replace(
-                                    /\*\*(.*?)\*\*/g,
-                                    "<strong>$1</strong>"
-                                  )
-                                  ?.replace(/\*(.*?)\*/g, "<em>$1</em>"),
-                              }}
-                            />
-                          ) : (
-                            <div className="whitespace-pre-wrap">
-                              {item.content}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          );
-        })}
-      </div>
-    );
   };
 
-  const renderStoryVideoArtifacts = () => {
-    if (storyArtifacts.length === 0) {
-      return (
-        <Card>
-          <CardContent className="p-8 text-center">
-            <Video className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              No Story Videos
-            </h3>
-            <p className="text-gray-600 mb-4">
-              Create engaging story videos that highlight key moments and
-              emotional impact.
-            </p>
-            <Button
-              onClick={() => goToAIStudio("story_mode_generation")}
-              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
-            >
-              <Video className="h-4 w-4 mr-2" />
-              Generate Story Videos
-            </Button>
-          </CardContent>
-        </Card>
+  // Viral Platform Optimization Handler
+  const handleViralPlatformOptimization = async (platform: string) => {
+    if (!testimonial) return;
+
+    try {
+      const config = await preset_manager.getConfig("platform_optimizer");
+      const service = AI_SERVICES.find((s) => s.id === "platform_optimizer");
+
+      // Create special viral platform optimization configuration
+      const viralConfig = {
+        ...config,
+        enable_viral_optimization: true, // This will trigger viral analysis in the backend
+        target_platform: platform,
+        optimization_priority: "viral_engagement",
+      };
+
+      const jobId = await aiStudioManager.startJob(
+        "platform_optimizer" as ServiceType,
+        [testimonial.id],
+        { type: "testimonial" as const, data: testimonial },
+        viralConfig as any,
+        service
       );
+
+      navigate(`/detail/${testimonialId}?jobId=${jobId}`);
+    } catch (error) {
+      console.error("Failed to start viral platform optimization:", error);
     }
-
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {storyArtifacts.map((artifact) => {
-          const data = artifact.data as StoryVideoData;
-
-          return (
-            <Card
-              key={artifact.id}
-              className="hover:shadow-lg transition-all duration-200"
-            >
-              <CardContent className="p-6 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-semibold text-gray-900 flex items-center gap-2">
-                    <Video className="h-5 w-5 text-purple-600" />
-                    Story Video
-                  </h4>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => openInCapCut(data.story_video_url, "story")}
-                    className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
-                  >
-                    <Edit3 className="h-3 w-3 mr-1" />
-                    CapCut
-                  </Button>
-                </div>
-
-                <div className="aspect-video bg-black rounded-lg overflow-hidden relative">
-                  <video
-                    src={data.story_video_url}
-                    controls
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black/0 hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 hover:opacity-100">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm"
-                      onClick={() =>
-                        openInCapCut(data.story_video_url, "story")
-                      }
-                    >
-                      <Edit3 className="h-4 w-4 mr-1" />
-                      Edit in CapCut
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() =>
-                      downloadVideo(data.story_video_url, "story-video.mp4")
-                    }
-                    className="flex-1"
-                  >
-                    <Download className="h-3 w-3 mr-1" />
-                    Download
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() =>
-                      copyToClipboard(
-                        data.story_video_url,
-                        `story-${artifact.id}`
-                      )
-                    }
-                  >
-                    {copiedItems.has(`story-${artifact.id}`) ? (
-                      <Check className="h-3 w-3 text-green-600" />
-                    ) : (
-                      <Copy className="h-3 w-3" />
-                    )}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => window.open(data.story_video_url, "_blank")}
-                  >
-                    <ExternalLink className="h-3 w-3" />
-                  </Button>
-                </div>
-
-                <div className="text-xs text-gray-500">
-                  Created: {new Date(artifact.created_at).toLocaleDateString()}
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-    );
-  };
-
-  const renderEnhancementArtifacts = () => {
-    if (enhancementArtifacts.length === 0) {
-      return (
-        <Card>
-          <CardContent className="p-8 text-center">
-            <Palette className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              No Video Enhancements
-            </h3>
-            <p className="text-gray-600 mb-4">
-              Enhance video quality with AI-powered improvements like noise
-              reduction, color correction, and stabilization.
-            </p>
-            <Button
-              onClick={() => goToAIStudio("enhancement")}
-              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
-            >
-              <Palette className="h-4 w-4 mr-2" />
-              Enhance Video
-            </Button>
-          </CardContent>
-        </Card>
-      );
-    }
-
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {enhancementArtifacts.map((artifact) => {
-          const data = artifact.data as EnhancementData;
-
-          return (
-            <Card
-              key={artifact.id}
-              className="hover:shadow-lg transition-all duration-200"
-            >
-              <CardContent className="p-6 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-semibold text-gray-900 flex items-center gap-2">
-                      <Palette className="h-5 w-5 text-purple-600" />
-                      Enhanced {data.media_type}
-                    </h4>
-                    <div className="flex items-center gap-2 mt-1">
-                      <div className="flex items-center gap-1">
-                        <Award className="h-3 w-3 text-yellow-500" />
-                        <span className="text-xs text-gray-600">
-                          Quality: {Math.round(data.quality_score * 100)}%
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() =>
-                      openInCapCut(data.enhanced_url, "enhancement")
-                    }
-                    className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
-                  >
-                    <Edit3 className="h-3 w-3 mr-1" />
-                    CapCut
-                  </Button>
-                </div>
-
-                <div className="aspect-video bg-black rounded-lg overflow-hidden relative">
-                  <video
-                    src={data.enhanced_url}
-                    controls
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black/0 hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 hover:opacity-100">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm"
-                      onClick={() =>
-                        openInCapCut(data.enhanced_url, "enhancement")
-                      }
-                    >
-                      <Edit3 className="h-4 w-4 mr-1" />
-                      Edit in CapCut
-                    </Button>
-                  </div>
-                </div>
-
-                {data.applied_enhancements &&
-                  data.applied_enhancements.length > 0 && (
-                    <div>
-                      <span className="text-xs font-medium text-gray-600 block mb-2">
-                        Applied Enhancements:
-                      </span>
-                      <div className="flex flex-wrap gap-1">
-                        {data.applied_enhancements.map((enhancement, idx) => (
-                          <Badge
-                            key={idx}
-                            variant="secondary"
-                            className="text-xs"
-                          >
-                            {enhancement}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() =>
-                      downloadVideo(data.enhanced_url, "enhanced-video.mp4")
-                    }
-                    className="flex-1"
-                  >
-                    <Download className="h-3 w-3 mr-1" />
-                    Download
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() =>
-                      copyToClipboard(
-                        data.enhanced_url,
-                        `enhancement-${artifact.id}`
-                      )
-                    }
-                  >
-                    {copiedItems.has(`enhancement-${artifact.id}`) ? (
-                      <Check className="h-3 w-3 text-green-600" />
-                    ) : (
-                      <Copy className="h-3 w-3" />
-                    )}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => window.open(data.enhanced_url, "_blank")}
-                  >
-                    <ExternalLink className="h-3 w-3" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-    );
-  };
-
-  const renderNarrationArtifacts = () => {
-    if (narrationArtifacts.length === 0) {
-      return (
-        <Card>
-          <CardContent className="p-8 text-center">
-            <Mic className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              No Narration Audio
-            </h3>
-            <p className="text-gray-600 mb-4">
-              Generate professional narration audio from testimonial text using
-              AI voice synthesis.
-            </p>
-            <Button
-              onClick={() => goToAIStudio("narration")}
-              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
-            >
-              <Mic className="h-4 w-4 mr-2" />
-              Generate Narration
-            </Button>
-          </CardContent>
-        </Card>
-      );
-    }
-
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {narrationArtifacts.map((artifact) => {
-          const data = artifact.data as NarrationData;
-
-          return (
-            <Card
-              key={artifact.id}
-              className="hover:shadow-lg transition-all duration-200"
-            >
-              <CardContent className="p-6 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-semibold text-gray-900 flex items-center gap-2">
-                    <Mic className="h-5 w-5 text-purple-600" />
-                    Narration Audio
-                  </h4>
-                  <div className="flex items-center gap-1">
-                    <Award className="h-3 w-3 text-yellow-500" />
-                    <span className="text-xs text-gray-600">
-                      {Math.round(data.quality_score * 100)}%
-                    </span>
-                  </div>
-                </div>
-
-                <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg p-4">
-                  <audio src={data.audio_url} controls className="w-full" />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-600">Duration:</span>
-                    <p className="font-medium">
-                      {formatTime(data.audio_duration_seconds)}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Voice Provider:</span>
-                    <p className="font-medium capitalize">
-                      {data.voice_provider}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() =>
-                      downloadVideo(data.audio_url, "narration-audio.mp3")
-                    }
-                    className="flex-1"
-                  >
-                    <Download className="h-3 w-3 mr-1" />
-                    Download Audio
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() =>
-                      copyToClipboard(
-                        data.audio_url,
-                        `narration-${artifact.id}`
-                      )
-                    }
-                  >
-                    {copiedItems.has(`narration-${artifact.id}`) ? (
-                      <Check className="h-3 w-3 text-green-600" />
-                    ) : (
-                      <Copy className="h-3 w-3" />
-                    )}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => window.open(data.audio_url, "_blank")}
-                  >
-                    <ExternalLink className="h-3 w-3" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-    );
-  };
-
-  const renderTextPolishingArtifacts = () => {
-    if (polishingArtifacts.length === 0) {
-      return (
-        <Card>
-          <CardContent className="p-8 text-center">
-            <Zap className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              No Text Polishing
-            </h3>
-            <p className="text-gray-600 mb-4">
-              Polish and refine testimonial text for better impact, clarity, and
-              professional presentation.
-            </p>
-            <Button
-              onClick={() => goToAIStudio("text_polishing")}
-              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
-            >
-              <Zap className="h-4 w-4 mr-2" />
-              Polish Text
-            </Button>
-          </CardContent>
-        </Card>
-      );
-    }
-
-    return (
-      <div className="space-y-6">
-        {polishingArtifacts.map((artifact) => {
-          const data = artifact.data as TextPolishingData;
-          const contentId = `polishing-${artifact.id}`;
-          const isEditing = editingContent.hasOwnProperty(contentId);
-
-          return (
-            <Card key={artifact.id}>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <Zap className="h-5 w-5 text-purple-600" />
-                      Polished Text
-                    </CardTitle>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="secondary" className="text-xs">
-                        {data.format}
-                      </Badge>
-                      <span className="text-xs text-gray-500">
-                        {data.word_count} words
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        {new Date(data.created_at).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {isEditing ? (
-                      <>
-                        <Button
-                          size="sm"
-                          onClick={() => saveContent(contentId, artifact.id)}
-                          className="bg-green-600 hover:bg-green-700"
-                        >
-                          <Save className="h-4 w-4 mr-1" />
-                          Save
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => cancelEditing(contentId)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => startEditing(contentId, data.content)}
-                      >
-                        <Edit3 className="h-4 w-4 mr-1" />
-                        Edit
-                      </Button>
-                    )}
-
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() =>
-                        copyToClipboard(
-                          data.content,
-                          `polishing-copy-${artifact.id}`
-                        )
-                      }
-                    >
-                      {copiedItems.has(`polishing-copy-${artifact.id}`) ? (
-                        <Check className="h-3 w-3 text-green-600" />
-                      ) : (
-                        <Copy className="h-3 w-3" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {isEditing ? (
-                  <textarea
-                    value={editingContent[contentId]}
-                    onChange={(e) =>
-                      setEditingContent((prev) => ({
-                        ...prev,
-                        [contentId]: e.target.value,
-                      }))
-                    }
-                    className="w-full min-h-[200px] p-3 border border-gray-300 rounded-md text-sm resize-vertical focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    placeholder="Edit your polished content here..."
-                  />
-                ) : (
-                  <div className="prose prose-gray max-w-none">
-                    {data.format === "markdown" ? (
-                      <div
-                        className="whitespace-pre-wrap"
-                        dangerouslySetInnerHTML={{
-                          __html: data.content
-                            ?.replace(/\n/g, "<br>")
-                            ?.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-                            ?.replace(/\*(.*?)\*/g, "<em>$1</em>"),
-                        }}
-                      />
-                    ) : (
-                      <div className="whitespace-pre-wrap">{data.content}</div>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-    );
   };
 
   return (
-    <div className="min-h-screen ">
+    <div className="min-h-screen bg-slate-50/50">
       {/* Header */}
-      <div className="bg-white border-b sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-6 py-2">
+      <div className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
+        <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-6">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate("/dashboard")}
-                className="text-gray-600 hover:text-gray-900"
+                className="text-slate-600 hover:text-slate-900 hover:bg-slate-100"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Home
               </Button>
               <Separator orientation="vertical" className="h-6" />
               <div>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-slate-500 font-medium">
                   {testimonial.author_company && (
                     <>{testimonial.author_company} • </>
                   )}
@@ -1745,20 +808,27 @@ Need help? Contact our support team for detailed integration assistance.
                     <>
                       {" "}
                       • {testimonial.rating}/5{" "}
-                      <Star className="h-3 w-3 text-yellow-400 inline fill-current" />
+                      <Star className="h-3 w-3 text-amber-400 inline fill-current" />
                     </>
                   )}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
               {sentiment && (
-                <Badge className={getSentimentColor(sentiment.label)}>
+                <Badge
+                  className={`border font-medium ${getSentimentColor(sentiment.label)}`}
+                  variant="outline"
+                >
                   {sentiment?.label?.replace("_", " ")}
                 </Badge>
               )}
-              <Button variant="outline" size="sm">
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-slate-200 hover:bg-slate-50"
+              >
                 <Share2 className="h-4 w-4 mr-2" />
                 Share
               </Button>
@@ -1772,35 +842,32 @@ Need help? Contact our support team for detailed integration assistance.
         <Tabs
           value={activeTab}
           onValueChange={setActiveTab}
-          className="space-y-6"
+          className="space-y-8"
         >
-          <TabsList className="bg-white p-1 shadow-sm">
-            <TabsTrigger
-              value="overview"
-              className="data-[state=active]:bg-purple-50 data-[state=active]:text-purple-700"
-            >
-              Overview
-            </TabsTrigger>
-            <TabsTrigger
-              value="artifacts"
-              className="data-[state=active]:bg-purple-50 data-[state=active]:text-purple-700"
-            >
-              Artifacts ({artifacts.length})
-            </TabsTrigger>
-          </TabsList>
+          <MainTabs
+            artifactsCount={artifacts.length}
+            completedFeaturesCount={getCompletedFeaturesCount(
+              artifacts,
+              testimonial.type as "video" | "text"
+            )}
+            totalFeaturesCount={getTotalFeaturesCount(
+              testimonial.type as "video" | "text"
+            )}
+            hasNewFeatures={artifacts.length === 0} // Show "New" badge if no artifacts yet
+          />
 
-          <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          <TabsContent value="overview" className="space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
               {/* Main Content */}
-              <div className="lg:col-span-3 space-y-6">
+              <div className="lg:col-span-3 space-y-8">
                 {/* Video Player / Content Display */}
-                <Card>
+                <Card className="border-0 shadow-lg shadow-slate-100 bg-gradient-to-br from-white to-slate-50/30">
                   <CardContent className="p-0">
                     {isVideoTestimonial && testimonial.media_url ? (
-                      <div className="space-y-4">
+                      <div className="space-y-6">
                         <div
                           ref={fullscreenRef}
-                          className="aspect-video bg-black rounded-t-lg overflow-hidden relative"
+                          className="aspect-video bg-black rounded-t-2xl overflow-hidden relative"
                         >
                           <video
                             ref={videoRef}
@@ -1818,8 +885,8 @@ Need help? Contact our support team for detailed integration assistance.
                         </div>
 
                         {/* Custom Video Controls */}
-                        <div className="p-6 space-y-4">
-                          <div className="space-y-2">
+                        <div className="p-8 space-y-6">
+                          <div className="space-y-3">
                             <input
                               type="range"
                               min={0}
@@ -1829,20 +896,21 @@ Need help? Contact our support team for detailed integration assistance.
                               onChange={(e) =>
                                 handleSeek(Number(e.target.value))
                               }
-                              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                              className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"
                             />
-                            <div className="flex justify-between text-xs text-gray-500">
+                            <div className="flex justify-between text-xs text-slate-500 font-medium">
                               <span>{formatTime(currentTime)}</span>
                               <span>{formatTime(duration)}</span>
                             </div>
                           </div>
 
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-4">
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={handlePlayPause}
+                                className="border-slate-200 hover:bg-slate-50"
                               >
                                 {isPlaying ? (
                                   <Pause className="h-4 w-4" />
@@ -1851,11 +919,12 @@ Need help? Contact our support team for detailed integration assistance.
                                 )}
                               </Button>
 
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-3">
                                 <Button
                                   variant="ghost"
                                   size="sm"
                                   onClick={toggleMute}
+                                  className="hover:bg-slate-100"
                                 >
                                   {isMuted ? (
                                     <VolumeX className="h-4 w-4" />
@@ -1872,7 +941,7 @@ Need help? Contact our support team for detailed integration assistance.
                                   onChange={(e) =>
                                     handleVolumeChange([Number(e.target.value)])
                                   }
-                                  className="w-20 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                                  className="w-20 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"
                                 />
                               </div>
 
@@ -1885,7 +954,7 @@ Need help? Contact our support team for detailed integration assistance.
                                     videoRef.current.playbackRate = rate;
                                   }
                                 }}
-                                className="text-sm border rounded px-2 py-1"
+                                className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white hover:bg-slate-50"
                               >
                                 <option value={0.5}>0.5x</option>
                                 <option value={1}>1x</option>
@@ -1895,7 +964,7 @@ Need help? Contact our support team for detailed integration assistance.
                               </select>
                             </div>
 
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-3">
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -1905,6 +974,7 @@ Need help? Contact our support team for detailed integration assistance.
                                     "testimonial.mp4"
                                   )
                                 }
+                                className="border-slate-200 hover:bg-slate-50"
                               >
                                 <Download className="h-4 w-4 mr-2" />
                                 Download
@@ -1913,6 +983,7 @@ Need help? Contact our support team for detailed integration assistance.
                                 variant="outline"
                                 size="sm"
                                 onClick={toggleFullscreen}
+                                className="border-slate-200 hover:bg-slate-50"
                               >
                                 <Maximize className="h-4 w-4" />
                               </Button>
@@ -1921,267 +992,371 @@ Need help? Contact our support team for detailed integration assistance.
                         </div>
                       </div>
                     ) : (
-                      <div className="p-8">
-                        <div className="flex items-center gap-3 mb-4">
-                          <FileText className="h-6 w-6 text-purple-600" />
-                          <h3 className="text-lg font-semibold text-gray-900">
-                            Text Testimonial
-                          </h3>
-                        </div>
-                        <div className="prose prose-gray max-w-none">
-                          <p className="text-gray-700 leading-relaxed text-lg">
-                            {testimonial.content || "No content available"}
-                          </p>
-                        </div>
-                      </div>
+                      <EditableTextTestimonial
+                        content={testimonial.content || ""}
+                        authorName={testimonial.author_name}
+                        onSave={saveTestimonialContent}
+                        onCancel={() => console.log("Edit cancelled")}
+                        lastModified={testimonial.created_at}
+                        wordLimit={1000}
+                        placeholder="Enter the testimonial content here. Share the customer's experience, outcomes, and value they received..."
+                        showMetrics={true}
+                      />
                     )}
                   </CardContent>
                 </Card>
+
+                <AIFeaturesDiscovery
+                  testimonialType={testimonial.type as "video" | "text"}
+                  artifacts={artifacts}
+                  onFeatureClick={handleFeatureClick}
+                  onViewAllFeatures={handleViewAllFeatures}
+                />
 
                 {/* Transcript */}
                 {isVideoTestimonial &&
                   testimonial.content &&
                   showTranscript && (
-                    <Card>
-                      <CardHeader>
+                    <Card className="border-0 shadow-lg shadow-slate-100 bg-gradient-to-br from-white to-slate-50/30">
+                      <CardHeader className="pb-4">
                         <div className="flex items-center justify-between">
-                          <CardTitle className="text-lg flex items-center gap-2">
-                            <MessageSquare className="h-5 w-5" />
+                          <CardTitle className="text-lg flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
+                              <MessageSquare className="h-5 w-5 text-slate-600" />
+                            </div>
                             Transcript
                           </CardTitle>
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => setShowTranscript(!showTranscript)}
+                            className="hover:bg-slate-100"
                           >
                             <EyeOff className="h-4 w-4" />
                           </Button>
                         </div>
                       </CardHeader>
                       <CardContent>
-                        <div className="prose prose-gray max-w-none">
-                          <p className="text-gray-700 leading-relaxed">
+                        <div className="prose prose-slate max-w-none">
+                          <p className="text-slate-700 leading-relaxed">
                             {testimonial.content}
                           </p>
                         </div>
                       </CardContent>
                     </Card>
                   )}
+
+                {/* Realistic CapCut Integration (Optional) */}
               </div>
 
-              {/* Sidebar */}
-              <div className="space-y-6">
-                {/* Author Info */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Author Details</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center gap-3">
-                      {testimonial.author_avatar_url ? (
-                        <img
-                          src={testimonial.author_avatar_url}
-                          alt={testimonial.author_name || "Author"}
-                          className="w-12 h-12 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-100 to-indigo-100 flex items-center justify-center">
-                          <User className="h-6 w-6 text-purple-600" />
-                        </div>
-                      )}
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          {testimonial.author_name || "Anonymous"}
-                        </p>
-                        {testimonial.author_title && (
-                          <p className="text-sm text-gray-600">
-                            {testimonial.author_title}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    {testimonial.author_company && (
-                      <div className="flex items-center gap-3 text-sm text-gray-600">
-                        <Building2 className="h-4 w-4" />
-                        <span>{testimonial.author_company}</span>
-                      </div>
-                    )}
-
-                    {testimonial.author_email && (
-                      <div className="flex items-center gap-3 text-sm text-gray-600">
-                        <Mail className="h-4 w-4" />
-                        <span>{testimonial.author_email}</span>
-                      </div>
-                    )}
-
-                    {testimonial.rating && (
-                      <div className="pt-3 border-t">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-sm font-medium">Rating:</span>
-                          <div className="flex items-center gap-1">
-                            {[...Array(5)].map((_, i) => (
-                              <Star
-                                key={i}
-                                className={`h-4 w-4 ${
-                                  i < testimonial.rating!
-                                    ? "text-yellow-400 fill-current"
-                                    : "text-gray-300"
-                                }`}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                        <span className="text-2xl font-bold text-gray-900">
-                          {testimonial.rating}/5
-                        </span>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Quick Stats */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Quick Stats</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Type</span>
-                      <Badge
-                        variant={isVideoTestimonial ? "default" : "secondary"}
-                      >
-                        {testimonial?.type?.toUpperCase()}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Status</span>
-                      <Badge variant="outline">{testimonial.status}</Badge>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Collection</span>
-                      <span className="text-sm font-medium">
-                        {testimonial.collection_method}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Artifacts</span>
-                      <span className="text-sm font-medium">
-                        {artifacts.length}
-                      </span>
-                    </div>
-                    {testimonial.tags && testimonial.tags.length > 0 && (
-                      <div>
-                        <span className="text-sm text-gray-600 block mb-2">
-                          Tags
-                        </span>
-                        <div className="flex flex-wrap gap-1">
-                          {testimonial.tags.map((tag, index) => (
-                            <Badge
-                              key={index}
-                              variant="outline"
-                              className="text-xs"
-                            >
-                              {tag}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+              {/* Premium Sidebar */}
+              <div>
+                <AuthorStats
+                  testimonial={testimonial}
+                  artifactCount={artifacts.length}
+                  onSaveAuthorData={saveAuthorData}
+                />
               </div>
             </div>
           </TabsContent>
 
-          <TabsContent value="artifacts" className="space-y-6">
+          <TabsContent value="artifacts" className="space-y-8">
             <Tabs
               value={activeArtifactTab}
               onValueChange={setActiveArtifactTab}
             >
-              <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8">
-                <TabsTrigger value="sentiment" className="text-xs">
+              <TabsList
+                className={cn(
+                  "grid w-full grid-cols-4 bg-white border border-slate-200 shadow-sm",
+                  isVideo ? "lg:grid-cols-11" : "lg:grid-cols-7"
+                )}
+              >
+                <TabsTrigger
+                  value="sentiment"
+                  className="text-xs data-[state=active]:bg-slate-100"
+                >
                   Sentiment
                 </TabsTrigger>
-                <TabsTrigger value="clipping" className="text-xs">
-                  Clips
-                </TabsTrigger>
-                <TabsTrigger value="platform" className="text-xs">
+
+                {isVideo && (
+                  <>
+                    <TabsTrigger
+                      value="highlights"
+                      className="text-xs data-[state=active]:bg-slate-100"
+                    >
+                      Highlights
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="clipping"
+                      className="text-xs data-[state=active]:bg-slate-100"
+                    >
+                      Clips
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="story"
+                      className="text-xs data-[state=active]:bg-slate-100"
+                    >
+                      Story
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="enhancement"
+                      className="text-xs data-[state=active]:bg-slate-100"
+                    >
+                      Enhancement
+                    </TabsTrigger>
+                  </>
+                )}
+                <TabsTrigger
+                  value="platform"
+                  className="text-xs data-[state=active]:bg-slate-100"
+                >
                   Platform
                 </TabsTrigger>
-                <TabsTrigger value="content" className="text-xs">
+
+                <TabsTrigger
+                  value="content"
+                  className="text-xs data-[state=active]:bg-slate-100"
+                >
                   Content
                 </TabsTrigger>
-                <TabsTrigger value="story" className="text-xs">
-                  Story
+
+                <TabsTrigger
+                  value="translation"
+                  className="text-xs data-[state=active]:bg-slate-100"
+                >
+                  Translation
                 </TabsTrigger>
-                <TabsTrigger value="enhancement" className="text-xs">
-                  Enhancement
-                </TabsTrigger>
-                <TabsTrigger value="polishing" className="text-xs">
+                <TabsTrigger
+                  value="polishing"
+                  className="text-xs data-[state=active]:bg-slate-100"
+                >
                   Polishing
                 </TabsTrigger>
-                <TabsTrigger value="narration" className="text-xs">
+                <TabsTrigger
+                  value="narration"
+                  className="text-xs data-[state=active]:bg-slate-100"
+                >
                   Narration
+                </TabsTrigger>
+
+                <TabsTrigger
+                  value="viral"
+                  className="text-xs data-[state=active]:bg-slate-100"
+                >
+                  Viral
                 </TabsTrigger>
               </TabsList>
 
               <TabsContent value="sentiment">
                 {renderSentimentAnalysis()}
               </TabsContent>
-              <TabsContent value="clipping">
-                {renderClippingArtifacts()}
-              </TabsContent>
+              {isVideo && (
+                <>
+                  <TabsContent value="highlights">
+                    <HighlightsTab
+                      artifacts={highlightArtifacts}
+                      videoUrl={testimonial.media_url || ""}
+                      onGenerateHighlights={(type) =>
+                        goToAIStudio(`highlight_${type}`)
+                      }
+                      onRegenerateHighlights={(type) =>
+                        goToAIStudio(`highlight_${type}`)
+                      }
+                    />
+                  </TabsContent>
+                  <TabsContent value="clipping">
+                    {renderClippingArtifacts({
+                      artifacts: clippingArtifacts,
+                      onGenerateMore: () => goToAIStudio("clipping"),
+                      onDownload: downloadVideo,
+                      onCopyToClipboard: copyToClipboard,
+                      copiedItems,
+                      editingContent,
+                      onStartEditing: startEditing,
+                      onSaveContent: (id) => saveContent(id, ""),
+                      onCancelEditing: cancelEditing,
+                      onUpdateEditingContent: (id, content) =>
+                        setEditingContent((prev) => ({
+                          ...prev,
+                          [id]: content,
+                        })),
+                      // onProceedToAIStudio: () => {},
+                      // testimonialId: testimonialId || "",
+                      onProcessClip: handleProcessClip,
+                      onProcessArtifact: handleProcessArtifact,
+                      onProcessMultipleClips: handleProcessMultipleClips,
+                      selectedClips: selectedClips,
+                      onClipSelectionChange: handleClipSelectionChange,
+                      selectionMode: clipSelectionMode,
+                      onSelectionModeChange: handleSelectionModeChange,
+                      onVideoPreview: handleVideoPreview,
+                      onViewLineage: handleViewLineage,
+                    })}
+                  </TabsContent>
+                  <TabsContent value="story">
+                    {renderStoryVideoArtifacts({
+                      artifacts: storyArtifacts,
+                      onGenerateMore: () =>
+                        goToAIStudio("story_mode_generation"),
+                      onDownload: downloadVideo,
+                      onCopyToClipboard: copyToClipboard,
+                      copiedItems,
+                      editingContent,
+                      onStartEditing: startEditing,
+                      onSaveContent: (id) => saveContent(id, ""),
+                      onCancelEditing: cancelEditing,
+                      onUpdateEditingContent: (id, content) =>
+                        setEditingContent((prev) => ({
+                          ...prev,
+                          [id]: content,
+                        })),
+                      onProcessClip: handleProcessClip,
+                      onProcessArtifact: handleProcessArtifact,
+                      onVideoPreview: handleVideoPreview,
+                    })}
+                  </TabsContent>
+
+                  <TabsContent value="enhancement">
+                    {renderEnhancementArtifacts({
+                      artifacts: enhancementArtifacts,
+                      onGenerateMore: () => goToAIStudio("enhancement"),
+                      onDownload: downloadVideo,
+                      onCopyToClipboard: copyToClipboard,
+                      copiedItems,
+                      editingContent,
+                      onStartEditing: startEditing,
+                      onSaveContent: (id) => saveContent(id, ""),
+                      onCancelEditing: cancelEditing,
+                      onUpdateEditingContent: (id, content) =>
+                        setEditingContent((prev) => ({
+                          ...prev,
+                          [id]: content,
+                        })),
+                      onProcessClip: handleProcessClip,
+                      onProcessArtifact: handleProcessArtifact,
+                    })}
+                  </TabsContent>
+                </>
+              )}
+
               <TabsContent value="platform">
-                {renderPlatformOptimizationArtifacts()}
+                <PlatformOptimization
+                  artifacts={[
+                    ...platformVideoArtifacts,
+                    ...platformTextArtifacts,
+                  ]}
+                  onGenerateMore={() => goToAIStudio("platform_optimization")}
+                  onDownload={downloadVideo}
+                  onCopyToClipboard={copyToClipboard}
+                  copiedItems={copiedItems}
+                  onProcessArtifact={handleProcessArtifact}
+                />
               </TabsContent>
+
+              <TabsContent value="translation">
+                <TranslationTab
+                  artifacts={translationArtifacts.map((a) => ({
+                    id: a.id,
+                    data: a.data as TranslationData,
+                    created_at: a.created_at,
+                  }))}
+                  onGenerateTranslation={() => goToAIStudio("translation")}
+                  onCopyToClipboard={copyToClipboard}
+                  onSaveTranslation={(id, content) => {
+                    console.log("Saving translation:", id, content);
+                  }}
+                  copiedItems={copiedItems}
+                />
+              </TabsContent>
+
               <TabsContent value="content">
-                {renderContentGenerationArtifacts()}
+                {renderContentGenerationArtifacts({
+                  artifacts: contentGenArtifacts,
+                  onGenerateMore: () => goToAIStudio("content_generation"),
+                  onDownload: downloadVideo,
+                  onCopyToClipboard: copyToClipboard,
+                  copiedItems,
+                  editingContent,
+                  onStartEditing: startEditing,
+                  onSaveContent: (id) => saveContent(id, ""),
+                  onCancelEditing: cancelEditing,
+                  onUpdateEditingContent: (id, content) =>
+                    setEditingContent((prev) => ({ ...prev, [id]: content })),
+                })}
               </TabsContent>
-              <TabsContent value="story">
-                {/* {renderGenericArtifactTab(
-                  "Story Videos",
-                  Video,
-                  storyArtifacts,
-                  "story_mode_generation",
-                  "Create engaging story videos that highlight key moments and impact."
-                )} */}
-                {renderStoryVideoArtifacts()}
-              </TabsContent>
-              <TabsContent value="enhancement">
-                {/* {renderGenericArtifactTab(
-                  "Video Enhancement",
-                  Palette,
-                  enhancementArtifacts,
-                  "enhancement",
-                  "Enhance video quality with AI-powered improvements."
-                )} */}
-                {renderEnhancementArtifacts()}
-              </TabsContent>
+
               <TabsContent value="polishing">
-                {/* {renderGenericArtifactTab(
-                  "Text Polishing",
-                  Zap,
-                  polishingArtifacts,
-                  "text_polishing",
-                  "Polish and refine testimonial text for better impact."
-                )} */}
-                {renderTextPolishingArtifacts()}
+                {renderTextPolishingArtifacts({
+                  artifacts: polishingArtifacts,
+                  onGenerateMore: () => goToAIStudio("text_polishing"),
+                  onDownload: downloadVideo,
+                  onCopyToClipboard: copyToClipboard,
+                  copiedItems,
+                  editingContent,
+                  onStartEditing: startEditing,
+                  onSaveContent: (id) => saveContent(id, ""),
+                  onCancelEditing: cancelEditing,
+                  onUpdateEditingContent: (id, content) =>
+                    setEditingContent((prev) => ({ ...prev, [id]: content })),
+                })}
               </TabsContent>
+
               <TabsContent value="narration">
-                {/* {renderGenericArtifactTab(
-                  "Narration Audio",
-                  Mic,
-                  narrationArtifacts,
-                  "narration",
-                  "Generate professional narration audio from testimonial text."
-                )} */}
-                {renderNarrationArtifacts()}
+                {renderNarrationArtifacts({
+                  artifacts: narrationArtifacts,
+                  onGenerateMore: () => goToAIStudio("narration"),
+                  onDownload: downloadVideo,
+                  onCopyToClipboard: copyToClipboard,
+                  copiedItems,
+                  editingContent,
+                  onStartEditing: startEditing,
+                  onSaveContent: (id) => saveContent(id, ""),
+                  onCancelEditing: cancelEditing,
+                  onUpdateEditingContent: (id, content) =>
+                    setEditingContent((prev) => ({ ...prev, [id]: content })),
+                })}
+              </TabsContent>
+
+              <TabsContent value="viral">
+                {renderViralAnalysisArtifacts({
+                  artifacts: viralAnalysisArtifacts,
+                  onGenerateViralClips: handleViralClipGeneration,
+                  onGenerateViralOptimization: handleViralPlatformOptimization,
+                  onDownload: downloadVideo,
+                  onCopyToClipboard: copyToClipboard,
+                  copiedItems,
+                  editingContent,
+                  onStartEditing: startEditing,
+                  onSaveContent: (id) => saveContent(id, ""),
+                  onCancelEditing: cancelEditing,
+                  onUpdateEditingContent: (id, content) =>
+                    setEditingContent((prev) => ({ ...prev, [id]: content })),
+                })}
               </TabsContent>
             </Tabs>
           </TabsContent>
         </Tabs>
       </div>
+
+      <FeatureHint onExploreFeatures={handleViewAllFeatures} />
+
+      <VideoPreviewModal
+        isOpen={videoPreviewModal.open}
+        onClose={() =>
+          setVideoPreviewModal({ open: false, videoUrl: "", title: "" })
+        }
+        videoUrl={videoPreviewModal.videoUrl}
+        title={videoPreviewModal.title}
+        metadata={videoPreviewModal.metadata}
+      />
+
+      <ProcessingLineageModal
+        isOpen={lineageModal.open}
+        onClose={() => setLineageModal({ open: false, sourceContent: null })}
+        sourceContent={lineageModal.sourceContent}
+        onVideoPreview={handleVideoPreview}
+        onDownload={downloadVideo}
+      />
     </div>
   );
 });

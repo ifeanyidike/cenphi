@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"net/url"
+	"strings"
 	"time"
 
 	_ "github.com/lib/pq"
@@ -23,33 +25,56 @@ type database struct {
 
 var DB Database
 
+// ensureBinaryParameters ensures the DSN contains binary_parameters=yes (for lib/pq)
+func ensureBinaryParameters(dsn string) string {
+	if strings.Contains(dsn, "binary_parameters=") {
+		return dsn
+	}
+
+	u, err := url.Parse(dsn)
+	if err == nil && u.Scheme != "" {
+		q := u.Query()
+		q.Set("binary_parameters", "yes")
+		u.RawQuery = q.Encode()
+		return u.String()
+	}
+
+	// Fallback: append param if not a URL-style DSN (key=value style)
+	if strings.Contains(dsn, "?") {
+		return dsn + "&binary_parameters=yes"
+	}
+	return dsn + "?binary_parameters=yes"
+}
+
 func retryConnection(dsn string, maxRetries int, delay time.Duration) (*sql.DB, error) {
 	var lastErr error
-	for range maxRetries {
+	for i := range maxRetries {
 		db, err := sql.Open("postgres", dsn)
 		if err != nil {
 			lastErr = err
-			log.Printf("Database open failed: dsn: %v, %v. Retrying in %v...", dsn, err, delay)
+			log.Printf("Database open failed (attempt %d/%d): %v. Retrying in %v...", i+1, maxRetries, err, delay)
 			time.Sleep(delay)
 			continue
 		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		pingErr := db.PingContext(ctx)
-		cancel() // Cancel the context right after using it
+		cancel()
 
 		if pingErr != nil {
 			lastErr = pingErr
-			log.Printf("Database ping failed: %v. Retrying in %v...", pingErr, delay)
-			db.Close() // Make sure to close the connection if ping fails
+			_ = db.Close() // close failed connection before retry
+			log.Printf("Database ping failed (attempt %d/%d): %v. Retrying in %v...", i+1, maxRetries, pingErr, delay)
 			time.Sleep(delay)
 			continue
 		}
 
-		// Connection successful
-		db.SetMaxOpenConns(30)
-		db.SetConnMaxIdleTime(15 * time.Minute) // Use time.Minute for clarity
-		db.SetMaxIdleConns(30)
+		// Connection successful — configure pool
+		db.SetMaxOpenConns(50)
+		db.SetMaxIdleConns(20)
+		db.SetConnMaxIdleTime(5 * time.Minute)
+		db.SetConnMaxLifetime(30 * time.Minute)
+
 		return db, nil
 	}
 
@@ -57,7 +82,9 @@ func retryConnection(dsn string, maxRetries int, delay time.Duration) (*sql.DB, 
 }
 
 func InitializeDatabase(cfg Config) (*sql.DB, *redis.Client, error) {
-	db, err := retryConnection(cfg.Database.DSN, 5, 1*time.Second)
+	dsn := ensureBinaryParameters(cfg.Database.DSN)
+
+	db, err := retryConnection(dsn, 5, 1*time.Second)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -72,6 +99,7 @@ func InitializeDatabase(cfg Config) (*sql.DB, *redis.Client, error) {
 	defer cancel()
 	if err := redisClient.Ping(ctx).Err(); err != nil {
 		log.Println("Failed to connect to the redis server:", err)
+		_ = db.Close()
 		return nil, nil, err
 	}
 
