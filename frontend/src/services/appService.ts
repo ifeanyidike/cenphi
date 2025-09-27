@@ -1,5 +1,4 @@
 import { auth } from "@/config/firebase";
-import { Plan } from "@/types/workspace";
 import { flow, makeAutoObservable, reaction, runInAction } from "mobx";
 
 /**
@@ -94,7 +93,7 @@ class AppService {
    * @returns A promise that resolves to a boolean indicating whether the onboard operation succeeded.
    * @throws An error if the authentication token is missing or the request fails.
    */
-  async onboard_partial(user_id: string, plan: Plan) {
+  async onboard_partial(user_id: string, plan: string) {
     const token = await auth.currentUser?.getIdToken();
     if (!token) throw new Error("Token not found, Unauthorized!");
     console.log("user_id", user_id);
