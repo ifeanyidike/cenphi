@@ -1,26 +1,23 @@
-import AIFeaturesShowcase from "@/components/landing/AIShowcase";
-import UserTestimonial from "@/components/landing/hero/UserTestimonial";
-import TestimonialHero from "@/components/landing/hero/TestimonialHero";
-import HowItWorksSection from "@/components/landing/HowItWorksSection";
-import Navbar from "@/components/nav";
-import CollectionSection from "@/components/landing/CollectionSection";
-import FeatureSection from "@/components/landing/topfeatures";
-import Footer from "@/components/custom/footer";
 import { observer } from "mobx-react-lite";
+import Navbar from "@/components/landing/Navbar";
+import HomeLandingHero from "@/components/landing/HomeLandingHero";
+import FutureShowcase from "@/components/landing/FutureShowcase";
+import ServicesShowcase from "@/components/landing/ServicesShowcase";
+import RevolutionizeCollection from "@/components/landing/RevolutionizeCollection";
+import SimpleProof from "@/components/landing/SimpleProof";
+import Footer from "@/components/custom/footer";
 
 const LandingPage = observer(() => {
   return (
-    <>
-      <Navbar alwaysDarkText={false} />
-      <TestimonialHero />
-      <HowItWorksSection />
-
-      <UserTestimonial />
-      <FeatureSection />
-      <AIFeaturesShowcase />
-      <CollectionSection />
+    <div className="min-h-screen bg-white">
+      <Navbar />
+      <HomeLandingHero />
+      <FutureShowcase />
+      <ServicesShowcase />
+      <RevolutionizeCollection />
+      <SimpleProof />
       <Footer />
-    </>
+    </div>
   );
 });
 
