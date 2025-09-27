@@ -90,7 +90,7 @@ export class MemberManager {
         },
       });
 
-      if ((response.status = 200)) {
+      if (response.status === 200) {
         // const member = (await response.json()) as MemberDataParams;
         const member = response.data;
         console.log("✅ Member fetched successfully");

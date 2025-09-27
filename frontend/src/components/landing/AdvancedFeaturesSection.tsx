@@ -4,14 +4,10 @@ import {
   Brain,
   MessageSquare,
   BarChart3,
-  Zap,
-  Shield,
-  Globe,
   ArrowRight,
   Play,
   Sparkles,
   ChevronRight,
-  Star,
   TrendingUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";

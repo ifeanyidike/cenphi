@@ -348,7 +348,7 @@ export class JobsManager {
     });
 
     const endpoint = this.studioManager.getServiceEndpoint(job.service);
-    let payload = this.buildServicePayload(job, config);
+    const payload = this.buildServicePayload(job, config);
     console.log("payload", payload);
     try {
       const response = await fetch(
@@ -607,7 +607,7 @@ export class JobsManager {
   ): Record<string, any> {
     // const config = this.studioManager.serviceConfigs[job.service] || {};
     const source = this.buildSourceParameter(job.sourceInfo);
-    let basePayload = {
+    const basePayload = {
       workspace_id: job.workspaceId,
       ...config,
       source,

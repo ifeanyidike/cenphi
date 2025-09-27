@@ -95,7 +95,7 @@ const FutureShowcase = () => {
       setCurrentDemo((prev) => (prev + 1) % demos.length);
     }, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [demos.length]);
 
   const currentDemoData = demos[currentDemo];
 

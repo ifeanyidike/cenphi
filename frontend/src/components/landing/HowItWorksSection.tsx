@@ -345,7 +345,7 @@ const TestimonialSection: React.FC = () => {
       clearInterval(testimonialInterval);
       clearInterval(stepInterval);
     };
-  }, []);
+  }, [steps.length, testimonials.length]);
 
   // Color scheme chosen to create a sleek, premium aesthetic
   const steps: StepType[] = [
