@@ -1,7 +1,6 @@
 // components/ui/ErrorStates.tsx - Ultra-Premium Error State Components
 import {
   ArrowLeft,
-  Search,
   Home,
   RefreshCw,
   FileText,

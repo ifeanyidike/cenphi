@@ -1,5 +1,5 @@
 // import logo from "../../assets/cenphilogo.png";
-import logo from "../../assets/cenphi.png";
+import logo from "../../assets/Cenphi.png";
 const CenphiLogo = () => {
   return (
     <div className="bg-auto p-1">

@@ -32,7 +32,7 @@ const HighlightSegmentModal = ({
 
   // Get current highlight data based on selected type
   const currentHighlightRecord = highlightSegments?.find((record) => {
-    return record.hasOwnProperty(selectedHighlightType);
+    return Object.prototype.hasOwnProperty.call(record, selectedHighlightType);
   });
 
   const currentSegments = currentHighlightRecord?.[selectedHighlightType] || [];

@@ -73,14 +73,14 @@ const TestimonialSelector: React.FC<TestimonialSelectorProps> = observer(
     enableArtifactSelection = false,
   }) => {
     const [searchQuery, setSearchQuery] = useState("");
-    const [filterType, setFilterType] = useState("all");
+    // const [filterType, setFilterType] = useState("all");
+    const filterType = "all";
     const [showArtifacts, setShowArtifacts] = useState(enableArtifactSelection);
     const [isExpanded, setIsExpanded] = useState(
       !isCompact || selectedTestimonials.length === 0
     );
 
     const testimonials = workspaceHub.testimonialManager.testimonials || [];
-    const isLoading = workspaceHub.testimonialManager.loading_testimonials;
 
     // Load testimonials if not already loaded
     useEffect(() => {

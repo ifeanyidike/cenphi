@@ -60,7 +60,13 @@ export interface CaptureState {
 }
 
 // Recording status
-export type RecordingStatus = "idle" | "recording" | "stopped" | "uploading" | "completed" | "error";
+export type RecordingStatus =
+  | "idle"
+  | "recording"
+  | "stopped"
+  | "uploading"
+  | "completed"
+  | "error";
 
 // Upload progress
 export interface UploadProgress {
@@ -68,4 +74,14 @@ export interface UploadProgress {
   uploadedBytes: number;
   totalBytes: number;
   estimatedTimeLeft: number;
+}
+
+export enum TestimonialStep {
+  Info = 0,
+  Method = 1,
+  MediaOption = 2,
+  Record = 3,
+  Text = 4,
+  Review = 5,
+  ThankYou = 6,
 }
