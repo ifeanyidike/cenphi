@@ -45,15 +45,15 @@ const HomeLandingHero = () => {
   ];
 
   return (
-    <section className="pt-24 pb-20 bg-white text-gray-900">
-      <div className="max-w-6xl mx-auto px-4">
+    <section className="pt-16 sm:pt-24 pb-12 sm:pb-20 bg-white text-gray-900">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6">
         {/* Main Content */}
-        <div className="text-center mb-16">
+        <div className="text-center mb-8 sm:mb-16">
           {/* Headline */}
           <motion.h1
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-3xl md:text-4xl font-bold leading-tight mb-4 max-w-4xl mx-auto text-gray-900"
+            className="text-2xl sm:text-3xl md:text-4xl font-bold leading-tight mb-4 max-w-4xl mx-auto text-gray-900 px-2"
           >
             Transform customer testimonials into
             <span className="block text-blue-600">
@@ -66,7 +66,7 @@ const HomeLandingHero = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-lg text-gray-600 leading-relaxed max-w-2xl mx-auto mb-8"
+            className="text-base sm:text-lg text-gray-600 leading-relaxed max-w-2xl mx-auto mb-6 sm:mb-8 px-4"
           >
             AI-powered platform that collects, analyzes, and converts
             testimonials into high-converting content across all marketing
@@ -78,11 +78,11 @@ const HomeLandingHero = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="flex flex-col sm:flex-row gap-3 justify-center mb-12"
+            className="flex flex-col sm:flex-row gap-3 justify-center mb-8 sm:mb-12 px-4"
           >
             <Button
               onClick={() => navigate("/signup")}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 font-semibold rounded-lg shadow-sm transition-colors duration-200"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 sm:py-2.5 font-semibold rounded-lg shadow-sm transition-colors duration-200 w-full sm:w-auto"
             >
               Start free trial
               <ArrowRight className="ml-2 h-4 w-4" />
@@ -90,7 +90,7 @@ const HomeLandingHero = () => {
             <Button
               variant="outline"
               onClick={() => navigate("/studio")}
-              className="px-6 py-2.5 font-semibold border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors duration-200"
+              className="px-6 py-3 sm:py-2.5 font-semibold border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors duration-200 w-full sm:w-auto"
             >
               Try services
               <ChevronRight className="ml-2 h-4 w-4" />
@@ -102,7 +102,7 @@ const HomeLandingHero = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="flex flex-wrap justify-center gap-6 text-sm text-gray-500"
+            className="flex flex-wrap justify-center gap-4 sm:gap-6 text-sm text-gray-500 px-4"
           >
             <span className="flex items-center gap-2">
               <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
@@ -124,7 +124,7 @@ const HomeLandingHero = () => {
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-16"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8 sm:mb-16"
         >
           {services.map((service, index) => (
             <motion.div
@@ -132,7 +132,7 @@ const HomeLandingHero = () => {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 + index * 0.1 }}
-              className="bg-white p-5 rounded-lg border border-gray-200 hover:shadow-lg transition-all duration-200 cursor-pointer group"
+              className="bg-white p-4 sm:p-5 rounded-lg border border-gray-200 hover:shadow-lg transition-all duration-200 cursor-pointer group"
               onClick={() => navigate("/studio")}
             >
               <div className="flex items-center gap-3 mb-3">
@@ -177,29 +177,29 @@ const HomeLandingHero = () => {
             </div>
 
             {/* Dashboard Content */}
-            <div className="p-6 bg-white">
+            <div className="p-4 sm:p-6 bg-white">
               {/* Header */}
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 gap-3">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1">
                     Testimonial Dashboard
                   </h3>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-xs sm:text-sm text-gray-600">
                     247 testimonials • 94% positive sentiment
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <button className="bg-blue-600 text-white px-3 py-2 rounded-lg text-xs font-medium hover:bg-blue-700 transition-colors">
+                  <button className="bg-blue-600 text-white px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs font-medium hover:bg-blue-700 transition-colors">
                     Generate Content
                   </button>
-                  <button className="border border-gray-300 px-3 py-2 rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                  <button className="border border-gray-300 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors">
                     Analytics
                   </button>
                 </div>
               </div>
 
               {/* Stats */}
-              <div className="grid grid-cols-4 gap-4 mb-6">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
                 {[
                   { label: "Conversion Rate", value: "+47%" },
                   { label: "Revenue Impact", value: "$2.4M" },
@@ -208,9 +208,9 @@ const HomeLandingHero = () => {
                 ].map((stat, i) => (
                   <div
                     key={i}
-                    className="bg-gray-50 p-4 rounded-lg border border-gray-100"
+                    className="bg-gray-50 p-3 sm:p-4 rounded-lg border border-gray-100"
                   >
-                    <div className="text-xl font-bold text-gray-900 mb-1">
+                    <div className="text-lg sm:text-xl font-bold text-gray-900 mb-1">
                       {stat.value}
                     </div>
                     <div className="text-xs text-gray-600">{stat.label}</div>

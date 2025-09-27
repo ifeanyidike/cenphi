@@ -30,15 +30,15 @@ const SimpleProof = () => {
   ];
 
   return (
-    <section className="py-12 bg-gray-50">
-      <div className="max-w-6xl mx-auto px-4">
+    <section className="py-8 sm:py-12 bg-gray-50">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6">
         {/* Results */}
-        <div className="text-center mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+        <div className="text-center mb-8 sm:mb-12">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6 px-2">
             Real results from real customers
           </h2>
 
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
             {[
               { metric: "156%", label: "Increase in testimonial collection" },
               { metric: "73%", label: "Improvement in conversion rates" },
@@ -49,9 +49,9 @@ const SimpleProof = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 + index * 0.1 }}
-                className="text-center bg-white p-6 rounded-xl border border-gray-200"
+                className="text-center bg-white p-4 sm:p-6 rounded-xl border border-gray-200"
               >
-                <div className="text-3xl font-bold text-gray-900 mb-2">
+                <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
                   {stat.metric}
                 </div>
                 <div className="text-sm text-gray-600">{stat.label}</div>
@@ -61,14 +61,14 @@ const SimpleProof = () => {
         </div>
 
         {/* Testimonials */}
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {testimonials.map((testimonial, index) => (
             <motion.div
               key={index}
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 + index * 0.1 }}
-              className="bg-white rounded-xl p-6 border border-gray-200"
+              className="bg-white rounded-xl p-4 sm:p-6 border border-gray-200"
             >
               <div className="flex mb-3">
                 {[...Array(5)].map((_, i) => (
@@ -110,18 +110,18 @@ const SimpleProof = () => {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.7 }}
-          className="text-center mt-12"
+          className="text-center mt-8 sm:mt-12"
         >
-          <div className="bg-blue-600 rounded-lg p-8 text-white">
-            <h3 className="text-lg font-semibold mb-3">
+          <div className="bg-blue-600 rounded-lg p-6 sm:p-8 text-white">
+            <h3 className="text-base sm:text-lg font-semibold mb-3">
               Get these results for your business
             </h3>
-            <p className="text-blue-100 text-sm mb-6 max-w-xl mx-auto">
+            <p className="text-blue-100 text-sm mb-4 sm:mb-6 max-w-xl mx-auto px-2">
               Join companies using Cenphi to transform their customer
               testimonials into revenue engines.
             </p>
             <button
-              className="bg-white text-blue-600 hover:bg-gray-50 px-6 py-2.5 rounded-lg font-semibold text-sm transition-colors"
+              className="bg-white text-blue-600 hover:bg-gray-50 px-6 py-2.5 rounded-lg font-semibold text-sm transition-colors w-full sm:w-auto"
               onClick={() => (window.location.href = "/signup")}
             >
               Start free trial
