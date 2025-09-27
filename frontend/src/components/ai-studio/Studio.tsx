@@ -31,7 +31,7 @@ const AIStudio: React.FC = observer(() => {
 
   const testimonials = workspaceHub.testimonialManager.testimonials;
   const mountedRef = useRef(true);
-  const { connectionStatus, jobs: _jobs, streamingResults: _streamingResults } = aiStudioManager;
+  const { connectionStatus } = aiStudioManager;
 
   // Remove the deprecated monitor tab logic
 
@@ -77,7 +77,11 @@ const AIStudio: React.FC = observer(() => {
     }
 
     // Enhanced user feedback for batch processing
-    const batchSupportedServices = ["content_generation", "text_polishing", "translation"];
+    const batchSupportedServices = [
+      "content_generation",
+      "text_polishing",
+      "translation",
+    ];
     const selectedCount = aiStudioManager.selectedTestimonials.length;
     const supportsBatch = batchSupportedServices.includes(serviceId);
 
@@ -87,8 +91,12 @@ const AIStudio: React.FC = observer(() => {
         showToast({
           message: (
             <div>
-              <div className="font-medium">{service.title} - Batch Processing</div>
-              <div className="text-sm opacity-90">Processing all {selectedCount} selected testimonials together</div>
+              <div className="font-medium">
+                {service.title} - Batch Processing
+              </div>
+              <div className="text-sm opacity-90">
+                Processing all {selectedCount} selected testimonials together
+              </div>
             </div>
           ),
           type: "info",
@@ -97,8 +105,12 @@ const AIStudio: React.FC = observer(() => {
         showToast({
           message: (
             <div>
-              <div className="font-medium">{service.title} - Single Processing</div>
-              <div className="text-sm opacity-90">Processing the first selected testimonial only</div>
+              <div className="font-medium">
+                {service.title} - Single Processing
+              </div>
+              <div className="text-sm opacity-90">
+                Processing the first selected testimonial only
+              </div>
             </div>
           ),
           type: "warning",
@@ -117,15 +129,19 @@ const AIStudio: React.FC = observer(() => {
         aiStudioManager.activeService || service
       );
 
-      const processingText = supportsBatch && selectedCount > 1
-        ? `Processing ${selectedCount} testimonials`
-        : "Processing testimonial";
+      const processingText =
+        supportsBatch && selectedCount > 1
+          ? `Processing ${selectedCount} testimonials`
+          : "Processing testimonial";
 
       showToast({
         message: (
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-            <span>{service?.title} {processingText.toLowerCase()} - you'll be notified when complete.</span>
+            <span>
+              {service?.title} {processingText.toLowerCase()} - you'll be
+              notified when complete.
+            </span>
           </div>
         ),
         type: "success",
@@ -231,10 +247,8 @@ const AIStudio: React.FC = observer(() => {
             isCompact={aiStudioManager.selectedTestimonials.length > 0}
           />
 
-          {Boolean(
-            aiStudioManager.selectedTestimonials.length > 0 &&
-              testimonials?.length
-          ) ? (
+          {aiStudioManager.selectedTestimonials.length > 0 &&
+          testimonials?.length ? (
             <Services
               handleCustomizeProcess={handleCustomizeProcess}
               handleProcessImmediate={handleProcessImmediate}
@@ -252,8 +266,8 @@ const AIStudio: React.FC = observer(() => {
                 Select Testimonials to Begin
               </h3>
               <p className="text-gray-600 max-w-md mx-auto">
-                Choose one or more testimonials above to unlock AI services
-                and start processing your content.
+                Choose one or more testimonials above to unlock AI services and
+                start processing your content.
               </p>
             </div>
           )}

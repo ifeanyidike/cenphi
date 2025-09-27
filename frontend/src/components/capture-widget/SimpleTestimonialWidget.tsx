@@ -8,7 +8,9 @@ interface SimpleTestimonialWidgetProps {
   config: Partial<TestimonialWidgetConfig>;
 }
 
-const SimpleTestimonialWidget: React.FC<SimpleTestimonialWidgetProps> = ({ config }) => {
+const SimpleTestimonialWidget: React.FC<SimpleTestimonialWidgetProps> = ({
+  config,
+}) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
 
@@ -25,21 +27,6 @@ const SimpleTestimonialWidget: React.FC<SimpleTestimonialWidgetProps> = ({ confi
     ...config,
   };
 
-  // Position classes
-  const positionClasses = {
-    "bottom-right": "bottom-6 right-6",
-    "bottom-left": "bottom-6 left-6",
-    "top-right": "top-6 right-6",
-    "top-left": "top-6 left-6",
-  };
-
-  // Rounded corner classes
-  const roundedClasses = {
-    sharp: "rounded-none",
-    rounded: "rounded-2xl",
-    pill: "rounded-full",
-  };
-
   const handleOpenModal = () => {
     setIsModalOpen(true);
   };
@@ -51,13 +38,18 @@ const SimpleTestimonialWidget: React.FC<SimpleTestimonialWidgetProps> = ({ confi
   const handleDismiss = () => {
     setIsVisible(false);
     // Store dismissal in localStorage to remember user preference
-    localStorage.setItem(`testimonial-widget-dismissed-${config.campaignId}`, "true");
+    localStorage.setItem(
+      `testimonial-widget-dismissed-${config.campaignId}`,
+      "true"
+    );
   };
 
   // Check if widget was previously dismissed
   useEffect(() => {
     if (config.campaignId) {
-      const wasDismissed = localStorage.getItem(`testimonial-widget-dismissed-${config.campaignId}`);
+      const wasDismissed = localStorage.getItem(
+        `testimonial-widget-dismissed-${config.campaignId}`
+      );
       if (wasDismissed === "true") {
         setIsVisible(false);
       }
@@ -73,25 +65,31 @@ const SimpleTestimonialWidget: React.FC<SimpleTestimonialWidgetProps> = ({ confi
         onClick={handleOpenModal}
         className={`tw-button ${widgetConfig.position} ${widgetConfig.brandMode === "minimal" ? "minimal" : ""}`}
         style={{
-          background: widgetConfig.brandMode === "gradient"
-            ? `linear-gradient(135deg, ${widgetConfig.primaryColor}, ${widgetConfig.secondaryColor})`
-            : widgetConfig.brandMode === "solid"
-            ? widgetConfig.primaryColor
-            : widgetConfig.darkMode
-            ? "#1F2937"
-            : "#FFFFFF",
-          color: widgetConfig.brandMode === "minimal"
-            ? widgetConfig.darkMode ? "#FFFFFF" : "#1F2937"
-            : "#FFFFFF",
-          border: widgetConfig.brandMode === "minimal"
-            ? `2px solid ${widgetConfig.primaryColor}`
-            : "none",
+          background:
+            widgetConfig.brandMode === "gradient"
+              ? `linear-gradient(135deg, ${widgetConfig.primaryColor}, ${widgetConfig.secondaryColor})`
+              : widgetConfig.brandMode === "solid"
+                ? widgetConfig.primaryColor
+                : widgetConfig.darkMode
+                  ? "#1F2937"
+                  : "#FFFFFF",
+          color:
+            widgetConfig.brandMode === "minimal"
+              ? widgetConfig.darkMode
+                ? "#FFFFFF"
+                : "#1F2937"
+              : "#FFFFFF",
+          border:
+            widgetConfig.brandMode === "minimal"
+              ? `2px solid ${widgetConfig.primaryColor}`
+              : "none",
           transform: `scale(${widgetConfig.dialogScale})`,
-          borderRadius: widgetConfig.roundedCorners === "pill"
-            ? "9999px"
-            : widgetConfig.roundedCorners === "sharp"
-            ? "4px"
-            : "16px",
+          borderRadius:
+            widgetConfig.roundedCorners === "pill"
+              ? "9999px"
+              : widgetConfig.roundedCorners === "sharp"
+                ? "4px"
+                : "16px",
         }}
       >
         <div className="tw-button-icon">
@@ -114,8 +112,10 @@ const SimpleTestimonialWidget: React.FC<SimpleTestimonialWidgetProps> = ({ confi
         className="tw-button-dismiss"
         style={{
           position: "fixed",
-          [widgetConfig.position.includes("right") ? "right" : "left"]: widgetConfig.position.includes("right") ? "20px" : "20px",
-          [widgetConfig.position.includes("bottom") ? "bottom" : "top"]: widgetConfig.position.includes("bottom") ? "80px" : "80px",
+          [widgetConfig.position.includes("right") ? "right" : "left"]:
+            widgetConfig.position.includes("right") ? "20px" : "20px",
+          [widgetConfig.position.includes("bottom") ? "bottom" : "top"]:
+            widgetConfig.position.includes("bottom") ? "80px" : "80px",
           width: "24px",
           height: "24px",
           backgroundColor: "rgba(0,0,0,0.5)",

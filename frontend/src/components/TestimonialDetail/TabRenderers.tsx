@@ -972,7 +972,10 @@ export const renderTextPolishingArtifacts = ({
       {artifacts.map((artifact) => {
         const data = artifact.data as TextPolishingData;
         const contentId = `polishing-${artifact.id}`;
-        const isEditing = editingContent.hasOwnProperty(contentId);
+        const isEditing = Object.prototype.hasOwnProperty.call(
+          editingContent,
+          contentId
+        );
 
         return (
           <Card key={artifact.id}>
@@ -1126,7 +1129,10 @@ export const renderContentGenerationArtifacts = ({
           <div key={artifact.id} className="space-y-4">
             {content.map((item, index) => {
               const contentId = `${artifact.id}-${index}`;
-              const isEditing = editingContent.hasOwnProperty(contentId);
+              const isEditing = Object.prototype.hasOwnProperty.call(
+                editingContent,
+                contentId
+              );
 
               return (
                 <Card key={index}>

@@ -96,7 +96,6 @@ const ProcessingLineageModal: React.FC<ProcessingLineageModalProps> = ({
   isOpen,
   onClose,
   sourceContent,
-  onVideoPreview,
   onDownload,
 }) => {
   const [lineageData, setLineageData] = useState<LineageResult | null>(null);
