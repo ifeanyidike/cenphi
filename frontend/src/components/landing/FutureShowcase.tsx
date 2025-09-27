@@ -100,15 +100,15 @@ const FutureShowcase = () => {
   const currentDemoData = demos[currentDemo];
 
   return (
-    <section className="py-10 bg-white">
-      <div className="max-w-7xl mx-auto px-6">
+    <section className="py-8 sm:py-10 bg-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
         {/* Header */}
-        <div className="text-center mb-16">
+        <div className="text-center mb-8 sm:mb-16">
           <motion.h2
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-2xl md:text-3xl font-bold text-gray-900 mb-6"
+            className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-4 sm:mb-6 px-2"
           >
             Experience the future of
             <span className="block text-blue-600">
@@ -121,7 +121,7 @@ const FutureShowcase = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: 0.1 }}
-            className="text-lg text-gray-600 max-w-2xl mx-auto"
+            className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto px-4"
           >
             Watch our AI transform your testimonials into powerful marketing
             assets in real-time.
@@ -129,20 +129,20 @@ const FutureShowcase = () => {
         </div>
 
         {/* Demo Selector */}
-        <div className="flex justify-center mb-12">
-          <div className="flex bg-gray-50 rounded-lg p-1 border border-gray-200">
+        <div className="flex justify-center mb-8 sm:mb-12 px-4">
+          <div className="flex flex-wrap justify-center bg-gray-50 rounded-lg p-1 border border-gray-200 gap-1 w-full max-w-4xl">
             {demos.map((demo, index) => (
               <button
                 key={index}
                 onClick={() => setCurrentDemo(index)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 ${
+                className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 rounded-lg transition-all duration-200 text-xs sm:text-sm ${
                   currentDemo === index
                     ? "bg-blue-600 text-white shadow-sm"
                     : "text-gray-600 hover:text-gray-900 hover:bg-white"
                 }`}
               >
-                <demo.icon className="h-4 w-4" />
-                <span className="font-medium text-sm">{demo.title}</span>
+                <demo.icon className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="font-medium text-xs sm:text-sm hidden sm:inline">{demo.title}</span>
               </button>
             ))}
           </div>
@@ -156,36 +156,36 @@ const FutureShowcase = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.4 }}
-            className="grid lg:grid-cols-2 gap-12 items-center"
+            className="grid lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 items-center"
           >
             {/* Left Side - Description */}
-            <div>
+            <div className="order-2 lg:order-1">
               <div
-                className={`inline-flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r ${currentDemoData.color} rounded-full text-white text-sm font-medium mb-6`}
+                className={`inline-flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r ${currentDemoData.color} rounded-full text-white text-sm font-medium mb-4 sm:mb-6`}
               >
                 <currentDemoData.icon className="h-4 w-4" />
                 {currentDemoData.title}
               </div>
 
-              <h3 className="text-3xl font-bold text-gray-900 mb-4">
+              <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-3 sm:mb-4">
                 {currentDemoData.subtitle}
               </h3>
 
-              <p className="text-lg text-gray-600 leading-relaxed mb-8">
+              <p className="text-base sm:text-lg text-gray-600 leading-relaxed mb-6 sm:mb-8">
                 {currentDemoData.description}
               </p>
 
-              <div className="flex gap-4">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                 <Button
                   onClick={() => navigate("/studio")}
-                  className={`bg-gradient-to-r ${currentDemoData.color} text-white hover:opacity-90 px-6 py-3 shadow-lg`}
+                  className={`bg-gradient-to-r ${currentDemoData.color} text-white hover:opacity-90 px-6 py-3 shadow-lg w-full sm:w-auto`}
                 >
                   Try This Feature
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
                 <Button
                   variant="outline"
-                  className="px-6 py-3 border-2 border-gray-400 text-gray-700 hover:bg-gray-50 hover:border-gray-500 transition-colors"
+                  className="px-6 py-3 border-2 border-gray-400 text-gray-700 hover:bg-gray-50 hover:border-gray-500 transition-colors w-full sm:w-auto"
                 >
                   Watch Full Demo
                 </Button>
@@ -193,21 +193,21 @@ const FutureShowcase = () => {
             </div>
 
             {/* Right Side - Interactive Demo */}
-            <div className="relative">
+            <div className="relative order-1 lg:order-2">
               {/* Demo Container */}
               <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
                 {/* Demo Header */}
                 <div
-                  className={`bg-gradient-to-r ${currentDemoData.color} px-6 py-4 text-white`}
+                  className={`bg-gradient-to-r ${currentDemoData.color} px-4 sm:px-6 py-3 sm:py-4 text-white`}
                 >
                   <div className="flex items-center gap-2">
-                    <currentDemoData.icon className="h-5 w-5" />
-                    <span className="font-semibold">Live Demo</span>
+                    <currentDemoData.icon className="h-4 w-4 sm:h-5 sm:w-5" />
+                    <span className="font-semibold text-sm sm:text-base">Live Demo</span>
                   </div>
                 </div>
 
                 {/* Demo Content */}
-                <div className="p-6">
+                <div className="p-4 sm:p-6">
                   {/* Input */}
                   <div className="mb-6">
                     <div className="text-sm font-medium text-gray-700 mb-2">

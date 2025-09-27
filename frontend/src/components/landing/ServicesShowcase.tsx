@@ -115,21 +115,21 @@ const ServicesShowcase = () => {
     colorClasses[currentService.color as keyof typeof colorClasses];
 
   return (
-    <section className="py-12 bg-white">
-      <div className="max-w-6xl mx-auto px-4">
+    <section className="py-8 sm:py-12 bg-white">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6">
         {/* Header */}
-        <div className="text-center mb-12">
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
+        <div className="text-center mb-8 sm:mb-12">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-3 px-2">
             Four powerful services that drive results
           </h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto px-4">
             Each service works independently or together to maximize the impact
             of your customer testimonials.
           </p>
         </div>
 
         {/* Service Navigation */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-12">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-8 sm:mb-12">
           {services.map((service, index) => {
             const colors =
               colorClasses[service.color as keyof typeof colorClasses];
@@ -139,7 +139,7 @@ const ServicesShowcase = () => {
               <motion.button
                 key={service.id}
                 onClick={() => setActiveService(index)}
-                className={`p-4 rounded-xl border text-left transition-all duration-300 ${
+                className={`p-3 sm:p-4 rounded-xl border text-left transition-all duration-300 ${
                   isActive
                     ? `${colors.bg} ${colors.border} shadow-lg border-2`
                     : "bg-white border-gray-200 hover:border-gray-300 hover:shadow-md"
@@ -148,18 +148,18 @@ const ServicesShowcase = () => {
                 whileTap={{ scale: 0.98 }}
               >
                 <div
-                  className={`w-10 h-10 rounded-lg ${isActive ? colors.bg : "bg-gray-100"} flex items-center justify-center mb-3`}
+                  className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg ${isActive ? colors.bg : "bg-gray-100"} flex items-center justify-center mb-2 sm:mb-3`}
                 >
                   <service.icon
-                    className={`h-5 w-5 ${isActive ? colors.text : "text-gray-600"}`}
+                    className={`h-4 w-4 sm:h-5 sm:w-5 ${isActive ? colors.text : "text-gray-600"}`}
                   />
                 </div>
                 <h3
-                  className={`font-semibold text-sm mb-1 ${isActive ? "text-gray-900" : "text-gray-800"}`}
+                  className={`font-semibold text-xs sm:text-sm mb-1 ${isActive ? "text-gray-900" : "text-gray-800"}`}
                 >
                   {service.title}
                 </h3>
-                <p className="text-gray-600 text-xs leading-relaxed mb-2">
+                <p className="text-gray-600 text-xs leading-relaxed mb-2 hidden sm:block">
                   {service.subtitle}
                 </p>
                 <div
@@ -184,7 +184,7 @@ const ServicesShowcase = () => {
           >
             <div className="grid lg:grid-cols-2">
               {/* Content */}
-              <div className="p-8">
+              <div className="p-4 sm:p-6 lg:p-8">
                 <div
                   className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full ${currentColors.bg} ${currentColors.text} text-xs font-medium mb-4`}
                 >
@@ -192,11 +192,11 @@ const ServicesShowcase = () => {
                   {currentService.title}
                 </div>
 
-                <h3 className="text-xl font-bold text-gray-900 mb-3">
+                <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-3">
                   {currentService.subtitle}
                 </h3>
 
-                <p className="text-sm text-gray-600 leading-relaxed mb-6">
+                <p className="text-sm text-gray-600 leading-relaxed mb-4 sm:mb-6">
                   {currentService.description}
                 </p>
 
@@ -211,7 +211,7 @@ const ServicesShowcase = () => {
                 </div>
 
                 {/* Features */}
-                <div className="grid grid-cols-2 gap-2 mb-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4 sm:mb-6">
                   {currentService.features.map((feature, index) => (
                     <motion.div
                       key={index}
@@ -228,9 +228,9 @@ const ServicesShowcase = () => {
                   ))}
                 </div>
 
-                <div className="flex gap-3">
+                <div className="flex flex-col sm:flex-row gap-3">
                   <Button
-                    className={`${currentColors.button} text-white px-5 py-2 text-sm`}
+                    className={`${currentColors.button} text-white px-5 py-2 text-sm w-full sm:w-auto`}
                     onClick={() => navigate("/studio")}
                   >
                     {currentService.cta}
@@ -238,7 +238,7 @@ const ServicesShowcase = () => {
                   </Button>
                   <Button
                     variant="outline"
-                    className="px-5 py-2 text-sm border-gray-300"
+                    className="px-5 py-2 text-sm border-gray-300 w-full sm:w-auto"
                   >
                     Learn More
                   </Button>
@@ -247,7 +247,7 @@ const ServicesShowcase = () => {
 
               {/* Demo */}
               <div
-                className={`${currentColors.bg} p-6 lg:p-8 flex items-center justify-center`}
+                className={`${currentColors.bg} p-4 sm:p-6 lg:p-8 flex items-center justify-center`}
               >
                 {currentService.demo}
               </div>
@@ -256,17 +256,17 @@ const ServicesShowcase = () => {
         </AnimatePresence>
 
         {/* Bottom CTA */}
-        <div className="text-center mt-12">
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 bg-gray-50">
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">
+        <div className="text-center mt-8 sm:mt-12">
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 sm:p-6 bg-gray-50">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3">
               Choose your power tools
             </h3>
-            <p className="text-gray-600 text-sm mb-6 max-w-xl mx-auto">
+            <p className="text-gray-600 text-sm mb-4 sm:mb-6 max-w-xl mx-auto px-2">
               Start with any service and scale as you grow. All services work
               together to maximize your testimonial ROI.
             </p>
             <Button
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 text-sm font-semibold border-0 rounded-lg"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 text-sm font-semibold border-0 rounded-lg w-full sm:w-auto"
               onClick={() => navigate("/studio")}
             >
               Try All Services
