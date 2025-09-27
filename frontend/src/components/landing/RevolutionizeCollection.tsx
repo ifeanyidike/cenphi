@@ -73,15 +73,15 @@ const RevolutionizeCollection = () => {
   };
 
   return (
-    <section className="py-12 bg-slate-50 relative">
-      <div className="max-w-6xl mx-auto px-4 relative z-10">
+    <section className="py-8 sm:py-12 bg-slate-50 relative">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 relative z-10">
         {/* Header */}
-        <div className="text-center mb-10">
+        <div className="text-center mb-6 sm:mb-10">
           <motion.h2
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-2xl md:text-3xl font-bold mb-4 text-gray-900"
+            className="text-xl sm:text-2xl md:text-3xl font-bold mb-4 text-gray-900 px-2"
           >
             Revolutionize how you manage testimonials
           </motion.h2>
@@ -91,7 +91,7 @@ const RevolutionizeCollection = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: 0.1 }}
-            className="text-lg text-gray-600 max-w-2xl mx-auto"
+            className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto px-4"
           >
             Transform from chaotic manual processes to AI-powered automation
             with smart posting, optimal timing suggestions, and intelligent
@@ -100,11 +100,11 @@ const RevolutionizeCollection = () => {
         </div>
 
         {/* Toggle Tabs */}
-        <div className="flex justify-center mb-8">
-          <div className="bg-white rounded-xl p-1 border border-gray-200 shadow-sm">
+        <div className="flex justify-center mb-6 sm:mb-8 px-4">
+          <div className="bg-white rounded-xl p-1 border border-gray-200 shadow-sm w-full max-w-md">
             <button
               onClick={() => setActiveTab("before")}
-              className={`px-6 py-2.5 rounded-lg font-medium text-sm transition-all duration-300 ${
+              className={`px-4 sm:px-6 py-2.5 rounded-lg font-medium text-sm transition-all duration-300 w-1/2 ${
                 activeTab === "before"
                   ? "bg-red-50 text-red-700 border border-red-200"
                   : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
@@ -114,7 +114,7 @@ const RevolutionizeCollection = () => {
             </button>
             <button
               onClick={() => setActiveTab("after")}
-              className={`px-6 py-2.5 rounded-lg font-medium text-sm transition-all duration-300 ${
+              className={`px-4 sm:px-6 py-2.5 rounded-lg font-medium text-sm transition-all duration-300 w-1/2 ${
                 activeTab === "after"
                   ? "bg-blue-50 text-blue-700 border border-blue-200"
                   : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
@@ -146,20 +146,20 @@ const RevolutionizeCollection = () => {
               className="relative z-10"
             >
               {activeTab === "before" ? (
-                <div className="grid lg:grid-cols-2 gap-8 items-start">
+                <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 items-start">
                   {/* Left Side - Problems */}
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-6">
+                  <div className="order-2 lg:order-1">
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">
                       {beforeScenario.title}
                     </h3>
-                    <div className="space-y-4">
+                    <div className="space-y-3 sm:space-y-4">
                       {beforeScenario.problems.map((problem, index) => (
                         <motion.div
                           key={index}
                           initial={{ opacity: 0, x: -30 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: index * 0.1 }}
-                          className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-lg"
+                          className="flex items-start gap-3 p-3 sm:p-4 bg-red-50 border border-red-200 rounded-lg"
                         >
                           <problem.icon className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
                           <div>
@@ -176,37 +176,37 @@ const RevolutionizeCollection = () => {
                   </div>
 
                   {/* Right Side - Stats */}
-                  <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-                    <h4 className="text-base font-semibold text-gray-900 mb-4">
+                  <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6 shadow-sm order-1 lg:order-2">
+                    <h4 className="text-base font-semibold text-gray-900 mb-3 sm:mb-4">
                       Current Metrics
                     </h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="text-center p-3 bg-red-50 rounded-lg">
-                        <div className="text-2xl font-bold text-red-600 mb-1">
+                    <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                      <div className="text-center p-2 sm:p-3 bg-red-50 rounded-lg">
+                        <div className="text-xl sm:text-2xl font-bold text-red-600 mb-1">
                           {beforeScenario.stats.organized}
                         </div>
                         <div className="text-xs text-gray-600">
                           Properly Organized
                         </div>
                       </div>
-                      <div className="text-center p-3 bg-red-50 rounded-lg">
-                        <div className="text-2xl font-bold text-red-600 mb-1">
+                      <div className="text-center p-2 sm:p-3 bg-red-50 rounded-lg">
+                        <div className="text-xl sm:text-2xl font-bold text-red-600 mb-1">
                           {beforeScenario.stats.efficiency}
                         </div>
                         <div className="text-xs text-gray-600">
                           Workflow Efficiency
                         </div>
                       </div>
-                      <div className="text-center p-3 bg-red-50 rounded-lg">
-                        <div className="text-2xl font-bold text-red-600 mb-1">
+                      <div className="text-center p-2 sm:p-3 bg-red-50 rounded-lg">
+                        <div className="text-xl sm:text-2xl font-bold text-red-600 mb-1">
                           {beforeScenario.stats.time}
                         </div>
                         <div className="text-xs text-gray-600">
                           Daily Management
                         </div>
                       </div>
-                      <div className="text-center p-3 bg-red-50 rounded-lg">
-                        <div className="text-2xl font-bold text-red-600 mb-1">
+                      <div className="text-center p-2 sm:p-3 bg-red-50 rounded-lg">
+                        <div className="text-xl sm:text-2xl font-bold text-red-600 mb-1">
                           {beforeScenario.stats.usage}
                         </div>
                         <div className="text-xs text-gray-600">
@@ -217,20 +217,20 @@ const RevolutionizeCollection = () => {
                   </div>
                 </div>
               ) : (
-                <div className="grid lg:grid-cols-2 gap-8 items-start">
+                <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 items-start">
                   {/* Left Side - Solutions */}
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-6">
+                  <div className="order-2 lg:order-1">
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">
                       {afterScenario.title}
                     </h3>
-                    <div className="space-y-4">
+                    <div className="space-y-3 sm:space-y-4">
                       {afterScenario.solutions.map((solution, index) => (
                         <motion.div
                           key={index}
                           initial={{ opacity: 0, x: -30 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: index * 0.1 }}
-                          className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg"
+                          className="flex items-start gap-3 p-3 sm:p-4 bg-blue-50 border border-blue-200 rounded-lg"
                         >
                           <solution.icon className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
                           <div>
@@ -247,37 +247,37 @@ const RevolutionizeCollection = () => {
                   </div>
 
                   {/* Right Side - Stats */}
-                  <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-                    <h4 className="text-base font-semibold text-gray-900 mb-4">
+                  <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6 shadow-sm order-1 lg:order-2">
+                    <h4 className="text-base font-semibold text-gray-900 mb-3 sm:mb-4">
                       AI-Powered Results
                     </h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="text-center p-3 bg-blue-50 rounded-lg">
-                        <div className="text-2xl font-bold text-blue-600 mb-1">
+                    <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                      <div className="text-center p-2 sm:p-3 bg-blue-50 rounded-lg">
+                        <div className="text-xl sm:text-2xl font-bold text-blue-600 mb-1">
                           {afterScenario.stats.organized}
                         </div>
                         <div className="text-xs text-gray-600">
                           Properly Organized
                         </div>
                       </div>
-                      <div className="text-center p-3 bg-blue-50 rounded-lg">
-                        <div className="text-2xl font-bold text-blue-600 mb-1">
+                      <div className="text-center p-2 sm:p-3 bg-blue-50 rounded-lg">
+                        <div className="text-xl sm:text-2xl font-bold text-blue-600 mb-1">
                           {afterScenario.stats.efficiency}
                         </div>
                         <div className="text-xs text-gray-600">
                           Workflow Efficiency
                         </div>
                       </div>
-                      <div className="text-center p-3 bg-blue-50 rounded-lg">
-                        <div className="text-2xl font-bold text-blue-600 mb-1">
+                      <div className="text-center p-2 sm:p-3 bg-blue-50 rounded-lg">
+                        <div className="text-xl sm:text-2xl font-bold text-blue-600 mb-1">
                           {afterScenario.stats.time}
                         </div>
                         <div className="text-xs text-gray-600">
                           Daily Management
                         </div>
                       </div>
-                      <div className="text-center p-3 bg-blue-50 rounded-lg">
-                        <div className="text-2xl font-bold text-blue-600 mb-1">
+                      <div className="text-center p-2 sm:p-3 bg-blue-50 rounded-lg">
+                        <div className="text-xl sm:text-2xl font-bold text-blue-600 mb-1">
                           {afterScenario.stats.usage}
                         </div>
                         <div className="text-xs text-gray-600">
@@ -297,27 +297,27 @@ const RevolutionizeCollection = () => {
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mt-12"
+          className="text-center mt-8 sm:mt-12"
         >
-          <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-            <h3 className="text-lg font-bold text-gray-900 mb-3">
+          <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6 shadow-sm">
+            <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-3">
               Transform your management today
             </h3>
-            <p className="text-gray-600 mb-6 max-w-xl mx-auto text-sm">
+            <p className="text-gray-600 mb-4 sm:mb-6 max-w-xl mx-auto text-sm px-2">
               Join thousands of companies who've revolutionized their
               testimonial management with intelligent AI organization.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Button
                 onClick={() => navigate("/studio")}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 text-sm font-medium shadow-sm transition-colors duration-200"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 text-sm font-medium shadow-sm transition-colors duration-200 w-full sm:w-auto"
               >
                 Start Intelligent Management
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
               <Button
                 variant="outline"
-                className="border-2 border-gray-400 text-gray-700 hover:bg-gray-50 hover:border-gray-500 px-6 py-2.5 text-sm font-medium transition-colors duration-200"
+                className="border-2 border-gray-400 text-gray-700 hover:bg-gray-50 hover:border-gray-500 px-6 py-2.5 text-sm font-medium transition-colors duration-200 w-full sm:w-auto"
               >
                 See Live Demo
               </Button>
