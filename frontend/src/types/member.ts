@@ -1,5 +1,3 @@
-import { Plan } from "./workspace";
-
 type MemberRole = "owner" | "admin" | "viewer" | "editor";
 
 type Member = {
@@ -18,7 +16,7 @@ export type MemberDataParams = {
   firebase_uid: string;
   email_verified: string;
   workspace_name: string;
-  workspace_plan: Plan;
+  workspace_plan: string;
   website_url: string;
   industry: string;
 } & Member;
