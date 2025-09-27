@@ -282,23 +282,6 @@ const FutureShowcase = () => {
                   </div>
                 </div>
               </div>
-
-              {/* Floating Stats */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.5 }}
-                className="absolute -top-4 -right-4 bg-white rounded-xl shadow-lg border border-gray-200 p-4"
-              >
-                <div className="text-center">
-                  <div
-                    className={`text-2xl font-bold bg-gradient-to-r ${currentDemoData.color} bg-clip-text text-transparent`}
-                  >
-                    <span className="animate-pulse">✨</span>
-                  </div>
-                  <div className="text-xs text-gray-600 mt-1">AI Powered</div>
-                </div>
-              </motion.div>
             </div>
           </motion.div>
         </AnimatePresence>
