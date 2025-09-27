@@ -28,8 +28,8 @@ export class WorkspaceOrchestrator {
    * Initializes member and testimonial managers and makes the instance observable.
    */
   constructor() {
-    this.memberManager = new MemberManager(this);
-    this.testimonialManager = new TestimonialManager(this);
+    this.memberManager = new MemberManager();
+    this.testimonialManager = new TestimonialManager();
     this.aiStudioManager = new AIStudioManager();
     this.serviceLineageManager = new ServiceLineageManager();
 

@@ -10,7 +10,6 @@ import {
   BarChart3,
   Settings,
   Activity,
-  Globe,
   RefreshCw,
   Trash2,
   ChevronDown,
@@ -24,26 +23,19 @@ import {
   Network,
   Timer,
   TrendingUp,
-  Users,
   Star,
-  Zap,
   Sparkles,
   Mic,
   MessageSquare,
   Image,
-  Music,
   Scissors,
-  Palette,
   Brain,
   Target,
   Volume2,
   Copy,
-  ExternalLink,
-  Code,
   Type,
   Languages,
   Maximize2,
-  Minimize2,
 } from "lucide-react";
 
 const API_BASE_URL = "http://localhost:8081/api";
@@ -1379,7 +1371,9 @@ const AITestingDashboard: React.FC = () => {
     // Clear job from active jobs after a delay
     setTimeout(() => {
       setJobs((prev) => {
-        const { [serviceId]: removed, ...rest } = prev;
+        const rest = Object.fromEntries(
+          Object.entries(prev).filter(([key]) => key !== serviceId)
+        );
         return rest;
       });
     }, 3000);
@@ -1397,7 +1391,9 @@ const AITestingDashboard: React.FC = () => {
     // Clear job from active jobs
     setTimeout(() => {
       setJobs((prev) => {
-        const { [serviceId]: removed, ...rest } = prev;
+        const rest = Object.fromEntries(
+          Object.entries(prev).filter(([key]) => key !== serviceId)
+        );
         return rest;
       });
     }, 2000);
@@ -1570,9 +1566,6 @@ const AITestingDashboard: React.FC = () => {
       if (Object.keys(serviceFormData).length > 0) {
         return serviceFormData;
       }
-
-      // Default test data matching protocol buffers exactly
-      const randomVoice = getRandomVoice();
 
       const testData: Record<string, any> = {
         "brand-context": {
@@ -1791,18 +1784,22 @@ const AITestingDashboard: React.FC = () => {
   const callAPI = useCallback(
     async (service: Service, customData?: any): Promise<void> => {
       const serviceId = service.id;
-      const startTime = Date.now();
 
       setLoading((prev) => ({ ...prev, [serviceId]: true }));
       setErrors((prev) => ({ ...prev, [serviceId]: "" }));
 
       // Clear existing results
       setResults((prev) => {
-        const { [serviceId]: removed, ...rest } = prev;
+        const rest = Object.fromEntries(
+          Object.entries(prev).filter(([key]) => key !== serviceId)
+        );
         return rest;
       });
+
       setStreamingResults((prev) => {
-        const { [serviceId]: removed, ...rest } = prev;
+        const rest = Object.fromEntries(
+          Object.entries(prev).filter(([key]) => key !== serviceId)
+        );
         return rest;
       });
 
@@ -1913,7 +1910,9 @@ const AITestingDashboard: React.FC = () => {
 
           setTimeout(() => {
             setJobs((prev) => {
-              const { [serviceId]: removed, ...rest } = prev;
+              const rest = Object.fromEntries(
+                Object.entries(prev).filter(([key]) => key !== serviceId)
+              );
               return rest;
             });
           }, 2000);

@@ -33,6 +33,25 @@ export const BusinessInfoCollection: React.FC<BusinessInfoProps> = ({
 
   const [errors, setErrors] = useState<FormErrors>({});
 
+  const isValidUrl = (input?: string) => {
+    if (!input) return false;
+    const trimmed = input.trim();
+    if (trimmed === "") return false;
+
+    try {
+      // If the user omitted the protocol, prepend http:// so new URL parses host-only values
+      const withProto = /^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//.test(trimmed)
+        ? trimmed
+        : `http://${trimmed}`;
+
+      // new URL will throw on invalid input
+      new URL(withProto);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
@@ -41,9 +60,7 @@ export const BusinessInfoCollection: React.FC<BusinessInfoProps> = ({
     }
 
     if (formData.websiteUrl && formData.websiteUrl.trim()) {
-      const urlPattern =
-        /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
-      if (!urlPattern.test(formData.websiteUrl.trim())) {
+      if (!isValidUrl(formData.websiteUrl)) {
         newErrors.websiteUrl = "Please enter a valid website URL";
       }
     }

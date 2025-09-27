@@ -64,6 +64,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   const [showActions, setShowActions] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [, setViewMode] = useState<"preview" | "full">();
 
   const [saveState, setSaveState] = useState<
     "idle" | "saving" | "success" | "error"
@@ -80,7 +81,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
       const words = text.split(/\s+/).filter((word) => word.length > 0);
       const lines = text.split("\n").filter((line) => line.trim().length > 0);
       const hasHeaders = /^#+\s/.test(text);
-      const hasLists = /^[\*\-\+]\s|^\d+\.\s/.test(text);
+      const hasLists = /^[*\-+]\s|^\d+\.\s/.test(text);
       const hasStructure = hasHeaders || hasLists;
 
       let contentHeight: "short" | "medium" | "long";
