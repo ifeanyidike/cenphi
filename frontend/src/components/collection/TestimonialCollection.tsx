@@ -1,7 +1,7 @@
 import { motion, AnimatePresence, useMotionValue } from "framer-motion";
 import TestimonialTypeSelection from "./TestimonialTypeSelection";
 import VideoRecorder from "./VideoRecorder";
-import AudioRecorder from "./AudioRecorder";
+
 import { AIFeedback } from "./AIFeedback";
 import MediaSelectionModal from "./MediaSelectionModal";
 import FileUpload from "./FileUpload";
@@ -207,35 +207,6 @@ function TestimonialCollection() {
     );
   }
 
-  function renderAudioTestimonial() {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        style={{ minHeight: "90vh" }}
-        className="max-w-screen-xl mx-auto flex flex-col justify-center"
-      >
-        <TestimonialProgress
-          progress={progress}
-          currentStep={state.currentPromptIndex}
-          totalSteps={GUIDED_PROMPTS.length}
-        />
-
-        <div className="bg-white rounded-xl shadow-lg p-6 mt-4 mb-8">
-          {renderDisplayQuestion()}
-
-          <AudioRecorder
-            onRecordingComplete={collectionStore.handleComplete}
-            maxDuration={MAX_RECORDING_DURATION / (GUIDED_PROMPTS.length || 1)}
-          />
-        </div>
-
-        {renderChangeType()}
-      </motion.div>
-    );
-  }
-
   function renderTextTestimonial() {
     return (
       <motion.div
@@ -277,9 +248,7 @@ function TestimonialCollection() {
     if (state.type === "video" && collectionStore.selectedOption === "record") {
       return renderVideoTestimonial();
     }
-    if (state.type === "audio" && collectionStore.selectedOption === "record") {
-      return renderAudioTestimonial();
-    }
+
     if (state.type === "text") {
       return renderTextTestimonial();
     }
