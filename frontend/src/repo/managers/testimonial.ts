@@ -2,8 +2,6 @@
 
 import { Testimonial } from "@/types/testimonial";
 import { makeAutoObservable, runInAction } from "mobx";
-import { WorkspaceOrchestrator } from "../workspace_hub";
-import { MemberManager } from "./member";
 import axios from "axios";
 import { authStore } from "@/stores/authStore";
 
@@ -20,16 +18,11 @@ export class TestimonialManager {
 
   loading_testimonials = false;
 
-  private workspaceOrchestrator: WorkspaceOrchestrator;
-  private memberManager: MemberManager;
-
   /**
    * Initializes the TestimonialManager with the provided workspace orchestrator.
    * @param workspaceRepository - The workspace orchestrator instance.
    */
-  constructor(workspaceRepository: WorkspaceOrchestrator) {
-    this.workspaceOrchestrator = workspaceRepository;
-    this.memberManager = workspaceRepository.memberManager;
+  constructor() {
     makeAutoObservable(this); // Make all properties observable
   }
 
@@ -163,20 +156,22 @@ export class TestimonialManager {
     if (!this.testimonials) return [];
 
     const multiTypes = ["content_generation", "text_polishing", "translation"];
-    const allArtifacts = this.testimonials.flatMap(testimonial =>
-      (testimonial.artifacts || []).filter(artifact =>
-        multiTypes.includes(artifact.processing_type) &&
-        artifact.data &&
-        typeof artifact.data === 'object' &&
-        'testimonial_ids' in artifact.data &&
-        Array.isArray((artifact.data as any).testimonial_ids) &&
-        (artifact.data as any).testimonial_ids.length > 0
+    const allArtifacts = this.testimonials.flatMap((testimonial) =>
+      (testimonial.artifacts || []).filter(
+        (artifact) =>
+          multiTypes.includes(artifact.processing_type) &&
+          artifact.data &&
+          typeof artifact.data === "object" &&
+          "testimonial_ids" in artifact.data &&
+          Array.isArray((artifact.data as any).testimonial_ids) &&
+          (artifact.data as any).testimonial_ids.length > 0
       )
     );
 
     // Remove duplicates by ID
-    const uniqueArtifacts = allArtifacts.filter((artifact, index, self) =>
-      index === self.findIndex(a => a.id === artifact.id)
+    const uniqueArtifacts = allArtifacts.filter(
+      (artifact, index, self) =>
+        index === self.findIndex((a) => a.id === artifact.id)
     );
 
     return uniqueArtifacts;

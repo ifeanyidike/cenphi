@@ -2,7 +2,6 @@
 
 import { MemberDataParams } from "@/types/member";
 import { makeAutoObservable, runInAction } from "mobx";
-import { WorkspaceOrchestrator } from "../workspace_hub";
 import axios from "axios";
 import { authStore } from "@/stores/authStore";
 
@@ -14,13 +13,11 @@ export class MemberManager {
   private server = import.meta.env.VITE_API_URL + "/team-member";
   public member: MemberDataParams | null = null;
   public loadingMembers = true;
-  private workspaceOrchestrator: WorkspaceOrchestrator;
 
   private fetchPromise: Promise<MemberDataParams> | null = null;
   private lastFetchUid: string | null = null;
 
-  constructor(workspaceOrchestrator: WorkspaceOrchestrator) {
-    this.workspaceOrchestrator = workspaceOrchestrator;
+  constructor() {
     makeAutoObservable(this);
   }
 
