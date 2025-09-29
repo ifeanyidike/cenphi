@@ -43,7 +43,6 @@ RUN mkdir -p /app/certs /app/data
 # Copy the binary and certificates from the builder stage
 COPY --from=builder /app/api /app/api
 COPY --from=builder /app/certs/ /app/certs/
-COPY --from=builder /app/cenphiio-service-account.json /app/cenphiio-service-account.json
 
 # Copy the entrypoint script
 COPY scripts/docker-entrypoint.sh /app/docker-entrypoint.sh

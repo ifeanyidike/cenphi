@@ -75,7 +75,7 @@ func (c *SocialController) GetAuthURL(w http.ResponseWriter, r *http.Request) {
 	// Get user ID from context
 	userClaims, ok := r.Context().Value("user").(map[string]any)
 	var userUUID uuid.UUID
-	
+
 	if !ok {
 		c.logger.Warn("User not authenticated, using default user ID for testing")
 		// For development/testing, use a default user ID
@@ -156,7 +156,7 @@ func (c *SocialController) HandleOAuthCallback(w http.ResponseWriter, r *http.Re
 	if err != nil {
 		c.logger.Error("Failed to handle OAuth callback", zap.Error(err))
 		// Redirect to frontend with error
-		frontendURL := c.config.Social.LinkedIn.FrontendURL
+		frontendURL := c.config.Server.BaseURL
 		errorURL := fmt.Sprintf("%s/settings?error=oauth_failed&message=%s", frontendURL, url.QueryEscape("Failed to connect LinkedIn account"))
 		http.Redirect(w, r, errorURL, http.StatusTemporaryRedirect)
 		return

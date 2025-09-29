@@ -184,9 +184,21 @@ const CustomSettings: FC = () => {
 
   // Initialize custom page settings if they don't exist
   useEffect(() => {
-    // Initialize with default values if needed
-    // Note: voice property doesn't exist in BrandGuide type
-  }, [store]);
+    if (!(brandData as any).voice?.channels?.custom) {
+      store.updateBrandData(["voice", "channels", "custom"], {
+        pageTitleTemplate: "Share your experience with {{brand}}",
+        headlineTemplate: "We value your feedback!",
+        formIntroTemplate:
+          "Please share your thoughts about your experience with {{brand}}. Your feedback helps us improve and assists others in making informed decisions.",
+        ctaButtonTemplate: "Submit your testimonial",
+        successTitleTemplate: "Thank you for your feedback!",
+        successMessageTemplate:
+          "We truly appreciate you taking the time to share your experience with {{brand}}. Your feedback helps us improve and provide better service to all our customers.",
+        customDomain: "",
+        customSlug: "testimonials",
+      });
+    }
+  }, [(brandData as any).voice?.channels?.custom, store]);
 
   // Get template value
   const getTemplateValue = (templateType: CustomPageTemplateType): string => {

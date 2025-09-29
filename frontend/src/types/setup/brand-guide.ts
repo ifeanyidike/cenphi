@@ -97,6 +97,44 @@ export interface BrandGuide {
   rating_style?: "stars" | "number" | "text";
 
   // Brand voice
+  voice?: {
+    channels?: {
+      custom?: {
+        pageTitleTemplate?: string;
+        headlineTemplate?: string;
+        formIntroTemplate?: string;
+        ctaButtonTemplate?: string;
+        successTitleTemplate?: string;
+        successMessageTemplate?: string;
+        customDomain?: string;
+        customSlug?: string;
+      };
+      social?: {
+        platforms?: {
+          twitter?: {
+            requestTemplate?: string;
+            thankYouTemplate?: string;
+            followupTemplate?: string;
+          };
+          linkedin?: {
+            requestTemplate?: string;
+            thankYouTemplate?: string;
+            followupTemplate?: string;
+          };
+          facebook?: {
+            requestTemplate?: string;
+            thankYouTemplate?: string;
+            followupTemplate?: string;
+          };
+          instagram?: {
+            requestTemplate?: string;
+            thankYouTemplate?: string;
+            followupTemplate?: string;
+          };
+        };
+      };
+    };
+  };
 
   // UI settings
   ui_settings?: {

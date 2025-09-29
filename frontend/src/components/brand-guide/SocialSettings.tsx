@@ -86,11 +86,48 @@ const SocialSettings: FC = () => {
   const [activeIdea, setActiveIdea] = useState<number | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+ 
   // Initialize social settings if they don't exist
   useEffect(() => {
-    // Initialize with default values if needed
-    // Note: voice property doesn't exist in BrandGuide type
-  }, [store]);
+    if (!(brandData as any).voice?.channels?.social) {
+      store.updateBrandData(["voice", "channels", "social"], {
+        platforms: {
+          twitter: {
+            requestTemplate:
+              "We value your feedback! How has your experience been with {{brand}}? Share your thoughts in a reply and help others discover us. #CustomerFeedback",
+            thankYouTemplate:
+              "Thank you @{{username}} for sharing your experience with {{brand}}! We appreciate your feedback and support. #CustomerLove",
+            followupTemplate:
+              "Hi @{{username}}, we noticed you recently had an experience with {{brand}}. We'd love to hear your thoughts when you have a moment!",
+          },
+          linkedin: {
+            requestTemplate:
+              "We value your professional opinion! How has your experience been with {{brand}}? Your insights would be invaluable to us and our network.",
+            thankYouTemplate:
+              "Thank you {{name}} for taking the time to share your experience with {{brand}}! Your professional insights are greatly appreciated.",
+            followupTemplate:
+              "Hello {{name}}, we noticed you recently engaged with {{brand}}. We'd value your professional perspective when you have a moment to share.",
+          },
+          facebook: {
+            requestTemplate:
+              "We'd love to hear about your experience with {{brand}}! Drop a comment below or send us a message with your feedback.",
+            thankYouTemplate:
+              "Thank you {{name}} for sharing your experience with {{brand}}! We truly value your feedback and support.",
+            followupTemplate:
+              "Hi {{name}}, we noticed you recently experienced {{brand}}. We'd love to hear your thoughts when you have a moment!",
+          },
+          instagram: {
+            requestTemplate:
+              "We'd love to hear your story! How has {{brand}} impacted you? Share in the comments or DM us your experience. ✨ #ShareYourStory",
+            thankYouTemplate:
+              "Thank you @{{username}} for sharing your amazing experience with {{brand}}! We're so glad to have you in our community. ❤️ #CustomerLove",
+            followupTemplate:
+              "Hi @{{username}}! We noticed you've been using {{brand}} - we'd love to hear your thoughts! Drop us a comment or DM when you have a moment. ✨",
+          },
+        },
+      });
+    }
+  }, [(brandData as any).voice?.channels?.social, store]);
 
   // Social platforms configuration
   const platforms: SocialPlatformType[] = [
