@@ -350,6 +350,86 @@ export class AIStudioManager {
     this.streamingConnections = {};
   }
 
+  /**
+   * Save highlight order for a testimonial
+   */
+  async saveHighlightOrder(
+    testimonialId: string,
+    highlightIds: string[]
+  ): Promise<void> {
+    try {
+      const payload = {
+        workspace_id: workspaceHub.workspace?.id,
+        testimonial_id: testimonialId,
+        highlight_ids: highlightIds,
+      };
+
+      const response = await fetch(`${this.baseUrl}/ai/highlights/save-order`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${(await this.tokenInfo).token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`Failed to save highlight order: ${error}`);
+      }
+
+      console.log("Highlight order saved successfully");
+    } catch (error) {
+      console.error("Error saving highlight order:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generate highlights by specific type
+   */
+  async generateHighlightsByType(
+    testimonialId: string,
+    text: string,
+    segments: any[],
+    highlightType: string,
+    customPrompt?: string,
+    maxHighlights?: number
+  ): Promise<any[]> {
+    try {
+      const payload = {
+        workspace_id: workspaceHub.workspace?.id,
+        testimonial_id: testimonialId,
+        text,
+        segments,
+        highlight_type: highlightType,
+        prompt: customPrompt || "",
+        max_highlights: maxHighlights || 5,
+      };
+
+      const response = await fetch(`${this.baseUrl}/ai/highlights/by-type`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${(await this.tokenInfo).token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`Failed to generate highlights: ${error}`);
+      }
+
+      const highlights = await response.json();
+      console.log(`Generated ${highlightType} highlights:`, highlights);
+      return highlights;
+    } catch (error) {
+      console.error("Error generating highlights:", error);
+      throw error;
+    }
+  }
+
   // Utility
   reset() {
     this.activeService = null;

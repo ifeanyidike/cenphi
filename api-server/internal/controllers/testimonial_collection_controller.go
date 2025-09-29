@@ -373,13 +373,6 @@ func (tcc *TestimonialCollectionController) ImportFromGoogleDrive(w http.Respons
 		return
 	}
 
-	// userID, err := getUserIDFromContext(r) // your existing auth
-	userID, err := uuid.Parse("6fe5d4ae-3627-4103-af42-39fb40cc0a12")
-
-	if err != nil {
-		utils.RespondWithError(w, http.StatusUnauthorized, "User ID does not exist")
-		return
-	}
 	// account, err := tcc.driveService.GetUserAccount(r.Context(), workspaceID, userID)
 	// if err != nil {
 	// 	utils.RespondWithError(w, http.StatusUnauthorized, "Google Drive not connected")
@@ -387,7 +380,7 @@ func (tcc *TestimonialCollectionController) ImportFromGoogleDrive(w http.Respons
 	// }
 
 	// REFRESH TOKEN IF NEEDED
-	token, err := tcc.driveService.RefreshTokenIfNeeded(r.Context(), workspaceID, userID)
+	token, err := tcc.driveService.RefreshTokenIfNeeded(r.Context(), workspaceID)
 	if err != nil {
 		utils.RespondWithError(w, http.StatusUnauthorized, "Failed to refresh Google token")
 		return

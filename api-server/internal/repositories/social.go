@@ -272,13 +272,13 @@ func (r *socialAccountRepository) DeleteAccount(ctx context.Context, id uuid.UUI
 func (r *socialPostRepository) CreatePost(ctx context.Context, post *models.SocialPost, db DB) error {
 	query := `
 		INSERT INTO social_posts (
-			id, workspace_id, testimonial_id, social_account_id, content, post_type,
+			id, workspace_id, testimonial_id, testimonial_ids, social_account_id, content, post_type,
 			media_urls, hashtags, platform, platform_post_id, platform_url,
-			status, scheduled_at, published_at, views_count, likes_count,
-			comments_count, shares_count, platform_data, error_details,
+			status, scheduled_at, published_at, ai_best_time, ai_best_time_score,
+			views_count, likes_count, comments_count, shares_count, platform_data, error_details,
 			retry_count, max_retries, last_metrics_sync, created_at, updated_at
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25
+			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28
 		)
 	`
 
@@ -292,14 +292,23 @@ func (r *socialPostRepository) CreatePost(ctx context.Context, post *models.Soci
 		return fmt.Errorf("failed to marshal error details: %w", err)
 	}
 
+	// Convert TestimonialIDs to JSONB
+	var testimonialIDsJSON []byte
+	if len(post.TestimonialIDs) > 0 {
+		testimonialIDsJSON, err = json.Marshal(post.TestimonialIDs)
+		if err != nil {
+			return fmt.Errorf("failed to marshal testimonial IDs: %w", err)
+		}
+	}
+
 	_, err = db.ExecContext(ctx, query,
-		post.ID, post.WorkspaceID, post.TestimonialID, post.SocialAccountID,
+		post.ID, post.WorkspaceID, post.TestimonialID, testimonialIDsJSON, post.SocialAccountID,
 		post.Content, post.PostType, pq.Array(post.MediaURLs), pq.Array(post.Hashtags),
 		post.Platform, post.PlatformPostID, post.PlatformURL, post.Status,
-		post.ScheduledAt, post.PublishedAt, post.ViewsCount, post.LikesCount,
-		post.CommentsCount, post.SharesCount, platformDataJSON, errorDetailsJSON,
-		post.RetryCount, post.MaxRetries, post.LastMetricsSync,
-		post.CreatedAt, post.UpdatedAt,
+		post.ScheduledAt, post.PublishedAt, post.AiBestTime, post.AiBestTimeScore,
+		post.ViewsCount, post.LikesCount, post.CommentsCount, post.SharesCount,
+		platformDataJSON, errorDetailsJSON, post.RetryCount, post.MaxRetries,
+		post.LastMetricsSync, post.CreatedAt, post.UpdatedAt,
 	)
 
 	return err
@@ -307,25 +316,26 @@ func (r *socialPostRepository) CreatePost(ctx context.Context, post *models.Soci
 
 func (r *socialPostRepository) GetPostByID(ctx context.Context, id uuid.UUID, db DB) (*models.SocialPost, error) {
 	query := `
-		SELECT id, workspace_id, testimonial_id, social_account_id, content, post_type,
+		SELECT id, workspace_id, testimonial_id, testimonial_ids, social_account_id, content, post_type,
 			   media_urls, hashtags, platform, platform_post_id, platform_url,
-			   status, scheduled_at, published_at, views_count, likes_count,
-			   comments_count, shares_count, platform_data, error_details,
+			   status, scheduled_at, published_at, ai_best_time, ai_best_time_score,
+			   views_count, likes_count, comments_count, shares_count, platform_data, error_details,
 			   retry_count, max_retries, last_metrics_sync, created_at, updated_at
-		FROM social_posts 
+		FROM social_posts
 		WHERE id = $1
 	`
 
 	var post models.SocialPost
 	var mediaURLs, hashtags pq.StringArray
-	var platformDataJSON, errorDetailsJSON []byte
+	var platformDataJSON, errorDetailsJSON, testimonialIDsJSON []byte
 
 	err := db.QueryRowContext(ctx, query, id).Scan(
-		&post.ID, &post.WorkspaceID, &post.TestimonialID, &post.SocialAccountID,
+		&post.ID, &post.WorkspaceID, &post.TestimonialID, &testimonialIDsJSON, &post.SocialAccountID,
 		&post.Content, &post.PostType, &mediaURLs, &hashtags, &post.Platform,
 		&post.PlatformPostID, &post.PlatformURL, &post.Status, &post.ScheduledAt,
-		&post.PublishedAt, &post.ViewsCount, &post.LikesCount, &post.CommentsCount,
-		&post.SharesCount, &platformDataJSON, &errorDetailsJSON, &post.RetryCount,
+		&post.PublishedAt, &post.AiBestTime, &post.AiBestTimeScore,
+		&post.ViewsCount, &post.LikesCount, &post.CommentsCount, &post.SharesCount,
+		&platformDataJSON, &errorDetailsJSON, &post.RetryCount,
 		&post.MaxRetries, &post.LastMetricsSync, &post.CreatedAt, &post.UpdatedAt,
 	)
 
@@ -335,6 +345,13 @@ func (r *socialPostRepository) GetPostByID(ctx context.Context, id uuid.UUID, db
 
 	post.MediaURLs = []string(mediaURLs)
 	post.Hashtags = []string(hashtags)
+
+	// Unmarshal testimonial IDs
+	if len(testimonialIDsJSON) > 0 {
+		if err := json.Unmarshal(testimonialIDsJSON, &post.TestimonialIDs); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal testimonial IDs: %w", err)
+		}
+	}
 
 	if len(platformDataJSON) > 0 {
 		if err := json.Unmarshal(platformDataJSON, &post.PlatformData); err != nil {
@@ -481,12 +498,12 @@ func (r *socialPostRepository) GetScheduledPosts(ctx context.Context, before tim
 func (r *socialPostRepository) UpdatePost(ctx context.Context, post *models.SocialPost, db DB) error {
 	query := `
 		UPDATE social_posts SET
-			content = $2, post_type = $3, media_urls = $4, hashtags = $5,
-			platform_post_id = $6, platform_url = $7, status = $8,
-			scheduled_at = $9, published_at = $10, views_count = $11,
-			likes_count = $12, comments_count = $13, shares_count = $14,
-			platform_data = $15, error_details = $16, retry_count = $17,
-			last_metrics_sync = $18, updated_at = $19
+			testimonial_ids = $2, content = $3, post_type = $4, media_urls = $5, hashtags = $6,
+			platform_post_id = $7, platform_url = $8, status = $9,
+			scheduled_at = $10, published_at = $11, ai_best_time = $12, ai_best_time_score = $13,
+			views_count = $14, likes_count = $15, comments_count = $16, shares_count = $17,
+			platform_data = $18, error_details = $19, retry_count = $20,
+			last_metrics_sync = $21, updated_at = $22
 		WHERE id = $1
 	`
 
@@ -500,13 +517,22 @@ func (r *socialPostRepository) UpdatePost(ctx context.Context, post *models.Soci
 		return fmt.Errorf("failed to marshal error details: %w", err)
 	}
 
+	// Convert TestimonialIDs to JSONB
+	var testimonialIDsJSON []byte
+	if len(post.TestimonialIDs) > 0 {
+		testimonialIDsJSON, err = json.Marshal(post.TestimonialIDs)
+		if err != nil {
+			return fmt.Errorf("failed to marshal testimonial IDs: %w", err)
+		}
+	}
+
 	post.UpdatedAt = time.Now()
 
 	_, err = db.ExecContext(ctx, query,
-		post.ID, post.Content, post.PostType, pq.Array(post.MediaURLs),
+		post.ID, testimonialIDsJSON, post.Content, post.PostType, pq.Array(post.MediaURLs),
 		pq.Array(post.Hashtags), post.PlatformPostID, post.PlatformURL,
-		post.Status, post.ScheduledAt, post.PublishedAt, post.ViewsCount,
-		post.LikesCount, post.CommentsCount, post.SharesCount,
+		post.Status, post.ScheduledAt, post.PublishedAt, post.AiBestTime, post.AiBestTimeScore,
+		post.ViewsCount, post.LikesCount, post.CommentsCount, post.SharesCount,
 		platformDataJSON, errorDetailsJSON, post.RetryCount,
 		post.LastMetricsSync, post.UpdatedAt,
 	)

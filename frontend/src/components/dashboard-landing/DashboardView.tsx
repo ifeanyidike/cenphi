@@ -3,14 +3,14 @@ import {
   MessageSquare,
   Plus,
   Star,
-  TrendingUp,
-  Activity,
   Settings,
   PlusCircle,
   ChevronDown,
   ChevronUp,
   BarChart3,
   Sparkles,
+  Mail,
+  Brain,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -19,10 +19,11 @@ import { observer } from "mobx-react-lite";
 import { itemVariants } from "./constants";
 import { StatCard } from "./components";
 import { EmptyStateView } from "./EmptyView";
-import { Testimonial } from "@/types/testimonial";
+
 import { workspaceHub } from "@/repo/workspace_hub";
 import TestimonialList from "./TestimonialList";
 import AIFeaturesDashboard from "./AIFeaturesDashboard";
+import TestimonialRequestModal from "./TestimonialRequestModal";
 import { useNavigate } from "react-router-dom";
 
 // AI Generated Content Card Component
@@ -41,36 +42,31 @@ const AIGeneratedContentCard: React.FC<{ onNavigate: () => void }> = observer(
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg p-6">
+        <div className="bg-white border border-gray-200 rounded p-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-lg bg-purple-600 flex items-center justify-center">
-                <Sparkles className="h-5 w-5 text-white" />
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded bg-gray-100 flex items-center justify-center">
+                <Sparkles className="h-4 w-4 text-gray-600" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">
+                <h3 className="text-sm font-medium text-gray-900">
                   AI-Generated Content
                 </h3>
-                <p className="text-sm text-gray-600">
-                  You have {multiArtifacts.length} piece
-                  {multiArtifacts.length !== 1 ? "s" : ""} of content created
-                  from multiple testimonials
+                <p className="text-xs text-gray-600">
+                  {multiArtifacts.length} piece
+                  {multiArtifacts.length !== 1 ? "s" : ""} ready to use
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <div className="text-right">
-                <div className="text-2xl font-bold text-purple-600">
+                <div className="text-lg font-semibold text-gray-900">
                   {multiArtifacts.length}
                 </div>
-                <div className="text-xs text-gray-500">Ready to use</div>
+                <div className="text-xs text-gray-500">Items</div>
               </div>
-              <Button
-                onClick={onNavigate}
-                className="bg-purple-600 hover:bg-purple-700 text-white"
-              >
+              <Button onClick={onNavigate} size="sm" className="text-xs h-7">
                 View All
-                <ChevronUp className="h-4 w-4 ml-2 rotate-90" />
               </Button>
             </div>
           </div>
@@ -82,6 +78,7 @@ const AIGeneratedContentCard: React.FC<{ onNavigate: () => void }> = observer(
 
 const DashboardView: React.FC = observer(() => {
   const [isStatsOpen, setIsStatsOpen] = useState(true);
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -94,17 +91,17 @@ const DashboardView: React.FC = observer(() => {
   const isLoading = workspaceHub.testimonialManager.loading_testimonials;
 
   const hasTestimonials = testimonials?.length;
-  const totalRating = testimonials?.reduce(
-    (acc: number, curr: Testimonial) => acc + (curr.rating || 0),
-    0
-  );
-  const avgRating = testimonials?.length
-    ? (totalRating! / testimonials.length).toFixed(1)
-    : "";
-  const conversionRate = testimonials?.reduce(
-    (acc: number, curr: Testimonial) => acc + (curr.conversion_count || 0),
-    0
-  );
+  // const totalRating = testimonials?.reduce(
+  //   (acc: number, curr: Testimonial) => acc + (curr.rating || 0),
+  //   0
+  // );
+  // const avgRating = testimonials?.length
+  //   ? (totalRating! / testimonials.length).toFixed(1)
+  //   : "";
+  // const conversionRate = testimonials?.reduce(
+  //   (acc: number, curr: Testimonial) => acc + (curr.conversion_count || 0),
+  //   0
+  // );
 
   const toggleStats = () => {
     setIsStatsOpen(!isStatsOpen);
@@ -125,9 +122,21 @@ const DashboardView: React.FC = observer(() => {
             </div>
 
             <div className="flex items-center space-x-3">
-              <Button variant="outline" size="sm" className="hidden md:flex">
+              <Button
+                variant="outline"
+                size="sm"
+                className="hidden md:flex"
+                onClick={() => navigate("/settings")}
+              >
                 <Settings className="h-4 w-4 mr-2" />
                 Settings
+              </Button>
+              <Button
+                onClick={() => setIsRequestModalOpen(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all duration-300"
+              >
+                <Mail className="h-4 w-4 mr-2" />
+                Request Testimonials
               </Button>
               <Button className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-md hover:shadow-lg transition-all duration-300">
                 <PlusCircle className="h-4 w-4 mr-2" />
@@ -143,17 +152,26 @@ const DashboardView: React.FC = observer(() => {
               </h1>
               <p className="text-gray-500 max-w-2xl mt-2">
                 Your journey to collecting powerful social proof starts here.
-                Add your first customer to unlock the full potential of your
-                dashboard.
+                Request testimonials from your customers or add your first
+                testimonial manually.
               </p>
             </div>
-            <Button
-              variant="default"
-              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              New Testimonial
-            </Button>
+            <div className="flex items-center space-x-3">
+              <Button
+                onClick={() => setIsRequestModalOpen(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+              >
+                <Mail className="h-4 w-4 mr-2" />
+                Request Testimonials
+              </Button>
+              <Button
+                variant="outline"
+                className="border-purple-200 text-purple-700 hover:bg-purple-50 shadow-lg hover:shadow-xl transition-all duration-300"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Manually
+              </Button>
+            </div>
           </>
         )}
       </motion.div>
@@ -198,47 +216,51 @@ const DashboardView: React.FC = observer(() => {
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           <StatCard
-            title="Total Reviews"
+            title="Total Testimonials"
             icon={MessageSquare}
-            message="Start collecting reviews"
-            color="bg-blue-500"
-            accentColor="bg-blue-500"
-            percentage={hasTestimonials ? "20" : undefined}
-            trend={hasTestimonials ? "10" : ""}
-            value={hasTestimonials ? `${testimonials.length}` : ""}
+            message="Testimonials collected"
+            color="bg-gray-600"
+            accentColor="bg-gray-600"
+            value={hasTestimonials ? `${testimonials.length}` : "0"}
             isLoading={isLoading}
           />
           <StatCard
-            title="Average Rating"
+            title="AI Processing Rate"
+            icon={Brain}
+            message="Enhanced with AI"
+            color="bg-gray-600"
+            accentColor="bg-gray-600"
+            value={
+              hasTestimonials
+                ? `${Math.round((testimonials.filter((t) => t.processing_status === "completed").length / testimonials.length) * 100)}%`
+                : "0%"
+            }
+            isLoading={isLoading}
+          />
+          <StatCard
+            title="Quality Score"
             icon={Star}
-            message="Awaiting your first rating"
-            color="bg-amber-500"
-            accentColor="bg-amber-500"
-            percentage={hasTestimonials ? "20" : undefined}
-            trend={hasTestimonials ? "10" : ""}
-            value={`${avgRating}`}
+            message="Average sentiment"
+            color="bg-gray-600"
+            accentColor="bg-gray-600"
+            value={
+              hasTestimonials && testimonials.length > 0
+                ? `${Math.round((testimonials.reduce((sum, t) => sum + (t.sentiment_score || 0), 0) / testimonials.length) * 100)}%`
+                : "0%"
+            }
             isLoading={isLoading}
           />
           <StatCard
-            title="Conversion Rate"
-            icon={TrendingUp}
-            message="Track visitor conversions"
-            color="bg-green-500"
-            accentColor="bg-green-500"
-            percentage={hasTestimonials ? "20" : undefined}
-            trend={hasTestimonials ? "10" : ""}
-            value={hasTestimonials ? `${conversionRate}` : ""}
-            isLoading={isLoading}
-          />
-          <StatCard
-            title="Total Reach"
-            icon={Activity}
-            message="Measure your impact"
-            color="bg-purple-500"
-            accentColor="bg-purple-500"
-            percentage={hasTestimonials ? "20" : undefined}
-            trend={hasTestimonials ? "10" : ""}
-            value={hasTestimonials ? `100` : ""} // Add total reach to db
+            title="Artifacts Created"
+            icon={Sparkles}
+            message="AI-generated content"
+            color="bg-gray-600"
+            accentColor="bg-gray-600"
+            value={
+              hasTestimonials
+                ? `${testimonials.reduce((sum, t) => sum + (t.artifacts?.length || 0), 0)}`
+                : "0"
+            }
             isLoading={isLoading}
           />
         </div>
@@ -258,6 +280,12 @@ const DashboardView: React.FC = observer(() => {
 
       {/* Main Content Area */}
       {hasTestimonials ? <TestimonialList /> : <EmptyStateView />}
+
+      {/* Testimonial Request Modal */}
+      <TestimonialRequestModal
+        isOpen={isRequestModalOpen}
+        onClose={() => setIsRequestModalOpen(false)}
+      />
     </>
   );
 });

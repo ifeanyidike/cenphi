@@ -2,6 +2,7 @@
 package models
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -33,31 +34,34 @@ type SocialAccount struct {
 
 // SocialPost represents a social media post
 type SocialPost struct {
-	ID              uuid.UUID  `json:"id" db:"id"`
-	WorkspaceID     uuid.UUID  `json:"workspace_id" db:"workspace_id" validate:"required"`
-	TestimonialID   *uuid.UUID `json:"testimonial_id" db:"testimonial_id"`
-	SocialAccountID uuid.UUID  `json:"social_account_id" db:"social_account_id" validate:"required"`
-	Content         string     `json:"content" db:"content" validate:"required,min=1,max=3000"`
-	PostType        string     `json:"post_type" db:"post_type" validate:"oneof=text image video carousel"`
-	MediaURLs       []string   `json:"media_urls" db:"media_urls"`
-	Hashtags        []string   `json:"hashtags" db:"hashtags"`
-	Platform        string     `json:"platform" db:"platform" validate:"required,oneof=linkedin facebook twitter instagram"`
-	PlatformPostID  *string    `json:"platform_post_id" db:"platform_post_id"`
-	PlatformURL     *string    `json:"platform_url" db:"platform_url"`
-	Status          string     `json:"status" db:"status" validate:"oneof=draft scheduled published failed"`
-	ScheduledAt     *time.Time `json:"scheduled_at" db:"scheduled_at"`
-	PublishedAt     *time.Time `json:"published_at" db:"published_at"`
-	ViewsCount      int        `json:"views_count" db:"views_count"`
-	LikesCount      int        `json:"likes_count" db:"likes_count"`
-	CommentsCount   int        `json:"comments_count" db:"comments_count"`
-	SharesCount     int        `json:"shares_count" db:"shares_count"`
-	PlatformData    JSONMap    `json:"platform_data" db:"platform_data"`
-	ErrorDetails    JSONMap    `json:"error_details" db:"error_details"`
-	RetryCount      int        `json:"retry_count" db:"retry_count"`
-	MaxRetries      int        `json:"max_retries" db:"max_retries"`
-	LastMetricsSync *time.Time `json:"last_metrics_sync" db:"last_metrics_sync"`
-	CreatedAt       time.Time  `json:"created_at" db:"created_at"`
-	UpdatedAt       time.Time  `json:"updated_at" db:"updated_at"`
+	ID              uuid.UUID   `json:"id" db:"id"`
+	WorkspaceID     uuid.UUID   `json:"workspace_id" db:"workspace_id" validate:"required"`
+	TestimonialID   *uuid.UUID  `json:"testimonial_id" db:"testimonial_id"`
+	TestimonialIDs  []uuid.UUID `json:"testimonial_ids" db:"testimonial_ids"`
+	SocialAccountID uuid.UUID   `json:"social_account_id" db:"social_account_id" validate:"required"`
+	Content         string      `json:"content" db:"content" validate:"required,min=1,max=3000"`
+	PostType        string      `json:"post_type" db:"post_type" validate:"oneof=text image video carousel"`
+	MediaURLs       []string    `json:"media_urls" db:"media_urls"`
+	Hashtags        []string    `json:"hashtags" db:"hashtags"`
+	Platform        string      `json:"platform" db:"platform" validate:"required,oneof=linkedin facebook twitter instagram"`
+	PlatformPostID  *string     `json:"platform_post_id" db:"platform_post_id"`
+	PlatformURL     *string     `json:"platform_url" db:"platform_url"`
+	Status          string      `json:"status" db:"status" validate:"oneof=draft scheduled published failed"`
+	ScheduledAt     *time.Time  `json:"scheduled_at" db:"scheduled_at"`
+	PublishedAt     *time.Time  `json:"published_at" db:"published_at"`
+	AiBestTime      *time.Time  `json:"ai_best_time" db:"ai_best_time"`
+	AiBestTimeScore *float64    `json:"ai_best_time_score" db:"ai_best_time_score"`
+	ViewsCount      int         `json:"views_count" db:"views_count"`
+	LikesCount      int         `json:"likes_count" db:"likes_count"`
+	CommentsCount   int         `json:"comments_count" db:"comments_count"`
+	SharesCount     int         `json:"shares_count" db:"shares_count"`
+	PlatformData    JSONMap     `json:"platform_data" db:"platform_data"`
+	ErrorDetails    JSONMap     `json:"error_details" db:"error_details"`
+	RetryCount      int         `json:"retry_count" db:"retry_count"`
+	MaxRetries      int         `json:"max_retries" db:"max_retries"`
+	LastMetricsSync *time.Time  `json:"last_metrics_sync" db:"last_metrics_sync"`
+	CreatedAt       time.Time   `json:"created_at" db:"created_at"`
+	UpdatedAt       time.Time   `json:"updated_at" db:"updated_at"`
 
 	// Computed fields (not in DB)
 	Account     *SocialAccount `json:"account,omitempty" db:"-"`
@@ -134,12 +138,15 @@ type OAuthState struct {
 
 // Post creation request from API
 type CreatePostRequest struct {
-	Content       string     `json:"content" validate:"required,min=1,max=3000"`
-	TestimonialID *uuid.UUID `json:"testimonial_id"`
-	PostType      string     `json:"post_type" validate:"omitempty,oneof=text image video carousel"`
-	MediaURLs     []string   `json:"media_urls"`
-	Hashtags      []string   `json:"hashtags"`
-	ScheduledAt   *time.Time `json:"scheduled_at"`
+	Content         string      `json:"content" validate:"required,min=1,max=3000"`
+	TestimonialID   *uuid.UUID  `json:"testimonial_id"`
+	TestimonialIDs  []uuid.UUID `json:"testimonial_ids"`
+	SocialAccountID *uuid.UUID  `json:"social_account_id"`
+	PostType        string      `json:"post_type" validate:"omitempty,oneof=text image video carousel"`
+	MediaURLs       []string    `json:"media_urls"`
+	Hashtags        []string    `json:"hashtags"`
+	ScheduledAt     *time.Time  `json:"scheduled_at"`
+	AiPickBestTime  bool        `json:"ai_pick_best_time"`
 }
 
 // Post update request from API
@@ -159,8 +166,8 @@ type OAuthCallbackRequest struct {
 
 // Schedule post request
 type SchedulePostRequest struct {
-	PostID      uuid.UUID `json:"post_id" validate:"required"`
-	ScheduledAt time.Time `json:"scheduled_at" validate:"required"`
+	ScheduledAt    *time.Time `json:"scheduled_at"`
+	AiPickBestTime bool       `json:"ai_pick_best_time"`
 }
 
 // Analytics response
@@ -185,6 +192,17 @@ func ValidateSocialPost(post *SocialPost) error {
 
 func ValidateCreatePostRequest(req *CreatePostRequest) error {
 	validate := validator.New()
+
+	// Custom validation for testimonial IDs
+	if req.TestimonialID != nil && len(req.TestimonialIDs) > 0 {
+		return fmt.Errorf("cannot specify both testimonial_id and testimonial_ids")
+	}
+
+	// Validate scheduling logic
+	if req.AiPickBestTime && req.ScheduledAt != nil {
+		return fmt.Errorf("cannot specify both ai_pick_best_time and scheduled_at")
+	}
+
 	return validate.Struct(req)
 }
 
@@ -194,6 +212,33 @@ func ValidateUpdatePostRequest(req *UpdatePostRequest) error {
 }
 
 func ValidateOAuthCallbackRequest(req *OAuthCallbackRequest) error {
+	validate := validator.New()
+	return validate.Struct(req)
+}
+
+// BestTimeRequest represents a request for AI-powered optimal posting time
+type BestTimeRequest struct {
+	Platform        string `json:"platform" validate:"required,oneof=linkedin facebook twitter instagram"`
+	PostType        string `json:"post_type" validate:"required,oneof=text image video carousel"`
+	ContentCategory string `json:"content_category,omitempty"`
+}
+
+// BestTimeResponse represents the AI-generated optimal posting time recommendation
+type BestTimeResponse struct {
+	SuggestedTime    string                  `json:"suggested_time"`
+	ConfidenceScore  float64                 `json:"confidence_score"`
+	Reasoning        string                  `json:"reasoning"`
+	AlternativeTimes []AlternativeTimeOption `json:"alternative_times"`
+}
+
+// AlternativeTimeOption represents an alternative posting time with score and reason
+type AlternativeTimeOption struct {
+	Time   string  `json:"time"`
+	Score  float64 `json:"score"`
+	Reason string  `json:"reason"`
+}
+
+func ValidateBestTimeRequest(req *BestTimeRequest) error {
 	validate := validator.New()
 	return validate.Struct(req)
 }

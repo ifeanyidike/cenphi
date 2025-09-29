@@ -28,19 +28,19 @@ const Navbar = () => {
       name: "Video Processing",
       desc: "Collect and enhance video testimonials",
       icon: Video,
-      color: "text-purple-600",
+      color: "text-gray-600",
     },
     {
       name: "Performance Analytics",
       desc: "Track ROI and conversion impact",
       icon: BarChart3,
-      color: "text-green-600",
+      color: "text-blue-600",
     },
     {
       name: "Smart Automation",
       desc: "Automate collection and management",
       icon: Zap,
-      color: "text-orange-600",
+      color: "text-gray-600",
     },
   ];
 

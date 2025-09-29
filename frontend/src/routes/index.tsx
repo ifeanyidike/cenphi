@@ -1,5 +1,5 @@
 // router.tsx
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 
 import { Login } from "@/pages/Login";
 import { Signup } from "@/pages/SignUp";
@@ -8,17 +8,9 @@ import ResetPasswordPage from "@/pages/ResetPassword";
 import EmailPage from "@/pages/EmailPage";
 
 // Testimonial Collection Process
-import TestimonialCollectionLayout from "@/layouts/TestimonialCollectionLayout";
-import TestimonialTypeSelection from "@/pages/collection/TypeSelection";
-import TestimonialUploads from "@/pages/collection/TestimonialUploads";
-import VideoTestimonialRecorder from "@/pages/collection/VideoTestimonialRecorder";
-import TextTestimonialCollection from "@/pages/collection/TextTestimonialCollection";
-import MobileTransferPage from "@/pages/collection/MobileTransferPage";
-import ThankYouPage from "@/pages/collection/ThankYouPage";
+import CollectionPage from "@/pages/CollectionPage";
 import WhyCenphi from "@/pages/WhyCenphi";
 import AuthFlow from "@/pages/authflow";
-
-import { useParams } from "react-router-dom";
 
 import Checkout from "@/pages/Checkout";
 import { lazy } from "react";
@@ -39,8 +31,9 @@ import BrandGuidePage from "@/pages/BrandGuidePage";
 import AIStudioPage from "@/pages/aistudio";
 import TestimonialDetailPage from "@/pages/TestimonialPage";
 import TempCapturePage from "@/pages/TempCapturePage";
-import StoryVideosPage from "@/pages/StoryVideosPage";
 import AIGeneratedContentPage from "@/pages/AIGeneratedContentPage";
+import SettingsPage from "@/pages/SettingsPage";
+import SocialAnalytics from "@/pages/SocialAnalytics";
 
 // lazy load
 const LandingPage = lazy(() => import("@/pages/Landing"));
@@ -50,20 +43,6 @@ const TestimonialsDashboard = lazy(
   () => import("@/pages/TestimonialsDashboard")
 );
 const NotFoundPage = lazy(() => import("@/pages/NotFoundPage"));
-
-const DynamicRecorder = () => {
-  // const { type } = useParams<{ type: "video" | "audio" | "text" }>();
-  const { type } = useParams() as {
-    type?: "video" | "audio" | "image" | "text";
-  };
-  if (type === "video") {
-    return <VideoTestimonialRecorder />;
-  } else {
-    // Although the loader should prevent an invalid type from reaching here,
-    // we return NotFoundPage as a fallback.
-    return <NotFoundPage />;
-  }
-};
 
 export const router = createBrowserRouter([
   {
@@ -135,27 +114,11 @@ export const router = createBrowserRouter([
       },
       {
         path: "/studio/stories",
-        element: (
-          <ErrorBoundary
-            ErrorComponent={DashboardErrorComponent}
-            LoadingComponent={LoadingIndicator}
-            componentName="StoryVideos"
-          >
-            <StoryVideosPage />
-          </ErrorBoundary>
-        ),
+        element: <Navigate to="/ai-content" replace />,
       },
       {
         path: "/studio/stories/:jobId",
-        element: (
-          <ErrorBoundary
-            ErrorComponent={DashboardErrorComponent}
-            LoadingComponent={LoadingIndicator}
-            componentName="StoryVideos"
-          >
-            <StoryVideosPage />
-          </ErrorBoundary>
-        ),
+        element: <Navigate to="/ai-content" replace />,
       },
       {
         path: "/ai-content",
@@ -166,6 +129,30 @@ export const router = createBrowserRouter([
             componentName="AIGeneratedContent"
           >
             <AIGeneratedContentPage />
+          </ErrorBoundary>
+        ),
+      },
+      {
+        path: "/settings",
+        element: (
+          <ErrorBoundary
+            ErrorComponent={DashboardErrorComponent}
+            LoadingComponent={LoadingIndicator}
+            componentName="Settings"
+          >
+            <SettingsPage />
+          </ErrorBoundary>
+        ),
+      },
+      {
+        path: "/social/analytics",
+        element: (
+          <ErrorBoundary
+            ErrorComponent={DashboardErrorComponent}
+            LoadingComponent={LoadingIndicator}
+            componentName="SocialAnalytics"
+          >
+            <SocialAnalytics />
           </ErrorBoundary>
         ),
       },
@@ -241,59 +228,12 @@ export const router = createBrowserRouter([
     ],
   },
 
+  // Testimonial collection from email links
   {
-    // Parent route for the testimonial collection process.
-    path: "/collection",
-    element: <TestimonialCollectionLayout />,
-    children: [
-      {
-        // Starter: choose testimonial type (video, audio, text).
-        index: true,
-        element: <TestimonialTypeSelection />,
-      },
-      {
-        // Dynamic route: the ":type" segment must be "video", "audio", or "text".
-        path: ":type",
-        loader: ({ params }) => {
-          const allowedTypes = ["video", "audio", "text"];
-          if (!params.type || !allowedTypes.includes(params.type)) {
-            throw new Response("Not Found", { status: 404 });
-          }
-          return null;
-        },
-        errorElement: <NotFoundPage />,
-        children: [
-          {
-            // For recording: conditionally render the proper recorder based on the type.
-            path: "record",
-            element: <DynamicRecorder />,
-          },
-          {
-            path: "upload",
-            element: <TestimonialUploads />,
-          },
-          {
-            index: true,
-            element: <TextTestimonialCollection />,
-          },
-        ],
-      },
-      {
-        // Transfer Flow: if the user needs to switch to mobile.
-        path: "transfer",
-        children: [
-          {
-            index: true,
-            element: <MobileTransferPage />,
-          },
-        ],
-      },
-      {
-        path: "thank-you",
-        element: <ThankYouPage />,
-      },
-    ],
+    path: "/collect",
+    element: <CollectionPage />,
   },
+
   {
     // Fallback for any unknown route.
     path: "*",

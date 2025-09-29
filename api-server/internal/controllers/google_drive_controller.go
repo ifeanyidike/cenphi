@@ -2,6 +2,7 @@
 package controllers
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -19,8 +20,10 @@ import (
 type GoogleDriveController interface {
 	GetAuthURL(w http.ResponseWriter, r *http.Request)
 	HandleOAuthCallback(w http.ResponseWriter, r *http.Request)
+	GetAccounts(w http.ResponseWriter, r *http.Request)
 	ListFiles(w http.ResponseWriter, r *http.Request)
 	ListTestimonialFiles(w http.ResponseWriter, r *http.Request)
+	ImportFile(w http.ResponseWriter, r *http.Request)
 }
 
 type googleDriveController struct {
@@ -54,24 +57,7 @@ func (gdc *googleDriveController) GetAuthURL(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// Get user ID from context (set by auth middleware)
-	userClaims, ok := r.Context().Value("user").(map[string]any)
-	if !ok {
-		gdc.logger.Warn("User not authenticated")
-		// utils.RespondWithError(w, http.StatusUnauthorized, "User not authenticated")
-		// return
-	}
-	gdc.logger.Warn("User claims information", zap.Any("user claims", userClaims))
-
-	// userID, err := uuid.Parse(userClaims["uid"].(string))
-	// if err != nil {
-	// 	utils.RespondWithError(w, http.StatusBadRequest, "Invalid user ID")
-	// 	return
-	// }
-
-	userID := uuid.New()
-
-	authURL, err := gdc.driveService.GetAuthURL(workspaceID, userID)
+	authURL, err := gdc.driveService.GetAuthURL(r.Context(), workspaceID)
 	if err != nil {
 		gdc.logger.Error("Failed to generate auth URL", zap.Error(err))
 		utils.RespondWithError(w, http.StatusInternalServerError, "Failed to generate auth URL")
@@ -132,58 +118,70 @@ func (gdc *googleDriveController) HandleOAuthCallback(w http.ResponseWriter, r *
 		return
 	}
 
-	redirectURL := fmt.Sprintf("%s/oauth/success?platform=google_drive&workspace_id=%s", gdc.config.Server.BaseURL, authState.WorkspaceID.String())
-
-	// utils.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
-	// 	"message": "Connected successfully",
-	// })
+	redirectURL := fmt.Sprintf("%s/settings?platform=google_drive&workspace_id=%s", gdc.config.Server.BaseURL, authState.WorkspaceID.String())
 
 	http.Redirect(w, r, redirectURL, http.StatusFound)
 }
 
-// ListFiles lists all files from Google Drive
-// func (gdc *googleDriveController) ListFiles(w http.ResponseWriter, r *http.Request) {
-// 	// Get authenticated drive service from token in request
-// 	token, authenticatedService, err := gdc.getAuthenticatedService(r)
-// 	if err != nil {
-// 		utils.RespondWithError(w, http.StatusUnauthorized, err.Error())
-// 		return
-// 	}
+// GetAccounts returns all connected Google Drive accounts for workspace
+func (gdc *googleDriveController) GetAccounts(w http.ResponseWriter, r *http.Request) {
+	workspaceIDStr := chi.URLParam(r, "workspaceID")
+	workspaceID, err := uuid.Parse(workspaceIDStr)
+	if err != nil {
+		gdc.logger.Error("Invalid workspace ID", zap.Error(err))
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid workspace ID")
+		return
+	}
 
-// 	// Parse query parameters
-// 	query := r.URL.Query().Get("query")
-// 	pageSizeStr := r.URL.Query().Get("page_size")
-// 	pageSize := 50 // default
-// 	if pageSizeStr != "" {
-// 		if ps, err := strconv.Atoi(pageSizeStr); err == nil && ps > 0 && ps <= 1000 {
-// 			pageSize = ps
-// 		}
-// 	}
+	accounts, err := gdc.driveService.GetWorkspaceAccounts(r.Context(), workspaceID)
+	if err != nil {
+		gdc.logger.Error("Failed to get Google Drive accounts", zap.Error(err))
+		utils.RespondWithError(w, http.StatusInternalServerError, "Failed to get Google Drive accounts")
+		return
+	}
 
-// 	files, err := authenticatedService.ListFiles(r.Context(), query, pageSize)
-// 	if err != nil {
-// 		gdc.logger.Error("Failed to list files", zap.Error(err))
-// 		utils.RespondWithError(w, http.StatusInternalServerError, "Failed to list files")
-// 		return
-// 	}
+	// Convert to response format (remove sensitive token information)
+	type AccountResponse struct {
+		ID           string `json:"id"`
+		AccountEmail string `json:"email"`
+		AccountName  string `json:"name"`
+		Status       string `json:"status"`
+		ConnectedAt  string `json:"connected_at"`
+		Platform     string `json:"platform"`
+	}
 
-// 	utils.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
-// 		"files":     files,
-// 		"query":     query,
-// 		"page_size": pageSize,
-// 		"total":     len(files),
-// 		"token_info": map[string]interface{}{
-// 			"expires_at": token.Expiry,
-// 			"valid":      token.Valid(),
-// 		},
-// 	})
-// }
+	var responseAccounts []AccountResponse
+	for _, account := range accounts {
+		email := ""
+		if account.AccountEmail != nil {
+			email = *account.AccountEmail
+		}
+
+		name := ""
+		if account.AccountName != nil {
+			name = *account.AccountName
+		}
+
+		responseAccounts = append(responseAccounts, AccountResponse{
+			ID:           account.ID.String(),
+			AccountEmail: email,
+			AccountName:  name,
+			Status:       account.Status,
+			ConnectedAt:  account.CreatedAt.Format("2006-01-02T15:04:05Z"),
+			Platform:     "google_drive",
+		})
+	}
+
+	utils.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
+		"accounts": responseAccounts,
+		"message":  "Google Drive accounts retrieved successfully",
+	})
+}
 
 func (gdc *googleDriveController) ListFiles(w http.ResponseWriter, r *http.Request) {
-	workspaceIDStr := chi.URLParam(r, "workspaceID")
-	userID, _ := uuid.Parse("6fe5d4ae-3627-4103-af42-39fb40cc0a12")
 
-	log.Println("workspace: ", workspaceIDStr, "user: ", userID.String())
+	// Get workspace from URL parameter (for now - can be enhanced to derive from user)
+	workspaceIDStr := chi.URLParam(r, "workspaceID")
 	workspaceID, err := uuid.Parse(workspaceIDStr)
 	if err != nil {
 		gdc.logger.Error("invalid workspace ID", zap.Error(err))
@@ -191,7 +189,7 @@ func (gdc *googleDriveController) ListFiles(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	token, err := gdc.driveService.RefreshTokenIfNeeded(r.Context(), workspaceID, userID)
+	token, err := gdc.driveService.RefreshTokenIfNeeded(r.Context(), workspaceID)
 	if err != nil {
 		gdc.logger.Error("Please reconnect Google Drive", zap.Error(err))
 		utils.RespondWithError(w, http.StatusUnauthorized, "Please reconnect Google Drive")
@@ -237,10 +235,9 @@ func (gdc *googleDriveController) ListFiles(w http.ResponseWriter, r *http.Reque
 
 // ListTestimonialFiles lists files suitable for testimonials
 func (gdc *googleDriveController) ListTestimonialFiles(w http.ResponseWriter, r *http.Request) {
-	workspaceIDStr := chi.URLParam(r, "workspaceID")
-	userID, _ := uuid.Parse("6fe5d4ae-3627-4103-af42-39fb40cc0a12")
 
-	log.Println("workspace: ", workspaceIDStr, "user: ", userID.String())
+	// Get workspace from URL parameter (for now - can be enhanced to derive from user)
+	workspaceIDStr := chi.URLParam(r, "workspaceID")
 	workspaceID, err := uuid.Parse(workspaceIDStr)
 	if err != nil {
 		gdc.logger.Error("invalid workspace ID", zap.Error(err))
@@ -248,7 +245,7 @@ func (gdc *googleDriveController) ListTestimonialFiles(w http.ResponseWriter, r 
 		return
 	}
 
-	token, err := gdc.driveService.RefreshTokenIfNeeded(r.Context(), workspaceID, userID)
+	token, err := gdc.driveService.RefreshTokenIfNeeded(r.Context(), workspaceID)
 	if err != nil {
 		gdc.logger.Error("Please reconnect Google Drive", zap.Error(err))
 		utils.RespondWithError(w, http.StatusUnauthorized, "Please reconnect Google Drive")
@@ -303,4 +300,108 @@ func (gdc *googleDriveController) getAuthenticatedService(r *http.Request) (*oau
 	}
 
 	return token, authenticatedService, nil
+}
+
+// ImportFile imports a single file from Google Drive as a testimonial
+func (gdc *googleDriveController) ImportFile(w http.ResponseWriter, r *http.Request) {
+	// Parse request body
+	var req struct {
+		WorkspaceID string `json:"workspace_id"`
+		FileID      string `json:"file_id"`
+		FileName    string `json:"file_name"`
+		MimeType    string `json:"mime_type"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	if req.FileID == "" {
+		utils.RespondWithError(w, http.StatusBadRequest, "File ID is required")
+		return
+	}
+
+	if req.WorkspaceID == "" {
+		utils.RespondWithError(w, http.StatusBadRequest, "Workspace ID is required")
+		return
+	}
+
+	workspaceID, err := uuid.Parse(req.WorkspaceID)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid workspace ID format")
+		return
+	}
+
+	gdc.logger.Info("Processing import request",
+		zap.String("workspace", workspaceID.String()),
+		zap.String("file", req.FileID),
+		zap.String("filename", req.FileName))
+
+	// Get user's Google Drive token and create authenticated service
+	token, err := gdc.driveService.RefreshTokenIfNeeded(r.Context(), workspaceID)
+	if err != nil {
+		gdc.logger.Error("Failed to get valid token", zap.Error(err))
+		utils.RespondWithError(w, http.StatusUnauthorized, "Please reconnect Google Drive")
+		return
+	}
+
+	authenticatedService, err := gdc.driveService.CreateServiceWithToken(r.Context(), token)
+	if err != nil {
+		gdc.logger.Error("Failed to create authenticated service", zap.Error(err))
+		utils.RespondWithError(w, http.StatusUnauthorized, "Failed to authenticate with Google Drive")
+		return
+	}
+
+	// Get file metadata to verify it exists and get full details
+	fileMetadata, err := authenticatedService.GetFileMetadata(r.Context(), req.FileID)
+	if err != nil {
+		gdc.logger.Error("Failed to get file metadata", zap.Error(err))
+		utils.RespondWithError(w, http.StatusNotFound, "File not found or inaccessible")
+		return
+	}
+
+	// Use existing bulk import service with single file
+	result, err := gdc.testimonialCollectionService.ProcessGoogleDriveImportWithAuth(
+		r.Context(),
+		workspaceID,
+		[]string{req.FileID},
+		token,
+	)
+	if err != nil {
+		gdc.logger.Error("Failed to import file", zap.Error(err))
+		utils.RespondWithError(w, http.StatusInternalServerError, "Failed to import file as testimonial")
+		return
+	}
+
+	// Check if import was successful
+	if result.FailureCount > 0 {
+		errorMsg := "Failed to import file"
+		if len(result.Errors) > 0 {
+			errorMsg = result.Errors[0].Message
+		}
+		gdc.logger.Error("Import failed", zap.String("error", errorMsg))
+		utils.RespondWithError(w, http.StatusInternalServerError, errorMsg)
+		return
+	}
+
+	if result.SuccessCount == 0 || len(result.Testimonials) == 0 {
+		gdc.logger.Error("No testimonial created from import")
+		utils.RespondWithError(w, http.StatusInternalServerError, "No testimonial was created from the file")
+		return
+	}
+
+	testimonialID := result.Testimonials[0]
+
+	gdc.logger.Info("Successfully imported file as testimonial",
+		zap.String("testimonial_id", testimonialID.String()),
+		zap.String("file", req.FileID))
+
+	utils.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
+		"success":        true,
+		"message":        "File imported successfully",
+		"testimonial_id": testimonialID.String(),
+		"file_name":      fileMetadata.Name,
+		"file_size":      fileMetadata.Size,
+	})
 }

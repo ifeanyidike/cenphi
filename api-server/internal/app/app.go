@@ -44,16 +44,13 @@ type App struct {
 	AuthMiddleware midware.AuthMiddleware
 
 	// Controllers
-	HealthController      controllers.HealthController
-	UserController        controllers.UserController
-	SwaggerController     controllers.SwaggerController
-	WorkspaceController   controllers.WorkspaceController
-	TeamMemberController  controllers.TeamMemberController
-	OnboardingController  controllers.OnboardingController
-	TestimonialController controllers.TestimonialController
-	// CampaignController     *controllers.CampaignController
-	// BrandContextController *controllers.BrandContextController
-	// WebsocketController    *controllers.WebsocketController
+	HealthController                controllers.HealthController
+	UserController                  controllers.UserController
+	SwaggerController               controllers.SwaggerController
+	WorkspaceController             controllers.WorkspaceController
+	TeamMemberController            controllers.TeamMemberController
+	OnboardingController            controllers.OnboardingController
+	TestimonialController           controllers.TestimonialController
 	AITestController                controllers.AITestController
 	SocialController                controllers.SocialController
 	TestimonialRequestController    controllers.TestimonialRequestController
@@ -127,6 +124,7 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 	teamMemberService := services.NewTeamMemberService(teamMemberRepo, db, logger)
 	onboardingService := services.NewOnboardingService(db, logger, repo, aiServiceManager)
 	workspaceService := services.NewWorkspaceService(workspaceRepo, teamMemberRepo, testimonialRepo, db, redisClient, logger)
+	bestTimeService := services.NewBestTimeService(repo, db, logger)
 	linkedinService := sharing.NewLinkedInClient(cfg.Social, logger, cacheService)
 	sharingService := sharing.NewSharingClient(
 		cfg.Social,
@@ -136,7 +134,9 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 		logger,
 		socialAccountRepository,
 		socialPostRepository,
+		userRepo,
 		linkedinService,
+		bestTimeService,
 	)
 	templateRenderer := mailing.NewTemplateRenderer(testimonialReqRepo, logger)
 	brevoProvider := brevo.NewProvider(cfg.Mailing.BrevoAPIKey, logger)
@@ -156,7 +156,7 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 			DefaultFromEmail: cfg.Mailing.FromEmail,
 		},
 	)
-	driveService := services.NewDriveService(cfg.Google.Drive, cacheService, driveRepo, db, logger)
+	driveService := services.NewDriveService(cfg.Google.Drive, cacheService, driveRepo, userRepo, db, logger)
 	testimonialCollService := services.NewTestimonialCollectionService(
 		testimonialRepo, jobRepo, storageService, driveService, &mailingService, queueService,
 		aiServiceManager.AudioTranscriptionService, db, redisClient, logger)

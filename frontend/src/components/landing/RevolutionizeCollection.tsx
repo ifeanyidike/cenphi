@@ -106,7 +106,7 @@ const RevolutionizeCollection = () => {
               onClick={() => setActiveTab("before")}
               className={`px-4 sm:px-6 py-2.5 rounded-lg font-medium text-sm transition-all duration-300 w-1/2 ${
                 activeTab === "before"
-                  ? "bg-red-50 text-red-700 border border-red-200"
+                  ? "bg-gray-50 text-gray-700 border border-gray-200"
                   : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
               }`}
             >
@@ -159,14 +159,14 @@ const RevolutionizeCollection = () => {
                           initial={{ opacity: 0, x: -30 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: index * 0.1 }}
-                          className="flex items-start gap-3 p-3 sm:p-4 bg-red-50 border border-red-200 rounded-lg"
+                          className="flex items-start gap-3 p-3 sm:p-4 bg-gray-50 border border-gray-200 rounded-lg"
                         >
-                          <problem.icon className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
+                          <problem.icon className="h-4 w-4 text-gray-600 mt-0.5 flex-shrink-0" />
                           <div>
                             <div className="text-gray-900 font-medium text-sm">
                               {problem.text}
                             </div>
-                            <div className="text-red-600 text-xs mt-1">
+                            <div className="text-gray-600 text-xs mt-1">
                               {problem.time}
                             </div>
                           </div>
@@ -181,32 +181,32 @@ const RevolutionizeCollection = () => {
                       Current Metrics
                     </h4>
                     <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                      <div className="text-center p-2 sm:p-3 bg-red-50 rounded-lg">
-                        <div className="text-xl sm:text-2xl font-bold text-red-600 mb-1">
+                      <div className="text-center p-2 sm:p-3 bg-gray-50 rounded-lg">
+                        <div className="text-xl sm:text-2xl font-bold text-gray-600 mb-1">
                           {beforeScenario.stats.organized}
                         </div>
                         <div className="text-xs text-gray-600">
                           Properly Organized
                         </div>
                       </div>
-                      <div className="text-center p-2 sm:p-3 bg-red-50 rounded-lg">
-                        <div className="text-xl sm:text-2xl font-bold text-red-600 mb-1">
+                      <div className="text-center p-2 sm:p-3 bg-gray-50 rounded-lg">
+                        <div className="text-xl sm:text-2xl font-bold text-gray-600 mb-1">
                           {beforeScenario.stats.efficiency}
                         </div>
                         <div className="text-xs text-gray-600">
                           Workflow Efficiency
                         </div>
                       </div>
-                      <div className="text-center p-2 sm:p-3 bg-red-50 rounded-lg">
-                        <div className="text-xl sm:text-2xl font-bold text-red-600 mb-1">
+                      <div className="text-center p-2 sm:p-3 bg-gray-50 rounded-lg">
+                        <div className="text-xl sm:text-2xl font-bold text-gray-600 mb-1">
                           {beforeScenario.stats.time}
                         </div>
                         <div className="text-xs text-gray-600">
                           Daily Management
                         </div>
                       </div>
-                      <div className="text-center p-2 sm:p-3 bg-red-50 rounded-lg">
-                        <div className="text-xl sm:text-2xl font-bold text-red-600 mb-1">
+                      <div className="text-center p-2 sm:p-3 bg-gray-50 rounded-lg">
+                        <div className="text-xl sm:text-2xl font-bold text-gray-600 mb-1">
                           {beforeScenario.stats.usage}
                         </div>
                         <div className="text-xs text-gray-600">
