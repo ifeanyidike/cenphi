@@ -380,7 +380,8 @@ const TestimonialDetail = observer(() => {
 
     try {
       // Use real segment IDs for reordering
-      const highlightIds = segments.map(segment => segment.id);
+      console.log("type", type);
+      const highlightIds = segments.map((segment) => segment.id);
       await aiStudioManager.saveHighlightOrder(testimonial.id, highlightIds);
     } catch (error) {
       console.error("Failed to save highlight order:", error);
