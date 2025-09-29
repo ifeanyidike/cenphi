@@ -68,20 +68,20 @@ func (c *SocialController) GetAuthURL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get user ID from context
-	userID := r.Context().Value("user")
-	if userID == nil {
-		c.respondError(w, http.StatusUnauthorized, "User not authenticated", nil)
-		return
-	}
+	// userID, err := middleware.GetUserFromContext(r.Context())
+	// if err != nil {
+	// 	c.respondError(w, http.StatusUnauthorized, err.Error(), nil)
+	// 	return
+	// }
 
-	userUUID, err := uuid.Parse(userID.(string))
-	if err != nil {
-		c.logger.Error("Invalid user ID", zap.Error(err))
-		c.respondError(w, http.StatusBadRequest, "Invalid user ID", err)
-		return
-	}
+	// userUUID, err := uuid.Parse(userID)
+	// if err != nil {
+	// 	c.logger.Error("Invalid user ID", zap.Error(err))
+	// 	c.respondError(w, http.StatusBadRequest, "Invalid user ID", err)
+	// 	return
+	// }
 
-	authURL, err := c.sharingClient.GetAuthURL(r.Context(), workspaceID, userUUID, platform)
+	authURL, err := c.sharingClient.GetAuthURL(r.Context(), workspaceID, platform)
 	if err != nil {
 		c.logger.Error("Failed to generate auth URL", zap.Error(err))
 		c.respondError(w, http.StatusInternalServerError, "Failed to generate authorization URL", err)
@@ -496,21 +496,39 @@ func (c *SocialController) SchedulePost(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Validate scheduled time is in the future
-	if req.ScheduledAt.Before(time.Now()) {
+	// Validate request logic
+	if req.AiPickBestTime && req.ScheduledAt != nil {
+		c.respondError(w, http.StatusBadRequest, "Cannot specify both ai_pick_best_time and scheduled_at", nil)
+		return
+	}
+
+	if !req.AiPickBestTime && req.ScheduledAt == nil {
+		c.respondError(w, http.StatusBadRequest, "Either scheduled_at or ai_pick_best_time must be provided", nil)
+		return
+	}
+
+	// Validate scheduled time is in the future (if provided)
+	if req.ScheduledAt != nil && req.ScheduledAt.Before(time.Now()) {
 		c.respondError(w, http.StatusBadRequest, "Scheduled time must be in the future", nil)
 		return
 	}
 
-	if _, err := c.sharingClient.SchedulePost(r.Context(), postID, req.ScheduledAt); err != nil {
+	// Use the new AI-aware scheduling method
+	jobID, err := c.sharingClient.SchedulePostWithAI(r.Context(), postID, &req)
+	if err != nil {
 		c.logger.Error("Failed to schedule post", zap.Error(err))
 		c.respondError(w, http.StatusInternalServerError, "Failed to schedule post", err)
 		return
 	}
 
-	response := map[string]string{
-		"message":      "Post scheduled successfully",
-		"scheduled_at": req.ScheduledAt.Format(time.RFC3339),
+	response := map[string]interface{}{
+		"message": "Post scheduled successfully",
+		"job_id":  jobID,
+		"used_ai": req.AiPickBestTime,
+	}
+
+	if req.ScheduledAt != nil {
+		response["scheduled_at"] = req.ScheduledAt.Format(time.RFC3339)
 	}
 
 	c.respondSuccess(w, http.StatusOK, "Post scheduled successfully", response)
@@ -576,6 +594,50 @@ func (c *SocialController) SyncPostMetrics(w http.ResponseWriter, r *http.Reques
 	}
 
 	c.respondSuccess(w, http.StatusOK, "Metrics sync queued successfully", nil)
+}
+
+// GetBestPostingTime generates AI-powered optimal posting time suggestion
+// @Summary Get AI-powered best posting time
+// @Description Generate optimal posting time recommendation based on historical data and AI analysis
+// @Tags social
+// @Accept json
+// @Produce json
+// @Param workspaceID path string true "Workspace ID"
+// @Param request body models.BestTimeRequest true "Best time request parameters"
+// @Success 200 {object} models.BestTimeResponse
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /social/workspaces/{workspaceID}/ai/best-time [post]
+func (c *SocialController) GetBestPostingTime(w http.ResponseWriter, r *http.Request) {
+	workspaceID, err := uuid.Parse(chi.URLParam(r, "workspaceID"))
+	if err != nil {
+		c.logger.Error("Invalid workspace ID", zap.Error(err))
+		c.respondError(w, http.StatusBadRequest, "Invalid workspace ID", err)
+		return
+	}
+
+	var req models.BestTimeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		c.logger.Error("Failed to decode request body", zap.Error(err))
+		c.respondError(w, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+
+	// Validate required fields
+	if req.Platform == "" {
+		c.respondError(w, http.StatusBadRequest, "Platform is required", nil)
+		return
+	}
+
+	// Generate AI recommendation
+	bestTime, err := c.sharingClient.GetBestPostingTime(r.Context(), workspaceID, req)
+	if err != nil {
+		c.logger.Error("Failed to get best posting time", zap.Error(err))
+		c.respondError(w, http.StatusInternalServerError, "Failed to generate time recommendation", err)
+		return
+	}
+
+	c.respondSuccess(w, http.StatusOK, "Best posting time generated successfully", bestTime)
 }
 
 // Helper methods for consistent response formatting

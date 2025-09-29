@@ -27,9 +27,11 @@ type TestimonialRequestRepository interface {
 
 	// Templates
 	GetTemplate(ctx context.Context, name string) (*models.EmailTemplate, error)
+	GetWorkspaceTemplate(ctx context.Context, workspaceID, name string) (*models.EmailTemplate, error)
 	CreateTemplate(ctx context.Context, template *models.EmailTemplate) error
 	UpdateTemplate(ctx context.Context, template *models.EmailTemplate) error
 	ListTemplates(ctx context.Context) ([]*models.EmailTemplate, error)
+	ListWorkspaceTemplates(ctx context.Context, workspaceID string) ([]*models.EmailTemplate, error)
 }
 
 type testimonialRequestRepository struct {
@@ -237,13 +239,34 @@ func (r *testimonialRequestRepository) GetEmailLogs(ctx context.Context, request
 // Templates
 func (r *testimonialRequestRepository) GetTemplate(ctx context.Context, name string) (*models.EmailTemplate, error) {
 	query := `
-		SELECT id, name, subject, html_content, text_content, variables, is_default, created_at, updated_at
-		FROM email_templates WHERE name = $1
+		SELECT id, workspace_id, name, subject, html_content, text_content, variables, is_default, created_at, updated_at
+		FROM email_templates WHERE name = $1 AND workspace_id IS NULL
 	`
 
 	var tmpl models.EmailTemplate
 	err := r.db.QueryRowContext(ctx, query, name).Scan(
-		&tmpl.ID, &tmpl.Name, &tmpl.Subject, &tmpl.HTMLContent, &tmpl.TextContent,
+		&tmpl.ID, &tmpl.WorkspaceID, &tmpl.Name, &tmpl.Subject, &tmpl.HTMLContent, &tmpl.TextContent,
+		&tmpl.Variables, &tmpl.IsDefault, &tmpl.CreatedAt, &tmpl.UpdatedAt,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &tmpl, nil
+}
+
+func (r *testimonialRequestRepository) GetWorkspaceTemplate(ctx context.Context, workspaceID, name string) (*models.EmailTemplate, error) {
+	query := `
+		SELECT id, workspace_id, name, subject, html_content, text_content, variables, is_default, created_at, updated_at
+		FROM email_templates WHERE name = $1 AND (workspace_id = $2 OR workspace_id IS NULL)
+		ORDER BY workspace_id DESC NULLS LAST
+		LIMIT 1
+	`
+
+	var tmpl models.EmailTemplate
+	err := r.db.QueryRowContext(ctx, query, name, workspaceID).Scan(
+		&tmpl.ID, &tmpl.WorkspaceID, &tmpl.Name, &tmpl.Subject, &tmpl.HTMLContent, &tmpl.TextContent,
 		&tmpl.Variables, &tmpl.IsDefault, &tmpl.CreatedAt, &tmpl.UpdatedAt,
 	)
 
@@ -257,9 +280,9 @@ func (r *testimonialRequestRepository) GetTemplate(ctx context.Context, name str
 func (r *testimonialRequestRepository) CreateTemplate(ctx context.Context, template *models.EmailTemplate) error {
 	query := `
 		INSERT INTO email_templates (
-			id, name, subject, html_content, text_content, variables, is_default, created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-		ON CONFLICT (name) DO UPDATE SET
+			id, workspace_id, name, subject, html_content, text_content, variables, is_default, created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		ON CONFLICT (name, COALESCE(workspace_id, '00000000-0000-0000-0000-000000000000'::uuid)) DO UPDATE SET
 			subject = EXCLUDED.subject,
 			html_content = EXCLUDED.html_content,
 			text_content = EXCLUDED.text_content,
@@ -273,7 +296,7 @@ func (r *testimonialRequestRepository) CreateTemplate(ctx context.Context, templ
 	}
 
 	_, err := r.db.ExecContext(ctx, query,
-		template.ID, template.Name, template.Subject, template.HTMLContent, template.TextContent,
+		template.ID, template.WorkspaceID, template.Name, template.Subject, template.HTMLContent, template.TextContent,
 		template.Variables, template.IsDefault, template.CreatedAt, template.UpdatedAt,
 	)
 
@@ -300,8 +323,8 @@ func (r *testimonialRequestRepository) UpdateTemplate(ctx context.Context, templ
 
 func (r *testimonialRequestRepository) ListTemplates(ctx context.Context) ([]*models.EmailTemplate, error) {
 	query := `
-		SELECT id, name, subject, html_content, text_content, variables, is_default, created_at, updated_at
-		FROM email_templates ORDER BY name
+		SELECT id, workspace_id, name, subject, html_content, text_content, variables, is_default, created_at, updated_at
+		FROM email_templates WHERE workspace_id IS NULL ORDER BY name
 	`
 
 	rows, err := r.db.QueryContext(ctx, query)
@@ -314,7 +337,35 @@ func (r *testimonialRequestRepository) ListTemplates(ctx context.Context) ([]*mo
 	for rows.Next() {
 		var tmpl models.EmailTemplate
 		err := rows.Scan(
-			&tmpl.ID, &tmpl.Name, &tmpl.Subject, &tmpl.HTMLContent, &tmpl.TextContent,
+			&tmpl.ID, &tmpl.WorkspaceID, &tmpl.Name, &tmpl.Subject, &tmpl.HTMLContent, &tmpl.TextContent,
+			&tmpl.Variables, &tmpl.IsDefault, &tmpl.CreatedAt, &tmpl.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		templates = append(templates, &tmpl)
+	}
+
+	return templates, nil
+}
+
+func (r *testimonialRequestRepository) ListWorkspaceTemplates(ctx context.Context, workspaceID string) ([]*models.EmailTemplate, error) {
+	query := `
+		SELECT id, workspace_id, name, subject, html_content, text_content, variables, is_default, created_at, updated_at
+		FROM email_templates WHERE workspace_id = $1 ORDER BY name
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var templates []*models.EmailTemplate
+	for rows.Next() {
+		var tmpl models.EmailTemplate
+		err := rows.Scan(
+			&tmpl.ID, &tmpl.WorkspaceID, &tmpl.Name, &tmpl.Subject, &tmpl.HTMLContent, &tmpl.TextContent,
 			&tmpl.Variables, &tmpl.IsDefault, &tmpl.CreatedAt, &tmpl.UpdatedAt,
 		)
 		if err != nil {

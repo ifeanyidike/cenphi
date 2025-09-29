@@ -36,15 +36,16 @@ type EmailRequest struct {
 
 // EmailTemplate represents an email template
 type EmailTemplate struct {
-	ID          uuid.UUID `json:"id" db:"id"`
-	Name        string    `json:"name" db:"name"`
-	Subject     string    `json:"subject" db:"subject"`
-	HTMLContent string    `json:"html_content" db:"html_content"`
-	TextContent string    `json:"text_content" db:"text_content"`
-	Variables   JSONArray `json:"variables" db:"variables"`
-	IsDefault   bool      `json:"is_default" db:"is_default"`
-	CreatedAt   time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
+	ID          uuid.UUID  `json:"id" db:"id"`
+	WorkspaceID *uuid.UUID `json:"workspace_id" db:"workspace_id"`
+	Name        string     `json:"name" db:"name"`
+	Subject     string     `json:"subject" db:"subject"`
+	HTMLContent string     `json:"html_content" db:"html_content"`
+	TextContent string     `json:"text_content" db:"text_content"`
+	Variables   JSONArray  `json:"variables" db:"variables"`
+	IsDefault   bool       `json:"is_default" db:"is_default"`
+	CreatedAt   time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at" db:"updated_at"`
 }
 
 // EmailLog represents email delivery tracking (simplified without webhooks)

@@ -1706,3 +1706,116 @@ func (r *TestimonialArtifactRepository) mergeMetadata(current, updates map[strin
 
 	return result
 }
+
+// GetByWorkspaceID gets artifacts by workspace ID with optional filtering by processing types
+func (r *TestimonialArtifactRepository) GetByWorkspaceID(
+	ctx context.Context,
+	workspaceID uuid.UUID,
+	processingTypes []string,
+	limit int,
+	offset int,
+	db DB,
+) ([]models.TestimonialArtifact, error) {
+	baseQuery := `
+		SELECT ta.id, ta.testimonial_id, ta.workspace_id, ta.processing_type,
+			   ta.result_category, ta.text_content, ta.data, ta.asset_url,
+			   ta.content_type, ta.platform, ta.format, ta.is_user_saved,
+			   ta.is_streamed, ta.processing_metadata, ta.created_at, ta.updated_at
+		FROM testimonial_artifacts ta
+		WHERE ta.workspace_id = $1
+	`
+
+	args := []interface{}{workspaceID}
+	argIndex := 2
+
+	// Add processing type filter if provided
+	if len(processingTypes) > 0 {
+		placeholders := make([]string, len(processingTypes))
+		for i, pt := range processingTypes {
+			placeholders[i] = fmt.Sprintf("$%d", argIndex)
+			args = append(args, pt)
+			argIndex++
+		}
+		baseQuery += fmt.Sprintf(" AND ta.processing_type IN (%s)", strings.Join(placeholders, ","))
+	}
+
+	// Add ordering and pagination
+	baseQuery += " ORDER BY ta.created_at DESC"
+	if limit > 0 {
+		baseQuery += fmt.Sprintf(" LIMIT $%d", argIndex)
+		args = append(args, limit)
+		argIndex++
+	}
+	if offset > 0 {
+		baseQuery += fmt.Sprintf(" OFFSET $%d", argIndex)
+		args = append(args, offset)
+	}
+
+	rows, err := db.QueryContext(ctx, baseQuery, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get artifacts by workspace ID: %w", err)
+	}
+	defer rows.Close()
+
+	var artifacts []models.TestimonialArtifact
+	for rows.Next() {
+		var artifact models.TestimonialArtifact
+		err := rows.Scan(
+			&artifact.ID,
+			&artifact.TestimonialID,
+			&artifact.WorkspaceID,
+			&artifact.ProcessingType,
+			&artifact.ResultCategory,
+			&artifact.TextContent,
+			&artifact.Data,
+			&artifact.AssetURL,
+			&artifact.ContentType,
+			&artifact.Platform,
+			&artifact.Format,
+			&artifact.IsUserSaved,
+			&artifact.IsStreamed,
+			&artifact.ProcessingMetadata,
+			&artifact.CreatedAt,
+			&artifact.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan artifact: %w", err)
+		}
+		artifacts = append(artifacts, artifact)
+	}
+
+	return artifacts, rows.Err()
+}
+
+// GetContentGenerationArtifacts gets content generation artifacts (multi-testimonial artifacts)
+func (r *TestimonialArtifactRepository) GetContentGenerationArtifacts(
+	ctx context.Context,
+	workspaceID uuid.UUID,
+	limit int,
+	offset int,
+	db DB,
+) ([]models.TestimonialArtifact, error) {
+	contentGenerationTypes := []string{
+		"content_generation",
+		"story_mode_generation",
+		"best_story_moments",
+	}
+
+	return r.GetByWorkspaceID(ctx, workspaceID, contentGenerationTypes, limit, offset, db)
+}
+
+// GetStoryVideoArtifacts gets story video artifacts specifically
+func (r *TestimonialArtifactRepository) GetStoryVideoArtifacts(
+	ctx context.Context,
+	workspaceID uuid.UUID,
+	limit int,
+	offset int,
+	db DB,
+) ([]models.TestimonialArtifact, error) {
+	storyVideoTypes := []string{
+		"story_mode_generation",
+		"best_story_moments",
+	}
+
+	return r.GetByWorkspaceID(ctx, workspaceID, storyVideoTypes, limit, offset, db)
+}

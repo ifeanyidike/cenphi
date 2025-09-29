@@ -7,13 +7,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"slices"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/ifeanyidike/cenphi/internal/cache"
 	"github.com/ifeanyidike/cenphi/internal/config"
+	"github.com/ifeanyidike/cenphi/internal/middleware"
 	"github.com/ifeanyidike/cenphi/internal/repositories"
 	"go.uber.org/zap"
 	"golang.org/x/oauth2"
@@ -30,6 +30,7 @@ type DriveService struct {
 	oauthConfig *oauth2.Config
 	db          *sql.DB
 	repo        repositories.GoogleDriveRepository
+	userRepo    repositories.UserRepository
 }
 
 type DriveFile struct {
@@ -51,7 +52,13 @@ type DriveAuthState struct {
 }
 
 // NewDriveService creates a new Drive service instance
-func NewDriveService(config config.GoogleDriveConfig, cache cache.RedisCache, repo repositories.GoogleDriveRepository, db *sql.DB, logger *zap.Logger) *DriveService {
+func NewDriveService(config config.GoogleDriveConfig,
+	cache cache.RedisCache,
+	repo repositories.GoogleDriveRepository,
+	userRepo repositories.UserRepository,
+	db *sql.DB,
+	logger *zap.Logger,
+) *DriveService {
 	oauthConfig := &oauth2.Config{
 		ClientID:     config.ClientID,
 		ClientSecret: config.ClientSecret,
@@ -66,17 +73,27 @@ func NewDriveService(config config.GoogleDriveConfig, cache cache.RedisCache, re
 		cache:       cache,
 		oauthConfig: oauthConfig,
 		repo:        repo,
+		userRepo:    userRepo,
 		db:          db,
 	}
 }
 
 // GetAuthURL generates OAuth URL for Google Drive authentication
-func (ds *DriveService) GetAuthURL(workspaceID, userID uuid.UUID) (string, error) {
-	log.Println("In Servivce GetAuthURL")
+func (ds *DriveService) GetAuthURL(ctx context.Context, workspaceID uuid.UUID) (string, error) {
+	userUID, err := middleware.GetUserFromContext(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	user, err := ds.userRepo.FindByUID(ctx, userUID, ds.db)
+	if err != nil {
+		return "", err
+	}
+
 	state := DriveAuthState{
 		State:       generateSecureState(),
 		WorkspaceID: workspaceID,
-		UserID:      userID,
+		UserID:      user.ID,
 		CreatedAt:   time.Now(),
 	}
 
@@ -300,6 +317,11 @@ func (ds *DriveService) GetUserAccount(ctx context.Context, workspaceID, userID 
 	return ds.repo.GetAccount(ctx, workspaceID, userID, ds.db)
 }
 
+// GetWorkspaceAccounts gets all Google Drive accounts for a workspace
+func (ds *DriveService) GetWorkspaceAccounts(ctx context.Context, workspaceID uuid.UUID) ([]repositories.GoogleDriveAccount, error) {
+	return ds.repo.GetAccountsByWorkspace(ctx, workspaceID, ds.db)
+}
+
 func (ds *DriveService) GetStoredToken(ctx context.Context, workspaceID, userID uuid.UUID) (*oauth2.Token, error) {
 	account, err := ds.repo.GetAccount(ctx, workspaceID, userID, ds.db)
 	if err != nil {
@@ -330,8 +352,18 @@ func (ds *DriveService) GetStoredToken(ctx context.Context, workspaceID, userID 
 }
 
 // func (ds *DriveService) RefreshTokenIfNeeded(ctx context.Context, account *models.GoogleDriveAccount) (*oauth2.Token, error) {
-func (ds *DriveService) RefreshTokenIfNeeded(ctx context.Context, workspaceID, userID uuid.UUID) (*oauth2.Token, error) {
-	account, err := ds.GetUserAccount(ctx, workspaceID, userID)
+func (ds *DriveService) RefreshTokenIfNeeded(ctx context.Context, workspaceID uuid.UUID) (*oauth2.Token, error) {
+	userUID, err := middleware.GetUserFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	user, err := ds.userRepo.FindByUID(ctx, userUID, ds.db)
+	if err != nil {
+		return nil, err
+	}
+
+	account, err := ds.GetUserAccount(ctx, workspaceID, user.ID)
 	if err != nil {
 		return nil, err
 	}

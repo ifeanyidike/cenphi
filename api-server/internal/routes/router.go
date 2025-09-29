@@ -213,7 +213,7 @@ func RegisterSocialRoutes(r chi.Router, controller controllers.SocialController,
 
 	// Protected social media routes
 	r.Route("/social/workspaces/{workspaceID}/social", func(r chi.Router) {
-		// r.Use(authMiddleware.VerifyToken) //commented out for test
+		r.Use(authMiddleware.VerifyToken)
 
 		// OAuth authorization endpoints
 		r.Get("/auth/{platform}", controller.GetAuthURL)
@@ -226,6 +226,14 @@ func RegisterSocialRoutes(r chi.Router, controller controllers.SocialController,
 
 		// General posts endpoint for workspace
 		r.Get("/posts", controller.GetPosts)
+	})
+
+	// AI-powered social features
+	r.Route("/social/workspaces/{workspaceID}/ai", func(r chi.Router) {
+		r.Use(authMiddleware.VerifyToken)
+
+		// AI best time suggestion
+		r.Post("/best-time", controller.GetBestPostingTime)
 	})
 
 	// Protected social post routes (no workspace in path for flexibility)
@@ -269,6 +277,11 @@ func RegisterTestimonialRequestRoutes(r chi.Router, controller controllers.Testi
 			r.Get("/get-logs/{requestID}", controller.GetEmailLogs)
 			r.Get("/track-response", controller.TrackResponse)
 			r.Get("/track-clicks", controller.TrackClick)
+
+			// Email templates for workspaces
+			r.Get("/workspaces/{workspaceID}/templates", controller.GetWorkspaceEmailTemplates)
+			r.Get("/workspaces/{workspaceID}/templates/{templateName}", controller.GetWorkspaceEmailTemplate)
+			r.Post("/workspaces/{workspaceID}/templates", controller.CreateOrUpdateWorkspaceEmailTemplate)
 		})
 	})
 }
@@ -309,15 +322,23 @@ func RegisterGoogleDriveRoutes(r chi.Router, controller controllers.GoogleDriveC
 
 		// Protected routes
 		r.Group(func(r chi.Router) {
-			// r.Use(authMiddleware.VerifyToken)
+			r.Use(authMiddleware.VerifyToken)
 
 			// OAuth management
 			r.Route("/workspaces/{workspaceID}/drive", func(r chi.Router) {
 				r.Get("/auth", controller.GetAuthURL)
+				r.Get("/accounts", controller.GetAccounts)
 				r.Get("/files", controller.ListFiles)
 				r.Get("/testimonial-files", controller.ListTestimonialFiles)
 			})
 		})
+	})
+
+	// Additional routes for frontend compatibility
+	r.Route("/google-drive", func(r chi.Router) {
+		r.Use(authMiddleware.VerifyToken)
+		r.Get("/files", controller.ListFiles)
+		r.Post("/import", controller.ImportFile)
 	})
 }
 
@@ -337,6 +358,8 @@ func RegisterAIProcessorRoutes(r chi.Router, controller controllers.AIProcessorC
 		r.Post("/ai/translate", controller.TranslateText)          // translation
 		r.Post("/ai/sentiment", controller.AnalyzeSentiment)       // sentiment
 		r.Post("/ai/highlights", controller.ExtractHighlights)     // highlight
+		r.Post("/ai/highlights/by-type", controller.ExtractHighlightsByType) // highlight by type
+		r.Post("/ai/highlights/save-order", controller.SaveHighlightOrder)   // save highlight order
 		r.Post("/ai/polish", controller.PolishText)                // polish
 		r.Post("/ai/generate-content", controller.GenerateContent) // generation
 	})
@@ -385,6 +408,20 @@ func RegisterAIProcessorRoutes(r chi.Router, controller controllers.AIProcessorC
 
 		r.Get("/optimized/{sourceType}/{sourceID}", controller.GetOptimizedServiceLineage)
 		r.Delete("/{sourceType}/{sourceID}/cache", controller.InvalidateServiceLineageCache)
+	})
+
+	// AI Artifacts routes - fetch artifacts by workspace
+	r.Route("/ai/workspaces/{workspaceID}", func(r chi.Router) {
+		r.Use(authMiddleware.VerifyToken)
+
+		// Get all artifacts for workspace with optional filtering
+		r.Get("/artifacts", controller.GetArtifactsByWorkspace)
+
+		// Get content generation artifacts (multi-testimonial)
+		r.Get("/content-generation", controller.GetContentGenerationArtifacts)
+
+		// Get story video artifacts
+		r.Get("/story-videos", controller.GetStoryVideoArtifacts)
 	})
 }
 

@@ -33,10 +33,18 @@ func (mc TestimonialRequestController) SendSingleEmail(w http.ResponseWriter, r 
 		return
 	}
 
-	// Basic validation
-	if req.WorkspaceID == "" || req.ContactEmail == "" || req.ContactName == "" || req.CompanyName == "" {
-		mc.respondError(w, http.StatusBadRequest, "Missing required fields", nil)
+	// Basic validation - only require workspace ID and email
+	if req.WorkspaceID == "" || req.ContactEmail == "" {
+		mc.respondError(w, http.StatusBadRequest, "Missing required fields: workspace_id and contact_email", nil)
 		return
+	}
+
+	// Set defaults if not provided
+	if req.ContactName == "" {
+		req.ContactName = "Valued Customer"
+	}
+	if req.CompanyName == "" {
+		req.CompanyName = "Your Organization"
 	}
 
 	response, err := mc.service.SendTestimonialRequest(r.Context(), req)
@@ -235,4 +243,72 @@ func (mc TestimonialRequestController) respondSuccess(w http.ResponseWriter, sta
 	}
 
 	json.NewEncoder(w).Encode(response)
+}
+
+// GetWorkspaceEmailTemplates gets email templates for a workspace
+func (mc TestimonialRequestController) GetWorkspaceEmailTemplates(w http.ResponseWriter, r *http.Request) {
+	workspaceID := chi.URLParam(r, "workspaceID")
+	if workspaceID == "" {
+		mc.respondError(w, http.StatusBadRequest, "Workspace ID is required", nil)
+		return
+	}
+
+	templates, err := mc.service.GetWorkspaceEmailTemplates(r.Context(), workspaceID)
+	if err != nil {
+		mc.logger.Error("Failed to get workspace email templates", zap.Error(err))
+		mc.respondError(w, http.StatusInternalServerError, "Failed to retrieve email templates", err)
+		return
+	}
+
+	mc.respondSuccess(w, http.StatusOK, "Email templates retrieved successfully", templates)
+}
+
+// GetWorkspaceEmailTemplate gets a specific email template for a workspace
+func (mc TestimonialRequestController) GetWorkspaceEmailTemplate(w http.ResponseWriter, r *http.Request) {
+	workspaceID := chi.URLParam(r, "workspaceID")
+	templateName := chi.URLParam(r, "templateName")
+
+	if workspaceID == "" || templateName == "" {
+		mc.respondError(w, http.StatusBadRequest, "Workspace ID and template name are required", nil)
+		return
+	}
+
+	template, err := mc.service.GetWorkspaceEmailTemplate(r.Context(), workspaceID, templateName)
+	if err != nil {
+		mc.logger.Error("Failed to get workspace email template", zap.Error(err))
+		mc.respondError(w, http.StatusNotFound, "Email template not found", err)
+		return
+	}
+
+	mc.respondSuccess(w, http.StatusOK, "Email template retrieved successfully", template)
+}
+
+// CreateOrUpdateWorkspaceEmailTemplate creates or updates an email template for a workspace
+func (mc TestimonialRequestController) CreateOrUpdateWorkspaceEmailTemplate(w http.ResponseWriter, r *http.Request) {
+	workspaceID := chi.URLParam(r, "workspaceID")
+	if workspaceID == "" {
+		mc.respondError(w, http.StatusBadRequest, "Workspace ID is required", nil)
+		return
+	}
+
+	var template models.EmailTemplate
+	if err := json.NewDecoder(r.Body).Decode(&template); err != nil {
+		mc.respondError(w, http.StatusBadRequest, "Invalid request payload", err)
+		return
+	}
+
+	// Basic validation
+	if template.Name == "" || template.Subject == "" || template.HTMLContent == "" {
+		mc.respondError(w, http.StatusBadRequest, "Missing required fields (name, subject, html_content)", nil)
+		return
+	}
+
+	err := mc.service.CreateOrUpdateWorkspaceEmailTemplate(r.Context(), workspaceID, &template)
+	if err != nil {
+		mc.logger.Error("Failed to create/update workspace email template", zap.Error(err))
+		mc.respondError(w, http.StatusInternalServerError, "Failed to save email template", err)
+		return
+	}
+
+	mc.respondSuccess(w, http.StatusOK, "Email template saved successfully", template)
 }
