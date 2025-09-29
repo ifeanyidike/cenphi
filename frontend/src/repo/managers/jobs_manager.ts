@@ -150,9 +150,9 @@ export class JobsManager {
       return `/detail/${job.testimonialId}?jobId=${job.id}`;
     }
 
-    // All story video jobs go to stories page (including multi-testimonial and best_story_moments)
+    // All story video jobs go to ai-content page (including multi-testimonial and best_story_moments)
     if (job.service === "story_mode") {
-      return `/studio/stories/${job.id}`;
+      return `/ai-content`;
     }
 
     // Streaming jobs should open modal (handled differently)

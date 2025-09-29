@@ -74,7 +74,7 @@ const SimpleProof = () => {
                 {[...Array(5)].map((_, i) => (
                   <Star
                     key={i}
-                    className="h-3 w-3 text-yellow-400 fill-current"
+                    className="h-3 w-3 text-gray-400 fill-current"
                   />
                 ))}
               </div>

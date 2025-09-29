@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { workspaceHub } from "@/repo/workspace_hub";
 import { aiStudioManager } from "@/repo/managers/ai_studio_manager";
+import { aiArtifactsManager } from "@/repo/managers/ai_artifacts_manager";
 import VideoPreviewModal from "@/components/TestimonialDetail/VideoPreviewModal";
 
 const StoryVideos: React.FC = observer(() => {
@@ -44,6 +45,30 @@ const StoryVideos: React.FC = observer(() => {
     "recent"
   );
   const [selectedVideo, setSelectedVideo] = useState<any>(null);
+  const [storyArtifacts, setStoryArtifacts] = useState<any[]>([]);
+
+  // Fetch story video artifacts directly
+  useEffect(() => {
+    const fetchStoryArtifacts = async () => {
+      try {
+        const currentWorkspace = workspaceHub.workspace;
+        if (currentWorkspace?.id) {
+          const artifacts = await aiArtifactsManager.getStoryVideoArtifacts(
+            currentWorkspace.id
+          );
+          setStoryArtifacts(
+            artifacts.map((artifact) => ({
+              ...artifact,
+              testimonial_name: "Story Video",
+            }))
+          );
+        }
+      } catch (error) {
+        console.error("Failed to fetch story video artifacts:", error);
+      }
+    };
+    fetchStoryArtifacts();
+  }, []);
 
   // Get story video artifacts and jobs
   const storyJobs = aiStudioManager.jobs.filter(
@@ -77,22 +102,6 @@ const StoryVideos: React.FC = observer(() => {
     }
   }, [jobId, storyJobs]);
 
-  // Get completed story video artifacts from testimonials
-  const allTestimonials = workspaceHub.testimonialManager.testimonials || [];
-  const storyArtifacts = allTestimonials.flatMap((testimonial) =>
-    (testimonial.artifacts || [])
-      .filter(
-        (artifact) =>
-          artifact.processing_type === "story_mode_generation" &&
-          artifact.asset_url
-      )
-      .map((artifact) => ({
-        ...artifact,
-        testimonial_id: testimonial.id,
-        testimonial_name: testimonial.author_name || "Anonymous",
-      }))
-  );
-
   // Combine jobs and artifacts for display
   const allStoryItems = [
     ...storyJobs.map((job) => ({
@@ -114,7 +123,10 @@ const StoryVideos: React.FC = observer(() => {
       status: "completed" as const,
       created_at: new Date(artifact.created_at || Date.now()),
       progress: 100,
-      source_count: artifact.data?.source_testimonials?.length || 1,
+      source_count:
+        artifact.data?.testimonial_ids?.length ||
+        artifact.data?.source_testimonials?.length ||
+        1,
       video_url: artifact.asset_url,
       metadata: artifact.data,
       testimonial_id: artifact.testimonial_id,
@@ -168,14 +180,6 @@ const StoryVideos: React.FC = observer(() => {
       });
     }
   };
-
-  //   const formatDuration = (startTime: Date, endTime?: Date) => {
-  //     if (!endTime) return "Processing...";
-  //     const duration = endTime.getTime() - startTime.getTime();
-  //     const minutes = Math.floor(duration / 60000);
-  //     const seconds = Math.floor((duration % 60000) / 1000);
-  //     return `${minutes}m ${seconds}s`;
-  //   };
 
   return (
     <div className="min-h-screen ">

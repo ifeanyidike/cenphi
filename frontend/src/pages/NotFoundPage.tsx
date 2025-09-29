@@ -218,7 +218,7 @@ const DigitalGlitchText: React.FC<{
 
     const glitchReveal = async () => {
       await new Promise((resolve) => {
-        timeout = setTimeout(resolve, delay);
+        timeout = window.setTimeout(resolve, delay);
       });
 
       // Start with digital gibberish

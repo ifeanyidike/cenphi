@@ -43,7 +43,65 @@ export function NavMain({
         {items.map((item) => {
           const isActive = activeItem === item.title;
           const isHovered = hoveredItem === item.title;
+          const hasSubItems = item.items && item.items.length > 0;
 
+          // For items without sub-items, render as direct link
+          if (!hasSubItems) {
+            return (
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton
+                  asChild
+                  tooltip={item.title}
+                  className={`relative rounded-lg transition-all duration-200
+                    ${
+                      isActive
+                        ? "bg-sidebar-item-active text-sidebar-item-active-foreground hover:!text-white font-medium"
+                        : "hover:bg-sidebar-item-hover "
+                    }`}
+                  onMouseEnter={() => setHoveredItem(item.title)}
+                  onMouseLeave={() => setHoveredItem(null)}
+                >
+                  <a href={item.url} className="flex items-center w-full">
+                    {isActive && (
+                      <motion.div
+                        layoutId="activeNavBackground"
+                        className="absolute inset-0 bg-gradient-to-br from-sidebar-accent/30 to-sidebar-accent/10 rounded-lg"
+                        initial={false}
+                        transition={{
+                          type: "spring",
+                          stiffness: 300,
+                          damping: 30,
+                        }}
+                      />
+                    )}
+                    {item.icon && (
+                      <motion.div
+                        whileHover={{ scale: 1.1 }}
+                        className={`${
+                          isActive ? "" : "text-sidebar-item-icon"
+                        }`}
+                      >
+                        <item.icon className="size-5" />
+                      </motion.div>
+                    )}
+                    <span className="truncate">{item.title}</span>
+                    {(isActive || isHovered) && (
+                      <motion.div
+                        className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-2/3 bg-sidebar-accent rounded-r-full"
+                        layoutId="activeNavIndicator"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                      />
+                    )}
+                  </a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          }
+
+          // For items with sub-items, render as collapsible
           return (
             <Collapsible
               key={item.title}
@@ -80,7 +138,6 @@ export function NavMain({
                     {item.icon && (
                       <motion.div
                         whileHover={{ scale: 1.1 }}
-                        // text-sidebar-item-active-icon
                         className={`${
                           isActive ? "" : "text-sidebar-item-icon"
                         }`}

@@ -15,7 +15,7 @@ const FutureShowcase = () => {
       description:
         "See how our AI analyzes testimonial sentiment and automatically generates compelling blog posts, social media content, and email campaigns.",
       icon: Sparkles,
-      color: "from-blue-500 to-cyan-500",
+      color: "from-blue-500 to-blue-600",
       preview: {
         input:
           "Amazing product! It increased our sales by 40% in just 2 months. The support team is incredible.",
@@ -44,7 +44,7 @@ const FutureShowcase = () => {
       description:
         "Our AI automatically transcribes, edits, and optimizes video testimonials for maximum impact across all platforms.",
       icon: Play,
-      color: "from-purple-500 to-pink-500",
+      color: "from-gray-500 to-gray-600",
       preview: {
         input: "Raw customer video testimonial",
         outputs: [
@@ -69,7 +69,7 @@ const FutureShowcase = () => {
       description:
         "Track how testimonials drive conversions, attribute revenue, and optimize placement for maximum ROI.",
       icon: TrendingUp,
-      color: "from-green-500 to-emerald-500",
+      color: "from-blue-500 to-blue-600",
       preview: {
         input: "Testimonial performance data",
         outputs: [
@@ -268,9 +268,9 @@ const FutureShowcase = () => {
                           initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: index * 0.2 }}
-                          className="bg-green-50 border border-green-200 p-3 rounded-lg"
+                          className="bg-blue-50 border border-blue-200 p-3 rounded-lg"
                         >
-                          <div className="text-xs font-semibold text-green-700 mb-1">
+                          <div className="text-xs font-semibold text-blue-700 mb-1">
                             {output.type}
                           </div>
                           <div className="text-sm text-gray-800">

@@ -50,9 +50,14 @@ import FeatureHint from "./FeatureHint";
 import VideoPreviewModal from "./VideoPreviewModal";
 import ProcessingLineageModal from "./ServiceLineageModal";
 import { aiStudioManager } from "@/repo/managers/ai_studio_manager";
-import { ServiceType } from "@/types/ai-service";
+import { ServiceType, Segment } from "@/types/ai-service";
 import { preset_manager } from "@/repo/managers/preset_manager";
 import { AI_SERVICES } from "../ai-studio/definitions";
+import ContextualContentFilter from "../smart-navigation/ContextualContentFilter";
+import SmartNavigationBanner from "../smart-navigation/SmartNavigationBanner";
+import { HighlightType } from "@/utils/highlights";
+import { shouldShowInContext } from "@/utils/ContentRouter";
+import { TestimonialArtifact } from "@/types/testimonial";
 
 // Enhanced types for specific artifact data structures
 interface SentimentData {
@@ -136,6 +141,8 @@ const TestimonialDetail = observer(() => {
     open: boolean;
     sourceContent: any;
   }>({ open: false, sourceContent: null });
+  const [showCrossReferences, setShowCrossReferences] = useState(false);
+  const [, setFilteredArtifacts] = useState<TestimonialArtifact[]>([]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const fullscreenRef = useRef<HTMLDivElement>(null);
@@ -339,6 +346,48 @@ const TestimonialDetail = observer(() => {
     navigate(`/ai-studio?type=${artifactType}&testimonialId=${testimonialId}`);
   };
 
+  // Handle generating highlights by type directly in the detail page
+  const handleGenerateHighlightsByType = async (type: HighlightType) => {
+    if (!testimonial?.id) return;
+
+    try {
+      // Use the testimonial's transcript data directly
+      const text = testimonial.content || "";
+      const segments = testimonial.transcript_segments || [];
+
+      if (text) {
+        await aiStudioManager.generateHighlightsByType(
+          testimonial.id,
+          text,
+          segments,
+          type
+        );
+
+        // Refresh testimonial data to get new highlights
+        await workspaceHub.testimonialManager.getTestimonials();
+      }
+    } catch (error) {
+      console.error(`Failed to generate ${type} highlights:`, error);
+    }
+  };
+
+  // Handle saving highlight order
+  const handleSaveHighlightOrder = async (
+    type: HighlightType,
+    segments: Segment[]
+  ) => {
+    if (!testimonial?.id) return;
+
+    try {
+      // Use real segment IDs for reordering
+      const highlightIds = segments.map(segment => segment.id);
+      await aiStudioManager.saveHighlightOrder(testimonial.id, highlightIds);
+    } catch (error) {
+      console.error("Failed to save highlight order:", error);
+      throw error;
+    }
+  };
+
   const handleProcessMultipleClips = async (
     clips: any[],
     serviceType: ServiceType
@@ -451,41 +500,49 @@ const TestimonialDetail = observer(() => {
   const isVideoTestimonial = testimonial.type === "video";
   const artifacts = testimonial.artifacts || [];
 
-  // Parse different artifact types
-  const sentimentArtifact = artifacts.find(
+  // Filter artifacts based on context and user preferences
+  const contextualArtifacts = artifacts.filter((artifact) => {
+    const shouldShow = shouldShowInContext(artifact, "testimonial-detail");
+    if (!shouldShow.show) return false;
+    if (shouldShow.isPrimary) return true;
+    return showCrossReferences;
+  });
+
+  // Parse different artifact types from contextual artifacts
+  const sentimentArtifact = contextualArtifacts.find(
     (a) => a.processing_type === "sentiment_analysis"
   );
-  const highlightArtifacts = artifacts.filter(
+  const highlightArtifacts = contextualArtifacts.filter(
     (a) => a.processing_type === "highlight_extraction"
   );
-  const clippingArtifacts = artifacts.filter(
+  const clippingArtifacts = contextualArtifacts.filter(
     (a) => a.processing_type === "clipping"
   );
-  const storyArtifacts = artifacts.filter(
+  const storyArtifacts = contextualArtifacts.filter(
     (a) => a.processing_type === "story_mode_generation"
   );
-  const enhancementArtifacts = artifacts.filter(
+  const enhancementArtifacts = contextualArtifacts.filter(
     (a) => a.processing_type === "enhancement"
   );
-  const platformVideoArtifacts = artifacts.filter(
+  const platformVideoArtifacts = contextualArtifacts.filter(
     (a) => a.processing_type === "video_platform_optimization"
   );
-  const platformTextArtifacts = artifacts.filter(
+  const platformTextArtifacts = contextualArtifacts.filter(
     (a) => a.processing_type === "text_platform_optization"
   );
-  const contentGenArtifacts = artifacts.filter(
+  const contentGenArtifacts = contextualArtifacts.filter(
     (a) => a.processing_type === "content_generation"
   );
-  const polishingArtifacts = artifacts.filter(
+  const polishingArtifacts = contextualArtifacts.filter(
     (a) => a.processing_type === "text_polishing"
   );
-  const narrationArtifacts = artifacts.filter(
+  const narrationArtifacts = contextualArtifacts.filter(
     (a) => a.processing_type === "narration"
   );
-  const translationArtifacts = artifacts.filter(
+  const translationArtifacts = contextualArtifacts.filter(
     (a) => a.processing_type === "translation"
   );
-  const viralAnalysisArtifacts = artifacts.filter(
+  const viralAnalysisArtifacts = contextualArtifacts.filter(
     (a) => a.processing_type === "viral_analysis"
   );
 
@@ -498,14 +555,14 @@ const TestimonialDetail = observer(() => {
       return "bg-red-50 text-red-700 border-red-200";
     if (label.includes("neutral"))
       return "bg-slate-50 text-slate-700 border-slate-200";
-    return "bg-blue-50 text-blue-700 border-blue-200";
+    return "bg-gray-50 text-gray-700 border-gray-200";
   };
 
   // Render sentiment analysis
   const renderSentimentAnalysis = () => {
     if (!sentiment) {
       return (
-        <Card className="border-0 shadow-lg shadow-slate-100 bg-gradient-to-br from-white to-slate-50/30">
+        <Card className="border border-gray-200 bg-white">
           <CardContent className="p-12 text-center">
             <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-6">
               <Brain className="h-8 w-8 text-slate-400" />
@@ -533,7 +590,7 @@ const TestimonialDetail = observer(() => {
       <div className="space-y-8">
         {/* Overall Sentiment */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <Card className="border-0 shadow-lg shadow-slate-100 bg-gradient-to-br from-white to-slate-50/30">
+          <Card className="border border-gray-200 bg-white">
             <CardHeader className="pb-6">
               <CardTitle className="flex items-center gap-3 text-lg">
                 <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
@@ -573,7 +630,7 @@ const TestimonialDetail = observer(() => {
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-lg shadow-slate-100 bg-gradient-to-br from-white to-slate-50/30">
+          <Card className="border border-gray-200 bg-white">
             <CardHeader className="pb-6">
               <CardTitle className="flex items-center gap-3 text-lg">
                 <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
@@ -594,7 +651,7 @@ const TestimonialDetail = observer(() => {
                 </div>
                 <div className="w-full bg-slate-200 rounded-full h-4">
                   <div
-                    className="bg-gradient-to-r from-slate-600 to-slate-700 h-4 rounded-full transition-all duration-500 shadow-sm"
+                    className="bg-gray-600 h-4 rounded-full transition-all duration-500"
                     style={{ width: `${sentiment.sentiment_score * 100}%` }}
                   />
                 </div>
@@ -608,7 +665,7 @@ const TestimonialDetail = observer(() => {
         </div>
 
         {/* Business Recommendations */}
-        <Card className="border-0 shadow-lg shadow-slate-100 bg-gradient-to-br from-white to-slate-50/30">
+        <Card className="border border-gray-200 bg-white">
           <CardHeader className="pb-6">
             <CardTitle className="flex items-center gap-3 text-lg">
               <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
@@ -838,22 +895,32 @@ const TestimonialDetail = observer(() => {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto p-6">
+      <div className="max-w-7xl mx-auto p-6 space-y-6">
+        {/* Smart Navigation Banner */}
+        <SmartNavigationBanner
+          currentContext="testimonial-detail"
+          onNavigate={(target) => {
+            if (target === "ai-hub") {
+              navigate("/ai-content");
+            }
+          }}
+        />
+
         <Tabs
           value={activeTab}
           onValueChange={setActiveTab}
           className="space-y-8"
         >
           <MainTabs
-            artifactsCount={artifacts.length}
+            artifactsCount={contextualArtifacts.length}
             completedFeaturesCount={getCompletedFeaturesCount(
-              artifacts,
+              contextualArtifacts,
               testimonial.type as "video" | "text"
             )}
             totalFeaturesCount={getTotalFeaturesCount(
               testimonial.type as "video" | "text"
             )}
-            hasNewFeatures={artifacts.length === 0} // Show "New" badge if no artifacts yet
+            hasNewFeatures={contextualArtifacts.length === 0} // Show "New" badge if no artifacts yet
           />
 
           <TabsContent value="overview" className="space-y-8">
@@ -861,7 +928,7 @@ const TestimonialDetail = observer(() => {
               {/* Main Content */}
               <div className="lg:col-span-3 space-y-8">
                 {/* Video Player / Content Display */}
-                <Card className="border-0 shadow-lg shadow-slate-100 bg-gradient-to-br from-white to-slate-50/30">
+                <Card className="border border-gray-200 bg-white">
                   <CardContent className="p-0">
                     {isVideoTestimonial && testimonial.media_url ? (
                       <div className="space-y-6">
@@ -1008,7 +1075,7 @@ const TestimonialDetail = observer(() => {
 
                 <AIFeaturesDiscovery
                   testimonialType={testimonial.type as "video" | "text"}
-                  artifacts={artifacts}
+                  artifacts={contextualArtifacts}
                   onFeatureClick={handleFeatureClick}
                   onViewAllFeatures={handleViewAllFeatures}
                 />
@@ -1017,7 +1084,7 @@ const TestimonialDetail = observer(() => {
                 {isVideoTestimonial &&
                   testimonial.content &&
                   showTranscript && (
-                    <Card className="border-0 shadow-lg shadow-slate-100 bg-gradient-to-br from-white to-slate-50/30">
+                    <Card className="border border-gray-200 bg-white">
                       <CardHeader className="pb-4">
                         <div className="flex items-center justify-between">
                           <CardTitle className="text-lg flex items-center gap-3">
@@ -1061,6 +1128,15 @@ const TestimonialDetail = observer(() => {
           </TabsContent>
 
           <TabsContent value="artifacts" className="space-y-8">
+            {/* Smart Content Context Filter */}
+            <ContextualContentFilter
+              artifacts={artifacts}
+              currentContext="testimonial-detail"
+              showCrossReferences={showCrossReferences}
+              onToggleCrossReferences={setShowCrossReferences}
+              onFilterChange={setFilteredArtifacts}
+            />
+
             <Tabs
               value={activeArtifactTab}
               onValueChange={setActiveArtifactTab}
@@ -1156,12 +1232,9 @@ const TestimonialDetail = observer(() => {
                     <HighlightsTab
                       artifacts={highlightArtifacts}
                       videoUrl={testimonial.media_url || ""}
-                      onGenerateHighlights={(type) =>
-                        goToAIStudio(`highlight_${type}`)
-                      }
-                      onRegenerateHighlights={(type) =>
-                        goToAIStudio(`highlight_${type}`)
-                      }
+                      onGenerateHighlights={handleGenerateHighlightsByType}
+                      onRegenerateHighlights={handleGenerateHighlightsByType}
+                      onSaveHighlightOrder={handleSaveHighlightOrder}
                     />
                   </TabsContent>
                   <TabsContent value="clipping">

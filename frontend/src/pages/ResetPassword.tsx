@@ -7,8 +7,8 @@ import {
   RequestResetForm,
   ResetPasswordForm,
 } from "@/components/auth/reset-password";
-import Navbar from "@/components/nav";
 import Footer from "@/components/custom/footer";
+import Navbar from "@/components/landing/Navbar";
 
 const ResetPasswordPage = observer(() => {
   const [searchParams] = useSearchParams();
@@ -76,7 +76,7 @@ const ResetPasswordPage = observer(() => {
         src="/media/img/telling-story.jpg"
         className="max-h-96 max-sm:mt-16"
       />
-      <Navbar alwaysDarkText={true} />
+      <Navbar />
 
       <div className="w-full max-w-sm md:max-w-xl mx-auto py-8 xl:py-20 2xl:py-24">
         {actionCode && !email ? (

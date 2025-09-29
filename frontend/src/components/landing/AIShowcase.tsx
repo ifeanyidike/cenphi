@@ -639,8 +639,8 @@ function FeatureNavigation({
           <span
             className={`text-xs px-2 py-1 rounded-md ${
               isDarkMode
-                ? "bg-green-500/20 text-green-400"
-                : "bg-green-500/10 text-green-600"
+                ? "bg-blue-500/20 text-blue-400"
+                : "bg-blue-500/10 text-blue-600"
             }`}
           >
             97% Accurate

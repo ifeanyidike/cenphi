@@ -20,8 +20,6 @@ export const StatCard: React.FC<StatCardProps> = ({
   title,
   icon: Icon,
   message,
-  color,
-  accentColor,
   value,
   trend,
   percentage,
@@ -32,19 +30,14 @@ export const StatCard: React.FC<StatCardProps> = ({
       <StatCardSkeleton />
     ) : (
       <motion.div variants={itemVariants}>
-        <Card className="group border border-gray-200/60 shadow-sm hover:shadow-md hover:border-gray-300/80 transition-all duration-200 bg-white/80 backdrop-blur-sm">
-          <div className={`h-0.5 ${accentColor} w-full opacity-60`} />
+        <Card className="border border-gray-200 hover:border-gray-300 transition-colors bg-white">
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
-                <div
-                  className={`p-2 rounded-lg ${color} group-hover:shadow-sm transition-all duration-200`}
-                >
-                  <Icon className="h-4 w-4 text-white" />
+                <div className="w-8 h-8 rounded bg-gray-100 flex items-center justify-center">
+                  <Icon className="h-4 w-4 text-gray-600" />
                 </div>
-                <h3 className="text-sm font-medium text-gray-700 leading-tight">
-                  {title}
-                </h3>
+                <h3 className="text-xs font-medium text-gray-900">{title}</h3>
               </div>
 
               {trend && (
@@ -69,13 +62,11 @@ export const StatCard: React.FC<StatCardProps> = ({
 
             <div className="space-y-1">
               {value ? (
-                <div className="text-2xl font-semibold text-gray-900 tracking-tight">
+                <div className="text-lg font-semibold text-gray-900">
                   {value}
                 </div>
               ) : (
-                <div className="text-sm text-gray-600 leading-relaxed">
-                  {message}
-                </div>
+                <div className="text-xs text-gray-600">{message}</div>
               )}
 
               {value && (

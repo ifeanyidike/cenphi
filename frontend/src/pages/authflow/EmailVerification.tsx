@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { getAuth, applyActionCode, sendEmailVerification } from "firebase/auth";
 import { CheckCircle, AlertTriangle, Loader2 } from "lucide-react";
-import confetti from "canvas-confetti";
 import { useNavigate } from "react-router-dom";
-import Navbar from "@/components/nav";
 import Footer from "@/components/custom/footer";
 import { FirebaseErrorHandler } from "@/services/error";
 import { authStore } from "@/stores/authStore";
 import { observer } from "mobx-react-lite";
+import Navbar from "@/components/landing/Navbar";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 
 // Verification states
 type VerificationStatus = "loading" | "success" | "error";
@@ -45,15 +46,8 @@ const EmailVerificationPage: React.FC<Props> = observer((props) => {
           return;
         }
 
-        // If successful, update status and trigger confetti
+        // If successful, update status
         setStatus("success");
-
-        // Trigger confetti effect
-        confetti({
-          particleCount: 100,
-          spread: 70,
-          origin: { y: 0.6 },
-        });
 
         // Start countdown for redirect
         const timer = setInterval(() => {
@@ -83,100 +77,100 @@ const EmailVerificationPage: React.FC<Props> = observer((props) => {
   }, []);
 
   return (
-    <div className=" bg-gradient-to-br from-indigo-100 via-white to-blue-100">
-      <Navbar alwaysDarkText />
-      <div className="flex items-center justify-center p-4 py-48">
+    <div className="min-h-screen bg-gray-50">
+      <Navbar />
+      <div className="flex items-center justify-center px-4 py-24">
         <div className="w-full max-w-md">
-          <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-            <div className="px-8 pt-8 pb-2">
-              {/* <div className="flex justify-center mb-4 font-playball text-2xl">
-                Cenphi
-              </div> */}
-              <h1 className="text-2xl font-bold text-center text-gray-800">
-                Email Verification
-              </h1>
-            </div>
+          <Card className="border border-gray-200 shadow-sm">
+            <CardContent className="p-6">
+              <div className="text-center mb-6">
+                <h1 className="text-lg font-medium text-gray-900 mb-1">
+                  Email Verification
+                </h1>
+                <p className="text-sm text-gray-600">
+                  Please wait while we verify your email address
+                </p>
+              </div>
 
-            <div className="p-8 pt-2">
               {status === "loading" && (
-                <div className="flex flex-col items-center justify-center py-8">
-                  <Loader2 className="h-16 w-16 text-blue-500 animate-spin mb-4" />
-                  <p className="text-gray-600 text-center">
+                <div className="flex flex-col items-center py-6">
+                  <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mb-3">
+                    <Loader2 className="h-4 w-4 text-gray-600 animate-spin" />
+                  </div>
+                  <p className="text-sm text-gray-600">
                     Verifying your email address...
                   </p>
                 </div>
               )}
 
               {status === "success" && (
-                <div className="flex flex-col items-center justify-center py-8">
-                  <div className="relative">
-                    <div className="absolute inset-0 rounded-full bg-green-100 animate-ping opacity-50"></div>
-                    <CheckCircle className="h-16 w-16 text-green-500 relative z-10 mb-4" />
+                <div className="text-center">
+                  <div className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-3">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
                   </div>
-                  <h2 className="text-xl font-semibold text-gray-800 mb-2">
-                    Email Verified Successfully!
+                  <h2 className="text-base font-medium text-gray-900 mb-2">
+                    Email Verified
                   </h2>
-                  <p className="text-gray-600 text-center mb-6">
-                    Thank you for verifying your email address.
+                  <p className="text-sm text-gray-600 mb-4">
+                    Your email has been successfully verified.
                   </p>
-                  <div className="bg-blue-50 rounded-lg p-4 w-full">
-                    <p className="text-blue-800 text-center">
+
+                  <div className="bg-gray-50 rounded-md p-3 mb-4">
+                    <p className="text-xs text-gray-700">
                       Redirecting to onboarding in{" "}
-                      <span className="font-bold">{countdown}</span> seconds...
+                      <span className="font-medium">{countdown}</span> seconds
                     </p>
                   </div>
-                  <button
-                    onClick={() =>
-                      navigate("/pricing?workflow=onboarding")
-                    }
-                    className="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+
+                  <Button
+                    onClick={() => navigate("/pricing?workflow=onboarding")}
+                    className="w-full text-sm h-9"
                   >
-                    Go to Onboarding Now
-                  </button>
+                    Continue to Onboarding
+                  </Button>
                 </div>
               )}
 
               {status === "error" && (
-                <div className="flex flex-col items-center justify-center py-8">
-                  <div className="bg-red-50 p-4 rounded-full mb-4">
-                    <AlertTriangle className="h-16 w-16 text-red-500" />
+                <div className="text-center">
+                  <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-3">
+                    <AlertTriangle className="h-4 w-4 text-red-600" />
                   </div>
-                  <h2 className="text-xl font-semibold text-gray-800 mb-2">
+                  <h2 className="text-base font-medium text-gray-900 mb-2">
                     Verification Failed
                   </h2>
-                  <p className="text-gray-600 text-center mb-6">
+                  <p className="text-sm text-gray-600 mb-4">
                     {errorMessage ||
-                      "There was a problem verifying your email. The link may have expired or already been used."}
+                      "The verification link may have expired or already been used."}
                   </p>
-                  <div className="flex flex-col gap-3 w-full">
-                    <button
+
+                  <div className="space-y-2">
+                    <Button
                       onClick={() => {
                         if (auth.currentUser) {
                           sendEmailVerification(auth.currentUser);
                         }
                       }}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+                      className="w-full text-sm h-9"
                     >
                       Resend Verification Email
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       onClick={() => navigate("/support")}
-                      className="w-full bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium py-3 px-4 rounded-lg transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50"
+                      variant="outline"
+                      className="w-full text-sm h-9"
                     >
                       Contact Support
-                    </button>
+                    </Button>
                   </div>
                 </div>
               )}
-            </div>
+            </CardContent>
+          </Card>
 
-            <div className="px-8 py-4 bg-gray-50 border-t border-gray-100">
-              <p className="text-sm text-gray-500 text-center">
-                If you didn't request this verification, please ignore this
-                email.
-              </p>
-            </div>
-          </div>
+          <p className="text-xs text-gray-500 text-center mt-4">
+            If you didn't request this verification, you can safely ignore this.
+          </p>
         </div>
       </div>
       <Footer />

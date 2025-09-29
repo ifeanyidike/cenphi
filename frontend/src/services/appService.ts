@@ -51,7 +51,7 @@ class AppService {
       this.checkHealth();
       this.healthInterval = setInterval(() => {
         this.checkHealth();
-      }, interval);
+      }, interval) as any;
     } else {
       console.log("Health check already running, ignoring duplicate start");
     }

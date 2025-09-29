@@ -38,11 +38,11 @@ const Essentials: FC<EssentialsProps> = ({
       <motion.div variants={itemVariants}>
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2">
-              <Flag className="h-5 w-5 text-primary" />
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <Flag className="h-4 w-4 text-primary" />
               Brand Essentials
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs">
               Define the core elements that make your brand unique and
               recognizable
             </CardDescription>
@@ -51,7 +51,7 @@ const Essentials: FC<EssentialsProps> = ({
             {/* Brand identity */}
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="brand-name">Brand Name</Label>
+                <Label htmlFor="brand-name" className="text-xs">Brand Name</Label>
                 <Input
                   id="brand-name"
                   placeholder="Your Brand Name"
@@ -59,11 +59,12 @@ const Essentials: FC<EssentialsProps> = ({
                   onChange={(e) =>
                     store.updateBrandData(["name"], e.target.value)
                   }
+                  className="text-xs h-8"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="brand-tagline">Tagline</Label>
+                <Label htmlFor="brand-tagline" className="text-xs">Tagline</Label>
                 <Input
                   id="brand-tagline"
                   placeholder="Your compelling tagline"
@@ -71,6 +72,7 @@ const Essentials: FC<EssentialsProps> = ({
                   onChange={(e) =>
                     store.updateBrandData(["tagline"], e.target.value)
                   }
+                  className="text-xs h-8"
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   A concise phrase that captures your brand's value proposition
@@ -78,7 +80,7 @@ const Essentials: FC<EssentialsProps> = ({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="brand-description">Brand Description</Label>
+                <Label htmlFor="brand-description" className="text-xs">Brand Description</Label>
                 <Textarea
                   id="brand-description"
                   placeholder="Briefly describe what makes your brand unique"
@@ -86,7 +88,7 @@ const Essentials: FC<EssentialsProps> = ({
                   onChange={(e) =>
                     store.updateBrandData(["description"], e.target.value)
                   }
-                  className="min-h-[100px]"
+                  className="min-h-[80px] text-xs"
                 />
               </div>
             </div>
@@ -94,7 +96,7 @@ const Essentials: FC<EssentialsProps> = ({
             {/* Brand logo - Simplified */}
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="logo-url">Logo URL</Label>
+                <Label htmlFor="logo-url" className="text-xs">Logo URL</Label>
                 <Input
                   id="logo-url"
                   type="url"
@@ -103,6 +105,7 @@ const Essentials: FC<EssentialsProps> = ({
                   onChange={(e) =>
                     store.updateBrandData(["logo", "main"], e.target.value)
                   }
+                  className="text-xs h-8"
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   Paste the direct URL to your logo image (PNG, JPG, or SVG)
@@ -112,7 +115,7 @@ const Essentials: FC<EssentialsProps> = ({
               {/* Live Preview */}
               {brandData.logo.main && (
                 <div className="space-y-2">
-                  <Label>Live Preview</Label>
+                  <Label className="text-xs">Live Preview</Label>
                   <div className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-900">
                     <div className="max-w-48 max-h-20 mx-auto">
                       <img
@@ -137,11 +140,11 @@ const Essentials: FC<EssentialsProps> = ({
       <motion.div variants={itemVariants}>
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-primary" />
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <Users className="h-4 w-4 text-primary" />
               Brand Voice & Context
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs">
               Define your brand's personality, values, and target audience
             </CardDescription>
           </CardHeader>
@@ -150,7 +153,7 @@ const Essentials: FC<EssentialsProps> = ({
               {/* Left Column */}
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="industry">Industry</Label>
+                  <Label htmlFor="industry" className="text-xs">Industry</Label>
                   <Input
                     id="industry"
                     placeholder="e.g., Technology, Healthcare, Finance"
@@ -160,6 +163,7 @@ const Essentials: FC<EssentialsProps> = ({
                       const newAttributes = e.target.value ? [e.target.value, ...currentAttributes.slice(1)] : currentAttributes.slice(1);
                       store.updateBrandData(["voice", "attributes"], newAttributes);
                     }}
+                    className="text-xs h-8"
                   />
                   <p className="text-xs text-gray-500 dark:text-gray-400">
                     Your primary business industry or sector
@@ -167,12 +171,12 @@ const Essentials: FC<EssentialsProps> = ({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="tone">Brand Tone</Label>
+                  <Label htmlFor="tone" className="text-xs">Brand Tone</Label>
                   <Select
                     value={brandData.voice?.tone || ""}
                     onValueChange={(value) => store.updateBrandData(["voice", "tone"], value)}
                   >
-                    <SelectTrigger id="tone">
+                    <SelectTrigger id="tone" className="text-xs h-8">
                       <SelectValue placeholder="Select brand tone" />
                     </SelectTrigger>
                     <SelectContent>
@@ -191,7 +195,7 @@ const Essentials: FC<EssentialsProps> = ({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="values">Brand Values</Label>
+                  <Label htmlFor="values" className="text-xs">Brand Values</Label>
                   <Input
                     id="values"
                     placeholder="e.g., innovation, reliability, customer-first"
@@ -200,6 +204,7 @@ const Essentials: FC<EssentialsProps> = ({
                       const values = e.target.value.split(",").map(v => v.trim()).filter(v => v);
                       store.updateBrandData(["voice", "personality"], values);
                     }}
+                    className="text-xs h-8"
                   />
                   <p className="text-xs text-gray-500 dark:text-gray-400">
                     Core values that define your brand (comma-separated)
@@ -210,13 +215,14 @@ const Essentials: FC<EssentialsProps> = ({
               {/* Right Column */}
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="mission">Mission Statement</Label>
+                  <Label htmlFor="mission" className="text-xs">Mission Statement</Label>
                   <Textarea
                     id="mission"
                     placeholder="A brief description of your company's mission and purpose"
                     value={brandData.mission || ""}
                     onChange={(e) => store.updateBrandData(["mission"], e.target.value)}
                     rows={3}
+                    className="text-xs"
                   />
                   <p className="text-xs text-gray-500 dark:text-gray-400">
                     Your company's mission and core purpose
@@ -224,13 +230,14 @@ const Essentials: FC<EssentialsProps> = ({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="audience">Target Audience</Label>
+                  <Label htmlFor="audience" className="text-xs">Target Audience</Label>
                   <Textarea
                     id="audience"
                     placeholder="Describe your ideal customers and target market"
                     value={brandData.audience || ""}
                     onChange={(e) => store.updateBrandData(["audience"], e.target.value)}
                     rows={3}
+                    className="text-xs"
                   />
                   <p className="text-xs text-gray-500 dark:text-gray-400">
                     Who your products or services are designed for
@@ -245,11 +252,11 @@ const Essentials: FC<EssentialsProps> = ({
       <motion.div variants={itemVariants}>
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <Sparkles className="h-4 w-4 text-primary" />
               Brand Presets
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs">
               Start with a predefined style and customize to fit your brand
               identity
             </CardDescription>
@@ -282,7 +289,7 @@ const Essentials: FC<EssentialsProps> = ({
                   </div>
                   <div className="p-3">
                     <div className="flex items-center justify-between mb-1">
-                      <h3 className="font-medium text-sm">{preset.name}</h3>
+                      <h3 className="font-medium text-xs">{preset.name}</h3>
                       {selectedPreset === preset.id && (
                         <CheckCircle className="h-4 w-4 text-primary" />
                       )}

@@ -13,8 +13,8 @@ import {
   ChevronDown,
   Sparkles,
 } from "lucide-react";
-import Navbar from "@/components/nav";
 import Footer from "@/components/custom/footer";
+import Navbar from "@/components/landing/Navbar";
 
 interface PricingTier {
   id: string;
@@ -183,7 +183,7 @@ const PricingPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar alwaysDarkText />
+      <Navbar />
 
       {/* Header Section */}
       <div className="max-w-5xl mx-auto px-6 pt-32 pb-12">
