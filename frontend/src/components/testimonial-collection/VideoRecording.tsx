@@ -650,8 +650,7 @@ const VideoRecording: React.FC<VideoRecordingProps> = ({
           {/* Personal details form */}
           {(recordedBlobRef.current || uploadedFile) &&
             !showMobileTransfer &&
-            recordingState.status !== "completed" &&
-            recordingState.status !== "uploading" && (
+            recordingState.status !== "completed" && (
               <PersonalDetailsForm
                 formData={formData}
                 setFormData={setFormData}

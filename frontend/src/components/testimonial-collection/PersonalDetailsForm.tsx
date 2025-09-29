@@ -37,9 +37,7 @@ const PersonalDetailsForm: React.FC<PersonalDetailsFormProps> = ({
         <input
           type="text"
           value={formData.name}
-          onChange={(e) =>
-            setFormData({ ...formData, name: e.target.value })
-          }
+          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
           className="px-2.5 py-1.5 border border-gray-200 rounded-md text-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
           placeholder="Your full name"
           required
@@ -48,9 +46,7 @@ const PersonalDetailsForm: React.FC<PersonalDetailsFormProps> = ({
         <input
           type="email"
           value={formData.email}
-          onChange={(e) =>
-            setFormData({ ...formData, email: e.target.value })
-          }
+          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
           className="px-2.5 py-1.5 border border-gray-200 rounded-md text-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
           placeholder="Email address"
           required
@@ -61,9 +57,7 @@ const PersonalDetailsForm: React.FC<PersonalDetailsFormProps> = ({
       <input
         type="text"
         value={formData.company}
-        onChange={(e) =>
-          setFormData({ ...formData, company: e.target.value })
-        }
+        onChange={(e) => setFormData({ ...formData, company: e.target.value })}
         className="w-full px-2.5 py-1.5 border border-gray-200 rounded-md text-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors mb-3"
         placeholder="Company name (optional)"
         disabled={isSubmitting}
@@ -71,9 +65,7 @@ const PersonalDetailsForm: React.FC<PersonalDetailsFormProps> = ({
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
-          <span className="text-xs font-medium text-gray-700">
-            Rating:
-          </span>
+          <span className="text-xs font-medium text-gray-700">Rating:</span>
           {[1, 2, 3, 4, 5].map((rating) => (
             <button
               key={rating}
