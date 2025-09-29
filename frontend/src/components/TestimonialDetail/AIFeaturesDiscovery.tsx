@@ -30,10 +30,10 @@ const SERVICE_CONFIGS = {
     icon: Scissors,
     title: "Smart Clipping",
     description: "Extract impactful moments automatically",
-    gradient: "from-blue-500 to-blue-600",
-    accentColor: "bg-blue-50/80 border-blue-200/50",
-    textColor: "text-blue-700",
-    hoverColor: "hover:bg-blue-50/50",
+    gradient: "from-gray-500 to-gray-600",
+    accentColor: "bg-gray-50/80 border-gray-200/50",
+    textColor: "text-gray-700",
+    hoverColor: "hover:bg-gray-50/50",
     benefits: [
       "Auto-detect highlights",
       "Engagement scoring",
@@ -46,10 +46,10 @@ const SERVICE_CONFIGS = {
     icon: Video,
     title: "Story Videos",
     description: "Create compelling narrative videos",
-    gradient: "from-purple-500 to-purple-600",
-    accentColor: "bg-purple-50/80 border-purple-200/50",
-    textColor: "text-purple-700",
-    hoverColor: "hover:bg-purple-50/50",
+    gradient: "from-gray-500 to-gray-600",
+    accentColor: "bg-gray-50/80 border-gray-200/50",
+    textColor: "text-gray-700",
+    hoverColor: "hover:bg-gray-50/50",
     benefits: [
       "Smart transitions",
       "Music integration",
@@ -62,10 +62,10 @@ const SERVICE_CONFIGS = {
     icon: Sparkles,
     title: "AI Enhancement",
     description: "Improve video quality with AI",
-    gradient: "from-amber-500 to-orange-500",
-    accentColor: "bg-amber-50/80 border-amber-200/50",
-    textColor: "text-amber-700",
-    hoverColor: "hover:bg-amber-50/50",
+    gradient: "from-gray-500 to-gray-600",
+    accentColor: "bg-gray-50/80 border-gray-200/50",
+    textColor: "text-gray-700",
+    hoverColor: "hover:bg-gray-50/50",
     benefits: ["4K upscaling", "Noise reduction", "Color correction"],
     estimatedTime: "5-8 min",
     category: "improvement",
@@ -74,10 +74,10 @@ const SERVICE_CONFIGS = {
     icon: Target,
     title: "Platform Optimizer",
     description: "Optimize for social media platforms",
-    gradient: "from-emerald-500 to-green-600",
-    accentColor: "bg-emerald-50/80 border-emerald-200/50",
-    textColor: "text-emerald-700",
-    hoverColor: "hover:bg-emerald-50/50",
+    gradient: "from-gray-500 to-gray-600",
+    accentColor: "bg-gray-50/80 border-gray-200/50",
+    textColor: "text-gray-700",
+    hoverColor: "hover:bg-gray-50/50",
     benefits: ["Multi-platform sizing", "Auto captions", "Platform-specific"],
     estimatedTime: "1-2 min",
     category: "optimization",
@@ -86,10 +86,10 @@ const SERVICE_CONFIGS = {
     icon: FileText,
     title: "Content Polishing",
     description: "Enhance and refine your text",
-    gradient: "from-indigo-500 to-indigo-600",
-    accentColor: "bg-indigo-50/80 border-indigo-200/50",
-    textColor: "text-indigo-700",
-    hoverColor: "hover:bg-indigo-50/50",
+    gradient: "from-gray-500 to-gray-600",
+    accentColor: "bg-gray-50/80 border-gray-200/50",
+    textColor: "text-gray-700",
+    hoverColor: "hover:bg-gray-50/50",
     benefits: [
       "Grammar perfection",
       "Style enhancement",
@@ -102,10 +102,10 @@ const SERVICE_CONFIGS = {
     icon: Volume2,
     title: "AI Narration",
     description: "Convert text to natural speech",
-    gradient: "from-pink-500 to-rose-600",
-    accentColor: "bg-pink-50/80 border-pink-200/50",
-    textColor: "text-pink-700",
-    hoverColor: "hover:bg-pink-50/50",
+    gradient: "from-gray-500 to-gray-600",
+    accentColor: "bg-gray-50/80 border-gray-200/50",
+    textColor: "text-gray-700",
+    hoverColor: "hover:bg-gray-50/50",
     benefits: ["Natural voices", "Multiple languages", "Professional quality"],
     estimatedTime: "2-4 min",
     category: "transformation",
@@ -114,10 +114,10 @@ const SERVICE_CONFIGS = {
     icon: Brain,
     title: "Content Generation",
     description: "Generate marketing content",
-    gradient: "from-cyan-500 to-teal-600",
-    accentColor: "bg-cyan-50/80 border-cyan-200/50",
-    textColor: "text-cyan-700",
-    hoverColor: "hover:bg-cyan-50/50",
+    gradient: "from-gray-500 to-gray-600",
+    accentColor: "bg-gray-50/80 border-gray-200/50",
+    textColor: "text-gray-700",
+    hoverColor: "hover:bg-gray-50/50",
     benefits: ["Multiple formats", "Brand-aligned", "Ready to use"],
     estimatedTime: "2-3 min",
     category: "generation",
@@ -324,7 +324,7 @@ const FeatureStats: React.FC<FeatureStatsProps> = ({ features }) => {
         </div>
         <div className="w-full bg-gray-200/50 rounded-full h-2 overflow-hidden">
           <motion.div
-            className="h-full bg-gradient-to-r from-blue-500 to-purple-600 rounded-full"
+            className="h-full bg-gray-600 rounded-full"
             initial={{ width: 0 }}
             animate={{ width: `${progressPercentage}%` }}
             transition={{ duration: 1, delay: 0.5, ease: "easeOut" }}
@@ -475,12 +475,12 @@ const AIFeaturesDiscovery = observer(
     return (
       <div className="space-y-6">
         {/* Main AI Features Card - Ultra Premium Design */}
-        <Card className="border border-gray-200/50 shadow-xl shadow-gray-100/50 bg-gradient-to-br from-white via-blue-50/20 to-purple-50/10 overflow-hidden">
-          <CardHeader className="border-b border-gray-100/50 bg-white/50 backdrop-blur-sm">
+        <Card className="border border-gray-200 bg-white overflow-hidden">
+          <CardHeader className="border-b border-gray-100">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <motion.div
-                  className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg ring-1 ring-black/5"
+                  className="w-10 h-10 rounded-xl bg-gray-900 flex items-center justify-center"
                   whileHover={{ scale: 1.05, rotate: 3 }}
                   transition={{ duration: 0.2 }}
                 >

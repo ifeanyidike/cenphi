@@ -8,7 +8,7 @@ import React, {
 } from "react";
 import { observer } from "mobx-react-lite";
 import { AnimatePresence } from "framer-motion";
-import { Cpu, Info, RefreshCw } from "lucide-react";
+import { Cpu, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DefaultSettings, ServiceType } from "@/types/ai-service";
 import { AI_SERVICES } from "./definitions";
@@ -18,8 +18,6 @@ import TestimonialSelector from "./TestimonialSelector";
 import Services from "./Services";
 import { workspaceHub } from "@/repo/workspace_hub";
 import { aiStudioManager } from "@/repo/managers/ai_studio_manager";
-import { Alert, AlertDescription } from "../ui/alert";
-import IndustryAwarenessIndicator from "./IndustryAwareIndicator";
 import { preset_manager } from "@/repo/managers/preset_manager";
 
 const AIStudio: React.FC = observer(() => {
@@ -179,34 +177,6 @@ const AIStudio: React.FC = observer(() => {
     );
   }
 
-  const renderIndustryHeader = () => {
-    // if (!brandContext?.business_model) return null;
-
-    return (
-      <Alert className="mb-6 border-blue-200 bg-blue-50">
-        <Info className="h-4 w-4 text-blue-600" />
-        <AlertDescription className="text-blue-800">
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="font-medium">
-                Industry-Intelligent Processing Active
-              </span>
-              <p className="text-sm mt-1">
-                All AI services are optimized for your business context and
-                audience.
-              </p>
-            </div>
-            <IndustryAwarenessIndicator
-              businessModel={"b2c"}
-              targetAudience={"entrepreneurs"}
-              tone={"professional"}
-            />
-          </div>
-        </AlertDescription>
-      </Alert>
-    );
-  };
-
   return (
     <div className="min-h-screen">
       {/* Updated Top Bar - Simple and Professional */}
@@ -238,8 +208,6 @@ const AIStudio: React.FC = observer(() => {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-6 py-8">
-        {renderIndustryHeader()}
-
         <div className="space-y-8">
           <TestimonialSelector
             selectedTestimonials={aiStudioManager.selectedTestimonials}

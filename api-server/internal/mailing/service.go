@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log"
+	"net/url"
 	"time"
 
 	"github.com/google/uuid"
@@ -63,8 +64,15 @@ func (s Service) SendTestimonialRequest(ctx context.Context, req models.SendEmai
 		return nil, fmt.Errorf("failed to generate tracking token: %w", err)
 	}
 
-	// Build collection URL
-	collectionURL := fmt.Sprintf("%s/collect/%s?token=%s", s.baseURL, req.WorkspaceID, token)
+	// Build collection URL with contact information for prefilling
+	collectionURL := fmt.Sprintf("%s/collect?workspace_id=%s&token=%s&email=%s&contact_name=%s&company=%s",
+		s.baseURL,
+		req.WorkspaceID,
+		token,
+		url.QueryEscape(req.ContactEmail),
+		url.QueryEscape(req.ContactName),
+		url.QueryEscape(req.CompanyName),
+	)
 
 	// Create email request record
 	emailReq := &models.EmailRequest{
@@ -292,4 +300,29 @@ func (s Service) GetEmailRequest(ctx context.Context, requestID string) (*models
 // GetEmailLogs retrieves logs for a specific email request
 func (s Service) GetEmailLogs(ctx context.Context, requestID string) ([]*models.EmailLog, error) {
 	return s.repository.GetEmailLogs(ctx, requestID)
+}
+
+// GetWorkspaceEmailTemplates retrieves email templates for a workspace
+func (s Service) GetWorkspaceEmailTemplates(ctx context.Context, workspaceID string) ([]*models.EmailTemplate, error) {
+	return s.repository.ListWorkspaceTemplates(ctx, workspaceID)
+}
+
+// GetWorkspaceEmailTemplate retrieves a specific email template for a workspace
+func (s Service) GetWorkspaceEmailTemplate(ctx context.Context, workspaceID, templateName string) (*models.EmailTemplate, error) {
+	return s.repository.GetWorkspaceTemplate(ctx, workspaceID, templateName)
+}
+
+// CreateOrUpdateWorkspaceEmailTemplate creates or updates an email template for a workspace
+func (s Service) CreateOrUpdateWorkspaceEmailTemplate(ctx context.Context, workspaceID string, template *models.EmailTemplate) error {
+	// Set workspace ID and timestamps
+	workspaceUUID, err := uuid.Parse(workspaceID)
+	if err != nil {
+		return fmt.Errorf("invalid workspace ID: %w", err)
+	}
+
+	template.WorkspaceID = &workspaceUUID
+	template.CreatedAt = time.Now()
+	template.UpdatedAt = time.Now()
+
+	return s.repository.CreateTemplate(ctx, template)
 }

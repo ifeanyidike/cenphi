@@ -41,13 +41,15 @@ export const RequestResetForm = observer(
       return (
         <Card className="overflow-hidden z-10">
           <CardContent className="p-6 md:p-8">
-            <div className="flex flex-col items-center text-center gap-6">
-              <div className="rounded-full bg-primary/10 p-3">
-                <CheckCircleIcon className="h-6 w-6 text-primary" />
+            <div className="text-center">
+              <div className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-3">
+                <CheckCircleIcon className="h-4 w-4 text-green-600" />
               </div>
-              <div className="space-y-2">
-                <CardTitle className="text-2xl">Check your email</CardTitle>
-                <p className="text-balance text-muted-foreground">
+              <div className="mb-4">
+                <CardTitle className="text-base font-medium text-gray-900 mb-2">
+                  Check your email
+                </CardTitle>
+                <p className="text-sm text-gray-600">
                   We've sent a password reset link to {email}. The link will
                   expire in 1 hour.
                 </p>
@@ -55,7 +57,7 @@ export const RequestResetForm = observer(
               <Button
                 type="button"
                 variant="outline"
-                className="w-full"
+                className="w-full text-sm h-9"
                 onClick={() => setIsSubmitted(false)}
               >
                 Didn't receive the email? Try again
@@ -75,20 +77,22 @@ export const RequestResetForm = observer(
                 <Button
                   type="button"
                   variant="ghost"
-                  className="w-fit -ml-2"
+                  className="w-fit -ml-2 text-sm h-8 px-2"
                   onClick={onBack}
                 >
-                  <ArrowLeftIcon className="mr-2 h-4 w-4" />
+                  <ArrowLeftIcon className="mr-1 h-3 w-3" />
                   Back to login
                 </Button>
               )}
 
-              <div className="flex flex-col items-center text-center space-y-2">
-                <div className="rounded-full bg-primary/10 p-3">
-                  <KeyIcon className="h-6 w-6 text-primary" />
+              <div className="text-center mb-6">
+                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
+                  <KeyIcon className="h-4 w-4 text-gray-600" />
                 </div>
-                <CardTitle className="text-2xl">Reset your password</CardTitle>
-                <p className="text-balance text-muted-foreground">
+                <CardTitle className="text-lg font-medium text-gray-900 mb-1">
+                  Reset your password
+                </CardTitle>
+                <p className="text-sm text-gray-600">
                   Enter your email address and we'll send you a link to reset
                   your password
                 </p>
@@ -111,9 +115,13 @@ export const RequestResetForm = observer(
                 onChange={(e) => setEmail(e.target.value)}
               />
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button
+                type="submit"
+                className="w-full text-sm h-9"
+                disabled={isLoading}
+              >
                 {isLoading ? (
-                  <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2Icon className="mr-2 h-3 w-3 animate-spin" />
                 ) : null}
                 Send Reset Link
               </Button>
@@ -157,22 +165,22 @@ export const ResetPasswordForm = observer(
       return (
         <Card className="overflow-hidden">
           <CardContent className="p-6 md:p-8">
-            <div className="flex flex-col items-center text-center gap-6">
-              <div className="rounded-full bg-primary/10 p-3">
-                <CheckCircleIcon className="h-6 w-6 text-primary" />
+            <div className="text-center">
+              <div className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-3">
+                <CheckCircleIcon className="h-4 w-4 text-green-600" />
               </div>
-              <div className="space-y-2">
-                <CardTitle className="text-2xl">
+              <div className="mb-4">
+                <CardTitle className="text-base font-medium text-gray-900 mb-2">
                   Password reset successful
                 </CardTitle>
-                <p className="text-balance text-muted-foreground">
+                <p className="text-sm text-gray-600">
                   Your password has been successfully reset. You can now login
                   with your new password.
                 </p>
               </div>
               <Button
                 type="button"
-                className="w-full"
+                className="w-full text-sm h-9"
                 onClick={() => navigate("/login")}
               >
                 Return to Login
@@ -188,12 +196,14 @@ export const ResetPasswordForm = observer(
         <Card className="overflow-hidden">
           <CardContent className="p-6 md:p-8">
             <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-              <div className="flex flex-col items-center text-center space-y-2">
-                <div className="rounded-full bg-primary/10 p-3">
-                  <LockIcon className="h-6 w-6 text-primary" />
+              <div className="text-center mb-6">
+                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
+                  <LockIcon className="h-4 w-4 text-gray-600" />
                 </div>
-                <CardTitle className="text-2xl">Reset your password</CardTitle>
-                <p className="text-balance text-muted-foreground">
+                <CardTitle className="text-lg font-medium text-gray-900 mb-1">
+                  Reset your password
+                </CardTitle>
+                <p className="text-sm text-gray-600">
                   Please enter your new password below
                 </p>
               </div>
@@ -230,9 +240,13 @@ export const ResetPasswordForm = observer(
                 onChange={(e) => setConfirmPassword(e.target.value)}
               />
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button
+                type="submit"
+                className="w-full text-sm h-9"
+                disabled={isLoading}
+              >
                 {isLoading ? (
-                  <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2Icon className="mr-2 h-3 w-3 animate-spin" />
                 ) : null}
                 Reset Password
               </Button>

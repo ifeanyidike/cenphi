@@ -72,7 +72,7 @@ func (tc *testController) TestGetGoogleDriveAuthURL(w http.ResponseWriter, r *ht
 	// Use a test user ID for testing (no auth required)
 	testUserID, _ := uuid.Parse("6fe5d4ae-3627-4103-af42-39fb40cc0a12")
 
-	authURL, err := tc.driveService.GetAuthURL(workspaceID, testUserID)
+	authURL, err := tc.driveService.GetAuthURL(r.Context(), workspaceID)
 	if err != nil {
 		tc.logger.Error("Failed to generate auth URL", zap.Error(err))
 		utils.RespondWithError(w, http.StatusInternalServerError, "Failed to generate auth URL")
@@ -117,7 +117,7 @@ func (tc *testController) TestGetSocialAuthURL(w http.ResponseWriter, r *http.Re
 	// Use a test user ID for testing (no auth required)
 	testUserID, _ := uuid.Parse("6fe5d4ae-3627-4103-af42-39fb40cc0a12")
 
-	authURL, err := tc.sharingClient.GetAuthURL(r.Context(), workspaceID, testUserID, platform)
+	authURL, err := tc.sharingClient.GetAuthURL(r.Context(), workspaceID, platform)
 	if err != nil {
 		tc.logger.Error("Failed to generate auth URL", zap.Error(err))
 		utils.RespondWithError(w, http.StatusInternalServerError, "Failed to generate authorization URL")

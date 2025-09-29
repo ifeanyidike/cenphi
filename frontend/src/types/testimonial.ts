@@ -99,6 +99,7 @@ export type ProcessingType =
   | "enhancement"
   | "clipping"
   | "story_mode_generation"
+  | "best_story_moments"
   | "video_platform_optimization"
   | "text_platform_optization"
   | "content_generation"

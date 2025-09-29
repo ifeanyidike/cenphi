@@ -73,8 +73,8 @@ const DraggableSegmentItem = ({
   return (
     <Card
       className={`cursor-pointer transition-all duration-200 group ${
-        isSelected ? "ring-2 ring-purple-500 bg-purple-50" : "hover:bg-gray-50"
-      } ${isDragging ? "opacity-50 rotate-2 scale-105" : ""}`}
+        isSelected ? "ring-1 ring-gray-400 bg-gray-50" : "hover:bg-gray-50"
+      } ${isDragging ? "opacity-50" : ""}`}
       onClick={onPlay}
       draggable
       onDragStart={(e) => onDragStart(e, index)}
@@ -235,24 +235,18 @@ const HighlightTypeSection = ({
 
   if (!isAvailable) {
     return (
-      <div className="text-center py-12">
-        <div
-          className={`w-16 h-16 rounded-2xl bg-${config.color}-50 flex items-center justify-center mx-auto mb-4`}
-        >
-          <IconComponent className={`h-8 w-8 text-${config.color}-500`} />
+      <div className="text-center py-8">
+        <div className="w-12 h-12 rounded bg-gray-100 flex items-center justify-center mx-auto mb-3">
+          <IconComponent className="h-5 w-5 text-gray-500" />
         </div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+        <h3 className="text-sm font-medium text-gray-900 mb-2">
           No {config.label} Available
         </h3>
-        <p className="text-gray-600 mb-6 max-w-md mx-auto">
-          {config.description}. Generate AI-powered highlights to identify these
-          key moments.
+        <p className="text-xs text-gray-600 mb-4 max-w-md mx-auto">
+          {config.description}. Generate highlights to identify key moments.
         </p>
-        <Button
-          onClick={onRegenerate}
-          className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
-        >
-          <Sparkles className="h-4 w-4 mr-2" />
+        <Button onClick={onRegenerate} size="sm" className="text-xs h-7">
+          <Sparkles className="h-3 w-3 mr-1" />
           Generate {config.label}
         </Button>
       </div>
@@ -264,17 +258,17 @@ const HighlightTypeSection = ({
       {/* Header with actions */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div
-            className={`w-10 h-10 rounded-xl bg-${config.color}-50 flex items-center justify-center`}
-          >
-            <IconComponent className={`h-5 w-5 text-${config.color}-500`} />
+          <div className="w-8 h-8 rounded bg-gray-100 flex items-center justify-center">
+            <IconComponent className="h-4 w-4 text-gray-600" />
           </div>
           <div>
-            <h3 className="font-semibold text-gray-900">{config.label}</h3>
-            <p className="text-sm text-gray-600">
-              {segments.length} segments found
+            <h3 className="text-sm font-medium text-gray-900">
+              {config.label}
+            </h3>
+            <p className="text-xs text-gray-600">
+              {segments.length} segments
               {hasUnsavedChanges && (
-                <span className="text-orange-600 ml-2">• Unsaved changes</span>
+                <span className="text-amber-600 ml-2">• Unsaved changes</span>
               )}
             </p>
           </div>
@@ -286,7 +280,7 @@ const HighlightTypeSection = ({
               onClick={playAllSegments}
               variant="outline"
               size="sm"
-              className="text-purple-600 hover:text-purple-700"
+              className="text-xs h-7 text-gray-700 hover:text-gray-900"
             >
               Play All ({segments.length})
             </Button>
@@ -298,7 +292,7 @@ const HighlightTypeSection = ({
                 onClick={handleReset}
                 variant="outline"
                 size="sm"
-                className="text-gray-600 hover:text-gray-700"
+                className="text-xs h-7 text-gray-600 hover:text-gray-700"
               >
                 <RotateCcw className="h-3 w-3 mr-1" />
                 Reset
@@ -307,7 +301,7 @@ const HighlightTypeSection = ({
                 onClick={handleSave}
                 disabled={isSaving}
                 size="sm"
-                className="bg-green-600 hover:bg-green-700 text-white"
+                className="text-xs h-7"
               >
                 {isSaving ? (
                   <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
@@ -316,15 +310,10 @@ const HighlightTypeSection = ({
                 ) : (
                   <Save className="h-3 w-3 mr-1" />
                 )}
-                {isSaving ? "Saving..." : saveSuccess ? "Saved!" : "Save Order"}
+                {isSaving ? "Saving..." : saveSuccess ? "Saved!" : "Save"}
               </Button>
             </>
           )}
-
-          <Button onClick={onRegenerate} variant="outline" size="sm">
-            <RefreshCw className="h-3 w-3 mr-1" />
-            Regenerate
-          </Button>
         </div>
       </div>
 
@@ -371,8 +360,10 @@ const HighlightTypeSection = ({
           </div>
 
           {segments.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              <p>No segments available for this highlight type.</p>
+            <div className="text-center py-6 text-gray-500">
+              <p className="text-xs">
+                No segments available for this highlight type.
+              </p>
             </div>
           )}
         </div>
@@ -475,7 +466,7 @@ const HighlightsTab = ({
           </p>
           <Button
             onClick={() => onGenerateHighlights("highlights")}
-            className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
+            className="bg-gray-900 hover:bg-gray-800 text-white"
           >
             <Sparkles className="h-4 w-4 mr-2" />
             Generate All Highlights
@@ -491,7 +482,7 @@ const HighlightsTab = ({
       <Card className="p-3">
         <CardHeader>
           <CardTitle className="p-2 flex items-center gap-2">
-            <Brain className="h-5 w-5 text-purple-600" />
+            <Brain className="h-4 w-4 text-gray-600" />
             Highlights Overview
           </CardTitle>
         </CardHeader>
@@ -528,7 +519,7 @@ const HighlightsTab = ({
                   onClick={() => onGenerateHighlights("highlights")}
                   size="sm"
                   variant="outline"
-                  className="text-purple-600 hover:text-purple-700"
+                  className="text-gray-600 hover:text-gray-700"
                   disabled={stats.missingCount === 0}
                 >
                   <Plus className="h-3 w-3 mr-1" />
@@ -560,7 +551,7 @@ const HighlightsTab = ({
                 value={type}
                 className={`relative text-xs p-2 ${
                   isAvailable
-                    ? "data-[state=active]:bg-purple-50 data-[state=active]:text-purple-700"
+                    ? "data-[state=active]:bg-gray-50 data-[state=active]:text-gray-900"
                     : "opacity-60"
                 }`}
               >

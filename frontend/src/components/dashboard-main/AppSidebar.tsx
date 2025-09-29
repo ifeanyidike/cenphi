@@ -21,6 +21,7 @@ import {
   FileText,
   Zap,
   Command,
+  BarChart3,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { workspaceHub } from "@/repo/workspace_hub";
@@ -80,19 +81,19 @@ export const AppSidebar = observer(
           items: [
             {
               title: "Video Testimonials",
-              url: "/collect/video",
+              url: "/collect",
             },
             {
               title: "Text Testimonials",
-              url: "/collect/text",
+              url: "/collect",
             },
             {
               title: "Email Requests",
-              url: "/emailpage",
+              url: "/settings",
             },
             {
               title: "Google Drive Import",
-              url: "/google-drive",
+              url: "/settings",
             },
           ],
         },
@@ -133,6 +134,11 @@ export const AppSidebar = observer(
           icon: FileText,
         },
         {
+          title: "Social Analytics",
+          url: "/social/analytics",
+          icon: BarChart3,
+        },
+        {
           title: "Email Campaigns",
           url: "/email",
           icon: Mail,
@@ -157,16 +163,12 @@ export const AppSidebar = observer(
           icon: Settings2,
           items: [
             {
+              title: "Integrations",
+              url: "/settings",
+            },
+            {
               title: "Brand Guide",
               url: "/brand-guide",
-            },
-            {
-              title: "Website Widgets",
-              url: "/settings/widgets",
-            },
-            {
-              title: "Team & Workspace",
-              url: "/settings/team",
             },
             {
               title: "Billing",
@@ -178,12 +180,12 @@ export const AppSidebar = observer(
       projects: [
         {
           name: "Video Collection",
-          url: "/collect/video",
+          url: "/collect",
           icon: Video,
         },
         {
           name: "Text Collection",
-          url: "/collect/text",
+          url: "/collect",
           icon: FileText,
         },
         {
@@ -193,7 +195,7 @@ export const AppSidebar = observer(
         },
         {
           name: "Email Campaigns",
-          url: "/emailpage",
+          url: "/settings",
           icon: Mail,
         },
       ],

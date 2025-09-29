@@ -34,7 +34,7 @@ const ServicesShowcase = () => {
       description:
         "Capture powerful video testimonials with our smart collection tools, then enhance them with AI-powered editing, transcription, and optimization.",
       icon: Video,
-      color: "purple",
+      color: "gray",
       demo: <VideoProcessingDemo />,
       features: [
         "Smart video collection",
@@ -52,7 +52,7 @@ const ServicesShowcase = () => {
       description:
         "Get deep insights into how your testimonials perform across channels, track conversion rates, and measure the revenue impact of social proof.",
       icon: BarChart3,
-      color: "green",
+      color: "blue",
       demo: <AnalyticsDemo />,
       features: [
         "Conversion tracking",
@@ -70,7 +70,7 @@ const ServicesShowcase = () => {
       description:
         "Set up intelligent workflows that automatically request, collect, and organize testimonials from your customers at the perfect moments.",
       icon: Zap,
-      color: "orange",
+      color: "gray",
       demo: <AutomationDemo />,
       features: [
         "Automated requests",
@@ -90,23 +90,11 @@ const ServicesShowcase = () => {
       border: "border-blue-200",
       button: "bg-blue-600 hover:bg-blue-700",
     },
-    purple: {
-      bg: "bg-purple-50",
-      text: "text-purple-600",
-      border: "border-purple-200",
-      button: "bg-purple-600 hover:bg-purple-700",
-    },
-    green: {
-      bg: "bg-green-50",
-      text: "text-green-600",
-      border: "border-green-200",
-      button: "bg-green-600 hover:bg-green-700",
-    },
-    orange: {
-      bg: "bg-orange-50",
-      text: "text-orange-600",
-      border: "border-orange-200",
-      button: "bg-orange-600 hover:bg-orange-700",
+    gray: {
+      bg: "bg-gray-50",
+      text: "text-gray-600",
+      border: "border-gray-200",
+      button: "bg-gray-600 hover:bg-gray-700",
     },
   };
 
@@ -305,10 +293,10 @@ const ContentGenerationDemo = () => (
 
         <div className="space-y-2">
           {[
-            { type: "Blog Post", status: "✓ Ready", bg: "bg-green-50" },
-            { type: "Social Media", status: "✓ Generated", bg: "bg-green-50" },
-            { type: "Email Copy", status: "✓ Ready", bg: "bg-green-50" },
-            { type: "Ad Copy", status: "⏳ Processing", bg: "bg-yellow-50" },
+            { type: "Blog Post", status: "✓ Ready", bg: "bg-blue-50" },
+            { type: "Social Media", status: "✓ Generated", bg: "bg-blue-50" },
+            { type: "Email Copy", status: "✓ Ready", bg: "bg-blue-50" },
+            { type: "Ad Copy", status: "⏳ Processing", bg: "bg-gray-50" },
           ].map((item, i) => (
             <motion.div
               key={i}
@@ -330,7 +318,7 @@ const ContentGenerationDemo = () => (
 const VideoProcessingDemo = () => (
   <div className="w-full max-w-md">
     <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-      <div className="bg-purple-600 text-white p-4">
+      <div className="bg-gray-600 text-white p-4">
         <h4 className="font-semibold">Video Processing</h4>
       </div>
       <div className="p-6">
@@ -345,7 +333,7 @@ const VideoProcessingDemo = () => (
               "This product completely transformed our business..."
             </div>
           </div>
-          <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded text-xs">
+          <div className="absolute top-2 right-2 bg-blue-500 text-white px-2 py-1 rounded text-xs">
             ● Processing
           </div>
         </div>
@@ -353,11 +341,11 @@ const VideoProcessingDemo = () => (
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
             <span>Transcription</span>
-            <span className="text-green-600">Complete</span>
+            <span className="text-blue-600">Complete</span>
           </div>
           <div className="flex justify-between text-sm">
             <span>Enhancement</span>
-            <span className="text-yellow-600">Processing</span>
+            <span className="text-gray-600">Processing</span>
           </div>
           <div className="flex justify-between text-sm">
             <span>Optimization</span>
@@ -372,13 +360,13 @@ const VideoProcessingDemo = () => (
 const AnalyticsDemo = () => (
   <div className="w-full max-w-md">
     <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-      <div className="bg-green-600 text-white p-4">
+      <div className="bg-blue-600 text-white p-4">
         <h4 className="font-semibold">Performance Analytics</h4>
       </div>
       <div className="p-6">
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div className="text-center">
-            <div className="text-2xl font-bold text-green-600">+47%</div>
+            <div className="text-2xl font-bold text-blue-600">+47%</div>
             <div className="text-xs text-gray-600">Conversion Rate</div>
           </div>
           <div className="text-center">
@@ -390,8 +378,8 @@ const AnalyticsDemo = () => (
         <div className="space-y-3">
           {[
             { metric: "Video Testimonials", value: 89, color: "bg-blue-500" },
-            { metric: "Text Reviews", value: 76, color: "bg-green-500" },
-            { metric: "Star Ratings", value: 94, color: "bg-purple-500" },
+            { metric: "Text Reviews", value: 76, color: "bg-blue-500" },
+            { metric: "Star Ratings", value: 94, color: "bg-gray-500" },
           ].map((item, i) => (
             <div key={i}>
               <div className="flex justify-between text-sm mb-1">
@@ -416,7 +404,7 @@ const AnalyticsDemo = () => (
 const AutomationDemo = () => (
   <div className="w-full max-w-md">
     <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-      <div className="bg-orange-600 text-white p-4">
+      <div className="bg-gray-600 text-white p-4">
         <h4 className="font-semibold">Smart Automation</h4>
       </div>
       <div className="p-6 space-y-3">
@@ -461,7 +449,7 @@ const AutomationDemo = () => (
             <div
               className={`px-2 py-1 rounded text-xs font-medium ${
                 item.status === "Active"
-                  ? "bg-green-100 text-green-700"
+                  ? "bg-blue-100 text-blue-700"
                   : "bg-blue-100 text-blue-700"
               }`}
             >

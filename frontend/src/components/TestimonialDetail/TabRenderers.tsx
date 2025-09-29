@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import ClipSelectionBar from "./ClipSelectionBar";
 import AudioCard from "./AudioCard";
+import ShareButton from "./ShareButton";
 import { TestimonialArtifact } from "@/types/testimonial";
 import { ServiceType } from "@/types/ai-service";
 import AIStoryUtilities from "@/utils/aistory-utilities";
@@ -465,6 +466,14 @@ export const renderClippingArtifacts = ({
                                     <Download className="h-3 w-3 mr-2" />
                                     Download
                                   </Button>
+                                  <ShareButton
+                                    testimonialId={artifact.testimonial_id}
+                                    content={`Check out this amazing testimonial clip: "${clip.title}"`}
+                                    artifactType="video"
+                                    videoUrl={clip.url}
+                                    size="sm"
+                                    className="flex-1"
+                                  />
                                   <Button
                                     size="sm"
                                     variant="ghost"
@@ -665,6 +674,14 @@ export const renderStoryVideoArtifacts = ({
                   <Download className="h-3 w-3 mr-1" />
                   Download
                 </Button>
+                <ShareButton
+                  testimonialId={artifact.testimonial_id}
+                  content="🎬 Check out this amazing testimonial story video! It perfectly captures the customer experience and impact."
+                  artifactType="video"
+                  videoUrl={data.story_video_url}
+                  size="sm"
+                  className="flex-1"
+                />
                 <Button
                   size="sm"
                   variant="ghost"
@@ -1173,16 +1190,24 @@ export const renderContentGenerationArtifacts = ({
                             </Button>
                           </>
                         ) : (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() =>
-                              onStartEditing(contentId, item.content)
-                            }
-                          >
-                            <Edit3 className="h-4 w-4 mr-1" />
-                            Edit
-                          </Button>
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                onStartEditing(contentId, item.content)
+                              }
+                            >
+                              <Edit3 className="h-4 w-4 mr-1" />
+                              Edit
+                            </Button>
+                            <ShareButton
+                              testimonialId={artifact.testimonial_id}
+                              content={item.content}
+                              artifactType="text"
+                              size="sm"
+                            />
+                          </>
                         )}
 
                         <Button

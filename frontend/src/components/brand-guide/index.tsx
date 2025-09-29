@@ -8,11 +8,7 @@ import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 
 // Icons
-import {
-  Loader2,
-  Save,
-  Shield,
-} from "lucide-react";
+import { Loader2, Save, Shield } from "lucide-react";
 import Essentials from "./Essentials";
 import { BrandGuide as BrandGuideType } from "@/types/setup";
 import { containerVariants, itemVariants } from "./constants";
@@ -29,19 +25,19 @@ interface BrandGuideProps {
 const BrandGuide: React.FC<BrandGuideProps> = observer(
   ({ onSave, className }) => {
     // State from MobX store
-    const { brandData, saveChanges, applyPreset } =
-      brandGuideStore;
+    const { brandData, saveChanges, applyPreset } = brandGuideStore;
 
     // Local component state
     const [activeTab, setActiveTab] = useState<string>("essentials");
     const [isSaving, setIsSaving] = useState<boolean>(false);
     const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
 
-
     // Initialize from workspace brand context on mount
     useEffect(() => {
       if (workspaceHub.workspace?.brand_context) {
-        brandGuideStore.initializeFromWorkspace(workspaceHub.workspace.brand_context);
+        brandGuideStore.initializeFromWorkspace(
+          workspaceHub.workspace.brand_context
+        );
       }
     }, [workspaceHub.workspace?.brand_context]);
 
@@ -87,10 +83,7 @@ const BrandGuide: React.FC<BrandGuideProps> = observer(
           {/* Header with progress and actions */}
           <header className="sticky top-0 z-40 bg-white/80 dark:bg-gray-950/80 backdrop-blur-sm border-b border-gray-100 dark:border-gray-800">
             <div className="container flex h-16 items-center justify-between">
-              <motion.div
-                className="flex items-center"
-                variants={itemVariants}
-              >
+              <motion.div className="flex items-center" variants={itemVariants}>
                 <Shield className="h-5 w-5 text-primary mr-2" />
                 <h1 className="text-xl font-bold">Brand Guide</h1>
               </motion.div>
@@ -145,28 +138,6 @@ const BrandGuide: React.FC<BrandGuideProps> = observer(
               <TabsContent value="typography" className="space-y-6">
                 <Typography colorMode="light" setColorMode={() => {}} />
               </TabsContent>
-
-              {/* Testimonials */}
-              {/* <TabsContent value="testimonials" className="space-y-6">
-                <Testimonials
-                  colorMode={colorMode}
-                  setColorMode={setColorMode}
-                />
-              </TabsContent> */}
-
-              {/* Voice & Tone */}
-              {/* <TabsContent value="voice" className="space-y-6">
-                <VoiceAndTone
-                  showAIDialog={showAIDialog}
-                  setShowAIDialog={setShowAIDialog}
-                />
-              </TabsContent> */}
-
-              {/* Preview */}
-              {/* <TabsContent value="preview" className="space-y-6">
-                <Preview colorMode={colorMode} setColorMode={setColorMode} />
-              </TabsContent> */}
-
             </Tabs>
           </main>
         </motion.div>

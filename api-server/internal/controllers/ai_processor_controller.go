@@ -1783,6 +1783,290 @@ func (c *AIProcessorController) getServiceNameFromPath(path string) string {
 	return serviceMap[path]
 }
 
+// GetArtifactsByWorkspace handles GET /api/ai/workspaces/{workspaceID}/artifacts
+func (c *AIProcessorController) GetArtifactsByWorkspace(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	workspaceIDStr := chi.URLParam(r, "workspaceID")
+
+	workspaceID, err := uuid.Parse(workspaceIDStr)
+	if err != nil {
+		http.Error(w, "Invalid workspace ID", http.StatusBadRequest)
+		return
+	}
+
+	// Parse query parameters
+	processingTypes := r.URL.Query()["type"] // Allow multiple types: ?type=content_generation&type=story_mode_generation
+	limitStr := r.URL.Query().Get("limit")
+	offsetStr := r.URL.Query().Get("offset")
+
+	limit := 50 // default
+	if limitStr != "" {
+		if parsedLimit := parseIntParam(limitStr, 50); parsedLimit > 0 {
+			limit = parsedLimit
+		}
+	}
+
+	offset := 0 // default
+	if offsetStr != "" {
+		offset = parseIntParam(offsetStr, 0)
+	}
+
+	artifacts, err := c.ArtifactsRepo.GetByWorkspaceID(ctx, workspaceID, processingTypes, limit, offset, c.DB)
+	if err != nil {
+		c.logger.Error("Failed to get artifacts by workspace", zap.Error(err), zap.String("workspace_id", workspaceIDStr))
+		http.Error(w, "Failed to retrieve artifacts", http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]interface{}{
+		"success": true,
+		"data":    artifacts,
+		"count":   len(artifacts),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+// GetContentGenerationArtifacts handles GET /api/ai/workspaces/{workspaceID}/content-generation
+func (c *AIProcessorController) GetContentGenerationArtifacts(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	workspaceIDStr := chi.URLParam(r, "workspaceID")
+
+	workspaceID, err := uuid.Parse(workspaceIDStr)
+	if err != nil {
+		http.Error(w, "Invalid workspace ID", http.StatusBadRequest)
+		return
+	}
+
+	// Parse query parameters
+	limitStr := r.URL.Query().Get("limit")
+	offsetStr := r.URL.Query().Get("offset")
+
+	limit := 50 // default
+	if limitStr != "" {
+		if parsedLimit := parseIntParam(limitStr, 50); parsedLimit > 0 {
+			limit = parsedLimit
+		}
+	}
+
+	offset := 0 // default
+	if offsetStr != "" {
+		offset = parseIntParam(offsetStr, 0)
+	}
+
+	artifacts, err := c.ArtifactsRepo.GetContentGenerationArtifacts(ctx, workspaceID, limit, offset, c.DB)
+	if err != nil {
+		c.logger.Error("Failed to get content generation artifacts", zap.Error(err), zap.String("workspace_id", workspaceIDStr))
+		http.Error(w, "Failed to retrieve content generation artifacts", http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]interface{}{
+		"success": true,
+		"data":    artifacts,
+		"count":   len(artifacts),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+// GetStoryVideoArtifacts handles GET /api/ai/workspaces/{workspaceID}/story-videos
+func (c *AIProcessorController) GetStoryVideoArtifacts(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	workspaceIDStr := chi.URLParam(r, "workspaceID")
+
+	workspaceID, err := uuid.Parse(workspaceIDStr)
+	if err != nil {
+		http.Error(w, "Invalid workspace ID", http.StatusBadRequest)
+		return
+	}
+
+	// Parse query parameters
+	limitStr := r.URL.Query().Get("limit")
+	offsetStr := r.URL.Query().Get("offset")
+
+	limit := 50 // default
+	if limitStr != "" {
+		if parsedLimit := parseIntParam(limitStr, 50); parsedLimit > 0 {
+			limit = parsedLimit
+		}
+	}
+
+	offset := 0 // default
+	if offsetStr != "" {
+		offset = parseIntParam(offsetStr, 0)
+	}
+
+	artifacts, err := c.ArtifactsRepo.GetStoryVideoArtifacts(ctx, workspaceID, limit, offset, c.DB)
+	if err != nil {
+		c.logger.Error("Failed to get story video artifacts", zap.Error(err), zap.String("workspace_id", workspaceIDStr))
+		http.Error(w, "Failed to retrieve story video artifacts", http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]interface{}{
+		"success": true,
+		"data":    artifacts,
+		"count":   len(artifacts),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+// Helper function to parse integer parameters
+func parseIntParam(param string, defaultValue int) int {
+	if param == "" {
+		return defaultValue
+	}
+
+	var value int
+	if _, err := fmt.Sscanf(param, "%d", &value); err != nil {
+		return defaultValue
+	}
+
+	return value
+}
+
+// SaveHighlightOrder saves the reordered highlights for a testimonial
+func (c *AIProcessorController) SaveHighlightOrder(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		WorkspaceID   string   `json:"workspace_id"`
+		TestimonialID string   `json:"testimonial_id"`
+		HighlightIDs  []string `json:"highlight_ids"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.WorkspaceID == "" || req.TestimonialID == "" || len(req.HighlightIDs) == 0 {
+		http.Error(w, "workspace_id, testimonial_id, and highlight_ids are required", http.StatusBadRequest)
+		return
+	}
+
+	testimonialID, err := uuid.Parse(req.TestimonialID)
+	if err != nil {
+		http.Error(w, "invalid testimonial_id format", http.StatusBadRequest)
+		return
+	}
+
+	// Update existing highlight artifacts to include the new order
+	// Find existing highlight extraction artifact for this testimonial
+	highlightArtifact, err := c.ArtifactsRepo.GetByTestimonialAndType(r.Context(), testimonialID, "highlight_extraction", c.DB)
+	if err != nil {
+		c.logger.Error("Failed to get highlight artifact", zap.Error(err))
+		http.Error(w, "Failed to get highlight artifact", http.StatusInternalServerError)
+		return
+	}
+
+	if highlightArtifact == nil {
+		http.Error(w, "No highlight artifact found to update", http.StatusNotFound)
+		return
+	}
+
+	// Add the custom order to the artifact data
+	if highlightArtifact.Data == nil {
+		highlightArtifact.Data = make(models.JSONMap)
+	}
+	highlightArtifact.Data["custom_order"] = req.HighlightIDs
+	highlightArtifact.Data["ordered_at"] = time.Now()
+
+	// Update the artifact in the database
+	err = c.ArtifactsRepo.Update(r.Context(), highlightArtifact, c.DB)
+	if err != nil {
+		c.logger.Error("Failed to update highlight artifact", zap.String("artifact_id", highlightArtifact.ID.String()), zap.Error(err))
+		http.Error(w, "Failed to update highlight order", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": "Highlight order saved successfully",
+	})
+}
+
+// ExtractHighlightsByType extracts highlights of a specific type
+func (c *AIProcessorController) ExtractHighlightsByType(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		WorkspaceID   string                        `json:"workspace_id"`
+		TestimonialID string                        `json:"testimonial_id"`
+		Text          string                        `json:"text"`
+		Segments      []models.TranscriptionSegment `json:"segments,omitempty"`
+		Prompt        string                        `json:"prompt"`
+		HighlightType string                        `json:"highlight_type"` // general, problem, solution, etc.
+		MaxHighlights int                           `json:"max_highlights,omitempty"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.Text == "" {
+		http.Error(w, "text is required", http.StatusBadRequest)
+		return
+	}
+
+	if req.HighlightType == "" {
+		req.HighlightType = "general"
+	}
+
+	if req.MaxHighlights == 0 {
+		req.MaxHighlights = 5
+	}
+
+	testimonialID, err := uuid.Parse(req.TestimonialID)
+	if err != nil {
+		http.Error(w, "invalid testimonial ID format", http.StatusBadRequest)
+		return
+	}
+
+	workspaceID, err := uuid.Parse(req.WorkspaceID)
+	if err != nil {
+		http.Error(w, "invalid workspace ID format", http.StatusBadRequest)
+		return
+	}
+
+	// Create highlight request
+	highlightRequest := ai.HighlightRequest{
+		Text:          req.Text,
+		Segments:      req.Segments,
+		CustomPrompt:  req.Prompt,
+		HighlightType: ai.HighlightType(req.HighlightType),
+		MaxHighlights: req.MaxHighlights,
+	}
+
+	// Extract highlights by type
+	highlights, err := c.HighlightService.ExtractHighlightsByType(r.Context(), highlightRequest)
+	if err != nil {
+		c.logger.Error("Highlight extraction by type failed", zap.Error(err), zap.String("type", req.HighlightType))
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Save the highlights as an artifact
+	artifactType := fmt.Sprintf("highlight_extraction_%s", req.HighlightType)
+	_, err = c.ArtifactsRepo.CreateArtifactWithLineage(r.Context(), artifactType, workspaceID, &testimonialID, models.JSONMap{
+		"highlights":     highlights,
+		"highlight_type": req.HighlightType,
+		"max_highlights": req.MaxHighlights,
+	}, models.CreateArtifactSourceParams{Type: models.NoTypeSource}, nil, c.DB)
+
+	if err != nil {
+		c.logger.Error("highlight extraction artifact creation failed", zap.String("type", req.HighlightType), zap.Error(err))
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(highlights)
+}
+
 // func (c *AIProcessorController) NukeJobStatus(w http.ResponseWriter, r *http.Request) {
 // 	ctx := r.Context()
 

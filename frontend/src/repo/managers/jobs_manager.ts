@@ -150,9 +150,9 @@ export class JobsManager {
       return `/detail/${job.testimonialId}?jobId=${job.id}`;
     }
 
-    // All story video jobs go to stories page (including multi-testimonial and best_story_moments)
+    // All story video jobs go to ai-content page (including multi-testimonial and best_story_moments)
     if (job.service === "story_mode") {
-      return `/studio/stories/${job.id}`;
+      return `/ai-content`;
     }
 
     // Streaming jobs should open modal (handled differently)
@@ -740,7 +740,11 @@ export class JobsManager {
     artifactData?: any
   ): SourceInfo {
     // Services that support batch processing with multiple testimonials
-    const batchSupportedServices = ["content_generation", "text_polishing", "translation"];
+    const batchSupportedServices = [
+      "content_generation",
+      "text_polishing",
+      "translation",
+    ];
     const streamTypes = ["content_generation", "text_polishing", "translation"];
     const isStreamType = streamTypes.includes(service);
     const supportsBatch = batchSupportedServices.includes(service);
@@ -810,7 +814,11 @@ export class JobsManager {
     // Default to testimonial source
     if (selectedTestimonials.length > 0) {
       // Services that can handle multiple testimonials
-      const batchCapableServices = ["content_generation", "text_polishing", "translation"];
+      const batchCapableServices = [
+        "content_generation",
+        "text_polishing",
+        "translation",
+      ];
       const supportsBatch = batchCapableServices.includes(service);
 
       return {

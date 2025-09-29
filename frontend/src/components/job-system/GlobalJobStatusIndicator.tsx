@@ -92,7 +92,7 @@ const GlobalJobStatusIndicator: React.FC<GlobalJobStatusIndicatorProps> =
       }
 
       if (job.service === "story_mode") {
-        return `/studio/stories/${job.id}`;
+        return `/ai-content`;
       }
 
       if (job.status === "streaming") {
