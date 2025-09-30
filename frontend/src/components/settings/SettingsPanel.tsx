@@ -8,11 +8,7 @@ import BrandGuide from "../brand-guide";
 import { Button } from "@/components/ui/button";
 import { Mail } from "lucide-react";
 
-type SettingsSection =
-  | "profile"
-  | "integrations"
-  | "brand"
-  | "communications";
+type SettingsSection = "profile" | "integrations" | "brand" | "communications";
 
 const SettingsPanel: React.FC = () => {
   const [activeSection, setActiveSection] =

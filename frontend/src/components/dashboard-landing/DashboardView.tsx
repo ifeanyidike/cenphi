@@ -65,7 +65,11 @@ const AIGeneratedContentCard: React.FC<{ onNavigate: () => void }> = observer(
                 </div>
                 <div className="text-xs text-gray-500">Items</div>
               </div>
-              <Button onClick={onNavigate} size="sm" className="text-xs h-7 whitespace-nowrap">
+              <Button
+                onClick={onNavigate}
+                size="sm"
+                className="text-xs h-7 whitespace-nowrap"
+              >
                 View All
               </Button>
             </div>

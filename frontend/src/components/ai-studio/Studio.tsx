@@ -185,7 +185,9 @@ const AIStudio: React.FC = observer(() => {
           <div className="flex items-center justify-between h-14">
             {/* Left Side - Simple Title */}
             <div className="flex items-center space-x-3">
-              <h1 className="text-base sm:text-lg font-medium text-gray-900">AI Studio</h1>
+              <h1 className="text-base sm:text-lg font-medium text-gray-900">
+                AI Studio
+              </h1>
             </div>
 
             {/* Right Side - Status */}

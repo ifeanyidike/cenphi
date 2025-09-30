@@ -856,14 +856,25 @@ const TestimonialDetail = observer(() => {
                 <span className="hidden sm:inline">Back to Home</span>
                 <span className="sm:hidden">Back</span>
               </Button>
-              <Separator orientation="vertical" className="h-6 hidden sm:block" />
+              <Separator
+                orientation="vertical"
+                className="h-6 hidden sm:block"
+              />
               <div className="min-w-0">
                 <p className="text-xs sm:text-sm text-slate-500 font-medium truncate">
                   {testimonial.author_company && (
-                    <><span className="hidden sm:inline">{testimonial.author_company} • </span></>
+                    <>
+                      <span className="hidden sm:inline">
+                        {testimonial.author_company} •{" "}
+                      </span>
+                    </>
                   )}
-                  <span className="hidden sm:inline">{new Date(testimonial.created_at).toDateString()}</span>
-                  <span className="sm:hidden">{new Date(testimonial.created_at).toLocaleDateString()}</span>
+                  <span className="hidden sm:inline">
+                    {new Date(testimonial.created_at).toDateString()}
+                  </span>
+                  <span className="sm:hidden">
+                    {new Date(testimonial.created_at).toLocaleDateString()}
+                  </span>
                   {testimonial.rating && (
                     <>
                       {" "}
