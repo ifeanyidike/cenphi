@@ -13,19 +13,19 @@ import { containerVariants } from "../dashboard-landing/constants";
 
 export const DashboardWrapper = observer(({ children }: PropsWithChildren) => {
   return (
-    <SidebarProvider className="flex w-screen">
+    <SidebarProvider className="flex w-screen bg-white">
       <AppSidebar />
-      <SidebarInset className="flex-1">
-        <header className="flex h-16 shrink-0 items-center transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12 border-b border-gray-200/60 dark:border-gray-700/60 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
-          <div className="flex items-center justify-between w-full px-4">
-            <div className="flex items-center gap-4 flex-1 min-w-0">
+      <SidebarInset className="flex-1 bg-white">
+        <header className="flex h-16 shrink-0 items-center transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12 border-b border-gray-200 bg-white">
+          <div className="flex items-center justify-between w-full px-3 sm:px-4">
+            <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
               <SidebarTrigger className="hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" />
 
               {/* Dynamic Breadcrumb Navigation */}
               <BreadcrumbNav
                 showBackButton={true}
                 showHomeButton={true}
-                maxVisibleItems={4}
+                maxVisibleItems={2}
                 className="flex-1 min-w-0"
               />
             </div>
@@ -37,7 +37,7 @@ export const DashboardWrapper = observer(({ children }: PropsWithChildren) => {
           </div>
         </header>
 
-        <div className="p-6 lg:p-8 bg-white/50 bg-grid-pattern min-h-screen dark:bg-gray-900/50">
+        <div className="p-4 sm:p-6 lg:p-8 bg-white min-h-screen">
           <motion.div
             initial="hidden"
             animate="show"

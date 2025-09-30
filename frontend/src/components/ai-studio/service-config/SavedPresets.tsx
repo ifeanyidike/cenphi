@@ -17,16 +17,16 @@ const SavedPresets = ({ selectedPreset, service, handleLoadPreset }: Props) => {
     <div className="lg:col-span-1 order-2 lg:order-1">
       <div className="bg-white rounded-lg border shadow-sm">
         <div className="p-4 border-b">
-          <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-            <Bookmark className="h-5 w-5" />
+          <h3 className="font-semibold text-gray-900 flex items-center gap-2 text-sm sm:text-base">
+            <Bookmark className="h-4 w-4 sm:h-5 sm:w-5" />
             Saved Presets
           </h3>
         </div>
         <div className="p-4">
           {savedPresets?.length === 0 ? (
-            <div className="text-center py-6 text-gray-500">
-              <Bookmark className="h-8 w-8 mx-auto mb-2 opacity-30" />
-              <p className="text-sm">No saved presets</p>
+            <div className="text-center py-4 sm:py-6 text-gray-500">
+              <Bookmark className="h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-2 opacity-30" />
+              <p className="text-xs sm:text-sm">No saved presets</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -50,7 +50,7 @@ const SavedPresets = ({ selectedPreset, service, handleLoadPreset }: Props) => {
                       </p>
                     </div>
                     {defaultPreset?.id === preset.id && (
-                      <Heart className="h-4 w-4 text-red-500 fill-current" />
+                      <Heart className="h-3 w-3 sm:h-4 sm:w-4 text-red-500 fill-current flex-shrink-0" />
                     )}
                   </div>
 
@@ -63,7 +63,8 @@ const SavedPresets = ({ selectedPreset, service, handleLoadPreset }: Props) => {
                       }}
                       className="flex-1 text-xs px-2 py-1 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
                     >
-                      Make Default
+                      <span className="hidden sm:inline">Make Default</span>
+                      <span className="sm:hidden">Default</span>
                     </button>
                     <button
                       onClick={(e) => {

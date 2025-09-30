@@ -72,13 +72,13 @@ const SettingsPanel: React.FC = () => {
                   Send testimonial collection requests to your customers
                 </p>
               </div>
-              <div className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
+              <div className="p-4 sm:p-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex-1">
                     <div className="text-sm font-medium text-gray-900 mb-1">
                       Request Testimonials from Customers
                     </div>
-                    <div className="text-xs text-gray-500 mb-4">
+                    <div className="text-xs text-gray-500 mb-4 sm:mb-0">
                       Send single emails or bulk requests using CSV uploads.
                       Customize with your email templates.
                     </div>
@@ -86,7 +86,7 @@ const SettingsPanel: React.FC = () => {
                   <Button
                     onClick={() => setIsRequestModalOpen(true)}
                     size="sm"
-                    className="text-xs h-7"
+                    className="text-xs h-7 w-full sm:w-auto"
                   >
                     <Mail className="h-3 w-3 mr-2" />
                     Send Requests
@@ -111,16 +111,40 @@ const SettingsPanel: React.FC = () => {
     <div className="w-full min-h-screen">
       <div className="max-w-screen-xl mx-auto">
         {/* Header */}
-        <div className="bg-white border-b border-gray-200 px-6 py-4">
+        <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
           <h1 className="text-base font-medium text-gray-900">Settings</h1>
           <p className="text-xs text-gray-500 mt-1">
             Manage your workspace configuration and integrations
           </p>
         </div>
 
-        <div className="flex">
-          {/* Sidebar Navigation */}
-          <div className="w-64 bg-white border-r border-gray-200">
+        <div className="flex flex-col lg:flex-row">
+          {/* Mobile Navigation - Horizontal Tabs */}
+          <div className="lg:hidden bg-white border-b border-gray-200">
+            <nav className="p-4">
+              <div className="flex space-x-1 overflow-x-auto">
+                {sections.map((section) => {
+                  const isActive = activeSection === section.id;
+                  return (
+                    <button
+                      key={section.id}
+                      onClick={() => setActiveSection(section.id)}
+                      className={`flex-shrink-0 px-3 py-2 text-xs font-medium rounded-sm transition-colors whitespace-nowrap ${
+                        isActive
+                          ? "bg-gray-900 text-white"
+                          : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                      }`}
+                    >
+                      {section.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </nav>
+          </div>
+
+          {/* Desktop Sidebar Navigation */}
+          <div className="hidden lg:block lg:w-64 bg-white border-r border-gray-200">
             <nav className="p-4">
               <div className="space-y-1">
                 {sections.map((section) => {
@@ -144,7 +168,7 @@ const SettingsPanel: React.FC = () => {
           </div>
 
           {/* Main Content */}
-          <div className="flex-1 p-6">
+          <div className="flex-1 p-4 sm:p-6">
             <motion.div
               key={activeSection}
               initial={{ opacity: 0 }}

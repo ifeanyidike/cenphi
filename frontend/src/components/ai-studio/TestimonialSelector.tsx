@@ -255,8 +255,8 @@ const TestimonialSelector: React.FC<TestimonialSelectorProps> = observer(
     return (
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
-          <div className="flex items-center justify-between">
+        <div className="px-4 sm:px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-0 sm:justify-between">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
                 {showArtifacts ? (
@@ -271,7 +271,7 @@ const TestimonialSelector: React.FC<TestimonialSelectorProps> = observer(
                     ? "Select Processed Content"
                     : "Select Testimonials"}
                 </h3>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-gray-500 hidden sm:block">
                   {showArtifacts
                     ? `Choose artifacts to process with ${targetService || "AI services"}`
                     : "Choose testimonials to process with AI services"}
@@ -279,14 +279,15 @@ const TestimonialSelector: React.FC<TestimonialSelectorProps> = observer(
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between sm:justify-end gap-2">
               {enableArtifactSelection && (
                 <div className="flex items-center gap-2">
                   <Label
                     htmlFor="show-artifacts"
                     className="text-xs font-medium"
                   >
-                    Processed Content
+                    <span className="hidden sm:inline">Processed Content</span>
+                    <span className="sm:hidden">Artifacts</span>
                   </Label>
                   <Switch
                     id="show-artifacts"
@@ -323,9 +324,9 @@ const TestimonialSelector: React.FC<TestimonialSelectorProps> = observer(
 
         <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
           <CollapsibleContent>
-            <div className="p-4">
+            <div className="p-4 sm:p-4">
               {/* Search and Filter Controls */}
-              <div className="flex items-center gap-4 mb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-4">
                 <div className="flex-1">
                   <Input
                     placeholder={`Search ${showArtifacts ? "artifacts" : "testimonials"}...`}
@@ -341,16 +342,20 @@ const TestimonialSelector: React.FC<TestimonialSelectorProps> = observer(
                     size="sm"
                     onClick={handleSelectAll}
                     disabled={totalCount === 0}
+                    className="text-xs h-8 px-3"
                   >
-                    Select All
+                    <span className="hidden sm:inline">Select All</span>
+                    <span className="sm:hidden">All</span>
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={handleSelectNone}
                     disabled={selectedCount === 0}
+                    className="text-xs h-8 px-3"
                   >
-                    Select None
+                    <span className="hidden sm:inline">Select None</span>
+                    <span className="sm:hidden">None</span>
                   </Button>
                 </div>
               </div>
@@ -383,7 +388,7 @@ const TestimonialSelector: React.FC<TestimonialSelectorProps> = observer(
                           <div className="flex items-center gap-3">
                             <div
                               className={`
-                              w-5 h-5 rounded border-2 flex items-center justify-center
+                              w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0
                               ${
                                 selectedArtifacts.includes(artifact.id)
                                   ? "bg-blue-600 border-blue-600"
@@ -396,11 +401,11 @@ const TestimonialSelector: React.FC<TestimonialSelectorProps> = observer(
                               )}
                             </div>
 
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-shrink-0">
                               <ArtifactIcon className="w-4 h-4 text-purple-600" />
                               <Badge
                                 variant="secondary"
-                                className="text-xs bg-purple-100 text-purple-700"
+                                className="text-xs bg-purple-100 text-purple-700 hidden sm:inline-flex"
                               >
                                 {getArtifactLabel(artifact.processing_type)}
                               </Badge>
@@ -410,7 +415,8 @@ const TestimonialSelector: React.FC<TestimonialSelectorProps> = observer(
                               <p className="text-sm font-medium text-gray-900 truncate">
                                 {artifact.testimonial.author_name ||
                                   "Anonymous"}{" "}
-                                - {getArtifactLabel(artifact.processing_type)}
+                                <span className="sm:hidden">- {getArtifactLabel(artifact.processing_type)}</span>
+                                <span className="hidden sm:inline">- {getArtifactLabel(artifact.processing_type)}</span>
                               </p>
                               <p className="text-xs text-gray-600 truncate">
                                 {artifact.testimonial.author_company ||
@@ -423,7 +429,7 @@ const TestimonialSelector: React.FC<TestimonialSelectorProps> = observer(
                             </div>
 
                             {artifact.platform && (
-                              <Badge variant="outline" className="text-xs">
+                              <Badge variant="outline" className="text-xs hidden sm:inline-flex">
                                 {artifact.platform}
                               </Badge>
                             )}
@@ -454,7 +460,7 @@ const TestimonialSelector: React.FC<TestimonialSelectorProps> = observer(
                         <div className="flex items-center gap-3">
                           <div
                             className={`
-                            w-5 h-5 rounded border-2 flex items-center justify-center
+                            w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0
                             ${
                               selectedTestimonials.includes(testimonial.id)
                                 ? "bg-blue-600 border-blue-600"
@@ -467,7 +473,7 @@ const TestimonialSelector: React.FC<TestimonialSelectorProps> = observer(
                             )}
                           </div>
 
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-shrink-0">
                             {testimonial.type === "video" ? (
                               <PlayCircle className="w-4 h-4 text-blue-600" />
                             ) : (
@@ -475,7 +481,7 @@ const TestimonialSelector: React.FC<TestimonialSelectorProps> = observer(
                             )}
                             <Badge
                               variant="secondary"
-                              className={`text-xs ${
+                              className={`text-xs hidden sm:inline-flex ${
                                 testimonial.type === "video"
                                   ? "bg-blue-100 text-blue-700"
                                   : "bg-green-100 text-green-700"
@@ -491,7 +497,7 @@ const TestimonialSelector: React.FC<TestimonialSelectorProps> = observer(
                                 {testimonial.author_name || "Anonymous"}
                               </p>
                               {testimonial.rating && (
-                                <div className="flex items-center gap-1">
+                                <div className="flex items-center gap-1 flex-shrink-0">
                                   <Star className="w-3 h-3 text-yellow-500 fill-current" />
                                   <span className="text-xs text-gray-600">
                                     {testimonial.rating}
@@ -500,14 +506,15 @@ const TestimonialSelector: React.FC<TestimonialSelectorProps> = observer(
                               )}
                             </div>
                             <p className="text-xs text-gray-600 truncate">
-                              {testimonial.content?.substring(0, 80)}...
+                              <span className="sm:hidden">{testimonial.type} • </span>
+                              {testimonial.content?.substring(0, 60)}...
                             </p>
                           </div>
 
                           {/* Show available artifacts count */}
                           {testimonial.artifacts &&
                             testimonial.artifacts.length > 0 && (
-                              <Badge variant="outline" className="text-xs">
+                              <Badge variant="outline" className="text-xs hidden sm:inline-flex">
                                 {testimonial.artifacts.length} artifacts
                               </Badge>
                             )}

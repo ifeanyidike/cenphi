@@ -37,6 +37,31 @@ export const AppSidebar = observer(
       setMounted(true);
     }, []);
 
+    // Add mobile-specific styles to ensure solid background
+    React.useEffect(() => {
+      const style = document.createElement("style");
+      style.textContent = `
+        :root {
+          --sidebar-bg: 0 0% 100% !important;
+          --sidebar-background: 0 0% 100% !important;
+        }
+        [data-mobile="true"] {
+          background-color: white !important;
+          backdrop-filter: none !important;
+        }
+        .bg-sidebar {
+          background-color: white !important;
+        }
+        [data-radix-dialog-content] {
+          background-color: white !important;
+        }
+      `;
+      document.head.appendChild(style);
+      return () => {
+        document.head.removeChild(style);
+      };
+    }, []);
+
     // Get actual user data
     // const member = workspaceHub.memberManager.member;
     const firebaseUser = auth.currentUser;
@@ -151,10 +176,6 @@ export const AppSidebar = observer(
               title: "Send Requests",
               url: "/emailpage",
             },
-            {
-              title: "Campaign Analytics",
-              url: "/email/analytics",
-            },
           ],
         },
         {
@@ -211,7 +232,7 @@ export const AppSidebar = observer(
       >
         <Sidebar
           collapsible="icon"
-          className="backdrop-blur-lg bg-sidebar-bg/95 border-r border-sidebar-border/30"
+          className="bg-white border-r border-gray-200"
           {...props}
         >
           <SidebarHeader className="px-2 py-3">

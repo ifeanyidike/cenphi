@@ -321,21 +321,21 @@ export const SignUpForm: React.FC<SignupFormProps> = observer(
     };
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center p-6">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center p-4 sm:p-6">
         <div className="w-full max-w-[460px]">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: "easeOut" }}
-            className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/20 overflow-hidden"
+            className="bg-white/80 backdrop-blur-sm rounded-2xl sm:rounded-3xl shadow-2xl border border-white/20 overflow-hidden"
           >
             {/* Header */}
-            <div className="px-10 pt-10 pb-8 text-center border-b border-gray-100/50">
+            <div className="px-6 sm:px-10 pt-8 sm:pt-10 pb-6 sm:pb-8 text-center border-b border-gray-100/50">
               <motion.h1
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2, duration: 0.5 }}
-                className="text-2xl font-bold text-gray-900 tracking-tight mb-2"
+                className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight mb-2"
               >
                 Create your account
               </motion.h1>

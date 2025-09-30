@@ -186,19 +186,19 @@ const PricingPage: React.FC = () => {
       <Navbar />
 
       {/* Header Section */}
-      <div className="max-w-5xl mx-auto px-6 pt-32 pb-12">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-24 sm:pt-32 pb-8 sm:pb-12">
         <div className="text-center max-w-3xl mx-auto">
-          <h1 className="text-2xl font-medium text-gray-900 mb-4">
+          <h1 className="text-xl sm:text-2xl font-medium text-gray-900 mb-4">
             Choose the right plan for your business
           </h1>
-          <p className="text-gray-600 mb-8">
+          <p className="text-gray-600 mb-6 sm:mb-8 text-sm sm:text-base">
             Transform customer testimonials into revenue-driving content with
             AI-powered tools. Start with a 14-day free trial, no credit card
             required.
           </p>
 
           {/* Billing Toggle */}
-          <div className="inline-flex items-center p-1 bg-white border border-gray-200 rounded-lg shadow-sm mb-12">
+          <div className="inline-flex items-center p-1 bg-white border border-gray-200 rounded-lg shadow-sm mb-8 sm:mb-12">
             <button
               onClick={() => setIsAnnual(false)}
               className={`px-4 py-2 text-sm font-medium transition-colors duration-200 rounded-md ${
@@ -229,8 +229,8 @@ const PricingPage: React.FC = () => {
       </div>
 
       {/* Pricing Cards */}
-      <div className="max-w-6xl mx-auto px-6 pb-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-12 sm:pb-16">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {pricingTiers.map((tier, index) => (
             <motion.div
               key={tier.id}
