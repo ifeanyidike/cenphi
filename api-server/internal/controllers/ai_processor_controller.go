@@ -656,11 +656,6 @@ func (c *AIProcessorController) GenerateSmartClips(w http.ResponseWriter, r *htt
 		return
 	}
 
-	// if req.MediaUrl == "" {
-	// 	http.Error(w, "media_url is required", http.StatusBadRequest)
-	// 	return
-	// }
-
 	testimonialID, _ := uuid.Parse(req.TestimonialID)
 	workspaceID, _ := uuid.Parse(req.WorkspaceID)
 
@@ -1744,7 +1739,7 @@ func (c *AIProcessorController) PreventDuplicateProcessing(next http.Handler) ht
 
 		if isApplied {
 			// Service already applied - return conflict response
-			response := map[string]interface{}{
+			response := map[string]any{
 				"error": "service_already_applied",
 				"message": fmt.Sprintf(
 					"Service '%s' has already been applied to this source. Check the service tree for existing results.",
