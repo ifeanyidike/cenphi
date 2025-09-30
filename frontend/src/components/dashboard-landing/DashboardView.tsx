@@ -43,7 +43,7 @@ const AIGeneratedContentCard: React.FC<{ onNavigate: () => void }> = observer(
         transition={{ duration: 0.5 }}
       >
         <div className="bg-white border border-gray-200 rounded p-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded bg-gray-100 flex items-center justify-center">
                 <Sparkles className="h-4 w-4 text-gray-600" />
@@ -58,14 +58,18 @@ const AIGeneratedContentCard: React.FC<{ onNavigate: () => void }> = observer(
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between sm:justify-end gap-3">
               <div className="text-right">
                 <div className="text-lg font-semibold text-gray-900">
                   {multiArtifacts.length}
                 </div>
                 <div className="text-xs text-gray-500">Items</div>
               </div>
-              <Button onClick={onNavigate} size="sm" className="text-xs h-7">
+              <Button
+                onClick={onNavigate}
+                size="sm"
+                className="text-xs h-7 whitespace-nowrap"
+              >
                 View All
               </Button>
             </div>
@@ -111,17 +115,17 @@ const DashboardView: React.FC = observer(() => {
     <>
       <motion.div
         variants={itemVariants}
-        className="flex justify-between items-center mb-10"
+        className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-6 mb-10"
       >
         {hasTestimonials ? (
           <>
-            <div>
+            <div className="flex-1">
               <p className="text-gray-500 dark:text-gray-400 mt-1">
                 Manage, analyze and leverage your customer reviews
               </p>
             </div>
 
-            <div className="flex items-center space-x-3">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <Button
                 variant="outline"
                 size="sm"
@@ -133,43 +137,47 @@ const DashboardView: React.FC = observer(() => {
               </Button>
               <Button
                 onClick={() => setIsRequestModalOpen(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all duration-300"
+                className="bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all duration-300 text-sm"
               >
                 <Mail className="h-4 w-4 mr-2" />
-                Request Testimonials
+                <span className="hidden sm:inline">Request Testimonials</span>
+                <span className="sm:hidden">Request</span>
               </Button>
-              <Button className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-md hover:shadow-lg transition-all duration-300">
+              <Button className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-md hover:shadow-lg transition-all duration-300 text-sm">
                 <PlusCircle className="h-4 w-4 mr-2" />
-                Add Testimonial
+                <span className="hidden sm:inline">Add Testimonial</span>
+                <span className="sm:hidden">Add</span>
               </Button>
             </div>
           </>
         ) : (
           <>
-            <div>
-              <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">
+            <div className="flex-1">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
                 Welcome to Your Testimonial Dashboard
               </h1>
-              <p className="text-gray-500 max-w-2xl mt-2">
+              <p className="text-gray-500 max-w-2xl mt-2 text-sm sm:text-base">
                 Your journey to collecting powerful social proof starts here.
                 Request testimonials from your customers or add your first
                 testimonial manually.
               </p>
             </div>
-            <div className="flex items-center space-x-3">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <Button
                 onClick={() => setIsRequestModalOpen(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 text-sm"
               >
                 <Mail className="h-4 w-4 mr-2" />
-                Request Testimonials
+                <span className="hidden sm:inline">Request Testimonials</span>
+                <span className="sm:hidden">Request</span>
               </Button>
               <Button
                 variant="outline"
-                className="border-purple-200 text-purple-700 hover:bg-purple-50 shadow-lg hover:shadow-xl transition-all duration-300"
+                className="border-purple-200 text-purple-700 hover:bg-purple-50 shadow-lg hover:shadow-xl transition-all duration-300 text-sm"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Add Manually
+                <span className="hidden sm:inline">Add Manually</span>
+                <span className="sm:hidden">Add</span>
               </Button>
             </div>
           </>

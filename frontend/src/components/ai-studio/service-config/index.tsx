@@ -174,55 +174,53 @@ const ServiceConfigPage: React.FC<{
       {/* Header */}
       <div className="bg-white border-b">
         <div className="max-w-screen-xl mx-auto px-2 sm:px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-0 sm:justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
               <button
                 onClick={onBack}
-                className="flex items-center gap-2 text-gray-600 hover:text-gray-900 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                className="flex items-center gap-2 text-gray-600 hover:text-gray-900 p-2 rounded-lg hover:bg-gray-100 transition-colors self-start"
               >
                 <ArrowLeft className="h-4 w-4" />
-                <span className="hidden text-sm sm:inline">
-                  Back to Studio Home
+                <span className="text-sm">
+                  <span className="hidden sm:inline">Back to Studio Home</span>
+                  <span className="sm:hidden">Back</span>
                 </span>
               </button>
               <div className="h-6 w-px bg-gray-300 hidden sm:block" />
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col gap-3">
                 {!serviceValidation.canApply && (
-                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <div className="p-3 sm:p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                     <div className="flex items-center gap-2">
-                      <AlertTriangle className="w-5 h-5 text-yellow-600" />
-                      <span className="font-medium text-yellow-800">
+                      <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600 flex-shrink-0" />
+                      <span className="font-medium text-yellow-800 text-sm">
                         Service Cannot Be Applied
                       </span>
                     </div>
-                    <p className="text-yellow-700 mt-1">
+                    <p className="text-yellow-700 mt-1 text-sm">
                       {serviceValidation.reason}
                     </p>
                   </div>
                 )}
                 <div>
-                  <h1 className="font-semibold text-gray-900">
+                  <h1 className="font-semibold text-gray-900 text-base sm:text-lg">
                     {service.title} Configuration
                   </h1>
-                  {/* <p className="text-xs text-gray-600">
-                    Customize settings for {selectedTestimonials?.length}{" "}
-                    testimonial{selectedTestimonials?.length > 1 ? "s" : ""}
-                  </p> */}
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 order-first sm:order-last">
               <button
                 onClick={() => setShowSavePreset(true)}
-                className="hidden sm:flex items-center gap-2 px-4 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 <Save className="h-3 w-3" />
-                Save Preset
+                <span className="hidden sm:inline">Save Preset</span>
+                <span className="sm:hidden">Save</span>
               </button>
               <button
                 onClick={handleProcess}
-                className="flex text-sm items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                className="flex text-sm items-center gap-2 px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
               >
                 <Play className="h-3 w-3" />
                 <span className="hidden sm:inline">Start Processing</span>
@@ -233,19 +231,12 @@ const ServiceConfigPage: React.FC<{
         </div>
       </div>
       <div className="max-w-screen-xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 sm:gap-8">
-          {/* Saved Presets Sidebar */}
-          <SavedPresets
-            handleLoadPreset={handleLoadPreset}
-            selectedPreset={selectedPreset}
-            service={service}
-          />
-
-          {/* Configuration Content */}
-          <div className="lg:col-span-3 order-1 lg:order-2">
+        <div className="flex flex-col lg:grid lg:grid-cols-4 gap-6 sm:gap-8">
+          {/* Configuration Content - Show first on mobile */}
+          <div className="lg:col-span-3 order-2 lg:order-2">
             <div className="bg-white rounded-lg border shadow-sm">
               <div className="p-4 sm:p-6 border-b">
-                <h2 className="text-lg font-semibold text-gray-900">
+                <h2 className="text-base sm:text-lg font-semibold text-gray-900">
                   Configuration Settings
                 </h2>
                 <p className="text-sm text-gray-600 mt-1">
@@ -254,6 +245,15 @@ const ServiceConfigPage: React.FC<{
               </div>
               <div className="p-4 sm:p-6">{renderConfigOptions()}</div>
             </div>
+          </div>
+
+          {/* Saved Presets Sidebar - Show second on mobile */}
+          <div className="order-1 lg:order-1">
+            <SavedPresets
+              handleLoadPreset={handleLoadPreset}
+              selectedPreset={selectedPreset}
+              service={service}
+            />
           </div>
         </div>
       </div>

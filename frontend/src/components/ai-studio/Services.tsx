@@ -128,12 +128,12 @@ const Services: React.FC<Props> = ({
     selectedTestimonials.length > 0 || selectedArtifacts.length > 0;
 
   return (
-    <div className="space-y-7">
+    <div className="space-y-6 sm:space-y-7">
       {/* Header */}
       <div className="relative">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-50/30 to-purple-50/30 rounded-lg -m-4"></div>
-        <div className="relative p-4">
-          <h2 className="text-xl font-semibold text-gray-900 tracking-tight">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-50/30 to-purple-50/30 rounded-lg -m-3 sm:-m-4"></div>
+        <div className="relative p-3 sm:p-4">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 tracking-tight">
             AI Services
           </h2>
           <p className="text-gray-600 mt-1 text-sm">
@@ -143,13 +143,13 @@ const Services: React.FC<Props> = ({
       </div>
 
       {/* Category Navigation */}
-      <div className="flex items-center gap-6">
-        <div className="flex space-x-1 bg-gray-100/60 p-1 rounded-lg">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
+        <div className="flex space-x-1 bg-gray-100/60 p-1 rounded-lg overflow-x-auto">
           {categories.map((category) => (
             <button
               key={category.id}
               onClick={() => setSelectedCategory(category.id)}
-              className={`relative px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
+              className={`relative px-3 sm:px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 whitespace-nowrap ${
                 selectedCategory === category.id
                   ? "bg-white text-gray-900 shadow-sm"
                   : "text-gray-600 hover:text-gray-900"
@@ -162,21 +162,21 @@ const Services: React.FC<Props> = ({
             </button>
           ))}
         </div>
-        <div className="flex-1 h-px bg-gradient-to-r from-gray-200 to-transparent"></div>
+        <div className="hidden sm:block flex-1 h-px bg-gradient-to-r from-gray-200 to-transparent"></div>
       </div>
 
       {/* Selection prompt */}
       {!hasSelection && (
-        <div className="text-center py-16">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Brain className="w-8 h-8 text-gray-400" />
+        <div className="text-center py-12 sm:py-16">
+          <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Brain className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400" />
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
+          <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">
             {artifactMode
               ? "Select Content to Process"
               : "Select Testimonials to Begin"}
           </h3>
-          <p className="text-gray-600 max-w-md mx-auto">
+          <p className="text-gray-600 max-w-md mx-auto text-sm sm:text-base">
             {artifactMode
               ? "Choose clips or videos above to process with AI services."
               : "Choose one or more testimonials above to unlock AI services and start processing your content."}
@@ -185,7 +185,7 @@ const Services: React.FC<Props> = ({
       )}
 
       {/* Services Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
         {filteredServices.map((service, index) => {
           const IconComponent = service.icon;
           const config =
@@ -211,7 +211,7 @@ const Services: React.FC<Props> = ({
                 ></div>
 
                 {/* Header Section */}
-                <div className="relative p-5 border-b border-gray-100">
+                <div className="relative p-4 sm:p-5 border-b border-gray-100">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
                       <div
@@ -306,7 +306,7 @@ const Services: React.FC<Props> = ({
                 </div>
 
                 {/* Action Section */}
-                <div className="relative p-5 pt-0">
+                <div className="relative p-4 sm:p-5 pt-0">
                   {isStreamlined ? (
                     <button
                       onClick={() =>
@@ -323,7 +323,7 @@ const Services: React.FC<Props> = ({
                       <ArrowRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
                     </button>
                   ) : (
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <button
                         onClick={() =>
                           handleServiceAction(service.id, "immediate")
@@ -336,7 +336,8 @@ const Services: React.FC<Props> = ({
                         className="flex-1 h-9 px-3 bg-gray-900 hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-md transition-all duration-200 flex items-center justify-center gap-1.5 text-sm font-medium"
                       >
                         <Play className="h-3 w-3" />
-                        Process
+                        <span className="hidden sm:inline">Process</span>
+                        <span className="sm:hidden">Start</span>
                       </button>
                       <button
                         onClick={() =>
