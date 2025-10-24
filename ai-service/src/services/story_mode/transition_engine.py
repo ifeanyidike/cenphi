@@ -19,7 +19,7 @@ class TransitionEngine:
     """
     
     def __init__(self):
-        self.transition_duration = 0.5  # Professional standard
+        self.transition_duration = 0.2  # Optimized for minimal duration loss
         self._current_transition_type = None  # For direction awareness
         self._file_manager = None
         self._storage_manager = None

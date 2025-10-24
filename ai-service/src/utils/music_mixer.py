@@ -233,10 +233,10 @@ class MusicMixer:
                 logger.warning("Could not read video duration, using 60s default")
                 duration = 60.0
 
-            # Convert volume
+            # Convert volume - Balanced levels for good voice/music mix
             if isinstance(music_volume, str):
-                volume_levels = {"low": "0.25", "medium": "0.4", "high": "0.6"}
-                volume = volume_levels.get(music_volume.lower(), "0.25")
+                volume_levels = {"low": "0.18", "medium": "0.35", "high": "0.50"}
+                volume = volume_levels.get(music_volume.lower(), "0.18")
             else:
                 volume = str(music_volume)
 
@@ -256,10 +256,11 @@ class MusicMixer:
             filter_complex.append(music_filter)
             
             # Mix or use music only
+            # Prioritize voice over music with adjusted weights
             if has_audio:
                 filter_complex.append(
                     f"[0:a]volume=1.0[voice];"
-                    f"[voice][music]amix=inputs=2:weights=1.0 1.0:duration=first[mix]"
+                    f"[voice][music]amix=inputs=2:weights=2.5 0.8:duration=first[mix]"
                 )
                 map_audio = "[mix]"
             else:
@@ -321,8 +322,9 @@ class MusicMixer:
                 logger.warning("Could not read audio duration, using 30s default")
                 duration = 30.0
 
+            # Balanced volume levels for good narration/music balance
             if isinstance(music_volume, str):
-                volume_levels = {"low": "0.15", "medium": "0.35", "high": "0.55"}
+                volume_levels = {"low": "0.15", "medium": "0.28", "high": "0.45"}
                 volume = volume_levels.get(music_volume.lower(), "0.15")
             else:
                 volume = str(music_volume)

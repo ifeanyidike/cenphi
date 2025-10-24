@@ -37,16 +37,24 @@ import {
   Target,
   TrendingUp,
   Users,
+  Copy,
+  Check,
+  Link2,
+  Zap,
+  MessageCircle,
+  Mail,
 } from "lucide-react";
 import { socialManager, SocialAccount } from "@/repo/managers/social_manager";
 import { workspaceHub } from "@/repo/workspace_hub";
 import { useToast } from "@/hooks/use-toast";
+import { shareManager, PublicShare } from "@/repo/managers/share_manager";
 
 interface SocialSharingModalProps {
   isOpen: boolean;
   onClose: () => void;
   testimonialId?: string;
   testimonialIds?: string[];
+  artifactId?: string;
   artifactContent?: string;
   artifactType?: string;
   videoUrl?: string;
@@ -73,6 +81,7 @@ const SocialSharingModal = observer(
     onClose,
     testimonialId,
     testimonialIds = [],
+    artifactId,
     artifactContent = "",
     artifactType = "text",
     videoUrl,
@@ -90,6 +99,10 @@ const SocialSharingModal = observer(
     const [isCreating, setIsCreating] = useState(false);
     const [accounts, setAccounts] = useState<SocialAccount[]>([]);
     const [loadingAccounts, setLoadingAccounts] = useState(false);
+    const [isCopied, setIsCopied] = useState(false);
+    const [publicShareUrl, setPublicShareUrl] = useState("");
+    const [publicShare, setPublicShare] = useState<PublicShare | null>(null);
+    const [isLoadingShare, setIsLoadingShare] = useState(false);
 
     const { toast } = useToast();
 
@@ -167,6 +180,140 @@ const SocialSharingModal = observer(
 
     const removeHashtag = (tag: string) => {
       setHashtags(hashtags.filter((h) => h !== tag));
+    };
+
+    // Generate public share URL with backend integration
+    useEffect(() => {
+      const initializeShare = async () => {
+        if (!isOpen || (!testimonialId && !artifactId)) return;
+
+        setIsLoadingShare(true);
+        try {
+          let share: PublicShare;
+
+          if (artifactId) {
+            // Create/get share for artifact
+            share = await shareManager.getOrCreateArtifactShare(artifactId);
+          } else if (testimonialId) {
+            // Create/get share for testimonial
+            share = await shareManager.getOrCreateTestimonialShare(testimonialId);
+          } else {
+            return;
+          }
+
+          setPublicShare(share);
+          setPublicShareUrl(shareManager.getPublicShareUrl(share.id));
+        } catch (error) {
+          console.error("Failed to create share:", error);
+          toast({
+            title: "Share Error",
+            description: "Failed to create public share link",
+            variant: "destructive",
+          });
+        } finally {
+          setIsLoadingShare(false);
+        }
+      };
+
+      initializeShare();
+    }, [isOpen, testimonialId, artifactId]);
+
+    // Copy share link to clipboard with tracking
+    const handleCopyLink = async () => {
+      if (!publicShareUrl || !publicShare) return;
+
+      try {
+        await navigator.clipboard.writeText(publicShareUrl);
+        setIsCopied(true);
+
+        // Track copy event
+        await shareManager.trackEvent(publicShare.id, {
+          event_type: "copy_link",
+        });
+
+        toast({
+          title: "Link Copied!",
+          description: "Public share link copied to clipboard",
+        });
+        setTimeout(() => setIsCopied(false), 2000);
+      } catch (error) {
+        console.error("Failed to copy link:", error);
+        toast({
+          title: "Copy Failed",
+          description: "Failed to copy link to clipboard",
+          variant: "destructive",
+        });
+      }
+    };
+
+    // Quick share via LinkedIn web intent (no OAuth needed) with tracking
+    const quickShareLinkedIn = async () => {
+      if (!publicShareUrl || !publicShare) return;
+
+      const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(publicShareUrl)}`;
+      window.open(linkedInUrl, "_blank", "width=550,height=420");
+
+      // Track LinkedIn share click
+      await shareManager.trackEvent(publicShare.id, {
+        event_type: "share_linkedin",
+      });
+
+      toast({
+        title: "Opening LinkedIn",
+        description: "Share window opened",
+      });
+    };
+
+    // Quick share via Twitter web intent with tracking
+    const quickShareTwitter = async () => {
+      if (!publicShareUrl || !publicShare) return;
+
+      const text = content || artifactContent || "Check out this testimonial";
+      const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(publicShareUrl)}`;
+      window.open(twitterUrl, "_blank", "width=550,height=420");
+
+      // Track Twitter share click
+      await shareManager.trackEvent(publicShare.id, {
+        event_type: "share_twitter",
+      });
+
+      toast({
+        title: "Opening Twitter",
+        description: "Share window opened",
+      });
+    };
+
+    // Quick share via WhatsApp with tracking
+    const quickShareWhatsApp = async () => {
+      if (!publicShareUrl || !publicShare) return;
+
+      const text = `Check out this testimonial: ${publicShareUrl}`;
+      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
+      window.open(whatsappUrl, "_blank");
+
+      // Track WhatsApp share click
+      await shareManager.trackEvent(publicShare.id, {
+        event_type: "share_whatsapp",
+      });
+
+      toast({
+        title: "Opening WhatsApp",
+        description: "Share window opened",
+      });
+    };
+
+    // Quick share via Email with tracking
+    const quickShareEmail = async () => {
+      if (!publicShareUrl || !publicShare) return;
+
+      const subject = "Check out this testimonial";
+      const body = `I thought you might be interested in this testimonial:\n\n${publicShareUrl}`;
+      window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+      // Track Email share click
+      await shareManager.trackEvent(publicShare.id, {
+        event_type: "share_email",
+      });
     };
 
     const handleShare = async () => {
@@ -277,6 +424,124 @@ const SocialSharingModal = observer(
           </DialogHeader>
 
           <div className="space-y-6">
+            {/* Quick Share Section */}
+            {(testimonialId || artifactId) && (
+              <Card className="border-blue-200 bg-gradient-to-br from-blue-50/50 to-white">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Zap className="h-4 w-4 text-blue-600" />
+                    Quick Share (No Login Required)
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground">
+                    Share your {artifactId ? "content" : "testimonial"} instantly using native platform dialogs
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {isLoadingShare ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin text-blue-600 mr-2" />
+                      <span className="text-sm text-muted-foreground">Creating share link...</span>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Public Share Link */}
+                      <div className="space-y-2">
+                        <Label className="text-xs flex items-center gap-1">
+                          <Link2 className="h-3 w-3" />
+                          Public Share Link
+                        </Label>
+                        <div className="flex gap-2">
+                          <Input
+                            value={publicShareUrl}
+                            readOnly
+                            className="text-xs font-mono bg-white"
+                          />
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={handleCopyLink}
+                            className="shrink-0"
+                            disabled={!publicShare}
+                          >
+                            {isCopied ? (
+                              <Check className="h-3 w-3 text-green-600" />
+                            ) : (
+                              <Copy className="h-3 w-3" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Quick Share Buttons */}
+                      <div className="space-y-2">
+                        <Label className="text-xs">Share via</Label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={quickShareLinkedIn}
+                            className="justify-start bg-white hover:bg-blue-50 border-blue-200"
+                            disabled={!publicShare}
+                          >
+                            <Linkedin className="h-3 w-3 mr-2 text-blue-600" />
+                            <span className="text-xs">LinkedIn</span>
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={quickShareTwitter}
+                            className="justify-start bg-white hover:bg-sky-50 border-sky-200"
+                            disabled={!publicShare}
+                          >
+                            <Twitter className="h-3 w-3 mr-2 text-sky-500" />
+                            <span className="text-xs">Twitter</span>
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={quickShareWhatsApp}
+                            className="justify-start bg-white hover:bg-green-50 border-green-200"
+                            disabled={!publicShare}
+                          >
+                            <MessageCircle className="h-3 w-3 mr-2 text-green-600" />
+                            <span className="text-xs">WhatsApp</span>
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={quickShareEmail}
+                            className="justify-start bg-white hover:bg-gray-50 border-gray-200"
+                            disabled={!publicShare}
+                          >
+                            <Mail className="h-3 w-3 mr-2 text-gray-600" />
+                            <span className="text-xs">Email</span>
+                          </Button>
+                        </div>
+                      </div>
+
+                      <p className="text-xs text-muted-foreground bg-blue-50 p-2 rounded-md">
+                        ⚡ Quick Share opens native platform dialogs - no account connection needed!
+                      </p>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Divider */}
+            {(testimonialId || artifactId) && publicShareUrl && (
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-200"></div>
+                </div>
+                <div className="relative flex justify-center text-xs">
+                  <span className="bg-white px-2 text-muted-foreground">
+                    Or connect accounts for advanced features
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Account Selection */}
             <Card>
               <CardHeader className="pb-3">

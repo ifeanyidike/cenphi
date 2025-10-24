@@ -50,28 +50,6 @@ const serviceConfig = {
   platform_optimizer: { icon: Video, color: "from-green-500 to-emerald-500" },
 };
 
-// const NotificationItem: React.FC<{
-//   notification: Notification;
-//   onDismiss: (id: string) => void;
-// }> = ({ notification, onDismiss }) => {
-//   const [timeLeft, setTimeLeft] = useState(notification.duration || 0);
-
-//   useEffect(() => {
-//     if (!notification.duration) return;
-
-//     const timer = setInterval(() => {
-//       setTimeLeft((prev) => {
-//         if (prev <= 1) {
-//           onDismiss(notification.id);
-//           return 0;
-//         }
-//         return prev - 1;
-//       });
-//     }, 1000);
-
-//     return () => clearInterval(timer);
-//   }, [notification.duration, notification.id, onDismiss]);
-
 const NotificationItem: React.FC<{
   notification: Notification;
   onDismiss: (id: string) => void;

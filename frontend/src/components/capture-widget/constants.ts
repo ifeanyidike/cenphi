@@ -18,7 +18,8 @@ export const Icons = {
 export const DEFAULT_WINDOW_CONFIG: Partial<TestimonialWidgetConfig> = {
   apiBaseUrl:
     (window.testimonialWidgetConfig as any)?.apiBaseUrl ||
-    import.meta.env.VITE_API_BASE || "http://localhost:8081/api",
+    import.meta.env.VITE_API_BASE ||
+    "http://localhost:8081/api",
   campaignId: (window.testimonialWidgetConfig as any)?.campaignId,
   primaryColor:
     (window.testimonialWidgetConfig as any)?.primaryColor || "#4F46E5",
@@ -42,7 +43,7 @@ export const DEFAULT_WINDOW_CONFIG: Partial<TestimonialWidgetConfig> = {
 
 // File upload configuration
 export const UPLOAD_CONFIG = {
-  maxFileSize: 1024 * 1024 * 1024, // 1GB
+  maxFileSize: 1024 * 1024 * 250, // 250MB (with compression support)
   acceptedFormats: ["video/mp4", "video/webm", "video/quicktime", "video/avi"],
   supportedFormats: [
     { mime: "video/mp4", ext: "MP4", description: "Most common format" },

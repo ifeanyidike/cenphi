@@ -331,6 +331,11 @@ func (c TestimonialController) parseTestimonialFilter(r *http.Request) models.Te
 		}
 	}
 
+	// Parse exclude_artifacts - default to false if not specified
+	if excludeArtifactsStr := r.URL.Query().Get("exclude_artifacts"); excludeArtifactsStr != "" {
+		filter.ExcludeArtifacts = excludeArtifactsStr == "true" || excludeArtifactsStr == "1"
+	}
+
 	return filter
 }
 
@@ -395,4 +400,95 @@ func (c TestimonialController) updateTestimonialFromRequest(testimonial *models.
 	if req.Metadata != nil {
 		testimonial.Metadata = models.JSONMap(req.Metadata)
 	}
+}
+
+// UploadToVector handles POST /api/testimonials/{id}/upload-to-vector
+func (tc *TestimonialController) UploadToVector(w http.ResponseWriter, r *http.Request) {
+	// Get testimonial ID from URL
+	testimonialIDStr := chi.URLParam(r, "id")
+	testimonialID, err := uuid.Parse(testimonialIDStr)
+	if err != nil {
+		tc.logger.Error("Invalid testimonial ID", zap.Error(err))
+		http.Error(w, "Invalid testimonial ID", http.StatusBadRequest)
+		return
+	}
+
+	// Get the testimonial first
+	testimonial, err := tc.service.GetTestimonialByID(r.Context(), testimonialID)
+	if err != nil {
+		tc.logger.Error("Failed to get testimonial", zap.Error(err))
+		http.Error(w, "Testimonial not found", http.StatusNotFound)
+		return
+	}
+
+	// Upload to vector store (this will be handled by the service layer)
+	err = tc.service.UploadToVectorStore(r.Context(), testimonial)
+	if err != nil {
+		tc.logger.Error("Failed to upload testimonial to vector store",
+			zap.Error(err),
+			zap.String("testimonial_id", testimonialID.String()))
+		http.Error(w, "Failed to upload to vector store", http.StatusInternalServerError)
+		return
+	}
+
+	// Return success response
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success":        true,
+		"message":        "Testimonial uploaded to vector store successfully",
+		"testimonial_id": testimonialID.String(),
+	})
+}
+
+// GetPlatformRecommendation handles GET /api/testimonials/{id}/platform-recommendations
+func (tc *TestimonialController) GetPlatformRecommendation(w http.ResponseWriter, r *http.Request) {
+	testimonialIDStr := chi.URLParam(r, "id")
+	testimonialID, err := uuid.Parse(testimonialIDStr)
+	if err != nil {
+		tc.logger.Error("Invalid testimonial ID", zap.Error(err))
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid testimonial ID")
+		return
+	}
+
+	// Get platform recommendations from service
+	recommendations, err := tc.service.GetPlatformRecommendation(r.Context(), testimonialID)
+	if err != nil {
+		tc.logger.Error("Failed to get platform recommendations",
+			zap.Error(err),
+			zap.String("testimonial_id", testimonialID.String()))
+		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	utils.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
+		"recommendations": recommendations,
+		"message":         "Platform recommendations retrieved successfully",
+	})
+}
+
+// GeneratePlatformRecommendation triggers platform recommendation generation (manual)
+func (tc *TestimonialController) GeneratePlatformRecommendation(w http.ResponseWriter, r *http.Request) {
+	testimonialIDStr := chi.URLParam(r, "id")
+	testimonialID, err := uuid.Parse(testimonialIDStr)
+	if err != nil {
+		tc.logger.Error("Invalid testimonial ID", zap.Error(err))
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid testimonial ID")
+		return
+	}
+
+	// Generate and save platform recommendations
+	recommendations, err := tc.service.GeneratePlatformRecommendations(r.Context(), testimonialID)
+	if err != nil {
+		tc.logger.Error("Failed to generate platform recommendations",
+			zap.Error(err),
+			zap.String("testimonial_id", testimonialID.String()))
+		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	utils.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
+		"primary_recommendation": recommendations.PrimaryRecommendation,
+		"alternative_platforms":  recommendations.AlternativePlatforms,
+		"message":                "Platform recommendations generated successfully",
+	})
 }

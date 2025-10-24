@@ -6,31 +6,29 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { NavMain } from "./NavMain";
-import { NavProjects } from "./NavProjects";
 import NavUser from "./NavUser";
 import { TeamSwitcher } from "./TeamSwitcher";
 import CenphiLogo from "../custom/cenphi-logo";
 import * as React from "react";
 import {
   Home,
-  MessageSquare,
   Sparkles,
   Settings2,
-  Mail,
-  Video,
-  FileText,
-  Zap,
-  Command,
+  MessageCircle,
+  Share2,
+  Wand2,
   BarChart3,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { workspaceHub } from "@/repo/workspace_hub";
 import { auth } from "@/config/firebase";
 import { observer } from "mobx-react-lite";
+import { useLocation } from "react-router-dom";
 
 export const AppSidebar = observer(
   ({ ...props }: React.ComponentProps<typeof Sidebar>) => {
     const [mounted, setMounted] = React.useState(false);
+    const location = useLocation();
 
     // Handle hydration issues
     React.useEffect(() => {
@@ -74,6 +72,11 @@ export const AppSidebar = observer(
 
     // const workspacePlan = member?.workspace_plan || "";
 
+    // Check active route
+    const currentPath = location.pathname;
+    const isStudioRoute = currentPath.startsWith("/studio");
+    const isDetailRoute = currentPath.startsWith("/detail");
+
     const data = {
       user: {
         name: userName,
@@ -86,95 +89,52 @@ export const AppSidebar = observer(
           logo: CenphiLogo,
           plan: workspacePlan,
         },
-        {
-          name: "Product Team",
-          logo: Command,
-          plan: "Pro",
-        },
       ],
       navMain: [
         {
-          title: "Dashboard",
+          title: "Testimonials",
           url: "/dashboard",
           icon: Home,
-          isActive: true,
+          isActive: currentPath === "/dashboard" || isDetailRoute,
         },
         {
-          title: "Collect",
-          url: "/collect",
-          icon: MessageSquare,
-          items: [
-            {
-              title: "Video Testimonials",
-              url: "/collect",
-            },
-            {
-              title: "Text Testimonials",
-              url: "/collect",
-            },
-            {
-              title: "Email Requests",
-              url: "/settings",
-            },
-            {
-              title: "Google Drive Import",
-              url: "/settings",
-            },
-          ],
-        },
-        {
-          title: "AI Studio",
+          title: "Studio",
           url: "/studio",
-          icon: Sparkles,
-          items: [
-            {
-              title: "Video Processing",
-              url: "/studio?tab=video",
-            },
-            {
-              title: "Text Processing",
-              url: "/studio?tab=text",
-            },
-            {
-              title: "Smart Clipping",
-              url: "/studio?service=clipping",
-            },
-            {
-              title: "Content Enhancement",
-              url: "/studio?service=enhancement",
-            },
-            {
-              title: "Platform Optimization",
-              url: "/studio?service=platform_optimizer",
-            },
-            {
-              title: "AI Narration",
-              url: "/studio?service=narration",
-            },
-          ],
+          icon: Wand2,
+          isActive: isStudioRoute,
         },
         {
-          title: "AI-Generated Content",
+          title: "AI Content Hub",
           url: "/ai-content",
-          icon: FileText,
+          icon: Sparkles,
+          isActive: currentPath === "/ai-content",
         },
         {
-          title: "Social Analytics",
-          url: "/social/analytics",
+          title: "Analytics",
+          url: "/analytics",
           icon: BarChart3,
+          isActive: currentPath === "/analytics",
         },
         {
-          title: "Email Campaigns",
-          url: "/email",
-          icon: Mail,
+          title: "Talk to Data",
+          url: "/talk-to-your-data",
+          icon: MessageCircle,
+          isActive: currentPath === "/talk-to-your-data",
+        },
+        {
+          title: "Collection",
+          url: "#",
+          icon: Share2,
+          isActive:
+            currentPath === "/emailpage" || currentPath === "/email/templates",
           items: [
+            {
+              title: "Share Collection Link",
+              url: "/settings",
+            },
             {
               title: "Request Templates",
-              url: "/email/templates",
-            },
-            {
-              title: "Send Requests",
-              url: "/emailpage",
+              url: "/settings/",
             },
           ],
         },
@@ -182,9 +142,13 @@ export const AppSidebar = observer(
           title: "Settings",
           url: "/settings",
           icon: Settings2,
+          isActive:
+            currentPath === "/settings" ||
+            currentPath === "/brand-guide" ||
+            currentPath === "/checkout",
           items: [
             {
-              title: "Integrations",
+              title: "Workspace Settings",
               url: "/settings",
             },
             {
@@ -192,34 +156,13 @@ export const AppSidebar = observer(
               url: "/brand-guide",
             },
             {
-              title: "Billing",
+              title: "Billing & Plans",
               url: "/checkout",
             },
           ],
         },
       ],
-      projects: [
-        {
-          name: "Video Collection",
-          url: "/collect",
-          icon: Video,
-        },
-        {
-          name: "Text Collection",
-          url: "/collect",
-          icon: FileText,
-        },
-        {
-          name: "AI Processing",
-          url: "/studio",
-          icon: Zap,
-        },
-        {
-          name: "Email Campaigns",
-          url: "/settings",
-          icon: Mail,
-        },
-      ],
+      projects: [],
     };
 
     if (!mounted) return null;
@@ -240,7 +183,6 @@ export const AppSidebar = observer(
           </SidebarHeader>
           <SidebarContent className="scrollbar-thin">
             <NavMain items={data.navMain} />
-            <NavProjects projects={data.projects} />
           </SidebarContent>
           <SidebarFooter>
             <NavUser user={data.user} />

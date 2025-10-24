@@ -7,12 +7,13 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"log/slog"
 	"reflect"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -76,80 +77,128 @@ func (r *BaseRepository[T]) UpdateAny(ctx context.Context, id uuid.UUID, updates
 		return fmt.Errorf("no fields to update")
 	}
 
-	// Always update the updated_at field
-	updates["updated_at"] = time.Now()
+	// Always update updated_at
+	updates["updated_at"] = time.Now().UTC()
 
-	// Build dynamic query
-	setParts := make([]string, 0, len(updates))
-	args := make([]any, 0, len(updates)+1)
-	argIndex := 1
+	// Optional: whitelist updatable columns (recommended)
+	// allowed := map[string]struct{}{"data":{}, "result_category":{}, "updated_at":{}, ...}
+	// if you want, validate keys here and return an error if unknown key.
 
-	for field, value := range updates {
-		slog.Debug("Processing field for update",
-			slog.String("attr", field),
-			slog.String("value_type", fmt.Sprintf("%T", value)),
-			slog.Bool("needs_json", needsJSONSerialization(value)))
+	// Build deterministic order
+	keys := make([]string, 0, len(updates))
+	for k := range updates {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
 
-		// Handle special types that need JSON serialization
-		if needsJSONSerialization(value) {
-			// Dereference pointer if it's a pointer
-			actualValue := value
-			if reflect.ValueOf(value).Kind() == reflect.Ptr {
-				if reflect.ValueOf(value).IsNil() {
-					actualValue = nil
-				} else {
-					actualValue = reflect.ValueOf(value).Elem().Interface()
-				}
-			}
+	setParts := make([]string, 0, len(keys))
+	args := make([]any, 0, len(keys)+1)
+	for i, field := range keys {
+		value := updates[field]
 
-			if actualValue != nil {
-				jsonBytes, err := json.Marshal(actualValue)
-				if err != nil {
-					return fmt.Errorf("failed to marshal field %s: %w", field, err)
-				}
-				value = string(jsonBytes)
-				slog.Debug("Serialized field to JSON",
-					slog.String("field", field),
-					slog.String("json", string(jsonBytes)))
-			}
-		} else {
-			// Handle pointers to basic types
-			if reflect.ValueOf(value).Kind() == reflect.Ptr {
-				if reflect.ValueOf(value).IsNil() {
-					value = nil
-				} else {
-					value = reflect.ValueOf(value).Elem().Interface()
-				}
+		// dereference pointer if pointer
+		rv := reflect.ValueOf(value)
+		if rv.Kind() == reflect.Ptr {
+			if rv.IsNil() {
+				value = nil
+			} else {
+				value = rv.Elem().Interface()
 			}
 		}
 
-		setParts = append(setParts, fmt.Sprintf("%s = $%d", field, argIndex))
+		// If field needs JSON serialization (slice, map, struct) -> marshal
+		if needsJSONSerialization(value) {
+			if value == nil {
+				// leave nil
+			} else {
+				b, err := json.Marshal(value)
+				if err != nil {
+					return fmt.Errorf("failed to marshal field %s: %w", field, err)
+				}
+				value = string(b)
+			}
+		}
+
+		placeholder := fmt.Sprintf("$%d", i+1)
+		setParts = append(setParts, fmt.Sprintf("%s = %s", field, placeholder))
 		args = append(args, value)
-		argIndex++
 	}
 
-	// Add ID as the last argument
+	// Add id as last arg
 	args = append(args, id)
+	wherePlaceholder := fmt.Sprintf("$%d", len(args))
 
-	query := fmt.Sprintf(`
-		UPDATE %s 
-		SET %s 
-		WHERE id = $%d
-	`, r.tableName, strings.Join(setParts, ", "), argIndex)
+	query := fmt.Sprintf("UPDATE %s SET %s WHERE id = %s RETURNING id",
+		pq.QuoteIdentifier(r.tableName), strings.Join(setParts, ", "), wherePlaceholder)
 
-	result, err := db.ExecContext(ctx, query, args...)
+	// // log for debugging (structured)
+	// slog.Info("UpdateAny executing query",
+	// 	slog.String("query", query),
+	// 	slog.Any("args", args))
+
+	// Use QueryRowContext so we can RETURNING and detect if a row was returned
+	var returnedID uuid.UUID
+	err := db.QueryRowContext(ctx, query, args...).Scan(&returnedID)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("%s not found (ID: %s)", r.tableName, id)
+		}
 		return fmt.Errorf("failed to update %s (ID: %s): %w", r.tableName, id, err)
 	}
 
-	rowsAffected, err := result.RowsAffected()
+	return nil
+}
+
+// Get retrieves a cached entity from Redis
+func (r *BaseRepository[T]) Get(ctx context.Context, key string, redisClient *redis.Client) (*T, error) {
+	val, err := redisClient.Get(ctx, key).Result()
 	if err != nil {
-		return fmt.Errorf("failed to get rows affected: %w", err)
+		if err == redis.Nil {
+			return nil, fmt.Errorf("cache miss")
+		}
+		return nil, fmt.Errorf("redis get error: %w", err)
 	}
 
-	if rowsAffected == 0 {
-		return fmt.Errorf("%s not found (ID: %s)", r.tableName, id)
+	var entity T
+	if err := json.Unmarshal([]byte(val), &entity); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal cached entity: %w", err)
 	}
 
+	return &entity, nil
+}
+
+// Set caches an entity in Redis with expiration
+func (r *BaseRepository[T]) Set(ctx context.Context, key string, entity *T, expiration time.Duration, redisClient *redis.Client) error {
+	data, err := json.Marshal(entity)
+	if err != nil {
+		return fmt.Errorf("failed to marshal entity: %w", err)
+	}
+
+	if err := redisClient.Set(ctx, key, data, expiration).Err(); err != nil {
+		return fmt.Errorf("redis set error: %w", err)
+	}
+
+	return nil
+}
+
+// DeleteCache removes a cached entity from Redis
+func (r *BaseRepository[T]) DeleteCache(ctx context.Context, key string, redisClient *redis.Client) error {
+	if err := redisClient.Del(ctx, key).Err(); err != nil {
+		return fmt.Errorf("redis delete error: %w", err)
+	}
+	return nil
+}
+
+// DeleteCachePattern removes cached entities matching a pattern from Redis
+func (r *BaseRepository[T]) DeleteCachePattern(ctx context.Context, pattern string, redisClient *redis.Client) error {
+	iter := redisClient.Scan(ctx, 0, pattern, 0).Iterator()
+	for iter.Next(ctx) {
+		if err := redisClient.Del(ctx, iter.Val()).Err(); err != nil {
+			return fmt.Errorf("redis delete pattern error: %w", err)
+		}
+	}
+	if err := iter.Err(); err != nil {
+		return fmt.Errorf("redis scan error: %w", err)
+	}
 	return nil
 }

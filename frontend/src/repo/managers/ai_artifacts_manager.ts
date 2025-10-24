@@ -16,10 +16,28 @@ export class AIArtifactsManager {
   isLoading: boolean = false;
   error: string | null = null;
 
+  // Cache tracking
+  private cachedWorkspaceId: string | null = null;
+  private cacheTimestamp: number = 0;
+  private CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache TTL
+
   private server_addr = import.meta.env.VITE_API_URL;
 
   constructor() {
     makeAutoObservable(this);
+  }
+
+  /**
+   * Check if cache is valid for the given workspace
+   */
+  private isCacheValid(workspaceId: string): boolean {
+    const now = Date.now();
+    const cacheAge = now - this.cacheTimestamp;
+    return (
+      this.cachedWorkspaceId === workspaceId &&
+      this.artifacts.length > 0 &&
+      cacheAge < this.CACHE_TTL
+    );
   }
 
   /**
@@ -29,8 +47,24 @@ export class AIArtifactsManager {
     workspaceId: string,
     processingTypes?: string[],
     limit?: number,
-    offset?: number
+    offset?: number,
+    refresh: boolean = false
   ): Promise<TestimonialArtifact[]> {
+    // Check cache if not forcing refresh and no filters applied
+    if (
+      !refresh &&
+      !processingTypes &&
+      !limit &&
+      !offset &&
+      this.isCacheValid(workspaceId)
+    ) {
+      console.log("[AIArtifactsManager] Using cached artifacts:", {
+        count: this.artifacts.length,
+        workspaceId,
+      });
+      return this.artifacts;
+    }
+
     this.isLoading = true;
     this.error = null;
 
@@ -55,6 +89,17 @@ export class AIArtifactsManager {
       });
 
       this.artifacts = response.data.data || [];
+
+      // Update cache metadata only if no filters were applied
+      if (!processingTypes && !limit && !offset) {
+        this.cachedWorkspaceId = workspaceId;
+        this.cacheTimestamp = Date.now();
+        console.log("[AIArtifactsManager] Cached artifacts:", {
+          count: this.artifacts.length,
+          workspaceId,
+        });
+      }
+
       console.log("response data", response.data.data);
       this.isLoading = false;
       return this.artifacts;
@@ -170,6 +215,15 @@ export class AIArtifactsManager {
   }
 
   /**
+   * Invalidate cache to force refetch on next call
+   */
+  invalidateCache(): void {
+    console.log("[AIArtifactsManager] Cache invalidated");
+    this.cachedWorkspaceId = null;
+    this.cacheTimestamp = 0;
+  }
+
+  /**
    * Clear all data
    */
   clear(): void {
@@ -178,6 +232,7 @@ export class AIArtifactsManager {
     this.storyVideoArtifacts = [];
     this.error = null;
     this.isLoading = false;
+    this.invalidateCache();
   }
 
   /**

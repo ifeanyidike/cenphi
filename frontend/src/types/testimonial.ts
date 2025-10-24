@@ -2,7 +2,7 @@
 // Generated from PostgreSQL schema
 
 // Enum types
-export type ContentType = "video" | "text";
+export type ContentType = "video" | "text" | "voice";
 export type ContentStatus =
   | "draft"
   | "processing"
@@ -18,7 +18,8 @@ export type CollectionMethod =
   | "form"
   | "email"
   | "dashboard_import"
-  | "drive_import";
+  | "drive_import"
+  | "voice_call";
 
 // Base types for common fields
 export interface BaseEntity {
@@ -73,6 +74,7 @@ export interface Testimonial extends BaseEntity {
   format?: string;
   content?: string;
   media_url?: string;
+  audio_url?: string; // For voice testimonials
   transcript_segments: Array<any>;
 
   // Collection metadata

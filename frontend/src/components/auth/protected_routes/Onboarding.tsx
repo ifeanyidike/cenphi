@@ -10,10 +10,6 @@ const OnboardingProtectedRoute = observer(() => {
   const [userExists, setUserExists] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Check if user is in active onboarding flow
-  // const isActiveFlow = location.search.includes("flow=active");
-  // console.log("is active", isActiveFlow, location.search);
-
   useEffect(() => {
     const fetchUser = async () => {
       if (!workspaceHub.workspace) {
@@ -25,11 +21,6 @@ const OnboardingProtectedRoute = observer(() => {
     };
     fetchUser();
   }, []);
-
-  // // If workspace exists AND user is not in active flow, redirect to dashboard
-  // if (workspaceHub.workspace && !isActiveFlow) {
-  //   return <Navigate to="/dashboard" replace />;
-  // }
 
   if (authStore.loading || loading) return <LoadingIndicator />;
   if (userExists) return <Outlet />;

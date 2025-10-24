@@ -34,13 +34,15 @@ interface TestimonialFormData {
 interface TextTestimonialProps {
   formData: TestimonialFormData;
   setFormData: (data: TestimonialFormData) => void;
-  onSubmitSuccess: () => void;
+  onSubmitSuccess: (testimonialId?: string) => void;
+  workspaceId: string;
 }
 
 const TextTestimonial: React.FC<TextTestimonialProps> = ({
   formData,
   setFormData,
   onSubmitSuccess,
+  workspaceId,
 }) => {
   const [recordingState, setRecordingState] = useState<RecordingState>({
     status: "idle",
@@ -51,31 +53,19 @@ const TextTestimonial: React.FC<TextTestimonialProps> = ({
     setRecordingState((prev) => ({ ...prev, status: "uploading" }));
 
     try {
-      // Use workspace-scoped endpoint if workspace context is available
-      const endpoint = formData.workspaceId
-        ? `${import.meta.env.VITE_API_URL}/collection/workspaces/${formData.workspaceId}/testimonials/form`
-        : `${import.meta.env.VITE_API_URL}/api/public/testimonials`;
+      // Use workspace-scoped endpoint
+      const endpoint = `${import.meta.env.VITE_API_URL}/collection/workspaces/${workspaceId}/testimonials/form`;
 
-      const requestBody = formData.workspaceId
-        ? {
-            // Workspace-scoped format
-            author_name: formData.name,
-            author_email: formData.email,
-            author_company: formData.company,
-            content: formData.textContent,
-            rating: formData.rating,
-            type: "text",
-            ...(formData.token && { tracking_token: formData.token }),
-          }
-        : {
-            // Legacy format
-            type: "text",
-            author_name: formData.name,
-            author_email: formData.email,
-            company: formData.company,
-            content: formData.textContent,
-            rating: formData.rating,
-          };
+      const requestBody = {
+        // Workspace-scoped format
+        author_name: formData.name,
+        author_email: formData.email,
+        author_company: formData.company,
+        content: formData.textContent,
+        rating: formData.rating,
+        type: "text",
+        ...(formData.token && { tracking_token: formData.token }),
+      };
 
       const response = await fetch(endpoint, {
         method: "POST",
@@ -90,8 +80,11 @@ const TextTestimonial: React.FC<TextTestimonialProps> = ({
         );
       }
 
+      const result = await response.json();
+      const testimonialId = result.id || result.testimonial_id;
+
       setRecordingState((prev) => ({ ...prev, status: "completed" }));
-      setTimeout(() => onSubmitSuccess(), 1000);
+      setTimeout(() => onSubmitSuccess(testimonialId), 1000);
     } catch (error: any) {
       console.error("Error submitting testimonial:", error);
       setRecordingState({
@@ -104,27 +97,27 @@ const TextTestimonial: React.FC<TextTestimonialProps> = ({
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="grid lg:grid-cols-3 gap-6">
+    <div className="max-w-4xl mx-auto px-4 md:px-0">
+      <div className="grid lg:grid-cols-3 gap-4 md:gap-6">
         {/* Guidance sidebar */}
         <div className="lg:col-span-1">
-          <div className="bg-gradient-to-br from-green-50 to-blue-50 rounded-xl p-5 sticky top-4">
-            <h3 className="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <Target className="h-4 w-4 text-green-600" />
+          <div className="bg-slate-50 rounded-lg p-4 md:p-5 sticky top-4 border border-slate-200">
+            <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+              <Target className="h-3.5 w-3.5 text-slate-600" />
               Writing Guide
             </h3>
 
-            <div className="space-y-3 mb-4">
+            <div className="space-y-2.5 mb-4">
               {TESTIMONIAL_QUESTIONS.map((question, index) => (
                 <div
                   key={index}
-                  className="p-3 bg-white rounded-lg border border-gray-200"
+                  className="p-2.5 bg-white rounded-lg border border-slate-200"
                 >
                   <div className="flex gap-2">
-                    <div className="w-5 h-5 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-xs font-bold">
+                    <div className="w-4 h-4 bg-slate-100 text-slate-700 rounded-full flex items-center justify-center text-[10px] font-semibold flex-shrink-0 mt-0.5">
                       {index + 1}
                     </div>
-                    <p className="text-xs text-gray-700 leading-relaxed">
+                    <p className="text-xs text-slate-600 leading-relaxed">
                       {question}
                     </p>
                   </div>
@@ -132,19 +125,19 @@ const TextTestimonial: React.FC<TextTestimonialProps> = ({
               ))}
             </div>
 
-            <div className="bg-white rounded-lg p-3 border border-gray-200">
-              <h4 className="text-sm font-medium text-gray-900 mb-2">Tips</h4>
-              <ul className="text-xs text-gray-600 space-y-1">
+            <div className="bg-white rounded-lg p-3 border border-slate-200">
+              <h4 className="text-xs font-semibold text-slate-900 mb-2">Tips</h4>
+              <ul className="text-xs text-slate-600 space-y-1.5">
                 <li className="flex items-center gap-2">
-                  <CheckCircle className="h-3 w-3 text-green-500" />
+                  <CheckCircle className="h-3 w-3 text-slate-400 flex-shrink-0" />
                   Be specific about results
                 </li>
                 <li className="flex items-center gap-2">
-                  <CheckCircle className="h-3 w-3 text-green-500" />
+                  <CheckCircle className="h-3 w-3 text-slate-400 flex-shrink-0" />
                   Include numbers when possible
                 </li>
                 <li className="flex items-center gap-2">
-                  <CheckCircle className="h-3 w-3 text-green-500" />
+                  <CheckCircle className="h-3 w-3 text-slate-400 flex-shrink-0" />
                   Share honest experience
                 </li>
               </ul>
@@ -154,36 +147,36 @@ const TextTestimonial: React.FC<TextTestimonialProps> = ({
 
         {/* Form */}
         <div className="lg:col-span-2">
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-lg">
-            <h2 className="text-xl font-bold text-gray-900 mb-5">
+          <div className="bg-white rounded-lg border border-slate-200 p-5 md:p-6 shadow-sm">
+            <h2 className="text-lg md:text-xl font-semibold text-slate-900 mb-4 md:mb-5">
               Share Your Experience
             </h2>
 
             {recordingState.error && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 flex items-center gap-2">
-                <AlertCircle className="h-4 w-4" />
-                <span className="text-sm">{recordingState.error}</span>
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                <span className="text-xs md:text-sm">{recordingState.error}</span>
               </div>
             )}
 
             {recordingState.status === "completed" && (
-              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 flex items-center gap-2">
-                <CheckCircle className="h-4 w-4" />
-                <span className="text-sm">
+              <div className="mb-4 p-3 bg-slate-100 border border-slate-200 rounded-lg text-slate-700 flex items-start gap-2">
+                <CheckCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                <span className="text-xs md:text-sm">
                   Your testimonial has been submitted successfully!
                 </span>
               </div>
             )}
 
             <div className="space-y-4">
-              <div className="grid md:grid-cols-2 gap-4">
+              <div className="grid md:grid-cols-2 gap-3 md:gap-4">
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) =>
                     setFormData({ ...formData, name: e.target.value })
                   }
-                  className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-green-500 focus:border-green-500 transition-colors"
+                  className="px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-slate-400 focus:border-slate-400 transition-colors bg-white disabled:bg-slate-50 disabled:text-slate-500"
                   placeholder="Your full name *"
                   required
                   disabled={recordingState.status === "uploading" || recordingState.status === "completed"}
@@ -194,7 +187,7 @@ const TextTestimonial: React.FC<TextTestimonialProps> = ({
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
                   }
-                  className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-green-500 focus:border-green-500 transition-colors"
+                  className="px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-slate-400 focus:border-slate-400 transition-colors bg-white disabled:bg-slate-50 disabled:text-slate-500"
                   placeholder="Email address *"
                   required
                   disabled={recordingState.status === "uploading" || recordingState.status === "completed"}
@@ -207,29 +200,29 @@ const TextTestimonial: React.FC<TextTestimonialProps> = ({
                 onChange={(e) =>
                   setFormData({ ...formData, company: e.target.value })
                 }
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-green-500 focus:border-green-500 transition-colors"
+                className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-slate-400 focus:border-slate-400 transition-colors bg-white disabled:bg-slate-50 disabled:text-slate-500"
                 placeholder="Company name (optional)"
                 disabled={recordingState.status === "uploading" || recordingState.status === "completed"}
               />
 
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-sm font-medium text-gray-700">
+              <div className="flex items-center gap-2">
+                <span className="text-xs md:text-sm font-medium text-slate-700">
                   Rating:
                 </span>
                 {[1, 2, 3, 4, 5].map((rating) => (
                   <button
                     key={rating}
                     onClick={() => setFormData({ ...formData, rating })}
-                    className={`transition-colors ${rating <= formData.rating ? "text-yellow-400" : "text-gray-300"} disabled:opacity-50`}
+                    className={`transition-colors touch-manipulation ${rating <= formData.rating ? "text-yellow-400" : "text-slate-300"} disabled:opacity-50 hover:scale-110`}
                     disabled={recordingState.status === "uploading" || recordingState.status === "completed"}
                   >
-                    <Star className="h-5 w-5 fill-current" />
+                    <Star className="h-5 w-5 md:h-6 md:w-6 fill-current" />
                   </button>
                 ))}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-xs md:text-sm font-medium text-slate-700 mb-2">
                   Your testimonial
                 </label>
                 <textarea
@@ -237,12 +230,15 @@ const TextTestimonial: React.FC<TextTestimonialProps> = ({
                   onChange={(e) =>
                     setFormData({ ...formData, textContent: e.target.value })
                   }
-                  rows={6}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-green-500 focus:border-green-500 resize-none transition-colors"
+                  rows={7}
+                  className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:ring-1 focus:ring-slate-400 focus:border-slate-400 resize-none transition-colors bg-white disabled:bg-slate-50 disabled:text-slate-500"
                   placeholder="Share your experience with our solution..."
                   required
                   disabled={recordingState.status === "uploading" || recordingState.status === "completed"}
                 />
+                <p className="text-xs text-slate-500 mt-1.5">
+                  {formData.textContent.length} characters
+                </p>
               </div>
 
               <Button
@@ -254,7 +250,7 @@ const TextTestimonial: React.FC<TextTestimonialProps> = ({
                   recordingState.status === "uploading" ||
                   recordingState.status === "completed"
                 }
-                className="w-full bg-green-600 hover:bg-green-700 text-white py-3 text-base font-medium rounded-lg disabled:opacity-50"
+                className="w-full bg-slate-900 hover:bg-slate-700 text-white py-3 text-sm font-medium rounded-lg disabled:opacity-50 disabled:bg-slate-400 transition-colors touch-manipulation"
               >
                 {recordingState.status === "uploading" ? (
                   <>

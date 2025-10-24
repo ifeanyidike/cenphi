@@ -1,10 +1,7 @@
 // stores/rootStore.ts
 
-import { makeAutoObservable, observable, runInAction } from "mobx";
-import { MemberManager } from "./managers/member";
+import { makeAutoObservable, runInAction } from "mobx";
 import { TestimonialManager } from "./managers/testimonial";
-import { AIStudioManager } from "./managers/ai_studio_manager";
-import { ServiceLineageManager } from "./managers/service_lineage_manager";
 import { authStore } from "@/stores/authStore";
 import { Workspace } from "@/types/testimonial";
 
@@ -16,29 +13,17 @@ import { Workspace } from "@/types/testimonial";
 export class WorkspaceOrchestrator {
   public server = import.meta.env.VITE_API_URL + "/workspaces";
   public ID: string | null = null;
-  public memberManager: MemberManager;
   public workspace: Workspace | null = null;
-
   public testimonialManager: TestimonialManager;
-  aiStudioManager: AIStudioManager;
-  serviceLineageManager: ServiceLineageManager;
 
   /**
    * Constructs a new WorkspaceOrchestrator instance.
-   * Initializes member and testimonial managers and makes the instance observable.
+   * Initializes testimonial manager and makes the instance observable.
    */
   constructor() {
-    this.memberManager = new MemberManager();
     this.testimonialManager = new TestimonialManager();
-    this.aiStudioManager = new AIStudioManager();
-    this.serviceLineageManager = new ServiceLineageManager();
 
-    makeAutoObservable(this, {
-      memberManager: observable.ref,
-      testimonialManager: observable.ref,
-      aiStudioManager: observable.ref,
-      serviceLineageManager: observable.ref,
-    });
+    makeAutoObservable(this);
   }
 
   /**
@@ -49,16 +34,11 @@ export class WorkspaceOrchestrator {
    * @throws Error if the user is not authorized, the workspace does not exist, or the request fails.
    */
   async update(updates: Partial<Workspace>) {
-    const { token, currentUser } = await authStore.getToken();
+    const { token } = await authStore.getToken();
 
-    let member = this.memberManager.member;
-    if (!member) {
-      member = await this.memberManager.getUser(currentUser?.uid);
-    }
+    if (!this.workspace?.id) throw new Error("Workspace does not exist");
 
-    if (!member?.workspace_id) throw new Error("Workspace does not exist");
-
-    const response = await fetch(`${this.server}/${member.workspace_id}`, {
+    const response = await fetch(`${this.server}/${this.workspace.id}`, {
       method: "PUT",
       body: JSON.stringify({
         ...updates,
@@ -98,7 +78,11 @@ export class WorkspaceOrchestrator {
           const { testimonials, ...workspace } = data;
           runInAction(() => {
             workspaceHub.workspace = workspace;
-            workspaceHub.testimonialManager.testimonials = testimonials || [];
+            // Only set testimonials if not already loaded to prevent race condition
+            if (!workspaceHub.testimonialManager.testimonials ||
+                workspaceHub.testimonialManager.testimonials.length === 0) {
+              workspaceHub.testimonialManager.testimonials = testimonials || [];
+            }
           });
 
           return true;

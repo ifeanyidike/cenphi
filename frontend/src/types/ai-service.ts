@@ -26,7 +26,8 @@ export type ServiceType =
   | "content_generation"
   | "text_polishing"
   | "translation"
-  | "narration";
+  | "narration"
+  | "custom_pipeline";
 
 export type HighlightType =
   | "general"
@@ -194,6 +195,18 @@ export type TextTranslationConfig = {
   prompt?: string | null;
 };
 
+export type CustomPipelineStep = {
+  id: string;
+  type: "music_mix" | "noise_removal" | "branding" | "audio_normalization" | "captions" | "crop_resize" | "enhancement";
+  config: any;
+  order: number;
+};
+
+export type CustomPipelineConfig = {
+  steps: CustomPipelineStep[];
+  target_platform?: string; // Optional for aspect ratio
+} & Partial<BrandingConfig> & Partial<MusicConfig>;
+
 // Union of all possible configs
 export type DefaultSettings =
   | MediaEnhancementConfig
@@ -206,6 +219,7 @@ export type DefaultSettings =
   | BrandingConfig
   | ContentConfig
   | TextPolishingConfig
+  | CustomPipelineConfig
   | undefined;
 
 // Main type
@@ -311,4 +325,54 @@ export interface ServiceNode {
   asset_url?: string;
   text_content?: string;
   children: ServiceNode[];
+}
+
+// Highlight Moment types for new moment-based workflow
+export interface HighlightMoment {
+  id: string;
+  testimonial_id: string;
+  type: HighlightType | "highlight"; // 'highlight' is legacy name for 'general'
+  start_time: number;
+  end_time: number;
+  duration: number;
+  text: string;
+  theme?: string;
+  importance_score?: number;
+  engagement_score: number;
+  keywords?: string[];
+  thumbnail_url?: string;
+
+  // Optional: For moments converted from existing clips
+  // These fields allow backend to use existing clips instead of re-extracting
+  clip_artifact_id?: string;
+  storage_path?: string;
+  preview_url?: string;
+}
+
+export interface TestimonialWithMoments {
+  id: string;
+  author_name?: string;
+  author_company?: string;
+  media_url: string;
+  rating?: number;
+  sentiment_score: number;
+  moments: HighlightMoment[];
+}
+
+export interface MomentSelection {
+  moment: HighlightMoment;
+  selected: boolean;
+  order?: number;
+}
+
+export interface AIOrderingRequest {
+  moments: HighlightMoment[];
+  context?: "story_video" | "clipping";
+  target_duration?: number;
+}
+
+export interface AIOrderingResponse {
+  ordered_moment_ids: string[];
+  reasoning?: string;
+  estimated_duration: number;
 }

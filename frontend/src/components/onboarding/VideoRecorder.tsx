@@ -367,7 +367,7 @@ export const VideoRecorder: React.FC<VideoRecorderProps> = ({
       // Send request
       xhr.open(
         "POST",
-        `${import.meta.env.VITE_API_URL}/collection/workspaces/${workspaceId}/testimonials/upload/video`
+        `${import.meta.env.VITE_API_URL}/collection/workspaces/${workspaceId}/testimonials/upload/video/queue`
       );
       xhr.setRequestHeader("Authorization", `Bearer ${token}`);
       xhr.send(formData);

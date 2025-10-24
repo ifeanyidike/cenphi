@@ -9,6 +9,7 @@ import (
 
 	"github.com/ifeanyidike/cenphi/internal/cache"
 	"github.com/ifeanyidike/cenphi/internal/models"
+	"github.com/ifeanyidike/cenphi/internal/utils"
 )
 
 type PolishResult struct {
@@ -55,7 +56,8 @@ func (s PolishService) PolishTextSync(ctx context.Context, text string, brandCon
 	}
 
 	var result PolishResult
-	if err := json.Unmarshal([]byte(response), &result); err != nil {
+	cleanedResponse := utils.CleanAIJSONResponse(response)
+	if err := json.Unmarshal([]byte(cleanedResponse), &result); err != nil {
 		return PolishResult{}, fmt.Errorf("failed to parse polish response: %w", err)
 	}
 

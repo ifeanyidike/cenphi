@@ -1,7 +1,7 @@
 // src/components/capture-widget/index.tsx
 import React from "react";
 import { createRoot } from "react-dom/client";
-import SimpleTestimonialWidget from "./SimpleTestimonialWidget";
+import SimpleTestimonialWidget from "./TestimonialWidget";
 import { TestimonialWidgetConfig } from "./types";
 
 // Export simplified main component
@@ -44,7 +44,9 @@ if (typeof document !== "undefined") {
           const root = createRoot(container);
           root.render(
             <React.StrictMode>
-              <SimpleTestimonialWidget config={window.testimonialWidgetConfig} />
+              <SimpleTestimonialWidget
+                config={window.testimonialWidgetConfig}
+              />
             </React.StrictMode>
           );
           console.log("Testimonial widget initialized successfully");

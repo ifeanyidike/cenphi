@@ -76,9 +76,87 @@ func (qw *AIQueueWorker) handleTestimonialHighlightExtraction(ctx context.Contex
 		HighlightType: HighlightType("general"),
 	}
 
+	qw.logger.Info("📊 Starting highlight extraction with type-specific prompt",
+		zap.String("job_id", req.JobID),
+		zap.String("testimonial_id", req.TestimonialID),
+		zap.String("highlight_type", string(highlightRequest.HighlightType)),
+		zap.Int("max_highlights", highlightRequest.MaxHighlights))
+
 	highlights, err := qw.aiService.HighlightService.ExtractHighlightsByType(ctx, highlightRequest)
 	if err != nil {
+		qw.logger.Error("❌ Highlight extraction failed",
+			zap.String("job_id", req.JobID),
+			zap.String("testimonial_id", req.TestimonialID),
+			zap.Error(err))
 		return qw.respondWithFailure(ctx, serviceID, req.JobID, "highlight extraction failed", err)
+	}
+
+	// Calculate duration statistics for diagnostics (convert milliseconds to seconds)
+	var totalDuration, minDur, maxDur float64
+	minDur = 999999.0
+	var durationBreakdown = map[string]int{
+		"<5s":    0,
+		"5-8s":   0,
+		"8-20s":  0,
+		"20-25s": 0,
+		">25s":   0,
+	}
+
+	for _, h := range highlights {
+		durMs := h.EndTime - h.StartTime    // In milliseconds
+		dur := durMs / 1000.0               // Convert to seconds
+		totalDuration += dur
+		if dur < minDur {
+			minDur = dur
+		}
+		if dur > maxDur {
+			maxDur = dur
+		}
+
+		// Track duration distribution
+		if dur < 5.0 {
+			durationBreakdown["<5s"]++
+		} else if dur < 8.0 {
+			durationBreakdown["5-8s"]++
+		} else if dur <= 20.0 {
+			durationBreakdown["8-20s"]++
+		} else if dur <= 25.0 {
+			durationBreakdown["20-25s"]++
+		} else {
+			durationBreakdown[">25s"]++
+		}
+	}
+
+	avgDur := 0.0
+	if len(highlights) > 0 {
+		avgDur = totalDuration / float64(len(highlights))
+	}
+
+	qw.logger.Info("✅ Highlight extraction and filtering completed",
+		zap.String("job_id", req.JobID),
+		zap.String("testimonial_id", req.TestimonialID),
+		zap.Int("final_highlights_count", len(highlights)),
+		zap.Float64("avg_duration_seconds", avgDur),
+		zap.Float64("min_duration_seconds", minDur),
+		zap.Float64("max_duration_seconds", maxDur),
+		zap.Int("count_8_20s_sweetspot", durationBreakdown["8-20s"]),
+		zap.Int("count_under_5s", durationBreakdown["<5s"]),
+		zap.Int("count_over_25s", durationBreakdown[">25s"]),
+		zap.String("quality_note", "Ideal: Most highlights in 8-20s range"))
+
+	// Don't save empty highlights to database
+	if len(highlights) == 0 {
+		qw.logger.Warn("No highlights passed filtering - not saving to database",
+			zap.String("job_id", req.JobID),
+			zap.String("testimonial_id", req.TestimonialID))
+
+		response := map[string]interface{}{
+			"highlights":  highlights,
+			"message":     "No highlights passed filtering. Try adjusting your testimonial content or re-record with more specific value propositions.",
+		}
+
+		qw.updateJobStatusWithService(ctx, req.JobID, serviceID, "completed", 100, response, nil)
+		return nil
 	}
 
 	// Save highlights artifact
@@ -86,6 +164,7 @@ func (qw *AIQueueWorker) handleTestimonialHighlightExtraction(ctx context.Contex
 		"highlights":           highlights,
 		"max_highlights":       req.MaxHighlights,
 		"min_importance_score": req.MinImportanceScore,
+		"highlight_type":       "general",
 	}, models.CreateArtifactSourceParams{Type: models.NoTypeSource}, nil, qw.db)
 
 	if err != nil {
@@ -102,7 +181,7 @@ func (qw *AIQueueWorker) handleTestimonialHighlightExtraction(ctx context.Contex
 	qw.logger.Info("✅ Testimonial highlight extraction completed",
 		zap.String("job_id", req.JobID),
 		zap.String("testimonial_id", req.TestimonialID),
-		zap.Int("highlights_count", len(highlights)))
+		zap.Int("highlights_saved", len(highlights)))
 
 	return nil
 }

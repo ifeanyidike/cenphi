@@ -299,6 +299,10 @@ func (c *RESTClient) AnalyzeEmotion(ctx context.Context, req *pb.EmotionRequest)
 	}, nil
 }
 
+func (c *RESTClient) AdaptiveEnhanceMedia(ctx context.Context, req *pb.AdaptiveEnhanceRequest) (*pb.AdaptiveEnhanceResponse, error) {
+	return nil, fmt.Errorf("AdaptiveEnhanceMedia not yet implemented for REST client - use gRPC client")
+}
+
 func (c *RESTClient) EnhanceMedia(ctx context.Context, req *pb.EnhanceRequest) (*pb.EnhanceResponse, error) {
 
 	var restReq map[string]interface{}
@@ -1016,14 +1020,14 @@ func (c *RESTClient) AnalyzeViralPotential(ctx context.Context, req *pb.ViralAna
 		for _, moment := range moments {
 			if momentMap, ok := moment.(map[string]interface{}); ok {
 				viralMoments = append(viralMoments, &pb.ViralMoment{
-					StartTime:             getFloat64FromMap(momentMap, "start_time"),
-					EndTime:               getFloat64FromMap(momentMap, "end_time"),
-					ViralScore:            getFloat64FromMap(momentMap, "viral_score"),
-					Reasons:               getStringSliceFromMap(momentMap, "reasons"),
-					RecommendedPlatforms:  getStringSliceFromMap(momentMap, "recommended_platforms"),
-					ThumbnailTimestamp:    getFloat64FromMap(momentMap, "thumbnail_timestamp"),
-					SuggestedCaption:      getStringFromMap(momentMap, "suggested_caption"),
-					TrendingElements:      getStringSliceFromMap(momentMap, "trending_elements"),
+					StartTime:            getFloat64FromMap(momentMap, "start_time"),
+					EndTime:              getFloat64FromMap(momentMap, "end_time"),
+					ViralScore:           getFloat64FromMap(momentMap, "viral_score"),
+					Reasons:              getStringSliceFromMap(momentMap, "reasons"),
+					RecommendedPlatforms: getStringSliceFromMap(momentMap, "recommended_platforms"),
+					ThumbnailTimestamp:   getFloat64FromMap(momentMap, "thumbnail_timestamp"),
+					SuggestedCaption:     getStringFromMap(momentMap, "suggested_caption"),
+					TrendingElements:     getStringSliceFromMap(momentMap, "trending_elements"),
 				})
 			}
 		}
@@ -1259,4 +1263,136 @@ func pbToRESTMediaOpts(pbOpts []*pb.MediaOpt) []models.MediaOpt {
 		}
 	}
 	return opts
+}
+
+// ==========================================
+// PLATFORM RECOMMENDATION (IMPROVEMENT #2)
+// ==========================================
+
+func (c *RESTClient) RecommendPlatforms(ctx context.Context, req *pb.PlatformRecommendRequest) (*pb.PlatformRecommendResponse, error) {
+	return nil, fmt.Errorf("RecommendPlatforms not yet implemented for REST client - use gRPC client")
+}
+
+// ==========================================
+// STEP-BY-STEP PLATFORM OPTIMIZATION RPCs
+// (Stubs for future RunPod/REST implementation)
+// ==========================================
+
+func (c *RESTClient) CropResize(ctx context.Context, req *pb.CropResizeRequest) (*pb.CropResizeResponse, error) {
+	return nil, fmt.Errorf("CropResize not yet implemented for REST client - use gRPC client")
+}
+
+func (c *RESTClient) BurnCaptions(ctx context.Context, req *pb.BurnCaptionsRequest) (*pb.BurnCaptionsResponse, error) {
+	return nil, fmt.Errorf("BurnCaptions not yet implemented for REST client - use gRPC client")
+}
+
+func (c *RESTClient) ApplyBranding(ctx context.Context, req *pb.ApplyBrandingRequest) (*pb.ApplyBrandingResponse, error) {
+	return nil, fmt.Errorf("ApplyBranding not yet implemented for REST client - use gRPC client")
+}
+
+func (c *RESTClient) MixMusic(ctx context.Context, req *pb.MixMusicRequest) (*pb.MixMusicResponse, error) {
+	return nil, fmt.Errorf("MixMusic not yet implemented for REST client - use gRPC client")
+}
+
+func (c *RESTClient) NormalizeAudio(ctx context.Context, req *pb.NormalizeAudioRequest) (*pb.NormalizeAudioResponse, error) {
+	return nil, fmt.Errorf("NormalizeAudio not yet implemented for REST client - use gRPC client")
+}
+
+func (c *RESTClient) EnhanceVideo(ctx context.Context, req *pb.EnhanceVideoRequest) (*pb.EnhanceVideoResponse, error) {
+	return nil, fmt.Errorf("EnhanceVideo not yet implemented for REST client - use gRPC client")
+}
+
+// ==========================================
+// STEP-BY-STEP STORY VIDEO RPCs
+// (Stubs for future RunPod/REST implementation)
+// ==========================================
+
+func (c *RESTClient) NormalizeVideoResolution(ctx context.Context, req *pb.NormalizeVideoRequest) (*pb.NormalizeVideoResponse, error) {
+	return nil, fmt.Errorf("NormalizeVideoResolution not yet implemented for REST client - use gRPC client")
+}
+
+func (c *RESTClient) AssembleStoryVideo(ctx context.Context, req *pb.AssembleStoryRequest) (*pb.AssembleStoryResponse, error) {
+	return nil, fmt.Errorf("AssembleStoryVideo not yet implemented for REST client - use gRPC client")
+}
+
+func (c *RESTClient) AddIntroOutro(ctx context.Context, req *pb.IntroOutroRequest) (*pb.IntroOutroResponse, error) {
+	return nil, fmt.Errorf("AddIntroOutro not yet implemented for REST client - use gRPC client")
+}
+
+// ==========================================
+// 3-STEP STORY VIDEO WORKFLOW RPCs
+// (Stubs for future RunPod/REST implementation)
+// ==========================================
+
+func (c *RESTClient) CollectClips(ctx context.Context, req *pb.CollectClipsRequest) (*pb.CollectClipsResponse, error) {
+	return nil, fmt.Errorf("CollectClips not yet implemented for REST client - use gRPC client")
+}
+
+func (c *RESTClient) AIOrdering(ctx context.Context, req *pb.AIOrderingRequest) (*pb.AIOrderingResponse, error) {
+	return nil, fmt.Errorf("AIOrdering not yet implemented for REST client - use gRPC client")
+}
+
+func (c *RESTClient) AssembleDraft(ctx context.Context, req *pb.AssembleDraftRequest) (*pb.AssembleDraftResponse, error) {
+	return nil, fmt.Errorf("AssembleDraft not yet implemented for REST client - use gRPC client")
+}
+
+func (c *RESTClient) CollectAndAssembleClips(ctx context.Context, req *pb.CollectAndAssembleClipsRequest) (*pb.AssembleDraftResponse, error) {
+	return nil, fmt.Errorf("CollectAndAssembleClips not yet implemented for REST client - use gRPC client")
+}
+
+func (c *RESTClient) DetectHooks(ctx context.Context, req *pb.HookDetectionRequest) (*pb.HookDetectionResponse, error) {
+	return nil, fmt.Errorf("DetectHooks not yet implemented for REST client - use gRPC client")
+}
+
+// ==========================================
+// SESSION MANAGEMENT RPCs
+// (Stubs for future RunPod/REST implementation)
+// ==========================================
+
+func (c *RESTClient) SaveProgress(ctx context.Context, req *pb.SaveProgressRequest) (*pb.SaveProgressResponse, error) {
+	return nil, fmt.Errorf("SaveProgress not yet implemented for REST client - use gRPC client")
+}
+
+func (c *RESTClient) CleanupSession(ctx context.Context, req *pb.CleanupSessionRequest) (*pb.CleanupSessionResponse, error) {
+	return nil, fmt.Errorf("CleanupSession not yet implemented for REST client - use gRPC client")
+}
+
+// CancelJob cancels a running job in the AI service
+func (c *RESTClient) CancelJob(ctx context.Context, jobID string) error {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if c.closed {
+		return fmt.Errorf("REST client is closed")
+	}
+
+	// Build cancel endpoint URL
+	cancelURL := fmt.Sprintf("%s/ai/jobs/%s/cancel", c.baseURL, jobID)
+
+	// Create POST request
+	req, err := http.NewRequestWithContext(ctx, "POST", cancelURL, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create cancel request: %w", err)
+	}
+
+	// Set headers
+	req.Header.Set("Content-Type", "application/json")
+	if c.apiKey != "" {
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.apiKey))
+	}
+
+	// Execute request
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send cancel request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Check response status
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("cancel request failed with status %d: %s", resp.StatusCode, string(body))
+	}
+
+	return nil
 }

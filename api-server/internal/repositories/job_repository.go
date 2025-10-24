@@ -3,6 +3,9 @@ package repositories
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -17,6 +20,8 @@ type JobRepository interface {
 	GetPendingJobs(ctx context.Context, limit int, db *sql.DB) ([]*models.Job, error)
 	Update(ctx context.Context, job *models.Job, db *sql.DB) error
 	UpdateStatus(ctx context.Context, id uuid.UUID, status string, result models.JSONMap, errorMessage *string, db *sql.DB) error
+	UpdateStatusIfIn(ctx context.Context, db *sql.DB, id uuid.UUID, newStatus string, allowedStatuses []string) (*models.Job, error)
+	ClaimNextJob(ctx context.Context, db *sql.DB) (*models.Job, error)
 	Delete(ctx context.Context, id uuid.UUID, db *sql.DB) error
 }
 
@@ -244,4 +249,108 @@ func (r *jobRepository) Delete(ctx context.Context, id uuid.UUID, db *sql.DB) er
 	query := `DELETE FROM jobs WHERE id = $1`
 	_, err := db.ExecContext(ctx, query, id)
 	return err
+}
+
+// UpdateStatusIfIn atomically updates job status only if current status is in allowedStatuses
+// Returns ErrNoRowsUpdated if job is not in an allowed status (concurrency conflict)
+func (r *jobRepository) UpdateStatusIfIn(ctx context.Context, db *sql.DB, id uuid.UUID, newStatus string, allowedStatuses []string) (*models.Job, error) {
+	if len(allowedStatuses) == 0 {
+		return nil, fmt.Errorf("allowedStatuses must not be empty")
+	}
+
+	placeholders := make([]string, len(allowedStatuses))
+	args := make([]interface{}, 0, len(allowedStatuses)+2)
+
+	// args ordering: 1=id, 2=newStatus, then allowedStatuses...
+	args = append(args, id, newStatus)
+
+	for i := range allowedStatuses {
+		placeholders[i] = fmt.Sprintf("$%d", 3+i)
+		args = append(args, allowedStatuses[i])
+	}
+
+	query := fmt.Sprintf(`
+		UPDATE jobs
+		SET status = $2, updated_at = now()
+		WHERE id = $1 AND status IN (%s)
+		RETURNING id, job_type, testimonial_id, social_post_id, workspace_id,
+		          status, priority, payload, result, error_message, retry_count,
+		          max_retries, scheduled_at, created_at, updated_at
+	`, strings.Join(placeholders, ","))
+
+	row := db.QueryRowContext(ctx, query, args...)
+
+	var job models.Job
+	if err := row.Scan(
+		&job.ID,
+		&job.JobType,
+		&job.TestimonialID,
+		&job.SocialPostID,
+		&job.WorkspaceID,
+		&job.Status,
+		&job.Priority,
+		&job.Payload,
+		&job.Result,
+		&job.ErrorMessage,
+		&job.RetryCount,
+		&job.MaxRetries,
+		&job.ScheduledAt,
+		&job.CreatedAt,
+		&job.UpdatedAt,
+	); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNoRowsUpdated
+		}
+		return nil, err
+	}
+
+	return &job, nil
+}
+
+// ClaimNextJob atomically claims the next available pending job
+// Uses FOR UPDATE SKIP LOCKED to prevent multiple workers from claiming the same job
+// Returns nil if no jobs are available
+func (r *jobRepository) ClaimNextJob(ctx context.Context, db *sql.DB) (*models.Job, error) {
+	query := `
+		UPDATE jobs
+		SET status = 'processing', updated_at = now()
+		WHERE id = (
+			SELECT id FROM jobs
+			WHERE status = 'pending' AND scheduled_at <= NOW()
+			ORDER BY priority ASC, created_at ASC
+			LIMIT 1
+			FOR UPDATE SKIP LOCKED
+		)
+		RETURNING id, job_type, testimonial_id, social_post_id, workspace_id,
+		          status, priority, payload, result, error_message, retry_count,
+		          max_retries, scheduled_at, created_at, updated_at
+	`
+
+	row := db.QueryRowContext(ctx, query)
+
+	var job models.Job
+	if err := row.Scan(
+		&job.ID,
+		&job.JobType,
+		&job.TestimonialID,
+		&job.SocialPostID,
+		&job.WorkspaceID,
+		&job.Status,
+		&job.Priority,
+		&job.Payload,
+		&job.Result,
+		&job.ErrorMessage,
+		&job.RetryCount,
+		&job.MaxRetries,
+		&job.ScheduledAt,
+		&job.CreatedAt,
+		&job.UpdatedAt,
+	); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil // No jobs available - this is not an error
+		}
+		return nil, err
+	}
+
+	return &job, nil
 }

@@ -57,27 +57,32 @@ class NoiseService:
         #     }
         # }
 
+        # Improved noise profiles with balanced noise removal and voice preservation
+        # All values are within FFmpeg 7.1.1 safe ranges to prevent video/audio corruption:
+        # - nr (noise_reduction): 0.01 to 97 (tested safe range: 8-28)
+        # - nf (noise_floor): -80 to -20 (tested safe range: -35 to -20)
+        # - Lower (more negative) nf = more aggressive noise removal
         self.noise_profiles = {
             "high": {
-                "video_denoise": "4:3:6:4",     # ✅ Reduced complexity
-                "audio_nr": "15",               # ✅ Reduced from 22
-                "audio_nf": "-25",              # ✅ LESS aggressive than your -28
-                "voice_eq_boost": "1.6",        # ✅ Reduced from 2.0  
-                "high_cut": "10000"             # ✅ Preserves more audio content
+                "video_denoise": "5:4:7:5",     # Strong video denoising (safe for FFmpeg 7.1.1)
+                "audio_nr": "25",               # Strong noise reduction (within 0.01-97 range)
+                "audio_nf": "-22",              # Aggressive noise floor (within -80 to -20 range)
+                "voice_eq_boost": "2.0",        # Strong voice preservation
+                "high_cut": "9500"              # Balanced high-frequency cut
             },
             "medium": {
-                "video_denoise": "3:2:4:3",     # ✅ Reduced from 4:3:6:4
-                "audio_nr": "10",               # ✅ Reduced from 20
-                "audio_nf": "-30",              # ✅ LESS aggressive than current -30
-                "voice_eq_boost": "1.4",        # ✅ Reduced from 2.0
-                "high_cut": "11000"             # ✅ Preserves more content
+                "video_denoise": "4:3:6:4",     # Moderate video denoising
+                "audio_nr": "18",               # Moderate noise reduction
+                "audio_nf": "-27",              # Moderate noise floor
+                "voice_eq_boost": "1.7",        # Good voice preservation
+                "high_cut": "10500"             # Moderate high-frequency cut
             },
             "low": {
-                "video_denoise": "2:1:3:2",     # ✅ Already conservative
-                "audio_nr": "8",                # ✅ Reduced from 12
-                "audio_nf": "-32",              # ✅ LESS aggressive than current -35  
-                "voice_eq_boost": "1.2",        # ✅ Reduced from 1.5
-                "high_cut": "12000"             # ✅ Already conservative
+                "video_denoise": "2:1:3:2",     # Light video denoising
+                "audio_nr": "12",               # Light noise reduction
+                "audio_nf": "-33",              # Conservative noise floor
+                "voice_eq_boost": "1.4",        # Light voice boost
+                "high_cut": "11500"             # Conservative high-frequency cut
             }
         }
 
@@ -308,20 +313,22 @@ class NoiseService:
                 # No filtering, just copy
                 cmd.extend(["-c", "copy"])
             
-            # Reliable encoding settings
+            # HIGH QUALITY encoding settings to match crop/branding/enhancement quality
             if has_video:
                 cmd.extend([
                     "-c:v", "libx264",
                     "-preset", "medium",  # Balanced speed/quality
-                    "-crf", "20",         # Good quality
+                    "-crf", "17",         # Excellent quality to match other pipeline steps
+                    "-profile:v", "high",
+                    "-level", "4.1",
                     "-pix_fmt", "yuv420p" # Universal compatibility
                 ])
             
             if has_audio:
                 cmd.extend([
                     "-c:a", "aac",
-                    "-b:a", "128k",
-                    "-ar", "44100"
+                    "-b:a", "192k",  # Higher audio bitrate for quality
+                    "-ar", "48000"   # Higher sample rate for quality
                 ])
             
             cmd.extend(["-movflags", "+faststart", output_path])
@@ -426,11 +433,30 @@ class NoiseService:
                 logger.error("No valid streams found")
                 return False
 
-            # CPU-optimized noise profile (lighter processing)
+            # Improved CPU-optimized profiles with better noise removal
+            # Note: These values are within FFmpeg 7.1.1 safe ranges:
+            # - nr (noise_reduction): 0.01 to 97
+            # - nf (noise_floor): -80 to -20
+            # - Lower (more negative) nf = more aggressive noise removal
             cpu_profiles = {
-                "low": {"video_denoise": "1:0.5:2:1", "audio_nr": "8", "audio_nf": "-40"},
-                "medium": {"video_denoise": "2:1:3:2", "audio_nr": "15", "audio_nf": "-35"},
-                "high": {"video_denoise": "3:2:4:3", "audio_nr": "20", "audio_nf": "-30"}
+                "low": {
+                    "video_denoise": "2:1:3:2",    # Light video denoising
+                    "audio_nr": "12",               # FFmpeg 7.1.1 compatible (range: 0.01-97)
+                    "audio_nf": "-35",              # FFmpeg 7.1.1 compatible (range: -80 to -20)
+                    "voice_eq_boost": "1.4"         # Light voice boost
+                },
+                "medium": {
+                    "video_denoise": "3:2:4:3",    # Moderate video denoising
+                    "audio_nr": "18",               # FFmpeg 7.1.1 compatible
+                    "audio_nf": "-28",              # More aggressive noise floor
+                    "voice_eq_boost": "1.8"         # Moderate voice boost
+                },
+                "high": {
+                    "video_denoise": "4:3:6:4",    # Strong video denoising
+                    "audio_nr": "24",               # FFmpeg 7.1.1 compatible
+                    "audio_nf": "-22",              # Aggressive noise floor
+                    "voice_eq_boost": "2.0"         # Strong voice boost
+                }
             }
 
             profile = cpu_profiles.get(level, cpu_profiles["medium"])
@@ -453,17 +479,33 @@ class NoiseService:
                 filter_complex.append(f"[0:v]{video_filter}[vout]")
                 map_args.extend(["-map", "[vout]"])
 
-            # Optimized audio processing
+            # Improved audio processing with better voice preservation
             if has_audio:
                 audio_filters = []
 
-                # Lighter audio noise reduction
-                nr_value = profile.get('audio_nr', '15')
-                nf_value = profile.get('audio_nf', '-35')
+                # Improved audio noise reduction with FFmpeg 7.1.1 compatible settings
+                nr_value = profile.get('audio_nr', '18')
+                nf_value = profile.get('audio_nf', '-28')
+                voice_boost = profile.get('voice_eq_boost', '1.8')
+
+                # Primary noise reduction
                 audio_filters.append(f"afftdn=nr={nr_value}:nf={nf_value}")
 
-                # Light voice enhancement (faster)
-                audio_filters.append("equalizer=f=250:t=o:w=150:g=1.2")
+                # Enhanced voice frequency preservation
+                # Boost fundamental voice frequencies (100Hz-300Hz)
+                audio_filters.append(f"equalizer=f=200:t=o:w=100:g={voice_boost}")
+
+                # Boost primary voice formants (800Hz-1200Hz) - critical for clarity
+                audio_filters.append(f"equalizer=f=1000:t=o:w=400:g={voice_boost}")
+
+                # Boost voice presence (2000Hz-3500Hz) - consonant clarity
+                audio_filters.append("equalizer=f=2800:t=o:w=1500:g=1.5")
+
+                # Remove rumble/low-frequency noise
+                audio_filters.append("highpass=f=80")
+
+                # Remove high-frequency noise while preserving consonants
+                audio_filters.append("lowpass=f=10000")
 
                 if audio_filters:
                     audio_filter_chain = ",".join(audio_filters)
@@ -477,11 +519,16 @@ class NoiseService:
             else:
                 cmd.extend(["-c", "copy"])
 
-            # CPU-optimized encoding settings with quality preservation
+            # HIGH QUALITY encoding settings to match crop/branding/enhancement quality
             cmd.extend([
-                "-c:v", "libx264", "-preset", "veryfast", "-crf", "19",
-                "-tune", "film",  # Better quality for video content
-                "-c:a", "aac", "-b:a", "128k",
+                "-c:v", "libx264",
+                "-preset", "medium",  # Better quality than veryfast
+                "-crf", "17",         # Excellent quality to match other pipeline steps
+                "-profile:v", "high",
+                "-level", "4.1",
+                "-tune", "film",      # Better quality for video content
+                "-c:a", "aac",
+                "-b:a", "192k",       # Higher audio bitrate for quality
                 "-movflags", "+faststart"
             ])
 

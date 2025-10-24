@@ -3,7 +3,7 @@ import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Video, Sparkles, Target, X, Clock, Play } from "lucide-react";
+import { Video, Target, X, Clock, Play } from "lucide-react";
 
 interface ClipSelectionBarProps {
   selectedCount: number;
@@ -18,8 +18,7 @@ const ClipSelectionBar: React.FC<ClipSelectionBarProps> = ({
   selectedCount,
   totalDuration,
   onCreateStory,
-  // onEnhanceAll,
-  // onOptimizeAll,
+  onOptimizeAll,
   onClearSelection,
 }) => {
   if (selectedCount === 0) return null;
@@ -56,75 +55,34 @@ const ClipSelectionBar: React.FC<ClipSelectionBarProps> = ({
                     </Badge>
                   </div>
                   <p className="text-xs text-gray-500">
-                    Ready for batch processing
+                    {selectedCount === 1
+                      ? "Ready to optimize"
+                      : "Ready to create story video"}
                   </p>
                 </div>
               </div>
 
               {/* Action Buttons */}
               <div className="flex items-center gap-2">
-                <Button
-                  onClick={onCreateStory}
-                  size="sm"
-                  className="bg-gray-900 hover:bg-gray-800 text-white text-xs px-3"
-                >
-                  <Play className="h-3 w-3 mr-1" />
-                  Create Story
-                </Button>
-
-                {/* Enhanced Enhance Button with Coming Soon */}
-                <div className="relative group">
+                {selectedCount === 1 ? (
                   <Button
-                    variant="outline"
+                    onClick={onOptimizeAll}
                     size="sm"
-                    disabled
-                    className="border-gray-200 text-gray-600 cursor-not-allowed text-xs px-3 relative overflow-hidden"
+                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3"
                   >
-                    <Sparkles className="h-3 w-3 mr-1 opacity-50" />
-                    Enhance
-                    <div className="absolute top-0 right-0 -mr-1 -mt-1">
-                      <Badge
-                        variant="secondary"
-                        className="text-[9px] px-1 py-0 h-4 bg-blue-100 text-blue-700 border-blue-200 font-medium"
-                      >
-                        Soon
-                      </Badge>
-                    </div>
+                    <Target className="h-3 w-3 mr-1" />
+                    Optimize Clip
                   </Button>
-
-                  {/* Tooltip */}
-                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-                    Bulk enhancement coming soon!
-                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
-                  </div>
-                </div>
-
-                {/* Enhanced Optimize Button with Coming Soon */}
-                <div className="relative group">
+                ) : (
                   <Button
-                    variant="outline"
+                    onClick={onCreateStory}
                     size="sm"
-                    disabled
-                    className="border-gray-200 text-gray-600 cursor-not-allowed text-xs px-3 relative overflow-hidden"
+                    className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs px-3"
                   >
-                    <Target className="h-3 w-3 mr-1 opacity-50" />
-                    Optimize
-                    <div className="absolute top-0 right-0 -mr-1 -mt-1">
-                      <Badge
-                        variant="secondary"
-                        className="text-[9px] px-1 py-0 h-4 bg-purple-100 text-purple-700 border-purple-200 font-medium"
-                      >
-                        Soon
-                      </Badge>
-                    </div>
+                    <Play className="h-3 w-3 mr-1" />
+                    Create Story
                   </Button>
-
-                  {/* Tooltip */}
-                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-                    Bulk optimization coming soon!
-                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
-                  </div>
-                </div>
+                )}
 
                 <div className="w-px h-6 bg-gray-200"></div>
 

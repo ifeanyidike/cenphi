@@ -24,27 +24,6 @@ type AIClient struct {
 	httpClient *http.Client
 }
 
-// type OpenAIRequest struct {
-// 	Model       string  `json:"model"`
-// 	Messages    []Input `json:"messages"`
-// 	MaxTokens   int     `json:"max_tokens,omitempty"`
-// 	Temperature float64 `json:"temperature,omitempty"`
-// 	Stream      bool    `json:"stream,omitempty"`
-// }
-
-// type Message struct {
-// 	Role    string `json:"role"`
-// 	Content string `json:"content"`
-// }
-// type Choice struct {
-// 	Message Message `json:"message"`
-// }
-
-// type APIError struct {
-// 	Message string `json:"message"`
-// 	Type    string `json:"type"`
-// }
-
 type ResponsesAPIResponse struct {
 	ID      string       `json:"id"`
 	Object  string       `json:"object"`
@@ -89,6 +68,7 @@ type AIServiceManager struct {
 	FillerDetectionService    FillerDetectionService
 	TranslationService        TranslationService
 	SentimentService          SentimentService
+	AIClient                  AIClient
 	DB                        *sql.DB
 	TestimonialRepo           repositories.TestimonialRepository
 	ArtifactsRepo             repositories.TestimonialArtifactRepository
@@ -120,6 +100,7 @@ func NewAIServiceManager(cfg config.Config, cacheService cache.RedisCache, aiCli
 		FillerDetectionService:    fillerService,
 		TranslationService:        translationService,
 		SentimentService:          sentimentService,
+		AIClient:                  aiClient,
 		DB:                        db,
 		TestimonialRepo:           testimonialRepo,
 		ArtifactsRepo:             artifactsRepo,
@@ -282,7 +263,7 @@ func extractTextFromResponsesBytes(body []byte) (string, error) {
 func (s AIClient) makeClaudeCall(ctx context.Context, prompt, systemPrompt string, isStream bool) (*http.Response, error) {
 	payload := map[string]any{
 		"model":      "claude-3-5-sonnet-20241022",
-		"max_tokens": 4000,
+		"max_tokens": 8000, // Increased from 4000 to handle longer content optimization responses
 		"messages": []map[string]string{
 			{
 				"role":    "user",

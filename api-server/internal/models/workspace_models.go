@@ -55,6 +55,7 @@ type Workspace struct {
 	Plan              Plan            `json:"plan" db:"plan" validate:"required,oneof=essentials growth accelerate transform enterprise"`
 	Settings          JSONMap         `json:"settings,omitempty" db:"settings"`
 	BrandContext      json.RawMessage `json:"brand_context,omitempty" db:"brand_context"`
+	VectorStoreID     *string         `json:"vector_store_id,omitempty" db:"vector_store_id"`
 	TotalTestimonials int             `json:"total_testimonials" db:"total_testimonials"`
 	CreatedAt         time.Time       `json:"created_at" db:"created_at"`
 	UpdatedAt         time.Time       `json:"updated_at" db:"updated_at"`

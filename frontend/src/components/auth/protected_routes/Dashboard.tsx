@@ -1,5 +1,6 @@
 import JobSystemProvider from "@/components/job-system/JobSystemProvider";
 import LoadingIndicator from "@/components/LoadingIndicator";
+import { GlobalProcessingMonitor } from "@/components/common/GlobalProcessingMonitor";
 import { workspaceHub } from "@/repo/workspace_hub";
 import { authStore } from "@/stores/authStore";
 import { observer } from "mobx-react-lite";
@@ -41,6 +42,7 @@ const DashboardProtectedRoute = observer(() => {
   return (
     <JobSystemProvider>
       <Outlet />
+      <GlobalProcessingMonitor />
     </JobSystemProvider>
   );
 });

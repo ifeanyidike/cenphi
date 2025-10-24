@@ -35,6 +35,9 @@ grpcio>=1.73.1,<2.0.0
 grpcio-reflection>=1.60.0,<1.65.0
 protobuf>=4.25.3,<5.0.0
 
+# Cache and Message Queue (ESSENTIAL for progress publishing)
+redis>=5.0.0,<6.0.0
+
 # System Utilities
 psutil>=5.9.0,<6.0.0
 inflect>=6.0.0                    # Replaces num2words (no docopt dependency)

@@ -787,7 +787,7 @@ const LinkedInShareModal: React.FC<LinkedInShareModalProps> = ({
           <div className="flex items-center gap-2">
             {linkedInAccounts.length > 0 && (
               <Button
-                onClick={() => window.open("/social/analytics", "_blank")}
+                onClick={() => window.open("/analytics", "_blank")}
                 variant="outline"
                 size="sm"
                 className="h-8 px-3 text-xs"

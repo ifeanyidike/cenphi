@@ -29,6 +29,10 @@ services:
       # - /etc/ssl/certs:/etc/ssl/certs:ro
     environment:
       - OCI_GO_SDK_DEBUG=info
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      - REDIS_PASSWORD=redispassword
     depends_on:
       - cenphidb
       - redis

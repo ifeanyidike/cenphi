@@ -6,6 +6,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"math"
+	"sort"
 	"strings"
 	"time"
 
@@ -13,6 +15,7 @@ import (
 	"github.com/ifeanyidike/cenphi/internal/cache"
 	"github.com/ifeanyidike/cenphi/internal/models"
 	"github.com/ifeanyidike/cenphi/internal/repositories"
+	"github.com/ifeanyidike/cenphi/internal/utils"
 	"github.com/ifeanyidike/cenphi/pb"
 )
 
@@ -33,7 +36,7 @@ type HighlightRequest struct {
 	TestimonialID uuid.UUID                     `json:"testimonial_id"`
 	Text          string                        `json:"text"`
 	Segments      []models.TranscriptionSegment `json:"segments"`
-	MaxHighlights int                           `json:"max_highlights,omitempty"` // Optional, defaults to 5
+	MaxHighlights int                           `json:"max_highlights,omitempty"` // Optional, 0 means extract all valuable highlights
 	HighlightType HighlightType                 `json:"highlight_type,omitempty"` // Optional, defaults to general
 	CustomPrompt  string                        `json:"custom_prompt,omitempty"`  // Optional
 }
@@ -89,10 +92,131 @@ func (s HighlightService) ExtractHighlights(ctx context.Context, textOrTranscrip
 		return s.addWordsToHighlights(cachedHighlights, segments), nil
 	}
 
-	systemPrompt := `You are an expert video editor and content strategist specializing in extracting the most compelling moments from customer testimonial videos for creating engaging clips, story modes, and social media content.
-Your task is to identify the most emotionally impactful and business-relevant passages that work perfectly as standalone video clips.`
+	systemPrompt := `You are an expert video content strategist and testimonial analyst with deep expertise in B2B and B2C marketing. Your specialty is extracting HIGH-VALUE standalone video clips from customer testimonials that perfectly communicate without any surrounding context.
 
-	maxHighlights := 5
+# ROLE
+You are a professional video story curator tasked with identifying ALL business-critical, standalone highlight clips that accomplish maximum impact and clarity.
+
+# TASK
+Extract ALL COMPLETE, SELF-CONTAINED highlights meeting ALL the criteria below. Quality over quantity — extract every valuable moment, but only if it meets all quality standards.
+
+# CRITICAL DURATION GUIDANCE
+- TARGET: 8-20 seconds (SWEET SPOT for social media and marketing)
+- WORD COUNT: Aim for 40-80 words (typical speech is ~150 words/minute = 2.5 words/second)
+- MINIMUM: Never go below 8 seconds (too short to convey complete value)
+- MAXIMUM: Never exceed 25 seconds (attention span limit for social media)
+- QUALITY CHECK: If your highlight feels incomplete under 20s, you picked the wrong segment — find a more concise moment
+
+# DURATION CALCULATION STRATEGY
+1. Count words in your selected text
+2. Estimate duration: word_count / 2.5 = seconds
+3. If >60 words (>24s), trim to most impactful sentence cluster
+4. If <40 words (<16s), check if it's truly complete — if not, find better moment
+5. AVOID spanning multiple distant transcript segments (creates timing issues)
+
+# COMMON CORE PRINCIPLES for EVERY HIGHLIGHT
+- Complete narrative arc: clear context (who, what), core insight, and concluding resolution.
+- Zero external context: no unexplained pronouns or references.
+- Natural sentence boundaries: start and end at fully formed sentences.
+- Duration: STRICTLY 8-20 seconds. Discard clips under 8s or above 25s.
+- Use verbatim transcript text: no paraphrasing, no text edits.
+- Viewer clarity test: if shown to someone with zero previous context, the clip must be fully understandable with evident message and significance.
+- Single contiguous segment: Prefer highlights from a single transcript segment or closely adjacent segments (avoid large time gaps)
+
+# BUSINESS VALUE PRIORITIES (ranked)
+1. Quantified measurable results WITH context (numbers, baselines, timeframes).
+2. Complete recommendations WITH reasons.
+3. Problem-solution narratives WITH clear outcomes.
+4. Credibility and authority WITH relevant background.
+5. Authentic emotional expressions WITH contextual setup.
+6. Competitive differentiation based on explicit comparisons.
+
+# VALIDATION CHECKLIST (APPLY BEFORE OUTPUT)
+- Duration is within 8–20 seconds (word count / 2.5 should be in 8-20 range).
+- Word count is 40-80 words (optimal for duration targeting).
+- Clip has no mid-sentence starts or ends.
+- No dangling conjunctions ("and", "but", "so") at start or end.
+- All pronouns or references are clearly explained.
+- Text matches exactly what appears in the transcript.
+- No overlapping or duplicated time ranges.
+- Clip fully stands alone with clear message and narrative arc.
+- Output clips are ordered chronologically.
+- Highlight uses contiguous text from transcript (no large gaps).
+
+IMPORTANT: For every highlight object include numeric values for
+"importance_score", "emotional_intensity", "shareability", "engagement_score" as decimals between 0.0 and 1.0.
+If you cannot estimate a number, choose a conservative default 0.5 rather than omitting the field.
+Also ensure start_time and end_time align with the transcript segment boundaries. If a single highlight spans parts of multiple segments, choose start_time at the first segment's start and end_time at the last segment's end.
+
+# OUTPUT FORMAT (STRICTLY FOLLOW)
+Return ONLY a JSON array of highlight objects with this EXACT schema:
+
+[
+  {
+    "text": "Exact transcript segment text here",
+    "theme": "Primary theme/subject of the highlight",
+    "start_time": float,
+    "end_time": float,
+    "importance_score": float (0 to 1),
+    "highlight_type": "the highlight category",
+    "suggested_title": "Concise, compelling title",
+    "keywords": ["keyword1", "keyword2", "keyword3"],
+    "emotional_intensity": float (0 to 1),
+    "shareability": float (0 to 1),
+    "engagement_score": float (0 to 1)
+  }
+]
+
+# EXAMPLES
+
+VALID EXAMPLE (Good Duration - 13.5s, ~54 words):
+{
+  "text": "After implementing the new system, our error rate dropped from 15 percent to under 1 percent, saving 20 hours weekly. The team was skeptical at first, but within two weeks, everyone was onboard because the results were undeniable.",
+  "start_time": 45.0,
+  "end_time": 58.5,
+  "importance_score": 0.9,
+  "highlight_type": "results",
+  "suggested_title": "Dramatic Error Rate Reduction",
+  "keywords": ["error reduction", "efficiency", "automation"],
+  "emotional_intensity": 0.7,
+  "shareability": 0.8,
+  "engagement_score": 0.85
+}
+
+INVALID EXAMPLE (Too Long - would be ~40s):
+{
+  "text": "We had all these problems... and then we tried various solutions... eventually we found this product... it took a while to implement... but after several months of testing and refinement, we finally saw some improvements in our workflow and our team started to adopt it more regularly.",
+  "reason": "Way too long (>100 words), rambling, lacks focus. Split into 2-3 concise highlights instead."
+}
+
+INVALID EXAMPLE (Too Short - would be ~4s):
+{
+  "text": "It was great.",
+  "reason": "Too short, lacks context and completeness."
+}
+
+INVALID EXAMPLE (Mid-sentence start):
+{
+  "text": "because we needed a better tool for managing our customer data",
+  "reason": "Starts mid-sentence with 'because', lacks subject/context."
+}
+
+# THINK-THEN-GENERATE INSTRUCTIONS
+1. Carefully analyze the testimonial content and all transcript segments.
+2. Identify candidate highlights meeting all core principles and priorities.
+3. For each candidate: COUNT WORDS and ESTIMATE DURATION (words / 2.5)
+4. Adjust selection to hit 40-80 word range (8-20 seconds)
+5. Validate each candidate against the checklist above.
+6. Only output fully compliant highlights in JSON format.
+7. Do NOT include explanations, commentary, or partial clips outside the array.
+
+# SAFETY NOTE
+Do not output any speculative, biased, or unrelated information. Stay factual and business-relevant.
+
+Extract well-crafted, meaningful standalone clips that maximize persuasion and clarity for marketing and sales use.
+`
+
+	maxHighlights := 0 // 0 means extract all valuable highlights
 	prompt := s.buildHighlightPrompt(textOrTranscript, segments, customPrompt, "general", maxHighlights)
 
 	response, err := s.aiClient.Complete(ctx, prompt, systemPrompt)
@@ -100,37 +224,434 @@ Your task is to identify the most emotionally impactful and business-relevant pa
 		return nil, fmt.Errorf("highlight extraction failed: %w", err)
 	}
 
+	// Clean AI response to remove markdown code blocks if present
+	cleanedResponse := utils.CleanAIJSONResponse(response)
+
 	// Parse AI response into highlights without words
 	var highlightsResponse []HighlightWithWords
-	if err := json.Unmarshal([]byte(response), &highlightsResponse); err != nil {
+	if err := json.Unmarshal([]byte(cleanedResponse), &highlightsResponse); err != nil {
 		return nil, fmt.Errorf("failed to parse highlights response: %w", err)
 	}
 
-	// Convert to pb.HighlightMoment for caching (without words to save space)
-	pbHighlights := make([]*pb.HighlightMoment, len(highlightsResponse))
-	for i, h := range highlightsResponse {
-		pbHighlights[i] = &pb.HighlightMoment{
+	// Convert to pb.HighlightMoment WITH word-level timing, then filter
+	// CRITICAL: We must add words FIRST, then filter, because word timing may differ from LLM timing
+
+	// First, create temp highlights from LLM response
+	tempHighlights := make([]*pb.HighlightMoment, 0, len(highlightsResponse))
+	for _, h := range highlightsResponse {
+		tempHighlights = append(tempHighlights, &pb.HighlightMoment{
 			Id:                 uuid.NewString(),
 			Text:               h.Text,
 			Theme:              h.Theme,
 			StartTime:          h.StartTime,
 			EndTime:            h.EndTime,
 			ImportanceScore:    h.ImportanceScore,
-			HighlightType:      h.HighlightType,
+			HighlightType:      "general",
 			SuggestedTitle:     h.SuggestedTitle,
 			Keywords:           h.Keywords,
 			EmotionalIntensity: h.EmotionalIntensity,
 			Shareability:       h.Shareability,
 			EngagementScore:    h.EngagementScore,
+		})
+	}
+
+	// Add words to get FINAL accurate timing and text
+	highlightsWithWords := s.addWordsToHighlights(tempHighlights, segments)
+
+	// Apply quality filters and scoring on FINAL highlights (after word adjustment)
+	pbHighlights := s.filterAndScoreHighlights(highlightsWithWords)
+
+	// Cache the filtered highlights
+	s.cacheService.Set(ctx, cacheKey, pbHighlights, 2*time.Hour)
+
+	return pbHighlights, nil
+}
+
+// calculateBusinessValueScoreFromHighlight calculates score from pb.HighlightMoment
+// IMPORTANT: Expects duration in MILLISECONDS
+func (s HighlightService) calculateBusinessValueScoreFromHighlight(h *pb.HighlightMoment) float64 {
+	durationMs := h.EndTime - h.StartTime
+	duration := durationMs / 1000.0 // Convert to seconds for scoring
+
+	// Weighted composite score emphasizing business value and completeness
+	const (
+		importanceWeight      = 0.25
+		engagementWeight      = 0.20
+		shareabilityWeight    = 0.15
+		emotionalWeight       = 0.10
+		keywordWeight         = 0.10
+		durationOptimalWeight = 0.05
+		completenessWeight    = 0.15
+	)
+
+	// Base scores
+	importanceScore := h.ImportanceScore
+	engagementScore := h.EngagementScore
+	shareabilityScore := h.Shareability
+	emotionalScore := h.EmotionalIntensity
+
+	// Keyword quality score
+	keywordScore := s.calculateKeywordValueScore(h.Keywords, h.Text)
+
+	// Duration optimization - favor concise, punchy clips
+	var durationScore float64
+	if duration >= 8.0 && duration <= 20.0 {
+		durationScore = 1.0 // Optimal - punchy and complete
+	} else if duration >= 5.0 && duration < 8.0 {
+		durationScore = 0.8 // Slightly short but acceptable
+	} else if duration > 20.0 && duration <= 30.0 {
+		durationScore = 0.7 // Getting long, needs exceptional value
+	} else if duration > 30.0 && duration <= 35.0 {
+		durationScore = 0.5 // Too long, only if absolutely necessary
+	} else {
+		durationScore = 0.3 // Far from optimal range
+	}
+
+	// Completeness score
+	completenessScore := s.calculateCompletenessScore(h.Text, duration)
+
+	// Calculate weighted composite
+	compositeScore := (importanceScore * importanceWeight) +
+		(engagementScore * engagementWeight) +
+		(shareabilityScore * shareabilityWeight) +
+		(emotionalScore * emotionalWeight) +
+		(keywordScore * keywordWeight) +
+		(durationScore * durationOptimalWeight) +
+		(completenessScore * completenessWeight)
+
+	if compositeScore > 1.0 {
+		compositeScore = 1.0
+	}
+	if compositeScore < 0.0 {
+		compositeScore = 0.0
+	}
+
+	return compositeScore
+}
+
+// defaultHighlightFields fills sensible defaults when the LLM did not provide numeric fields.
+func (s HighlightService) defaultHighlightFields(h *HighlightWithWords) {
+	// If model didn't provide importance/engagement, use conservative mid-values
+	if h.ImportanceScore <= 0.0 {
+		h.ImportanceScore = 0.45 // helps survive initial threshold; tune as needed
+	}
+	if h.EngagementScore <= 0.0 {
+		h.EngagementScore = 0.4
+	}
+	if h.Shareability <= 0.0 {
+		h.Shareability = 0.35
+	}
+	if h.EmotionalIntensity <= 0.0 {
+		h.EmotionalIntensity = 0.25
+	}
+	// Ensure suggested title present
+	if strings.TrimSpace(h.SuggestedTitle) == "" {
+		// Derive a short title from first 6–8 words
+		words := strings.Fields(h.Text)
+		limit := 6
+		if len(words) < limit {
+			limit = len(words)
+		}
+		h.SuggestedTitle = strings.Join(words[:limit], " ")
+	}
+}
+
+// filterAndScoreHighlights uses a graduated tiered approach to preserve valuable highlights
+// while filtering out truly problematic ones.
+// IMPORTANT: All durations are in MILLISECONDS
+func (s *HighlightService) filterAndScoreHighlights(
+	highlights []*pb.HighlightMoment,
+) []*pb.HighlightMoment {
+
+	filtered := make([]*pb.HighlightMoment, 0, len(highlights))
+
+	for _, h := range highlights {
+		if h == nil {
+			continue
+		}
+
+		durMs := h.EndTime - h.StartTime // Duration in milliseconds
+		txt := strings.TrimSpace(h.Text)
+		durSec := durMs / 1000.0 // Convert to seconds for scoring functions
+
+		// TIER 1: Premium highlights (8-20s, high quality) - Keep unconditionally
+		if durMs >= 8000.0 && durMs <= 20000.0 && h.ImportanceScore >= 0.5 && h.EngagementScore >= 0.4 {
+			filtered = append(filtered, h)
+			continue
+		}
+
+		// TIER 2: Good highlights (5-25s, decent quality) - Keep with validation
+		if durMs >= 5000.0 && durMs <= 25000.0 {
+			comp := s.calculateCompletenessScore(txt, durSec)
+			kw := s.calculateKeywordValueScore(h.Keywords, txt)
+			val := s.calculateBusinessValueScoreFromHighlight(h)
+
+			// Keep if any of these conditions are met:
+			// - High completeness (well-formed narrative)
+			// - Good keyword value (contains business terms)
+			// - Decent business value score
+			// - In sweet spot duration with moderate scores
+			if comp >= 0.55 || kw >= 0.4 || val >= 0.45 ||
+				(durMs >= 8000.0 && durMs <= 20000.0 && comp >= 0.45) {
+				// Ensure minimum text length for substance
+				if len(txt) >= 30 {
+					filtered = append(filtered, h)
+					continue
+				}
+			}
+		}
+
+		// TIER 3: Borderline highlights - Reject unless exceptional
+		// These need BOTH good completeness AND good keywords/value
+		if durMs >= 5000.0 && durMs <= 30000.0 {
+			comp := s.calculateCompletenessScore(txt, durSec)
+			kw := s.calculateKeywordValueScore(h.Keywords, txt)
+
+			if comp >= 0.6 && kw >= 0.45 && len(txt) >= 40 {
+				filtered = append(filtered, h)
+				continue
+			}
+		}
+
+		// TIER 4: Reject - Duration too far outside acceptable range OR
+		// quality too low across all metrics
+		// Highlights that reach here are filtered out
+	}
+
+	// Remove duplicates and overlaps from the filtered list
+	return s.removeDuplicatesAndOverlaps(filtered)
+}
+
+// removeDuplicatesAndOverlaps ensures no duplicate or overlapping highlights
+func (s *HighlightService) removeDuplicatesAndOverlaps(
+	highlights []*pb.HighlightMoment,
+) []*pb.HighlightMoment {
+
+	if len(highlights) == 0 {
+		return highlights
+	}
+
+	sort.SliceStable(highlights, func(i, j int) bool {
+		return highlights[i].StartTime < highlights[j].StartTime
+	})
+
+	deduped := make([]*pb.HighlightMoment, 0, len(highlights))
+
+	for _, cur := range highlights {
+		if cur == nil {
+			continue
+		}
+		overlapFound := false
+
+		for i, exist := range deduped {
+			overlap := s.calculateOverlap(
+				exist.StartTime, exist.EndTime, cur.StartTime, cur.EndTime,
+			)
+
+			// Merge only when they overlap ≥50% of shorter segment
+			shorter := math.Min(exist.EndTime-exist.StartTime, cur.EndTime-cur.StartTime)
+			if overlap/shorter >= 0.5 {
+				overlapFound = true
+				// Replace weaker importance
+				if cur.ImportanceScore > exist.ImportanceScore {
+					deduped[i] = cur
+				}
+				break
+			}
+		}
+
+		if !overlapFound {
+			deduped = append(deduped, cur)
 		}
 	}
 
-	// Cache the highlights without words
-	s.cacheService.Set(ctx, cacheKey, pbHighlights, 2*time.Hour)
+	return deduped
+}
 
-	highlightsWithWords := s.addWordsToHighlights(pbHighlights, segments)
+// calculateOverlap returns the overlap duration between two time ranges
+func (s HighlightService) calculateOverlap(start1, end1, start2, end2 float64) float64 {
+	// No overlap if one range ends before the other starts
+	if end1 <= start2 || end2 <= start1 {
+		return 0.0
+	}
 
-	return highlightsWithWords, nil
+	// Calculate overlap
+	overlapStart := start1
+	if start2 > start1 {
+		overlapStart = start2
+	}
+
+	overlapEnd := end1
+	if end2 < end1 {
+		overlapEnd = end2
+	}
+
+	return overlapEnd - overlapStart
+}
+
+// calculateCompletenessScore validates that a highlight contains a complete thought
+func (s HighlightService) calculateCompletenessScore(text string, duration float64) float64 {
+	trimmedText := strings.TrimSpace(text)
+	if len(trimmedText) == 0 {
+		return 0.0
+	}
+
+	// Guard against invalid duration
+	if duration <= 0 {
+		return 0.0
+	}
+
+	score := 1.0
+
+	// 1. STRICTER: Check for sentence completeness (ends with proper punctuation)
+	lastChar := trimmedText[len(trimmedText)-1]
+	if lastChar != '.' && lastChar != '!' && lastChar != '?' {
+		score -= 0.4 // INCREASED penalty for incomplete sentence
+	}
+
+	// 2. STRICTER: Check for sentence fragments (starts with lowercase or connecting words)
+	words := strings.Fields(trimmedText)
+	if len(words) == 0 {
+		return 0.0 // Safety check - should not happen but prevents panic
+	}
+
+	firstWord := strings.ToLower(words[0])
+	// EXPANDED fragment indicators
+	fragmentIndicators := []string{
+		"and", "but", "or", "so", "because", "since", "while", "when", "if", "though", "although",
+		"then", "also", "however", "moreover", "furthermore", "therefore", "thus", "hence",
+	}
+	for _, indicator := range fragmentIndicators {
+		if firstWord == indicator {
+			score -= 0.3 // INCREASED penalty for starting mid-thought
+			break
+		}
+	}
+
+	// 3. Check text-to-duration ratio (ensures substance, not just filler)
+	wordCount := len(words)
+	wordsPerSecond := float64(wordCount) / duration
+	if wordsPerSecond < 1.5 {
+		score -= 0.3 // INCREASED penalty - too slow/sparse likely means missing content
+	} else if wordsPerSecond > 4.5 {
+		score -= 0.2 // INCREASED penalty - too fast might be incomplete or rushed
+	}
+
+	// 4. STRICTER: Word count requirements for standalone clips
+	if wordCount < 15 {
+		score -= 0.4 // MUCH stricter - too short to be complete standalone thought
+	} else if wordCount < 20 {
+		score -= 0.2 // Borderline short for standalone quality
+	} else if wordCount < 25 {
+		score -= 0.1 // Slightly short but acceptable
+	}
+
+	// 5. Check for narrative indicators (context words suggest complete story)
+	narrativeIndicators := map[string]bool{
+		"we": true, "our": true, "i": true, "my": true, "me": true, // Personal context
+		"was": true, "were": true, "had": true, "been": true, "did": true, // Past context (setup)
+		"now": true, "today": true, "currently": true, "since": true, // Current state (resolution)
+		"from": true, "to": true, "after": true, "before": true, "when": true, // Transformation indicators
+	}
+
+	narrativeCount := 0
+
+	// Split by word boundaries (spaces and punctuation) for accurate matching
+	for _, word := range words {
+		// Remove common punctuation from word for matching
+		cleanWord := strings.ToLower(strings.Trim(word, ".,!?;:\"'"))
+		if narrativeIndicators[cleanWord] {
+			narrativeCount++
+		}
+	}
+
+	if narrativeCount >= 3 {
+		score += 0.15 // INCREASED bonus for strong narrative structure
+	}
+
+	// 6. NEW: Penalize ellipsis or trailing incomplete indicators
+	if strings.Contains(trimmedText, "...") || strings.Contains(trimmedText, "…") {
+		score -= 0.3 // Strong penalty for explicit incompleteness
+	}
+
+	// 7. NEW: Check for complete sentence structure indicators
+	textLower := strings.ToLower(trimmedText)
+	hasSubject := strings.Contains(textLower, " i ") || strings.Contains(textLower, " we ") ||
+		strings.Contains(textLower, " they ") || strings.Contains(textLower, " it ") ||
+		strings.Contains(textLower, " he ") || strings.Contains(textLower, " she ")
+
+	hasVerb := strings.Contains(textLower, " was ") || strings.Contains(textLower, " were ") ||
+		strings.Contains(textLower, " have ") || strings.Contains(textLower, " had ") ||
+		strings.Contains(textLower, " can ") || strings.Contains(textLower, " did ") ||
+		strings.Contains(textLower, " will ") || strings.Contains(textLower, " would ")
+
+	if hasSubject && hasVerb {
+		score += 0.1 // Bonus for having subject + verb structure
+	}
+
+	// Ensure score is between 0 and 1
+	if score > 1.0 {
+		score = 1.0
+	}
+	if score < 0.0 {
+		score = 0.0
+	}
+
+	return score
+}
+
+// calculateKeywordValueScore assigns value based on presence of high-ROI keywords
+func (s HighlightService) calculateKeywordValueScore(keywords []string, text string) float64 {
+	// High-value keyword categories with weights
+	highValueKeywords := map[string]float64{
+		// Quantifiable results (highest value)
+		"roi": 1.0, "revenue": 1.0, "profit": 1.0, "savings": 1.0, "growth": 0.9,
+		"increase": 0.9, "decrease": 0.9, "reduce": 0.9, "improve": 0.8,
+		"%": 1.0, "$": 1.0, "percent": 1.0, "dollar": 1.0,
+
+		// Time and efficiency
+		"faster": 0.8, "quicker": 0.8, "time": 0.7, "efficiency": 0.8, "productivity": 0.8,
+		"automated": 0.8, "streamline": 0.8,
+
+		// Recommendations and endorsements
+		"recommend": 1.0, "definitely": 0.9, "absolutely": 0.9, "best": 0.9,
+		"game-changer": 1.0, "game changer": 1.0, "transformative": 0.9,
+
+		// Problem-solution indicators
+		"problem": 0.7, "challenge": 0.7, "solution": 0.8, "solved": 0.8,
+		"before": 0.7, "after": 0.7, "struggled": 0.7, "now": 0.6,
+
+		// Competitive differentiation
+		"only": 0.8, "competitor": 0.8, "alternative": 0.7, "compared": 0.7,
+		"better": 0.8, "superior": 0.8, "exceeded": 0.9,
+	}
+
+	var totalValue float64
+	var matchCount int
+
+	// Check keywords
+	textLower := strings.ToLower(text)
+	for _, keyword := range keywords {
+		keywordLower := strings.ToLower(keyword)
+		if value, found := highValueKeywords[keywordLower]; found {
+			totalValue += value
+			matchCount++
+		}
+	}
+
+	// Also scan text for high-value terms not in keywords
+	for term, value := range highValueKeywords {
+		if strings.Contains(textLower, term) {
+			totalValue += value * 0.5 // Half weight for non-keyword matches
+		}
+	}
+
+	// Normalize score
+	if matchCount > 0 {
+		return totalValue / float64(matchCount+5) // Normalize to 0-1 range
+	}
+
+	return 0.3 // Base score if no high-value keywords found
 }
 
 func (s HighlightService) ExtractHighlightsByType(ctx context.Context, request HighlightRequest) ([]*pb.HighlightMoment, error) {
@@ -138,7 +659,7 @@ func (s HighlightService) ExtractHighlightsByType(ctx context.Context, request H
 	// Get testimonial content
 	testimonial, err := s.testimonialRepo.FetchByID(ctx, request.TestimonialID, s.db)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get testimonial")
+		return nil, fmt.Errorf("failed to get testimonial: %s", err)
 	}
 
 	if testimonial.Content == nil || *testimonial.Content == "" {
@@ -149,10 +670,8 @@ func (s HighlightService) ExtractHighlightsByType(ctx context.Context, request H
 	request.Segments = *testimonial.TranscriptSegments
 	request.Text = *testimonial.Content
 
-	// Set defaults
-	if request.MaxHighlights == 0 {
-		request.MaxHighlights = 5
-	}
+	// MaxHighlights: 0 means extract all valuable highlights (don't set a limit)
+	// Only set a specific number if user explicitly provided one
 	if request.HighlightType == "" {
 		request.HighlightType = HighlightTypeGeneral
 	}
@@ -174,16 +693,123 @@ func (s HighlightService) ExtractHighlightsByType(ctx context.Context, request H
 		return nil, fmt.Errorf("highlight extraction failed: %w", err)
 	}
 
+	// Clean AI response to remove markdown code blocks if present
+	cleanedResponse := utils.CleanAIJSONResponse(response)
+
 	var highlightsResponse []HighlightWithWords
-	if err := json.Unmarshal([]byte(response), &highlightsResponse); err != nil {
+	if err := json.Unmarshal([]byte(cleanedResponse), &highlightsResponse); err != nil {
 		return nil, fmt.Errorf("failed to parse highlights response: %w", err)
 	}
 
-	// Convert to pb.HighlightMoment
-	pbHighlights := make([]*pb.HighlightMoment, len(highlightsResponse))
+	// Log LLM extraction results (LLM returns seconds)
+	fmt.Printf("🤖 LLM extracted %d highlights (type: %s)\n", len(highlightsResponse), request.HighlightType)
 	for i, h := range highlightsResponse {
-		pbHighlights[i] = &pb.HighlightMoment{
+		dur := h.EndTime - h.StartTime // This is in seconds from LLM
+		wordCount := len(strings.Fields(h.Text))
+		fmt.Printf("   [%d] Duration: %.1fs, Words: %d, Importance: %.2f, Text preview: %.60s...\n",
+			i+1, dur, wordCount, h.ImportanceScore, h.Text)
+	}
+
+	// Convert to pb.HighlightMoment WITH word-level timing, then filter - same as ExtractHighlights
+	// CRITICAL: Add words FIRST, then filter on FINAL timing
+
+	// First, create temp highlights from LLM response
+	// CRITICAL: Convert LLM timestamps from seconds to milliseconds to match Word timestamps
+	tempHighlights := make([]*pb.HighlightMoment, 0, len(highlightsResponse))
+	for _, h := range highlightsResponse {
+		tempHighlights = append(tempHighlights, &pb.HighlightMoment{
 			Id:                 uuid.NewString(),
+			Text:               h.Text,
+			Theme:              h.Theme,
+			StartTime:          h.StartTime * 1000.0, // Convert seconds to milliseconds
+			EndTime:            h.EndTime * 1000.0,   // Convert seconds to milliseconds
+			ImportanceScore:    h.ImportanceScore,
+			HighlightType:      string(request.HighlightType),
+			SuggestedTitle:     h.SuggestedTitle,
+			Keywords:           h.Keywords,
+			EmotionalIntensity: h.EmotionalIntensity,
+			Shareability:       h.Shareability,
+			EngagementScore:    h.EngagementScore,
+		})
+	}
+
+	// Add words to get FINAL accurate timing and text
+	fmt.Printf("🔧 Applying word-level timing adjustment to %d highlights...\n", len(tempHighlights))
+	highlightsWithWords := s.addWordsToHighlights(tempHighlights, request.Segments)
+
+	// Log duration changes after word alignment (convert milliseconds to seconds for display)
+	fmt.Printf("📏 After word-level timing adjustment:\n")
+	for i, h := range highlightsWithWords {
+		durMs := h.EndTime - h.StartTime                                         // In milliseconds
+		originalDurMs := tempHighlights[i].EndTime - tempHighlights[i].StartTime // In milliseconds
+		changeMs := durMs - originalDurMs
+
+		// Convert to seconds for display
+		dur := durMs / 1000.0
+		originalDur := originalDurMs / 1000.0
+		change := changeMs / 1000.0
+
+		status := "✓"
+		if dur < 5.0 {
+			status = "⚠️ TOO SHORT"
+		} else if dur > 25.0 {
+			status = "⚠️ TOO LONG"
+		} else if dur < 8.0 || dur > 20.0 {
+			status = "⚡ BORDERLINE"
+		}
+		fmt.Printf("   [%d] LLM: %.1fs → Actual: %.1fs (change: %+.1fs) %s\n",
+			i+1, originalDur, dur, change, status)
+	}
+
+	// Apply quality filters and scoring on FINAL highlights (after word adjustment)
+	fmt.Printf("🔍 Applying graduated filtering to %d highlights...\n", len(highlightsWithWords))
+	pbHighlights := s.filterAndScoreHighlights(highlightsWithWords)
+
+	fmt.Printf("✅ Final result: %d/%d highlights passed filtering (%.1f%% retention)\n",
+		len(pbHighlights), len(highlightsResponse),
+		float64(len(pbHighlights))/float64(len(highlightsResponse))*100.0)
+
+	s.cacheService.Set(ctx, cacheKey, pbHighlights, 2*time.Hour)
+	return pbHighlights, nil
+}
+
+// stripWordsFromSegments creates a copy of segments without the Words field to save tokens
+// CRITICAL: Converts timestamps from milliseconds to seconds for LLM
+func (s HighlightService) stripWordsFromSegments(segments []models.TranscriptionSegment) []TranscriptionSegmentStripped {
+	strippedSegments := make([]TranscriptionSegmentStripped, len(segments))
+	for i, segment := range segments {
+		strippedSegments[i] = TranscriptionSegmentStripped{
+			Text:      segment.Text,
+			StartTime: segment.StartTime / 1000.0, // Convert milliseconds to seconds
+			EndTime:   segment.EndTime / 1000.0,   // Convert milliseconds to seconds
+			Speaker:   segment.Speaker,
+		}
+	}
+	return strippedSegments
+}
+
+// addWordsToHighlights attaches transcript words to highlights and intelligently adjusts boundaries.
+func (s *HighlightService) addWordsToHighlights(
+	highlights []*pb.HighlightMoment,
+	originalSegments []models.TranscriptionSegment,
+) []*pb.HighlightMoment {
+
+	// Flatten all word data for lookup.
+	var allWords []models.Word
+	for _, seg := range originalSegments {
+		allWords = append(allWords, seg.Words...)
+	}
+
+	// Process highlights safely using pointers.
+	result := make([]*pb.HighlightMoment, 0, len(highlights))
+	for _, h := range highlights {
+		if h == nil {
+			continue
+		}
+
+		// Clone fields manually (not by copy)
+		nh := &pb.HighlightMoment{
+			Id:                 h.Id,
 			Text:               h.Text,
 			Theme:              h.Theme,
 			StartTime:          h.StartTime,
@@ -196,68 +822,327 @@ func (s HighlightService) ExtractHighlightsByType(ctx context.Context, request H
 			Shareability:       h.Shareability,
 			EngagementScore:    h.EngagementScore,
 		}
-	}
 
-	s.cacheService.Set(ctx, cacheKey, pbHighlights, 2*time.Hour)
-	return s.addWordsToHighlights(pbHighlights, request.Segments), nil
-}
+		if h.StartTime > 0 && h.EndTime > h.StartTime {
+			words := s.findWordsInTimeRange(h.StartTime, h.EndTime, allWords)
+			if len(words) == 0 {
+				// Try small tolerance windows (+/- 0.5s, 1.0s)
+				tolerances := []float64{0.5, 1.0, 2.0}
+				for _, tol := range tolerances {
+					words = s.findWordsInTimeRange(h.StartTime-tol, h.EndTime+tol, allWords)
+					if len(words) > 0 {
+						break
+					}
+				}
+			}
 
-// stripWordsFromSegments creates a copy of segments without the Words field to save tokens
-func (s HighlightService) stripWordsFromSegments(segments []models.TranscriptionSegment) []TranscriptionSegmentStripped {
-	strippedSegments := make([]TranscriptionSegmentStripped, len(segments))
-	for i, segment := range segments {
-		strippedSegments[i] = TranscriptionSegmentStripped{
-			Text:      segment.Text,
-			StartTime: segment.StartTime,
-			EndTime:   segment.EndTime,
-			Speaker:   segment.Speaker,
-		}
-	}
-	return strippedSegments
-}
+			if len(words) == 0 && strings.TrimSpace(h.Text) != "" {
+				words = s.findWordsByTextSnippet(h.Text, allWords)
+			}
 
-// addWordsToHighlights matches words to highlights based on timing and adds them back
-func (s HighlightService) addWordsToHighlights(highlights []*pb.HighlightMoment, originalSegments []models.TranscriptionSegment) []*pb.HighlightMoment {
-	// Create a flat list of all words from all segments for easier searching
-	var allWords []models.Word
-	for _, segment := range originalSegments {
-		allWords = append(allWords, segment.Words...)
-	}
+			if len(words) > 0 {
+				nh.Text = s.reconstructTextFromWords(words)
+				nh.StartTime = words[0].Start
+				nh.EndTime = words[len(words)-1].End
+				nh.Words = s.convertWordsToProto(words)
 
-	// Create new highlights with words added and text fixed
-	result := make([]*pb.HighlightMoment, len(highlights))
-	for i, highlight := range highlights {
-		newHighlight := &pb.HighlightMoment{
-			Text:               highlight.Text,
-			Theme:              highlight.Theme,
-			StartTime:          highlight.StartTime,
-			EndTime:            highlight.EndTime,
-			ImportanceScore:    highlight.ImportanceScore,
-			HighlightType:      highlight.HighlightType,
-			SuggestedTitle:     highlight.SuggestedTitle,
-			Keywords:           highlight.Keywords,
-			EmotionalIntensity: highlight.EmotionalIntensity,
-			Shareability:       highlight.Shareability,
-			EngagementScore:    highlight.EngagementScore,
-		}
-
-		// Add words if timing information is available
-		if highlight.StartTime >= 0 && highlight.EndTime > highlight.StartTime {
-			matchingWords := s.findWordsInTimeRange(highlight.StartTime, highlight.EndTime, allWords)
-
-			if len(matchingWords) > 0 {
-				// ALWAYS use the actual text from words - this ensures consistency
-				newHighlight.Text = s.reconstructTextFromWords(matchingWords)
-				newHighlight.StartTime = matchingWords[0].Start
-				newHighlight.EndTime = matchingWords[len(matchingWords)-1].End
-				newHighlight.Words = s.convertWordsToProto(matchingWords)
+				// CRITICAL: Apply smart boundary adjustment if duration is problematic
+				durationMs := nh.EndTime - nh.StartTime // In milliseconds
+				if durationMs < 8000.0 || durationMs > 25000.0 {
+					adjusted := s.smartAdjustHighlightBoundaries(nh, allWords)
+					if adjusted != nil {
+						nh = adjusted
+					}
+				}
 			}
 		}
 
-		result[i] = newHighlight
+		result = append(result, nh)
 	}
 
 	return result
+}
+
+// smartAdjustHighlightBoundaries intelligently adjusts highlight boundaries to hit target duration
+// while preserving narrative completeness and sentence boundaries.
+// IMPORTANT: Expects durations in MILLISECONDS
+func (s *HighlightService) smartAdjustHighlightBoundaries(
+	h *pb.HighlightMoment,
+	allWords []models.Word,
+) *pb.HighlightMoment {
+
+	durationMs := h.EndTime - h.StartTime
+
+	// Perfect duration - no adjustment needed (8-20s)
+	if durationMs >= 8000.0 && durationMs <= 20000.0 {
+		return h
+	}
+
+	// Too long - trim to sentence boundaries (20-35s)
+	if durationMs > 20000.0 && durationMs <= 35000.0 {
+		adjusted := s.trimToSentenceBoundaries(h, allWords, 20000.0, 25000.0)
+		if adjusted != nil {
+			return adjusted
+		}
+	}
+
+	// Too short - expand to include context (3-8s)
+	if durationMs < 8000.0 && durationMs > 3000.0 {
+		adjusted := s.expandToCompleteSentences(h, allWords, 8000.0, 20000.0)
+		if adjusted != nil {
+			return adjusted
+		}
+	}
+
+	// If we can't fix it, return original
+	return h
+}
+
+// trimToSentenceBoundaries trims a highlight to fit within target duration while preserving sentence boundaries
+func (s *HighlightService) trimToSentenceBoundaries(
+	h *pb.HighlightMoment,
+	allWords []models.Word,
+	minTarget float64,
+	maxTarget float64,
+) *pb.HighlightMoment {
+
+	if len(h.Words) == 0 {
+		return nil
+	}
+
+	// Find sentence boundaries (periods, exclamation marks, question marks)
+	sentenceBoundaries := []int{0} // Start with first word
+	for i, word := range h.Words {
+		text := strings.TrimSpace(word.Text)
+		if len(text) > 0 {
+			lastChar := text[len(text)-1]
+			if lastChar == '.' || lastChar == '!' || lastChar == '?' {
+				sentenceBoundaries = append(sentenceBoundaries, i+1)
+			}
+		}
+	}
+
+	// If no sentence boundaries found, can't safely trim
+	if len(sentenceBoundaries) < 2 {
+		return nil
+	}
+
+	// Try different sentence combinations to find best fit
+	bestFit := (*pb.HighlightMoment)(nil)
+	bestScore := 0.0
+
+	for i := 0; i < len(sentenceBoundaries)-1; i++ {
+		for j := i + 1; j < len(sentenceBoundaries); j++ {
+			startIdx := sentenceBoundaries[i]
+			endIdx := sentenceBoundaries[j]
+
+			if endIdx > len(h.Words) {
+				endIdx = len(h.Words)
+			}
+
+			wordSlice := h.Words[startIdx:endIdx]
+			if len(wordSlice) == 0 {
+				continue
+			}
+
+			duration := wordSlice[len(wordSlice)-1].End - wordSlice[0].Start
+
+			// Check if this duration fits our target (duration is in milliseconds)
+			if duration >= minTarget && duration <= maxTarget {
+				// Score based on how close to optimal (14s) and completeness
+				durationSec := duration / 1000.0 // Convert to seconds for scoring
+				completeness := s.calculateCompletenessScore(s.reconstructTextFromProtoWords(wordSlice), durationSec)
+				optimalityScore := 1.0 - math.Abs(durationSec-14.0)/14.0 // Closer to 14s = better
+				score := (completeness * 0.7) + (optimalityScore * 0.3)
+
+				if score > bestScore {
+					bestScore = score
+					bestFit = &pb.HighlightMoment{
+						Id:                 h.Id,
+						Text:               s.reconstructTextFromProtoWords(wordSlice),
+						Theme:              h.Theme,
+						StartTime:          wordSlice[0].Start,
+						EndTime:            wordSlice[len(wordSlice)-1].End,
+						ImportanceScore:    h.ImportanceScore,
+						HighlightType:      h.HighlightType,
+						SuggestedTitle:     h.SuggestedTitle,
+						Keywords:           h.Keywords,
+						EmotionalIntensity: h.EmotionalIntensity,
+						Shareability:       h.Shareability,
+						EngagementScore:    h.EngagementScore,
+						Words:              wordSlice,
+					}
+				}
+			}
+		}
+	}
+
+	return bestFit
+}
+
+// expandToCompleteSentences expands a short highlight to include surrounding sentences
+func (s *HighlightService) expandToCompleteSentences(
+	h *pb.HighlightMoment,
+	allWords []models.Word,
+	minTarget float64,
+	maxTarget float64,
+) *pb.HighlightMoment {
+
+	if len(h.Words) == 0 {
+		return nil
+	}
+
+	// Find the position of our highlight words in the full word list
+	startIdx := -1
+	for i, word := range allWords {
+		if word.Start == h.Words[0].Start && word.Text == h.Words[0].Text {
+			startIdx = i
+			break
+		}
+	}
+
+	if startIdx == -1 {
+		return nil
+	}
+
+	endIdx := startIdx + len(h.Words)
+	if endIdx > len(allWords) {
+		endIdx = len(allWords)
+	}
+
+	// Expand backward to find sentence start
+	expandedStart := startIdx
+	for i := startIdx - 1; i >= 0; i-- {
+		word := allWords[i]
+		text := strings.TrimSpace(word.Text)
+
+		// Check if previous word ends a sentence
+		if len(text) > 0 {
+			lastChar := text[len(text)-1]
+			if lastChar == '.' || lastChar == '!' || lastChar == '?' {
+				// Found sentence boundary
+				break
+			}
+		}
+
+		expandedStart = i
+
+		// Check if we've exceeded max duration
+		if allWords[endIdx-1].End-allWords[expandedStart].Start > maxTarget {
+			expandedStart = i + 1
+			break
+		}
+	}
+
+	// Expand forward to find sentence end
+	expandedEnd := endIdx
+	for i := endIdx; i < len(allWords); i++ {
+		word := allWords[i]
+		text := strings.TrimSpace(word.Text)
+
+		expandedEnd = i + 1
+
+		// Check if we've exceeded max duration
+		if allWords[expandedEnd-1].End-allWords[expandedStart].Start > maxTarget {
+			expandedEnd = i
+			break
+		}
+
+		// Check if this word ends a sentence
+		if len(text) > 0 {
+			lastChar := text[len(text)-1]
+			if lastChar == '.' || lastChar == '!' || lastChar == '?' {
+				// Check if duration is now acceptable
+				duration := allWords[expandedEnd-1].End - allWords[expandedStart].Start
+				if duration >= minTarget {
+					break
+				}
+			}
+		}
+	}
+
+	// Build expanded highlight
+	expandedWords := allWords[expandedStart:expandedEnd]
+	if len(expandedWords) == 0 {
+		return nil
+	}
+
+	duration := expandedWords[len(expandedWords)-1].End - expandedWords[0].Start
+
+	// Only return if duration is acceptable
+	if duration >= minTarget && duration <= maxTarget {
+		return &pb.HighlightMoment{
+			Id:                 h.Id,
+			Text:               s.reconstructTextFromWords(convertProtoWordsToModels(expandedWords)),
+			Theme:              h.Theme,
+			StartTime:          expandedWords[0].Start,
+			EndTime:            expandedWords[len(expandedWords)-1].End,
+			ImportanceScore:    h.ImportanceScore,
+			HighlightType:      h.HighlightType,
+			SuggestedTitle:     h.SuggestedTitle,
+			Keywords:           h.Keywords,
+			EmotionalIntensity: h.EmotionalIntensity,
+			Shareability:       h.Shareability,
+			EngagementScore:    h.EngagementScore,
+			Words:              s.convertWordsToProto(convertProtoWordsToModels(expandedWords)),
+		}
+	}
+
+	return nil
+}
+
+// reconstructTextFromProtoWords reconstructs text from proto Word slice
+func (s *HighlightService) reconstructTextFromProtoWords(words []*pb.Word) string {
+	if len(words) == 0 {
+		return ""
+	}
+
+	var textBuilder strings.Builder
+	for i, word := range words {
+		if i > 0 {
+			if !isPunctuation(word.Text) {
+				textBuilder.WriteString(" ")
+			}
+		}
+		textBuilder.WriteString(word.Text)
+	}
+
+	return textBuilder.String()
+}
+
+// convertProtoWordsToModels converts pb.Word slice to models.Word slice
+func convertProtoWordsToModels(protoWords []models.Word) []models.Word {
+	// This function receives models.Word already, so just return it
+	return protoWords
+}
+
+// findWordsByTextSnippet finds a contiguous run of words whose combined text best matches the snippet
+func (s HighlightService) findWordsByTextSnippet(snippet string, allWords []models.Word) []models.Word {
+	snippetClean := strings.ToLower(strings.TrimSpace(snippet))
+	if snippetClean == "" {
+		return nil
+	}
+	// naive approach: join sliding windows of N words and check substring inclusion
+	// limit window length to 40 words to keep compute small
+	maxWindow := 40
+	n := len(allWords)
+	for w := 5; w <= maxWindow && w <= n; w++ {
+		for i := 0; i+w <= n; i++ {
+			window := allWords[i : i+w]
+			var b strings.Builder
+			for j, wd := range window {
+				if j > 0 && !isPunctuation(wd.Text) {
+					b.WriteByte(' ')
+				}
+				b.WriteString(strings.ToLower(wd.Text))
+			}
+			if strings.Contains(b.String(), snippetClean) || strings.Contains(snippetClean, b.String()) {
+				// found good match
+				return window
+			}
+		}
+	}
+	return nil
 }
 
 // convertWordsToProto converts models.Word to pb.Word
@@ -320,445 +1205,192 @@ func isPunctuation(text string) bool {
 }
 
 func (s HighlightService) getTypeSpecificSystemPrompt(highlightType HighlightType) string {
-	basePrompt := "You are an expert video editor and content strategist specializing in extracting the most compelling moments from customer testimonial videos for creating engaging clips, story modes, and social media content."
+	commonRequirements := `
+ROLE: Expert Video Story Curator and Testimonial Analyst.
+TASK: Extract ALL standalone high-value micro-story highlights from the transcript that fully satisfy all COMMON CORE PRINCIPLES below. Extract every valuable moment that meets quality standards.
 
-	switch highlightType {
-	case HighlightTypeProblem:
-		return basePrompt + `
+# CRITICAL DURATION GUIDANCE
+- TARGET: 8-20 seconds (SWEET SPOT for social media and marketing)
+- WORD COUNT: Aim for 40-80 words (typical speech is ~150 words/minute = 2.5 words/second)
+- CALCULATION: Count words in your text, divide by 2.5 to estimate seconds
+- MINIMUM: Never go below 8 seconds (too short for complete value)
+- MAXIMUM: Never exceed 25 seconds (social media attention limit)
+- STRATEGY: If >60 words, trim to most impactful sentences. If <40 words, find a richer moment.
 
-PROBLEM/CHALLENGE MOMENTS EXPERTISE:
-You excel at identifying moments where customers authentically describe their pain points, challenges, and frustrations before finding the solution. These moments are crucial for prospect education and problem awareness.
+COMMON CORE PRINCIPLES:
+1. Self-contained micro-story with a clear narrative arc (beginning, middle, end).
+2. Zero external context: no unexplained pronouns, references, or assumptions.
+3. Natural sentence boundaries: start/end at complete sentences, never mid-sentence.
+4. Duration: STRICTLY 8-20 seconds. Target 40-80 words. Discard if outside this range.
+5. Use verbatim transcript text; do not paraphrase or alter.
+6. Viewer clarity test: the clip is fully understandable without prior knowledge or additional context.
+7. Contiguous text: Prefer single segment or closely adjacent segments (avoid large time gaps).
 
-Focus on moments where customers talk about:
-• Specific problems or challenges they were facing
-• Pain points and frustrations with their previous situation  
-• Failed attempts or struggles with other solutions
-• Quantified impact of their problems (costs, time lost, missed opportunities)
-• Urgent needs or critical situations that required solving
-• Industry-specific challenges and obstacles
-• Process inefficiencies or workflow problems
-• Strategic challenges and business bottlenecks
+VALIDATION: Exclude any highlight that fails any rule above.
 
-Extract moments that make prospects think "That's exactly our problem too!"`
+IMPORTANT: For every highlight object include numeric values for
+"importance_score", "emotional_intensity", "shareability", "engagement_score" as decimals between 0.0 and 1.0.
+If you cannot estimate a number, choose a conservative default 0.5 rather than omitting the field.
+Also ensure start_time and end_time align with the transcript segment boundaries. If a single highlight spans parts of multiple segments, choose start_time at the first segment's start and end_time at the last segment's end.
 
-	case HighlightTypeSolution:
-		return basePrompt + `
+THINK-THEN-GENERATE:
+1. Analyze transcript holistically.
+2. Select strongest candidate highlights according to business value and completeness.
+3. For each candidate: COUNT WORDS and verify 40-80 word range (8-20 seconds).
+4. Validate each highlight against all principles.
+5. Output only valid highlights in strictly formatted JSON.
 
-SOLUTION DISCOVERY MOMENTS EXPERTISE:
-You specialize in identifying moments where customers describe how they found, evaluated, or chose your solution. These moments help prospects understand the decision-making process.
-
-Focus on moments where customers explain:
-• How they discovered or found your solution
-• Why they chose you over competitors or alternatives
-• Key features or capabilities that attracted them initially
-• Decision-making process and evaluation criteria
-• First impressions and initial experiences
-• What convinced them to move forward with implementation
-• Unique differentiators that stood out
-• Trust factors and credibility indicators
-• Onboarding or getting-started experiences
-
-Extract moments that build confidence in the solution choice.`
-
-	case HighlightTypeResults:
-		return basePrompt + `
-
-RESULTS AND OUTCOMES EXPERTISE:
-You excel at extracting moments where customers describe specific results, achievements, and positive outcomes. These are the proof points that drive conversions.
-
-Focus on moments where customers share:
-• Specific results and achievements they've experienced
-• Positive changes in their business or processes
-• Goals that were met or exceeded
-• Success stories and milestone achievements
-• Improved performance or capabilities
-• Time savings and efficiency gains
-• Quality improvements and better outcomes
-• Strategic advantages gained
-• Customer satisfaction improvements
-• Long-term sustained benefits
-
-Extract moments that prove tangible value and ROI.`
-
-	case HighlightTypeMetrics:
-		return basePrompt + `
-
-METRICS AND NUMBERS EXPERTISE:
-You specialize in identifying moments where customers mention specific numbers, percentages, costs, or quantified improvements. These data points are crucial for business cases.
-
-Focus on moments that include:
-• Specific numerical improvements (percentages, dollar amounts, timeframes)
-• ROI calculations and cost savings
-• Revenue increases and profit improvements
-• Time reductions and efficiency metrics
-• Before/after statistical comparisons
-• Performance benchmarks and KPI improvements
-• User adoption rates and engagement metrics
-• Productivity gains and output increases
-• Error reductions and quality metrics
-• Scale and volume improvements
-
-Extract moments with hard numbers that CFOs and executives care about.`
-
-	case HighlightTypeRecommendation:
-		return basePrompt + `
-
-RECOMMENDATION AND ENDORSEMENT EXPERTISE:
-You excel at identifying powerful moments where customers directly recommend, endorse, or advocate for the solution. These are pure social proof gold.
-
-Focus on moments where customers:
-• Directly recommend the solution to others
-• Express strong satisfaction and endorsement
-• Compare favorably against competitors
-• State they would choose again or continue using
-• Advocate for the solution within their industry
-• Provide strong testimonial statements
-• Express loyalty and partnership value
-• Share success with peers and colleagues
-• Become reference customers or case studies
-• Evangelize the solution publicly
-
-Extract moments that convert skeptical prospects into believers.`
-
-	case HighlightTypeBeforeAfter:
-		return basePrompt + `
-
-BEFORE/AFTER TRANSFORMATION EXPERTISE:
-You specialize in extracting moments that show clear contrast between the customer's situation before and after using the solution.
-
-Focus on moments that demonstrate:
-• Clear before vs. after comparisons
-• Transformation stories and journey narratives
-• Process improvements and workflow changes
-• Capability enhancements and new possibilities
-• Cultural or organizational changes
-• Strategic shifts enabled by the solution
-• Evolution of their business or operations
-• Journey milestones and breakthrough moments
-• Turning points and pivotal changes
-• Long-term transformation impact
-
-Extract moments that tell a compelling transformation story.`
-
-	case HighlightTypeEmotional:
-		return basePrompt + `
-
-EMOTIONAL MOMENTS EXPERTISE:
-You excel at identifying genuine emotional expressions of satisfaction, excitement, relief, or gratitude from customers. These create the strongest human connections.
-
-Focus on moments that showcase:
-• Genuine excitement and enthusiasm about results
-• Relief from solving major problems or pain points
-• Surprise at exceeding expectations
-• Gratitude for support and partnership
-• Pride in achievements and accomplishments
-• Confidence gained from the solution
-• Authentic emotional reactions to positive outcomes
-• Joy and satisfaction with the experience
-• Trust and comfort with the relationship
-• Passion and advocacy for the solution
-
-Extract moments that create emotional resonance and trust.`
-
-	default: // HighlightTypeGeneral
-		return basePrompt + `
-
-GENERAL HIGHLIGHT EXPERTISE:
-You excel at identifying the most engaging, impactful, and shareable moments that showcase authentic customer experiences and drive overall business value.
-
-Focus on moments that provide:
-• High engagement potential across multiple platforms and audiences
-• Strong emotional resonance combined with clear business value
-• Authentic customer experiences with compelling storytelling elements
-• Shareable moments with viral potential and broad appeal
-• Professional credibility balanced with personal authenticity
-• Clear value propositions with supporting evidence and examples
-• Versatile content suitable for multiple marketing channels
-• Balanced mix of rational and emotional appeal elements
-
-Extract the most powerful moments regardless of category.`
-	}
+STRICT OUTPUT FORMAT:
+Return JSON array ordered chronologically, each object with the exact schema:
+{
+  "text": "...",
+  "theme": "...",
+  "start_time": 0.0,
+  "end_time": 0.0,
+  "importance_score": 0.0,
+  "highlight_type": "%s",
+  "suggested_title": "...",
+  "keywords": ["keyword1", "keyword2", "keyword3"],
+  "emotional_intensity": 0.0,
+  "shareability": 0.0,
+  "engagement_score": 0.0
 }
 
-// Enhanced buildHighlightPrompt that uses all parameters effectively
+SAFETY: Do not generate any speculative, biased, or unrelated under any circumstances.
+
+EXAMPLES:
+VALID (Good Duration - 12s, ~48 words):
+{
+  "text": "After implementing the system, our error rate dropped from 15 percent to under 1 percent, saving 20 hours per week. The team was skeptical at first, but within two weeks everyone was onboard.",
+  "start_time": 34.0,
+  "end_time": 46.0
+}
+INVALID (Too Short):
+{
+  "text": "It was amazing.",
+  "reason": "Too short (<8s), lacks context and completeness."
+}
+INVALID (Too Long - would be ~35s):
+{
+  "text": "We had many problems and tried different solutions over several months before finally discovering this tool which gradually helped improve things...",
+  "reason": "Too long (>80 words), rambling. Split into focused highlights."
+}
+`
+
+	var typeSpecific string
+	switch highlightType {
+	case HighlightTypeProblem:
+		typeSpecific = `
+FOCUS: Detailed, relatable problem/challenge moments that prospects identify with.
+PRIORITY: Quantified impacts, failed attempts before your solution, urgency, and industry-specific challenges.`
+	case HighlightTypeSolution:
+		typeSpecific = `
+FOCUS: Decision-making process, unique value propositions, trust signals, and early wins.
+PRIORITY: Why they picked your solution over others, smooth implementation, and confidence building.`
+	case HighlightTypeResults:
+		typeSpecific = `
+FOCUS: Clear, quantified business outcomes with context.
+PRIORITY: ROI, strategic impact, time-to-value, multiple benefit stacks, and long-term success.`
+	case HighlightTypeMetrics:
+		typeSpecific = `
+FOCUS: Hard numbers CFOs demand—ROI, performance metrics, efficiency gains.
+REQUIREMENT: Always provide full context around the numbers (baseline, timeframe, impact).`
+	case HighlightTypeRecommendation:
+		typeSpecific = `
+FOCUS: Direct, passionate endorsements with reasoning.
+PRIORITY: Competitive comparisons and detailed loyalty motivations.`
+	case HighlightTypeBeforeAfter:
+		typeSpecific = `
+FOCUS: Dramatic before/after transformation stories with quantifiable contrast.
+REQUIREMENT: Include both BEFORE and AFTER states for completeness.`
+	case HighlightTypeEmotional:
+		typeSpecific = `
+FOCUS: Genuine emotional reactions with clear contextual triggers.
+PRIORITY: Relief, pride, gratitude, advocacy rooted in their story journey.`
+	default:
+		typeSpecific = `
+FOCUS: Highest ROI clips with strong business impact, clear narrative, and emotional authenticity.`
+	}
+
+	outputRequirement := `
+# OUTPUT
+The output must be a single JSON array containing highlight objects with all schema fields present and in exact order. If no qualifying highlights are found, return only []. No fields may be omitted, null, or reordered. Default numeric values to 0.5 if uncertain.
+Set reasoning_effort = medium for this multi-step task: use moderate depth for analysis and validation.
+Request changes (optional)
+`
+
+	return commonRequirements + typeSpecific + outputRequirement
+}
+
 func (s HighlightService) buildHighlightPrompt(text string, segments []models.TranscriptionSegment, customPrompt string, highlightType string, maxHighlights int) string {
 	strippedSegments := s.stripWordsFromSegments(segments)
 	segmentsJSON, _ := json.Marshal(strippedSegments)
-	hasTimestamps := len(segments) > 0
-
-	var customInstructions string
+	customInstr := ""
 	if customPrompt != "" {
-		customInstructions = fmt.Sprintf("\n\nADDITIONAL REQUIREMENTS:\n%s", customPrompt)
+		customInstr = fmt.Sprintf("\n\nAdditional Analyst Instructions:\n%s", customPrompt)
 	}
 
-	promptBase := fmt.Sprintf(`Extract the most impactful highlights from the following customer testimonial content.
-
-CRITICAL TIMING AND TEXT REQUIREMENTS:
-- Use EXACT start_time and end_time from the provided segments
-- Use EXACT text from the segments - do not modify, paraphrase, or clean up the text
-- Ensure your timing ranges correspond to actual segments in the transcript
-- The text field must match exactly what appears in the segments for those times
-- Each highlight must use complete words/sentences from the original segments%s
-
-TESTIMONIAL CONTENT:
-%s`, customInstructions, text)
-
-	if hasTimestamps {
-		promptBase += fmt.Sprintf(`
-
-TRANSCRIPTION SEGMENTS WITH PRECISE TIMING:
-%s
-
-MANDATORY: Extract highlights using EXACT timing and text from these segments. Your start_time and end_time must correspond to actual segment boundaries, and your text must be exactly what appears in those segments.`, string(segmentsJSON))
+	// Build task description based on maxHighlights
+	taskDescription := ""
+	if maxHighlights > 0 {
+		taskDescription = fmt.Sprintf("Identify exactly %d business-critical, standalone testimonial highlights within the transcript below.", maxHighlights)
+	} else {
+		taskDescription = "Identify ALL business-critical, standalone testimonial highlights within the transcript below. Extract every valuable moment that meets all quality criteria."
 	}
 
-	promptBase += fmt.Sprintf(`
+	prompt := fmt.Sprintf(`
+ROLE: Professional video content editor and storytelling analyst.
+TASK: %s
 
-Extract exactly %d HIGH-VALUE segments with these requirements:
+COMMON CORE PRINCIPLES:
+- Highlights must be complete micro-stories with clear start, middle, and end.
+- No external context required — all pronouns and references must be explained.
+- Stick exactly to transcript text; NO paraphrasing or text edits.
+- Duration must be between 8 and 20 seconds; discard below 8s or above 25s unless completeness demands.
+- Highlights must start/end on full sentences.
+- No overlapping or duplicated time ranges; arrange results chronologically.
+- Output must be a valid JSON array matching this schema exactly:
 
-TIMING VALIDATION REQUIREMENTS:
-- **USE EXACT SEGMENT TIMING** - start_time and end_time must match actual segment boundaries
-- **NO TIME OVERLAPS** - Each highlight must have unique, non-overlapping time ranges
-- **SEQUENTIAL ORDERING** - Arrange highlights chronologically
-- **MINIMUM GAP** - Ensure at least 2-3 seconds between highlights
-
-TEXT CONSISTENCY REQUIREMENTS:
-- **EXACT TEXT EXTRACTION** - Use precisely the text that appears in the segments for your time range
-- **NO PARAPHRASING** - Do not clean up, modify, or improve the original text
-- **COMPLETE SENTENCES** - Ensure highlights contain complete thoughts from the segments
-- **NATURAL BOUNDARIES** - End highlights at natural speech boundaries
-
-Return a JSON array with this exact structure (ORDERED CHRONOLOGICALLY):
 [
   {
-    "text": "EXACT transcript text from the segments - no modifications",
-    "theme": "Primary theme or topic of this highlight",
+    "text": "...",
+    "theme": "...",
     "start_time": 0.0,
     "end_time": 0.0,
-    "importance_score": 0.0, (0-1, how important this moment is)
+    "importance_score": 0.0,
     "highlight_type": "%s",
-    "suggested_title": "Compelling title for video clip",
-    "keywords": ["keyword1", "keyword2", "keyword3"],
+    "suggested_title": "...",
+    "keywords": ["...", "...", "..."],
     "emotional_intensity": 0.0,
     "shareability": 0.0,
-	"engagement_score":0.4, (0-1, how engaging/compelling this moment would be as a video clip)
+    "engagement_score": 0.0
   }
 ]
 
-Engagement score should consider:
-- Emotional impact and authenticity
-- Clarity and specificity of the message  
-- Presence of concrete results/numbers
-- Relatability to other customers
-- Natural speaking flow and energy
-- Story value (setup, conflict, resolution)
+TRANSCRIPT:
+%s
 
-FINAL VALIDATION:
-- Verify each highlight's timing matches actual segments
-- Confirm text is exactly what appears in those time ranges
-- Ensure no overlapping time ranges
-- Validate chronological ordering
+TRANSCRIPT SEGMENTS WITH TIMING:
+%s
 
-Focus on extracting segments that provide immediate business value while maintaining perfect consistency between timing and text content.`, maxHighlights, highlightType)
+CRITICAL: Use start_time/end_time ONLY from these segments. Text must EXACTLY MATCH segments.
 
-	return promptBase
-}
+VALIDATE each highlight thoroughly on:
+1. Duration
+2. Narrative completeness
+3. Standalone clarity
+4. Sentence boundaries
+5. Absence of unknown references
+6. Timing alignment
+7. Non-overlapping uniqueness
 
-// Type-specific guidelines for different highlight types
-func (s HighlightService) getTypeSpecificGuidelines(highlightType string) string {
-	switch highlightType {
-	case "problem":
-		return `PROBLEM MOMENTS CRITERIA:
-• Customer describing specific pain points or business challenges
-• Mentions of inefficiencies, frustrations, or failed attempts
-• Stories about what wasn't working in their previous situation
-• Urgent needs or critical problems that required solving
-• Quantified impact of problems (time lost, money wasted, missed opportunities)
-• Industry-specific challenges and obstacles they faced
-• Process bottlenecks or workflow issues they experienced
-• Strategic challenges that were limiting growth
-• Compliance or regulatory challenges they needed to address
-• Competitive disadvantages they were experiencing
+%s
 
-IDEAL MEANINGFUL MOMENTS (BALANCED APPROACH):
+FINAL STEP: Output only highlights passing ALL checks as JSON. No explanation text outside JSON.
 
-**Complete Stories (60-90 seconds):**
-- "We were struggling with [specific problem] for months. We tried [attempts] but [what failed]. Then we found [solution] and within [timeframe], we [complete outcome]."
+`, taskDescription, highlightType, text, string(segmentsJSON), customInstr)
 
-**Powerful Short Segments (15-45 seconds):**
-- "This saved us $50,000 in the first month alone."
-- "I would absolutely recommend this to anyone in our industry."
-- "Our conversion rate went from 2% to 15% in just three months."
-- "No other solution even came close to what they delivered."
-- "It was honestly a game-changer for our entire operation."
-
-**Metric Moments with Context (20-40 seconds):**
-- "We went from processing 100 orders a day to over 500, and our error rate dropped to virtually zero."
-
-**Emotional Reactions with Setup (25-50 seconds):**
-- "When I saw the results for the first time, I couldn't believe it. We had been struggling with this for years."
-
-SEGMENT STRUCTURE REQUIREMENTS:
-- **For longer segments**: Must contain complete problem description with context and resolution
-- **For shorter segments**: Must include enough context that viewers understand who is speaking and what they achieved
-- **For metric segments**: Should include the baseline for comparison and timeframe for credibility
-- **For emotional segments**: Need enough setup so viewers understand why the emotion is justified
-- **For recommendation segments**: Should include context about the customer's credibility or situation`
-
-	case "solution":
-		return `SOLUTION DISCOVERY CRITERIA:
-• How the customer found or discovered your solution
-• Reasons why they chose you over competitors
-• Key features or capabilities that attracted them initially
-• Decision-making process and evaluation criteria
-• First impressions and initial experiences with your solution
-• What convinced them to move forward with implementation
-• Unique differentiators that stood out from alternatives
-• Trust factors and credibility indicators that influenced their choice
-• Onboarding or getting-started experiences they had
-• Early wins or quick victories they experienced
-
-IDEAL MEANINGFUL MOMENTS:
-- Complete decision stories: "We evaluated [competitors] and [process]. What convinced us was [detailed reasons]. The key differentiator was [specific factor] because [explanation]."
-- Full evaluation process: "We needed [requirements] and tested [options]. They were the only ones who [unique capability]. The implementation was [experience] and [results]."
-- Detailed reasoning: "Unlike other solutions that [limitations], this one [advantages]. We chose them because [complete reasoning] and [validation]."
-- Comprehensive comparison: "We looked at [alternatives] but [issues with each]. The deciding factor was [detailed explanation] and [proof points]."
-- Complete journey: "From our first conversation to implementation, [complete experience]. What stood out was [specifics] which [impact]."
-
-SEGMENT STRUCTURE REQUIREMENTS:
-- Must contain complete explanation of why they chose this solution
-- Should include comparison context and decision criteria
-- Must explain what made the difference in their evaluation process
-- Needs specific examples of how the solution met their unique needs
-- Should contain enough detail that prospects understand the value proposition`
-
-	case "results":
-		return `RESULTS AND OUTCOMES CRITERIA:
-• Specific achievements and positive outcomes they experienced
-• Goals that were met, exceeded, or surpassed
-• Improvements in their business processes or operations
-• Success stories and milestone achievements
-• Enhanced capabilities or new possibilities enabled
-• Quality improvements and better performance metrics
-• Time savings and efficiency gains they realized
-• Strategic advantages gained from the solution
-• Customer satisfaction improvements they achieved
-• Long-term sustained benefits and ongoing value
-
-IDEAL MEANINGFUL MOMENTS:
-- Complete success stories: "Since implementing [solution], we've achieved [specific results]. For example, [detailed case] which resulted in [outcomes]. Our team can now [new capabilities]."
-- Detailed transformations: "The results have been incredible. We went from [baseline] to [current state]. This means [business impact] and [future possibilities]."
-- Comprehensive outcomes: "We now achieve [specific goals] in [timeframe] instead of [old timeframe]. This has enabled us to [new opportunities] and [growth]."
-- Full impact stories: "The improvement has been across [areas]. We've seen [specific changes] which has [cascading effects]. Our customers now [experience improvements]."
-- Complete benefit explanation: "Beyond just [primary benefit], we've also gained [secondary benefits]. This has transformed [process/operations] and [strategic impact]."
-
-SEGMENT STRUCTURE REQUIREMENTS:
-- Must contain complete description of outcomes with specific examples
-- Should include before/after context to show transformation magnitude
-- Must explain the broader business impact beyond immediate results
-- Needs concrete examples and specific achievements that are measurable
-- Should contain enough detail that prospects can envision similar success`
-
-	case "metrics":
-		return `METRICS AND NUMBERS CRITERIA:
-• Specific numerical improvements (percentages, dollar amounts, timeframes)
-• ROI calculations, cost savings, or revenue increases
-• Performance metrics and efficiency measurements
-• Before/after statistical comparisons with exact figures
-• Growth rates, conversion improvements, and optimization results
-• User adoption rates and engagement statistics
-• Productivity gains and output increases measured quantitatively
-• Error reductions and quality metrics with specific numbers
-• Time savings measured in hours, days, or weeks
-• Scale improvements with volume or capacity numbers
-
-IDEAL MOMENTS:
-- "We saved $X per year..."
-- "Efficiency improved by 40%..."
-- "ROI was 300% in the first..."
-- "We reduced processing time from X to Y..."
-- "Our conversion rate went from X% to Y%..."`
-
-	case "recommendation":
-		return `RECOMMENDATION CRITERIA:
-• Direct statements recommending your solution to others
-• Strong endorsements and expressions of satisfaction
-• Comparisons that favor your solution over alternatives
-• Statements about choosing you again or continuing partnership
-• Advocacy for your solution within their industry or network
-• Testimonial statements and positive references they've provided
-• Expressions of loyalty and long-term partnership value
-• Public endorsements or case study participation
-• Referrals they've made to other potential customers
-• Speaking engagements or conference presentations about your solution
-
-IDEAL MOMENTS:
-- "I would absolutely recommend..."
-- "We tell everyone about..."
-- "If you're considering options..."
-- "Don't hesitate to..."
-- "They're the only ones who..."`
-
-	case "before_after":
-		return `BEFORE/AFTER TRANSFORMATION CRITERIA:
-• Clear comparisons between their situation before and after
-• Transformation stories showing journey from problem to success
-• Process improvements and workflow changes they implemented
-• Capability enhancements and new possibilities they gained
-• Cultural or organizational changes that resulted
-• Strategic shifts or new directions enabled by your solution
-• Evolution of their business operations or customer experience
-• Journey milestones and breakthrough moments they experienced
-• Turning points and pivotal changes in their business
-• Long-term transformation impact and sustained improvements
-
-IDEAL MOMENTS:
-- "Before, we used to... Now we..."
-- "The transformation has been..."
-- "We went from... to..."
-- "It's night and day compared to..."
-- "Our entire approach changed from..."`
-
-	case "emotional":
-		return `EMOTIONAL MOMENTS CRITERIA:
-• Genuine expressions of excitement, satisfaction, or enthusiasm
-• Relief expressed about solving major problems or challenges
-• Surprise at exceeding expectations or unexpected benefits
-• Gratitude for support, partnership, or exceptional service
-• Pride in achievements and accomplishments they've made
-• Confidence gained from using your solution successfully
-• Authentic emotional reactions to positive outcomes or milestones
-• Joy and satisfaction with the overall experience
-• Trust and comfort expressed about the ongoing relationship
-• Passion and advocacy when discussing the solution
-
-IDEAL MOMENTS:
-- Visible excitement when discussing results
-- Emotional relief when describing problem resolution
-- Genuine gratitude and appreciation
-- Surprised delight at unexpected benefits
-- Passionate advocacy and enthusiasm`
-
-	default: // General
-		return `GENERAL HIGHLIGHT CRITERIA:
-• VALUABLE SEGMENTS that provide immediate impact - both complete stories and powerful moments
-• Authentic customer experiences with SUBSTANTIAL CONTENT and specific details
-• Clear value demonstration through comprehensive narratives OR impactful statements  
-• Moments that work as standalone video clips with appropriate context for understanding
-• Content that's quotable, memorable, and shareable - from detailed stories to punchy one-liners
-• Strong combination of credibility and relatability with CONCRETE EXAMPLES
-• Natural storytelling moments OR powerful individual insights that drive engagement
-• Balanced mix of comprehensive explanations and impactful sound bites
-• Professional credibility paired with authentic, detailed personal experiences
-• Versatile content suitable for multiple marketing channels with IMMEDIATE IMPACT
-
-MEANINGFUL SEGMENT REQUIREMENTS:
-- Complete customer journeys with natural story progression (60-90 seconds)
-- Powerful standalone statements with enough context to understand impact (15-45 seconds)
-- Authentic emotional reactions with setup that justifies the emotion (25-50 seconds)
-- Key metrics and outcomes with comparison baselines for credibility (20-40 seconds)
-- Strong recommendations with customer credibility indicators (20-60 seconds)`
-	}
+	return prompt
 }
 
 // Convenience methods for easy access to specific highlight types

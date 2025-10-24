@@ -45,12 +45,12 @@ export interface AuthorInfo {
   consent: boolean;
 }
 
-// Simplified media types (only video and text)
-export type MediaType = "video" | "text";
+// Media types including voice AI
+export type MediaType = "video" | "text" | "voice";
 
 // Simplified capture state
 export interface CaptureState {
-  mode: "selection" | "video" | "text";
+  mode: "selection" | "video" | "text" | "voice";
   isRecording: boolean;
   recordedBlob: Blob | null;
   textContent: string;

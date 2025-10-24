@@ -30,24 +30,24 @@ export const StatCard: React.FC<StatCardProps> = ({
       <StatCardSkeleton />
     ) : (
       <motion.div variants={itemVariants}>
-        <Card className="border border-gray-200 hover:border-gray-300 transition-colors bg-white">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded bg-gray-100 flex items-center justify-center">
-                  <Icon className="h-4 w-4 text-gray-600" />
+        <Card className="border border-slate-200 hover:border-slate-300 transition-colors bg-white">
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded bg-slate-100 flex items-center justify-center">
+                  <Icon className="h-3.5 w-3.5 text-slate-600" />
                 </div>
-                <h3 className="text-xs font-medium text-gray-900">{title}</h3>
+                <h3 className="text-xs font-medium text-slate-900">{title}</h3>
               </div>
 
               {trend && (
                 <div
-                  className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                  className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs font-medium ${
                     trend === "up"
                       ? "text-emerald-600 bg-emerald-50"
                       : trend === "down"
                         ? "text-rose-600 bg-rose-50"
-                        : "text-gray-600 bg-gray-50"
+                        : "text-slate-600 bg-slate-50"
                   }`}
                 >
                   {trend === "up" ? (
@@ -60,17 +60,17 @@ export const StatCard: React.FC<StatCardProps> = ({
               )}
             </div>
 
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               {value ? (
-                <div className="text-lg font-semibold text-gray-900">
+                <div className="text-base font-semibold text-slate-900">
                   {value}
                 </div>
               ) : (
-                <div className="text-xs text-gray-600">{message}</div>
+                <div className="text-xs text-slate-600">{message}</div>
               )}
 
               {value && (
-                <div className="text-xs text-gray-500 font-medium">
+                <div className="text-xs text-slate-500 font-medium">
                   {message}
                 </div>
               )}

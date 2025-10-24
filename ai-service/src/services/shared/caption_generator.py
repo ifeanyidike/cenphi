@@ -318,8 +318,6 @@ class CaptionGenerator:
                 })
         
         logger.info(f"Processed into {len(caption_segments)} caption segments")
-        from pprint import pformat
-        logger.info(f"caption: {pformat(caption_segments, indent=2)}")
         
         # Validate no timing gaps
         self._validate_caption_timing(caption_segments)
@@ -942,15 +940,17 @@ class CaptionGenerator:
                 # Default styling
                 subtitle_filter = f"subtitles='{escaped_srt_path}'"
             
-            # FFmpeg command with proper error handling and optimization
+            # HIGH QUALITY encoding to match crop/branding/enhancement quality
             cmd = [
                 "ffmpeg", "-y",  # Overwrite output
                 "-i", video_path,
                 "-vf", subtitle_filter,
                 "-c:v", "libx264",
-                "-preset", "fast",  # Good balance of speed vs quality
-                "-crf", "23",         # Good quality
-                "-c:a", "copy",       # Don't re-encode audio
+                "-preset", "medium",     # Better quality than fast
+                "-crf", "17",            # Excellent quality to match other pipeline steps
+                "-profile:v", "high",
+                "-level", "4.1",
+                "-c:a", "copy",          # Don't re-encode audio
                 "-movflags", "+faststart",  # Web optimization
                 "-avoid_negative_ts", "make_zero",  # Fix timing issues
                 output_path

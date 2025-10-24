@@ -9,9 +9,15 @@ import {
   AlertCircle,
   QrCode,
   Target,
+  Clock,
+  CloudUpload,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PersonalDetailsForm from "./PersonalDetailsForm";
+import { useJobProgress } from "@/hooks/useJobProgress";
+import { observer } from "mobx-react-lite";
+import { videoCompressionService } from "@/services/video-compression";
 
 // Questions to display alongside recording
 const TESTIMONIAL_QUESTIONS = [
@@ -25,11 +31,19 @@ interface RecordingState {
     | "idle"
     | "recording"
     | "stopped"
+    | "compressing"
     | "uploading"
+    | "queued"
+    | "processing"
     | "completed"
     | "error";
   duration: number;
   error?: string;
+  jobId?: string;
+  stage?: string;
+  message?: string;
+  testimonialId?: string;
+  compressionProgress?: number;
 }
 
 interface TestimonialFormData {
@@ -43,13 +57,15 @@ interface TestimonialFormData {
 interface VideoRecordingProps {
   formData: TestimonialFormData;
   setFormData: (data: TestimonialFormData) => void;
-  onSubmitSuccess: () => void;
+  onSubmitSuccess: (testimonialId?: string) => void;
+  workspaceId: string;
 }
 
 const VideoRecording: React.FC<VideoRecordingProps> = ({
   formData,
   setFormData,
   onSubmitSuccess,
+  workspaceId,
 }) => {
   const [recordingState, setRecordingState] = useState<RecordingState>({
     status: "idle",
@@ -61,6 +77,7 @@ const VideoRecording: React.FC<VideoRecordingProps> = ({
   const [hasPermissions, setHasPermissions] = useState(false);
   const [permissionError, setPermissionError] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const { jobStatus, startTracking, stopTracking } = useJobProgress();
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const recordedVideoRef = useRef<HTMLVideoElement>(null);
@@ -86,16 +103,57 @@ const VideoRecording: React.FC<VideoRecordingProps> = ({
     };
   }, []);
 
+  // Handle job status updates from SSE
+  useEffect(() => {
+    if (jobStatus) {
+      setRecordingState((prev) => ({
+        ...prev,
+        status:
+          jobStatus.status === "completed"
+            ? "completed"
+            : jobStatus.status === "failed"
+              ? "error"
+              : "processing",
+        stage: jobStatus.stage,
+        message: jobStatus.message,
+        testimonialId: jobStatus.testimonial_id,
+        error: jobStatus.error,
+      }));
+
+      // Complete the upload if done
+      if (jobStatus.status === "completed" && jobStatus.testimonial_id) {
+        setTimeout(() => {
+          onSubmitSuccess(jobStatus.testimonial_id);
+        }, 1000);
+      }
+    }
+  }, [jobStatus, onSubmitSuccess]);
+
+  // Cleanup SSE connection on unmount
+  useEffect(() => {
+    return () => {
+      stopTracking();
+    };
+  }, [stopTracking]);
+
   const initializeMedia = async () => {
     try {
       setPermissionError(null);
 
+      // Mobile-optimized constraints
       const constraints: MediaStreamConstraints = {
-        video: {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          frameRate: { ideal: 30 },
-        },
+        video: isMobile
+          ? {
+              width: { ideal: 720 },
+              height: { ideal: 1280 },
+              frameRate: { ideal: 30 },
+              facingMode: "user",
+            }
+          : {
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+              frameRate: { ideal: 30 },
+            },
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
@@ -202,104 +260,214 @@ const VideoRecording: React.FC<VideoRecordingProps> = ({
     setUploadProgress(0);
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = event.target.files?.[0];
-    if (file && file.type.startsWith("video/")) {
-      if (file.size > 100 * 1024 * 1024) {
-        setRecordingState({
-          status: "error",
-          duration: 0,
-          error: "Video file must be smaller than 100MB",
-        });
-        return;
-      }
-      setUploadedFile(file);
-      recordedBlobRef.current = file;
-
-      // Stop camera when uploading
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
-      }
-
-      // Show uploaded video in preview
-      if (recordedVideoRef.current) {
-        recordedVideoRef.current.src = URL.createObjectURL(file);
-      }
-
-      setRecordingState({ status: "stopped", duration: 0 });
-    } else {
+    if (!file || !file.type.startsWith("video/")) {
       setRecordingState({
         status: "error",
         duration: 0,
         error: "Please select a valid video file",
       });
+      return;
     }
+
+    // Validate file size and check if compression is needed
+    const validation = videoCompressionService.validateFileSize(file);
+
+    if (!validation.isValid) {
+      setRecordingState({
+        status: "error",
+        duration: 0,
+        error: validation.message,
+      });
+      return;
+    }
+
+    // Stop camera when uploading
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+
+    let finalFile = file;
+
+    // Compress if needed
+    if (validation.shouldCompress) {
+      try {
+        setRecordingState({
+          status: "compressing",
+          duration: 0,
+          message: validation.message,
+          compressionProgress: 0,
+        });
+
+        const result = await videoCompressionService.compressVideo(file, {
+          onProgress: (progress) => {
+            setRecordingState((prev) => ({
+              ...prev,
+              compressionProgress: progress,
+            }));
+          },
+        });
+
+        if ("error" in result) {
+          // Compression failed - check if original file is under 200MB
+          if (file.size <= 200 * 1024 * 1024) {
+            console.warn(
+              "Compression failed, using original file:",
+              result.error
+            );
+            finalFile = file;
+          } else {
+            setRecordingState({
+              status: "error",
+              duration: 0,
+              error:
+                "File is too large and compression failed. Please use a file smaller than 200MB.",
+            });
+            return;
+          }
+        } else {
+          finalFile = result.compressedFile;
+          console.log(
+            `Video compressed: ${videoCompressionService.formatFileSize(result.originalSize)} → ${videoCompressionService.formatFileSize(result.compressedSize)} (${result.compressionRatio.toFixed(1)}% reduction)`
+          );
+        }
+      } catch (error) {
+        // Compression failed - fallback to original if under 200MB
+        if (file.size <= 200 * 1024 * 1024) {
+          console.warn("Compression failed, using original file:", error);
+          finalFile = file;
+        } else {
+          setRecordingState({
+            status: "error",
+            duration: 0,
+            error:
+              "File is too large and compression failed. Please use a file smaller than 200MB.",
+          });
+          return;
+        }
+      }
+    }
+
+    // Set uploaded file and blob
+    setUploadedFile(finalFile);
+    recordedBlobRef.current = finalFile;
+
+    // Show uploaded video in preview
+    if (recordedVideoRef.current) {
+      const videoUrl = URL.createObjectURL(finalFile);
+      recordedVideoRef.current.src = videoUrl;
+      recordedVideoRef.current.load(); // Force reload the video element
+    }
+
+    setRecordingState({ status: "stopped", duration: 0 });
   };
 
   const submitTestimonial = async () => {
     if (!recordedBlobRef.current) return;
 
+    let finalBlob = recordedBlobRef.current;
+
+    // Check if compression is needed for recorded videos
+    if (
+      videoCompressionService.shouldCompress(
+        (recordedBlobRef.current as File) ||
+          new File([recordedBlobRef.current], "recorded.webm")
+      )
+    ) {
+      try {
+        setRecordingState((prev) => ({
+          ...prev,
+          status: "compressing",
+          message: "Compressing recorded video for faster upload...",
+          compressionProgress: 0,
+        }));
+
+        const file =
+          recordedBlobRef.current instanceof File
+            ? recordedBlobRef.current
+            : new File([recordedBlobRef.current], "recorded.webm", {
+                type: "video/webm",
+              });
+
+        const result = await videoCompressionService.compressVideo(file, {
+          onProgress: (progress) => {
+            setRecordingState((prev) => ({
+              ...prev,
+              compressionProgress: progress,
+            }));
+          },
+        });
+
+        if ("error" in result) {
+          console.warn(
+            "Compression failed for recorded video, using original:",
+            result.error
+          );
+          finalBlob = recordedBlobRef.current;
+        } else {
+          finalBlob = result.compressedFile;
+          console.log(
+            `Recorded video compressed: ${videoCompressionService.formatFileSize(result.originalSize)} → ${videoCompressionService.formatFileSize(result.compressedSize)} (${result.compressionRatio.toFixed(1)}% reduction)`
+          );
+        }
+      } catch (error) {
+        console.warn(
+          "Compression failed for recorded video, using original:",
+          error
+        );
+        finalBlob = recordedBlobRef.current;
+      }
+    }
+
     setRecordingState((prev) => ({ ...prev, status: "uploading" }));
-    setUploadProgress(0);
+    setUploadProgress(5);
 
     try {
+      // Use the workspace ID passed as prop
+
       const formDataObj = new FormData();
       formDataObj.append(
         "video",
-        recordedBlobRef.current,
-        `testimonial_${Date.now()}.webm`
+        finalBlob,
+        `testimonial_${Date.now()}.${finalBlob instanceof File ? "mp4" : "webm"}`
       );
       formDataObj.append("author_name", formData.name);
       formDataObj.append("author_email", formData.email);
-      formDataObj.append("company", formData.company || "");
+      formDataObj.append("author_company", formData.company || "");
       formDataObj.append("rating", formData.rating.toString());
-      formDataObj.append(
-        "video_method",
-        uploadedFile ? "uploaded" : "recorded"
-      );
-      formDataObj.append("type", "video");
+      formDataObj.append("collection_method", uploadedFile ? "form" : "form");
 
-      const xhr = new XMLHttpRequest();
-
-      // Track upload progress
-      xhr.upload.addEventListener("progress", (event) => {
-        if (event.lengthComputable) {
-          const progress = Math.round((event.loaded / event.total) * 100);
-          setUploadProgress(progress);
+      // Use queued upload endpoint
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/collection/workspaces/${workspaceId}/testimonials/upload/video/queue`,
+        {
+          method: "POST",
+          body: formDataObj,
         }
-      });
-
-      // Handle response
-      xhr.addEventListener("load", () => {
-        if (xhr.status === 201 || xhr.status === 200) {
-          setRecordingState((prev) => ({ ...prev, status: "completed" }));
-          setTimeout(() => onSubmitSuccess(), 1000);
-        } else {
-          const errorData = xhr.responseText
-            ? JSON.parse(xhr.responseText)
-            : {};
-          setRecordingState({
-            status: "error",
-            duration: recordingState.duration,
-            error: errorData.message || "Failed to submit video testimonial",
-          });
-        }
-      });
-
-      xhr.addEventListener("error", () => {
-        setRecordingState({
-          status: "error",
-          duration: recordingState.duration,
-          error: "Upload failed. Please check your connection and try again.",
-        });
-      });
-
-      // Send request
-      xhr.open(
-        "POST",
-        `${import.meta.env.VITE_API_URL}/api/public/testimonials`
       );
-      xhr.send(formDataObj);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.message || `Upload failed with status ${response.status}`
+        );
+      }
+
+      const result = await response.json();
+
+      setRecordingState((prev) => ({
+        ...prev,
+        status: "queued",
+        jobId: result.job_id,
+        message: "Upload queued successfully! Processing will begin shortly...",
+      }));
+
+      // Start tracking job progress via SSE
+      startTracking(result.job_id);
     } catch (error: any) {
       console.error("Error submitting testimonial:", error);
       setRecordingState({
@@ -451,21 +619,24 @@ const VideoRecording: React.FC<VideoRecordingProps> = ({
               {/* Video Display */}
               <div className="relative bg-black">
                 {/* Live Preview or Recorded Video */}
-                {recordingState.status === "idle" ||
-                recordingState.status === "recording" ? (
+                {uploadedFile || recordedBlobRef.current ? (
+                  <video
+                    ref={recordedVideoRef}
+                    controls
+                    playsInline
+                    className={`w-full object-cover rounded-t-2xl ${
+                      isMobile ? "aspect-[9/16]" : "aspect-video"
+                    }`}
+                  />
+                ) : (
                   <video
                     ref={videoRef}
                     autoPlay
                     muted
                     playsInline
-                    className="w-full aspect-video object-cover rounded-t-2xl"
-                  />
-                ) : (
-                  <video
-                    ref={recordedVideoRef}
-                    controls
-                    playsInline
-                    className="w-full aspect-video object-cover rounded-t-2xl"
+                    className={`w-full object-cover rounded-t-2xl ${
+                      isMobile ? "aspect-[9/16]" : "aspect-video"
+                    }`}
                   />
                 )}
 
@@ -503,21 +674,65 @@ const VideoRecording: React.FC<VideoRecordingProps> = ({
                   </div>
 
                   {/* Upload Progress */}
-                  {recordingState.status === "uploading" && (
+                  {(recordingState.status === "compressing" ||
+                    recordingState.status === "uploading" ||
+                    recordingState.status === "queued" ||
+                    recordingState.status === "processing") && (
                     <div className="absolute inset-0 bg-black/90 flex items-center justify-center">
                       <div className="text-center text-white">
-                        <div className="w-12 h-12 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                        <div className="flex justify-center mb-3">
+                          {recordingState.status === "compressing" && (
+                            <Zap className="w-12 h-12 text-green-500 animate-pulse" />
+                          )}
+                          {recordingState.status === "uploading" && (
+                            <CloudUpload className="w-12 h-12 text-blue-500 animate-pulse" />
+                          )}
+                          {recordingState.status === "queued" && (
+                            <Clock className="w-12 h-12 text-yellow-500 animate-spin" />
+                          )}
+                          {recordingState.status === "processing" && (
+                            <Zap className="w-12 h-12 text-purple-500 animate-pulse" />
+                          )}
+                        </div>
                         <p className="text-sm mb-2">
-                          Uploading your testimonial...
+                          {recordingState.status === "compressing" &&
+                            "Compressing video for faster upload..."}
+                          {recordingState.status === "uploading" &&
+                            "Uploading your testimonial..."}
+                          {recordingState.status === "queued" &&
+                            "Upload queued for processing..."}
+                          {recordingState.status === "processing" &&
+                            "AI processing in progress..."}
                         </p>
+                        {recordingState.stage && (
+                          <p className="text-xs text-gray-400 mb-2">
+                            {recordingState.stage}
+                          </p>
+                        )}
                         <div className="w-32 h-1 bg-gray-700 rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-blue-500 transition-all duration-300"
-                            style={{ width: `${uploadProgress}%` }}
+                            className={`h-full transition-all duration-300 ${
+                              recordingState.status === "compressing"
+                                ? "bg-green-500"
+                                : recordingState.status === "uploading"
+                                  ? "bg-blue-500"
+                                  : recordingState.status === "queued"
+                                    ? "bg-yellow-500"
+                                    : "bg-purple-500"
+                            }`}
+                            style={{
+                              width: `${
+                                recordingState.status === "compressing"
+                                  ? recordingState.compressionProgress || 0
+                                  : jobStatus?.progress || uploadProgress
+                              }%`,
+                            }}
                           />
                         </div>
                         <p className="text-xs text-gray-400 mt-1">
-                          {uploadProgress}%
+                          {recordingState.status === "compressing"
+                            ? `${recordingState.compressionProgress || 0}%`
+                            : `${jobStatus?.progress || uploadProgress}%`}
                         </p>
                       </div>
                     </div>
@@ -664,4 +879,4 @@ const VideoRecording: React.FC<VideoRecordingProps> = ({
   );
 };
 
-export default VideoRecording;
+export default observer(VideoRecording);

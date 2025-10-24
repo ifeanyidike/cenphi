@@ -145,10 +145,11 @@ class SmartClipper:
         media_url: str,
         highlight_moments: List[intelligence_pb2.HighlightMoment],
         branding: Optional[intelligence_pb2.BrandingOptions] = None,
-        background_music: Optional[str] = None, 
+        background_music: Optional[str] = None,
         music_volume: str = "low",
         max_workers: int = 4,
         testimonial_id: Union[str, None] = None,
+        session_id: Union[str, None] = None,
     ) -> Dict[str, Any]:
         """Generate clips with thread-safe file management"""
         
@@ -156,9 +157,10 @@ class SmartClipper:
         shared_resources = {
             'temp_files': [],
             'media_path': None,
-            'music_path': None, 
+            'music_path': None,
             'logo_path': None,
-            'media_info': None
+            'media_info': None,
+            'session_id': session_id  # Add session_id to shared resources
         }
         
         try:
@@ -279,8 +281,9 @@ class SmartClipper:
             cache_url = self.storage_manager.get_public_url_for_object(cache_path)
             if self.storage_manager.check_url_exists(cache_url):
                 logger.info(f"Thread {thread_id}-{clip_index}: Returning result from cache.")
+                # CRITICAL: Use highlight ID as clip ID for deterministic matching
                 return intelligence_pb2.Clip(
-                    id=str(uuid.uuid4()),
+                    id=moment.id,  # Use highlight ID directly as clip ID
                     url=cache_url,
                     start_time=moment.start_time,
                     end_time=moment.end_time,
@@ -289,6 +292,7 @@ class SmartClipper:
                     theme=moment.theme,
                     engagement_score=float(getattr(moment, 'engagement_score', 0.5)),
                     duration=end_time - start_time,
+                    highlight_id=moment.id,  # Keep this for backward compatibility
                     error=""
                 )
             
@@ -454,8 +458,9 @@ class SmartClipper:
             duration = (moment.end_time - moment.start_time) / 1000
             
             # Create successful result
+            # CRITICAL: Use highlight ID as clip ID for deterministic matching
             result = intelligence_pb2.Clip(
-                id=str(uuid.uuid4()),
+                id=moment.id,  # Use highlight ID directly as clip ID
                 url=final_url,
                 start_time=moment.start_time,
                 end_time=moment.end_time,
@@ -465,6 +470,7 @@ class SmartClipper:
                 engagement_score=float(getattr(moment, 'engagement_score', 0.5)),
                 duration=duration,
                 size = file_size_mb,
+                highlight_id=moment.id,  # Keep this for backward compatibility
                 error=""
             )
             
@@ -473,8 +479,9 @@ class SmartClipper:
             
         except Exception as e:
             logger.error(f"Thread {thread_id}-{clip_index}: Clip generation failed: {e}")
+            # CRITICAL: Use highlight ID as clip ID for deterministic matching
             return intelligence_pb2.Clip(
-                id=str(uuid.uuid4()),
+                id=moment.id,  # Use highlight ID directly as clip ID
                 url="",
                 start_time=moment.start_time,
                 end_time=moment.end_time,
@@ -484,6 +491,7 @@ class SmartClipper:
                 engagement_score=0.0,
                 duration=0.0,
                 size=0.0,
+                highlight_id=moment.id,  # Keep this for backward compatibility
                 error=str(e)
             )
             
@@ -508,9 +516,10 @@ class SmartClipper:
         CLIPPER_ALGORITHM_VERSION = "v1.0"
 
         media_path = shared_resources['media_path']
-        media_info = shared_resources['media_info'] 
+        media_info = shared_resources['media_info']
         music_path = shared_resources['music_path']
         logo_path = shared_resources['logo_path']
+        session_id = shared_resources.get('session_id')  # Get session_id from shared resources
 
         duration = str(media_info.get("duration", 0))
         title = self._generate_clip_title(moment)
@@ -532,19 +541,29 @@ class SmartClipper:
             media_id = f"{parsed_url.netloc}{parsed_url.path}"
             return media_id
 
-        
+
+        # CRITICAL FIX: Include moment.id to ensure each highlight generates a unique cache key
+        # Without this, moments with similar timing can collide and use the wrong cached clip
+        moment_id = moment.id or ""
+
         cache_data = (
             f"{CLIPPER_ALGORITHM_VERSION}|{normalize_url(media_path)}|"
             f"{duration}|{normalize_url(music_path)}|{normalize_url(logo_path)}|"
             f"{title}|{start_time}|{end_time}|{theme}|"
             f"{music_volume}|{add_music}|{brand_color}|"
             f"{watermark_position}|{watermark_text}|"
-            f"{include_watermark}|{include_logo}"
+            f"{include_watermark}|{include_logo}|{moment_id}"
         )
-        
+
         safe_theme = re.sub(r'[^\w\-_]', '_', theme)[:20]
         cache_hash = hashlib.md5(cache_data.encode()).hexdigest()
-        return f"clips/{cache_hash}_{safe_theme}.mp4"
+
+        # If session_id is provided, upload to temp storage instead of permanent storage
+        if session_id:
+            return f"temp/sessions/{session_id}/clips/{cache_hash}_{safe_theme}.mp4"
+        else:
+            # Fallback to permanent storage for backward compatibility
+            return f"clips/{cache_hash}_{safe_theme}.mp4"
 
     def apply_overlay(self, current_clip: str, moment, thread_temp_files: List[str], prepared_branding: Dict[str, Any], clip_index: int):  
         """Apply overlay with thread-safe file management"""

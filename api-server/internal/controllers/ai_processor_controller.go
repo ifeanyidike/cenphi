@@ -1995,6 +1995,188 @@ func (c *AIProcessorController) ExtractHighlightsByType(w http.ResponseWriter, r
 		Prompt        string                        `json:"prompt"`
 		HighlightType string                        `json:"highlight_type"` // general, problem, solution, etc.
 		MaxHighlights int                           `json:"max_highlights,omitempty"`
+		ArtifactID    string                        `json:"artifact_id,omitempty"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		c.logger.Error("Failed to decode body", zap.Error(err))
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.HighlightType == "" {
+		req.HighlightType = "general"
+	}
+
+	if req.MaxHighlights == 0 {
+		req.MaxHighlights = 5
+	}
+
+	var existingArtifactID uuid.UUID
+
+	if req.ArtifactID != "" {
+		id, err := uuid.Parse(req.ArtifactID)
+		if err != nil {
+			http.Error(w, "Invalid artifact id", http.StatusBadRequest)
+			return
+		}
+		existingArtifactID = id
+
+	}
+
+	testimonialID, err := uuid.Parse(req.TestimonialID)
+	if err != nil {
+		c.logger.Error("Invalid testimonial ID format", zap.Error(err))
+		http.Error(w, "invalid testimonial ID format", http.StatusBadRequest)
+		return
+	}
+
+	workspaceID, err := uuid.Parse(req.WorkspaceID)
+	if err != nil {
+		c.logger.Error("Invalid workspace ID format", zap.Error(err))
+		http.Error(w, "invalid workspace ID format", http.StatusBadRequest)
+		return
+	}
+
+	// Create highlight request
+	highlightRequest := ai.HighlightRequest{
+		Text:          req.Text,
+		Segments:      req.Segments,
+		CustomPrompt:  req.Prompt,
+		HighlightType: ai.HighlightType(req.HighlightType),
+		MaxHighlights: req.MaxHighlights,
+		TestimonialID: testimonialID,
+	}
+
+	// Extract highlights by type
+	c.logger.Info("🎯 Starting highlight extraction via API",
+		zap.String("testimonial_id", req.TestimonialID),
+		zap.String("highlight_type", req.HighlightType),
+		zap.Int("max_highlights", req.MaxHighlights),
+		zap.Bool("has_custom_prompt", req.Prompt != ""))
+
+	highlights, err := c.HighlightService.ExtractHighlightsByType(r.Context(), highlightRequest)
+	if err != nil {
+		c.logger.Error("❌ Highlight extraction by type failed",
+			zap.Error(err),
+			zap.String("type", req.HighlightType),
+			zap.String("testimonial_id", req.TestimonialID))
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	c.logger.Info("✅ Highlight extraction via API completed successfully",
+		zap.String("testimonial_id", req.TestimonialID),
+		zap.String("highlight_type", req.HighlightType),
+		zap.Int("highlights_extracted", len(highlights)))
+
+	// Save the highlights as an artifact
+	processing_type := "highlight_extraction"
+
+	var artifactID string
+	c.logger.Info("req.ArtifactID", zap.String("req.ArtifactID", req.ArtifactID))
+	if existingArtifactID != uuid.Nil {
+		fmt.Println("processing for existing artifact")
+		updates := models.JSONMap{
+			"data": models.JSONMap{
+				"highlights":     highlights,
+				"highlight_type": req.HighlightType,
+				"max_highlights": req.MaxHighlights,
+			},
+			"result_category": req.HighlightType,
+		}
+
+		c.ArtifactsRepo.UpdateAny(r.Context(), existingArtifactID, updates, c.DB)
+		artifactID = req.ArtifactID
+	} else {
+		artifactID, err = c.ArtifactsRepo.CreateArtifactWithLineage(r.Context(), processing_type, workspaceID, &testimonialID, models.JSONMap{
+			"highlights":     highlights,
+			"highlight_type": req.HighlightType,
+			"max_highlights": req.MaxHighlights,
+		}, models.CreateArtifactSourceParams{Type: models.NoTypeSource}, nil, c.DB)
+	}
+
+	if err != nil {
+		c.logger.Error("highlight extraction artifact creation failed", zap.String("type", req.HighlightType), zap.Error(err))
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Retrieve the created artifact to return it to the frontend
+	artifactUUID, err := uuid.Parse(artifactID)
+	if err != nil {
+		c.logger.Error("Failed to parse artifact ID", zap.Error(err))
+		http.Error(w, "Failed to parse artifact ID", http.StatusInternalServerError)
+		return
+	}
+
+	createdArtifact, err := c.ArtifactsRepo.GetByID(r.Context(), artifactUUID, c.DB)
+	if err != nil {
+		c.logger.Error("Failed to retrieve created artifact", zap.Error(err), zap.String("artifact_id", artifactID))
+		http.Error(w, "Failed to retrieve created artifact", http.StatusInternalServerError)
+		return
+	}
+
+	c.ArtifactsRepo.InvalidateArtifactCaches(r.Context(), workspaceID, &testimonialID, &artifactUUID)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(createdArtifact)
+}
+
+// HandleOrderMoments handles AI-based ordering of highlight moments
+func (c *AIProcessorController) HandleOrderMoments(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Parse request body
+	var req ai.OrderMomentsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, fmt.Sprintf("Invalid request body: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	// Validate request
+	if len(req.Moments) == 0 {
+		http.Error(w, "No moments provided", http.StatusBadRequest)
+		return
+	}
+
+	c.logger.Info("Ordering moments",
+		zap.Int("moment_count", len(req.Moments)),
+		zap.String("context", req.Context))
+
+	// Create moment ordering service
+	orderingService := ai.NewMomentOrderingService(&c.AIClient, c.logger)
+
+	// Order moments
+	response, err := orderingService.OrderMoments(ctx, req)
+	if err != nil {
+		c.logger.Error("Failed to order moments", zap.Error(err))
+		http.Error(w, fmt.Sprintf("Failed to order moments: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Return response
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		c.logger.Error("Failed to encode response", zap.Error(err))
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
+
+	c.logger.Info("Successfully ordered moments",
+		zap.Int("count", len(response.OrderedMomentIDs)),
+		zap.String("reasoning", response.Reasoning))
+}
+
+// RegenerateContent regenerates and improves existing content without saving to DB
+// Streams the improved content back to the client for preview/editing
+func (c *AIProcessorController) RegenerateContent(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Text                 string               `json:"text"`
+		BrandContext         *models.BrandContext `json:"brand_context"`
+		PreserveAuthenticity bool                 `json:"preserve_authenticity"`
+		TargetStyle          string               `json:"target_style,omitempty"`
+		Prompt               string               `json:"prompt"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -2007,73 +2189,8 @@ func (c *AIProcessorController) ExtractHighlightsByType(w http.ResponseWriter, r
 		return
 	}
 
-	if req.HighlightType == "" {
-		req.HighlightType = "general"
-	}
-
-	if req.MaxHighlights == 0 {
-		req.MaxHighlights = 5
-	}
-
-	testimonialID, err := uuid.Parse(req.TestimonialID)
-	if err != nil {
-		http.Error(w, "invalid testimonial ID format", http.StatusBadRequest)
-		return
-	}
-
-	workspaceID, err := uuid.Parse(req.WorkspaceID)
-	if err != nil {
-		http.Error(w, "invalid workspace ID format", http.StatusBadRequest)
-		return
-	}
-
-	// Create highlight request
-	highlightRequest := ai.HighlightRequest{
-		Text:          req.Text,
-		Segments:      req.Segments,
-		CustomPrompt:  req.Prompt,
-		HighlightType: ai.HighlightType(req.HighlightType),
-		MaxHighlights: req.MaxHighlights,
-	}
-
-	// Extract highlights by type
-	highlights, err := c.HighlightService.ExtractHighlightsByType(r.Context(), highlightRequest)
-	if err != nil {
-		c.logger.Error("Highlight extraction by type failed", zap.Error(err), zap.String("type", req.HighlightType))
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Save the highlights as an artifact
-	artifactType := fmt.Sprintf("highlight_extraction_%s", req.HighlightType)
-	_, err = c.ArtifactsRepo.CreateArtifactWithLineage(r.Context(), artifactType, workspaceID, &testimonialID, models.JSONMap{
-		"highlights":     highlights,
-		"highlight_type": req.HighlightType,
-		"max_highlights": req.MaxHighlights,
-	}, models.CreateArtifactSourceParams{Type: models.NoTypeSource}, nil, c.DB)
-
-	if err != nil {
-		c.logger.Error("highlight extraction artifact creation failed", zap.String("type", req.HighlightType), zap.Error(err))
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(highlights)
+	// Use streamResponse (not streamResponseWithArtifact) to avoid auto-saving
+	c.streamResponse(w, r, func(ctx context.Context) (<-chan ai.StreamChunk, error) {
+		return c.PolishService.PolishTextStream(ctx, req.Text, req.BrandContext, req.PreserveAuthenticity, req.TargetStyle, req.Prompt)
+	})
 }
-
-// func (c *AIProcessorController) NukeJobStatus(w http.ResponseWriter, r *http.Request) {
-// 	ctx := r.Context()
-
-// 	err := NukeAllJobStatus(ctx, c.sseManager.cacheService, c.logger)
-// 	if err != nil {
-// 		http.Error(w, err.Error(), http.StatusInternalServerError)
-// 		return
-// 	}
-
-// 	w.Header().Set("Content-Type", "application/json")
-// 	json.NewEncoder(w).Encode(map[string]string{
-// 		"message": "All job status keys deleted successfully - starting fresh!",
-// 		"note":    "New jobs will automatically get TTL and clean up properly",
-// 	})
-// }

@@ -2133,6 +2133,145 @@ func (p *Processor) StreamUpload(ctx context.Context, filePath string, destinati
 	return p.storageProvider.UploadChunked(ctx, filePath, destinationPath, contentType, 10*1024*1024)
 }
 
+// ExportToGIF exports a video or video segment to GIF format
+func (p *Processor) ExportToGIF(ctx context.Context, inputPath string, startTime, duration float64,
+	width int, fps int, quality string) (*ProcessingResult, error) {
+	p.Logger.Info("Exporting video to GIF",
+		zap.String("input", inputPath),
+		zap.Float64("startTime", startTime),
+		zap.Float64("duration", duration),
+		zap.Int("width", width),
+		zap.Int("fps", fps))
+
+	procStartTime := time.Now()
+
+	// Create unique output filename
+	outputID := uuid.New().String()[:8]
+	baseName := fmt.Sprintf("gif_export_%s", outputID)
+	outputPath := filepath.Join(p.OutputDir, "gifs", baseName+".gif")
+
+	// Create output directory if needed
+	if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
+		return nil, fmt.Errorf("failed to create output directory: %v", err)
+	}
+
+	// Default values
+	if width <= 0 {
+		width = 480 // Default GIF width
+	}
+	if fps <= 0 || fps > 30 {
+		fps = 15 // Default to 15fps for reasonable file size
+	}
+	if duration <= 0 {
+		duration = 5.0 // Default to 5 seconds
+	}
+
+	// Determine color palette quality
+	paletteStats := "stats_mode=full"
+	switch quality {
+	case "high":
+		paletteStats = "stats_mode=full:dither=bayer:bayer_scale=5"
+	case "medium":
+		paletteStats = "stats_mode=full:dither=bayer:bayer_scale=3"
+	case "low":
+		paletteStats = "stats_mode=diff:dither=none"
+	default:
+		paletteStats = "stats_mode=full:dither=bayer:bayer_scale=3"
+	}
+
+	// Generate color palette file for better quality
+	paletteFile := filepath.Join(p.TempDir, fmt.Sprintf("palette_%s.png", outputID))
+	defer os.Remove(paletteFile)
+
+	// Build filter for palette generation
+	paletteFilter := fmt.Sprintf("fps=%d,scale=%d:-1:flags=lanczos,palettegen=%s", fps, width, paletteStats)
+
+	// Step 1: Generate palette
+	paletteArgs := []string{
+		"-y",
+	}
+
+	// Add start time and duration if specified
+	if startTime > 0 {
+		paletteArgs = append(paletteArgs, "-ss", formatTimestamp(startTime))
+	}
+
+	paletteArgs = append(paletteArgs,
+		"-i", inputPath,
+		"-t", fmt.Sprintf("%.2f", duration),
+		"-vf", paletteFilter,
+		paletteFile,
+	)
+
+	// Run palette generation
+	paletteCmd := exec.CommandContext(ctx, p.FFmpegPath, paletteArgs...)
+	paletteOutput, err := paletteCmd.CombinedOutput()
+
+	if err != nil {
+		return nil, fmt.Errorf("palette generation error: %v, output: %s", err, string(paletteOutput))
+	}
+
+	// Step 2: Generate GIF using palette
+	gifFilter := fmt.Sprintf("fps=%d,scale=%d:-1:flags=lanczos[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=3", fps, width)
+
+	gifArgs := []string{
+		"-y",
+	}
+
+	// Add start time if specified
+	if startTime > 0 {
+		gifArgs = append(gifArgs, "-ss", formatTimestamp(startTime))
+	}
+
+	gifArgs = append(gifArgs,
+		"-i", inputPath,
+		"-i", paletteFile,
+		"-t", fmt.Sprintf("%.2f", duration),
+		"-filter_complex", gifFilter,
+		outputPath,
+	)
+
+	// Run GIF generation
+	gifCmd := exec.CommandContext(ctx, p.FFmpegPath, gifArgs...)
+	gifOutput, err := gifCmd.CombinedOutput()
+
+	if err != nil {
+		return nil, fmt.Errorf("GIF generation error: %v, output: %s", err, string(gifOutput))
+	}
+
+	// Get file info
+	fileInfo, err := os.Stat(outputPath)
+	if err != nil {
+		p.Logger.Warn("Failed to get GIF file info", zap.Error(err))
+	}
+
+	// Create result
+	result := &ProcessingResult{
+		OutputPath:     outputPath,
+		OutputURL:      pathToURL(outputPath),
+		Width:          width,
+		Duration:       duration,
+		FileSize:       fileInfo.Size(),
+		Format:         "gif",
+		ProcessingTime: time.Since(procStartTime).Seconds(),
+		Command:        strings.Join(append([]string{p.FFmpegPath}, gifArgs...), " "),
+		AppliedFilters: []string{gifFilter},
+		AppliedOptions: []string{
+			fmt.Sprintf("fps=%d", fps),
+			fmt.Sprintf("width=%d", width),
+			fmt.Sprintf("duration=%.1fs", duration),
+			"quality=" + quality,
+		},
+	}
+
+	p.Logger.Info("GIF export completed successfully",
+		zap.String("output", outputPath),
+		zap.Int64("fileSize", fileInfo.Size()),
+		zap.Float64("processingTime", result.ProcessingTime))
+
+	return result, nil
+}
+
 // guessContentTypeFromPath guesses the content type from a file path
 func guessContentTypeFromPath(path string) string {
 	ext := strings.ToLower(filepath.Ext(path))

@@ -25,7 +25,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-Claude.md
+*.md
 
 ai-service/Dockerfile.optim
 ai-service/Dockerfile.optim0

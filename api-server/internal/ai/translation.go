@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/ifeanyidike/cenphi/internal/cache"
+	"github.com/ifeanyidike/cenphi/internal/utils"
 )
 
 type TranslationResult struct {
@@ -55,7 +56,8 @@ func (s TranslationService) TranslateTextSync(ctx context.Context, text, sourceL
 	}
 
 	var result TranslationResult
-	if err := json.Unmarshal([]byte(response), &result); err != nil {
+	cleanedResponse := utils.CleanAIJSONResponse(response)
+	if err := json.Unmarshal([]byte(cleanedResponse), &result); err != nil {
 		return TranslationResult{}, fmt.Errorf("failed to parse translation response: %w", err)
 	}
 

@@ -35,7 +35,7 @@ func NewTestimonialArtifactRepository(redis *redis.Client, logger *zap.Logger) T
 
 	return TestimonialArtifactRepository{
 		logger:         logger,
-		BaseRepository: NewBaseRepository[models.TestimonialArtifact](redis, "testimonial_artifact"),
+		BaseRepository: NewBaseRepository[models.TestimonialArtifact](redis, "testimonial_artifacts"),
 	}
 }
 
@@ -93,10 +93,25 @@ func (r TestimonialArtifactRepository) Create(ctx context.Context, artifact *mod
 		artifact.UpdatedAt,
 	)
 
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Invalidate caches after successful creation
+	r.InvalidateArtifactCaches(ctx, artifact.WorkspaceID, artifact.TestimonialID, &artifact.ID)
+
+	return nil
 }
 
 func (r TestimonialArtifactRepository) GetByID(ctx context.Context, id uuid.UUID, db DB) (*models.TestimonialArtifact, error) {
+	// Try cache first
+	cacheKey := fmt.Sprintf("artifact:%s", id.String())
+	cached, err := r.Get(ctx, cacheKey, r.redis)
+	if err == nil && cached != nil {
+		r.logger.Debug("Cache hit for artifact", zap.String("id", id.String()))
+		return cached, nil
+	}
+
 	query := `
 		SELECT id, testimonial_id, processing_type, result_category, text_content,
 			   data, asset_url, content_type, platform, format, is_user_saved,
@@ -105,7 +120,7 @@ func (r TestimonialArtifactRepository) GetByID(ctx context.Context, id uuid.UUID
 	`
 
 	var artifact models.TestimonialArtifact
-	err := db.QueryRowContext(ctx, query, id).Scan(
+	err = db.QueryRowContext(ctx, query, id).Scan(
 		&artifact.ID,
 		&artifact.TestimonialID,
 		&artifact.ProcessingType,
@@ -127,10 +142,23 @@ func (r TestimonialArtifactRepository) GetByID(ctx context.Context, id uuid.UUID
 		return nil, err
 	}
 
+	// Cache for 10 minutes (artifacts change less frequently than testimonials)
+	if err := r.Set(ctx, cacheKey, &artifact, 10*time.Minute, r.redis); err != nil {
+		r.logger.Warn("Failed to cache artifact", zap.Error(err), zap.String("id", id.String()))
+	}
+
 	return &artifact, nil
 }
 
 func (r TestimonialArtifactRepository) GetByTestimonialID(ctx context.Context, testimonialID uuid.UUID, db DB) ([]models.TestimonialArtifact, error) {
+	// Try cache first
+	cacheKey := fmt.Sprintf("artifacts:testimonial:%s", testimonialID.String())
+	cached, err := r.getSliceCache(ctx, cacheKey)
+	if err == nil {
+		r.logger.Debug("Cache hit for testimonial artifacts", zap.String("testimonial_id", testimonialID.String()))
+		return cached, nil
+	}
+
 	query := `
 		SELECT id, testimonial_id, processing_type, result_category, text_content,
 			   data, asset_url, content_type, platform, format, is_user_saved,
@@ -170,7 +198,16 @@ func (r TestimonialArtifactRepository) GetByTestimonialID(ctx context.Context, t
 		artifacts = append(artifacts, artifact)
 	}
 
-	return artifacts, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Cache for 10 minutes - use helper method for slices
+	if err := r.setSliceCache(ctx, cacheKey, artifacts, 10*time.Minute); err != nil {
+		r.logger.Warn("Failed to cache testimonial artifacts", zap.Error(err), zap.String("testimonial_id", testimonialID.String()))
+	}
+
+	return artifacts, nil
 }
 
 func (r TestimonialArtifactRepository) GetByTestimonialAndType(ctx context.Context, testimonialID uuid.UUID, processingType string, db DB) (*models.TestimonialArtifact, error) {
@@ -219,6 +256,28 @@ func (r TestimonialArtifactRepository) Update(ctx context.Context, artifact *mod
 		WHERE id = $1
 	`
 
+	var data []byte
+	if artifact.Data == nil {
+		data = []byte("{}")
+	} else {
+		jsonData, err := json.Marshal(artifact.Data)
+		if err != nil {
+			return fmt.Errorf("failed to marshall data: %w", err)
+		}
+		data = jsonData
+	}
+
+	var processing_metadata []byte
+	if artifact.ProcessingMetadata == nil {
+		processing_metadata = []byte("{}")
+	} else {
+		jsonData, err := json.Marshal(artifact.Data)
+		if err != nil {
+			return fmt.Errorf("failed to marshall processing metadata: %w", err)
+		}
+		processing_metadata = jsonData
+	}
+
 	artifact.UpdatedAt = time.Now()
 
 	_, err := db.ExecContext(ctx, query,
@@ -226,24 +285,51 @@ func (r TestimonialArtifactRepository) Update(ctx context.Context, artifact *mod
 		artifact.ProcessingType,
 		artifact.ResultCategory,
 		artifact.TextContent,
-		artifact.Data,
+		string(data),
 		artifact.AssetURL,
 		artifact.ContentType,
 		artifact.Platform,
 		artifact.Format,
 		artifact.IsUserSaved,
 		artifact.IsStreamed,
-		artifact.ProcessingMetadata,
+		string(processing_metadata),
 		artifact.UpdatedAt,
 	)
 
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Invalidate caches after successful update
+	r.InvalidateArtifactCaches(ctx, artifact.WorkspaceID, artifact.TestimonialID, &artifact.ID)
+
+	return nil
 }
 
 func (r TestimonialArtifactRepository) Delete(ctx context.Context, id uuid.UUID, db DB) error {
-	query := `DELETE FROM testimonial_artifacts WHERE id = $1`
-	_, err := db.ExecContext(ctx, query, id)
-	return err
+	// Get artifact info before deletion for cache invalidation
+	var testimonialID *uuid.UUID
+	var workspaceID uuid.UUID
+
+	selectQuery := `SELECT testimonial_id, workspace_id FROM testimonial_artifacts WHERE id = $1`
+	if err := db.QueryRowContext(ctx, selectQuery, id).Scan(&testimonialID, &workspaceID); err != nil {
+		if err != sql.ErrNoRows {
+			return fmt.Errorf("failed to get artifact info for cache invalidation: %w", err)
+		}
+		// If no rows, testimonialID remains nil and workspaceID is zero value.
+	}
+
+	// Perform delete
+	if _, err := db.ExecContext(ctx, `DELETE FROM testimonial_artifacts WHERE id = $1`, id); err != nil {
+		return fmt.Errorf("failed to delete testimonial artifact: %w", err)
+	}
+
+	// Invalidate caches only when we have artifact metadata from the SELECT
+	if testimonialID != nil {
+		r.InvalidateArtifactCaches(ctx, workspaceID, testimonialID, &id)
+	}
+
+	return nil
 }
 
 func (r TestimonialArtifactRepository) GetHighlights(ctx context.Context, testimonialID uuid.UUID, db DB) ([]models.TestimonialArtifact, error) {
@@ -522,138 +608,6 @@ func (r *TestimonialArtifactRepository) GetContentsByIDs(ctx context.Context, te
 
 	return results, nil
 }
-
-// func (r *TestimonialArtifactRepository) UpdateAny(ctx context.Context, id uuid.UUID, updates map[string]any, db *sql.DB) error {
-// 	if len(updates) == 0 {
-// 		return fmt.Errorf("no fields to update")
-// 	}
-
-// 	// Always update the updated_at field
-// 	updates["updated_at"] = time.Now()
-
-// 	// Build dynamic query
-// 	setParts := make([]string, 0, len(updates))
-// 	args := make([]any, 0, len(updates)+1)
-// 	argIndex := 1
-
-// 	for field, value := range updates {
-// 		slog.Debug("Processing field for update",
-// 			slog.String("attr", field),
-// 			slog.String("value_type", fmt.Sprintf("%T", value)),
-// 			slog.Bool("needs_json", needsJSONSerialization(value)))
-
-// 		// Handle special types that need JSON serialization
-// 		if needsJSONSerialization(value) {
-// 			// Dereference pointer if it's a pointer
-// 			actualValue := value
-// 			if reflect.ValueOf(value).Kind() == reflect.Ptr {
-// 				if reflect.ValueOf(value).IsNil() {
-// 					actualValue = nil
-// 				} else {
-// 					actualValue = reflect.ValueOf(value).Elem().Interface()
-// 				}
-// 			}
-
-// 			if actualValue != nil {
-// 				jsonBytes, err := json.Marshal(actualValue)
-// 				if err != nil {
-// 					return fmt.Errorf("failed to marshal field %s: %w", field, err)
-// 				}
-// 				value = jsonBytes
-// 				slog.Debug("Serialized field to JSON",
-// 					slog.String("field", field),
-// 					slog.String("json", string(jsonBytes)))
-// 			}
-// 		} else {
-// 			// Handle pointers to basic types
-// 			if reflect.ValueOf(value).Kind() == reflect.Ptr {
-// 				if reflect.ValueOf(value).IsNil() {
-// 					value = nil
-// 				} else {
-// 					value = reflect.ValueOf(value).Elem().Interface()
-// 				}
-// 			}
-// 		}
-
-// 		setParts = append(setParts, fmt.Sprintf("%s = $%d", field, argIndex))
-// 		args = append(args, value)
-// 		argIndex++
-// 	}
-
-// 	// Add ID as the last argument
-// 	args = append(args, id)
-
-// 	query := fmt.Sprintf(`
-// 		UPDATE testimonial_artifacts
-// 		SET %s
-// 		WHERE id = $%d
-// 	`, strings.Join(setParts, ", "), argIndex)
-
-// 	result, err := db.ExecContext(ctx, query, args...)
-// 	if err != nil {
-// 		return fmt.Errorf("failed to update testimonial (ID: %s): %w", id, err)
-// 	}
-
-// 	rowsAffected, err := result.RowsAffected()
-// 	if err != nil {
-// 		return fmt.Errorf("failed to get rows affected: %w", err)
-// 	}
-
-// 	if rowsAffected == 0 {
-// 		return fmt.Errorf("testimonial not found (ID: %s)", id)
-// 	}
-
-// 	return nil
-// }
-
-// // GetServiceLineageForTestimonial gets all services applied to a testimonial through any processing chain
-// func (r *TestimonialArtifactRepository) GetServiceLineageForTestimonial(
-// 	ctx context.Context,
-// 	testimonialID uuid.UUID,
-// 	db DB,
-// ) ([]string, error) {
-// 	query := `
-// 		WITH RECURSIVE testimonial_services AS (
-// 			-- Base: direct artifacts from testimonial
-// 			SELECT ta.processing_type, ta.created_at, 1 as depth
-// 			FROM testimonial_artifacts ta
-// 			JOIN artifact_sources asrc ON asrc.artifact_id = ta.id
-// 			WHERE asrc.source_testimonial_id = $1
-
-// 			UNION ALL
-
-// 			-- Recursive: artifacts created from other artifacts in the chain
-// 			SELECT ta.processing_type, ta.created_at, ts.depth + 1
-// 			FROM testimonial_artifacts ta
-// 			JOIN artifact_sources asrc ON asrc.artifact_id = ta.id
-// 			JOIN testimonial_services ts ON EXISTS (
-// 				SELECT 1 FROM testimonial_artifacts ta2
-// 				JOIN artifact_sources asrc2 ON asrc2.artifact_id = ta2.id
-// 				WHERE asrc.source_artifact_id = ta2.id
-// 			)
-// 		)
-// 		SELECT DISTINCT processing_type
-// 		FROM testimonial_services
-// 		ORDER BY processing_type
-// 	`
-
-// 	rows, err := db.QueryContext(ctx, query, testimonialID)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("failed to get testimonial service lineage: %w", err)
-// 	}
-// 	defer rows.Close()
-
-// 	var services []string
-// 	for rows.Next() {
-// 		var service string
-// 		if err := rows.Scan(&service); err != nil {
-// 			return nil, fmt.Errorf("failed to scan service: %w", err)
-// 		}
-// 		services = append(services, service)
-// 	}
-
-// 	return services, rows.Err()
-// }
 
 func (r *TestimonialArtifactRepository) GetServiceLineageForTestimonial(
 	ctx context.Context,
@@ -1165,13 +1119,40 @@ func (r *TestimonialArtifactRepository) CreateArtifactWithLineage(
 	}
 
 	// Determine result category based on processing type
+	// For duplicatable services, use unique result_category per variant
 	switch processingType {
-	case "clipping", "enhancement", "story_mode_generation", "video_platform_optimization":
-		artifact.ResultCategory = "content"
-	case "sentiment_analysis", "highlight_extraction":
+	case "highlight_extraction":
+		// Use highlight_type as result_category to allow multiple highlights per testimonial
+		if highlightType, ok := data["highlight_type"].(string); ok && highlightType != "" {
+			artifact.ResultCategory = highlightType
+		} else {
+			artifact.ResultCategory = "general"
+		}
+
+	case "video_platform_optimization", "custom_pipeline":
+		// These can be duplicated - use timestamp to ensure uniqueness
+		artifact.ResultCategory = fmt.Sprintf("content_%d", time.Now().UnixNano())
+
+	case "story_mode_generation":
+		// Can be duplicated but usually has nil testimonial_id, use timestamp for uniqueness
+		artifact.ResultCategory = fmt.Sprintf("story_%d", time.Now().UnixNano())
+
+	case "clipping":
+		// Use highlight_type as result_category to allow multiple clip sets per testimonial
+		// This allows clips from different highlight types (general, problem, solution, etc.) to coexist
+		if highlightType, ok := data["highlight_type"].(string); ok && highlightType != "" {
+			artifact.ResultCategory = highlightType
+		} else {
+			artifact.ResultCategory = "general" // default to general if not specified
+		}
+
+	case "sentiment_analysis":
+		// Cannot duplicate - fixed category
 		artifact.ResultCategory = "analysis"
-	case "text_polishing", "translation", "content_generation", "narration":
+
+	case "enhancement", "text_polishing", "translation", "content_generation", "narration":
 		artifact.ResultCategory = "content"
+
 	default:
 		artifact.ResultCategory = "analysis"
 	}
@@ -1818,4 +1799,172 @@ func (r *TestimonialArtifactRepository) GetStoryVideoArtifacts(
 	}
 
 	return r.GetByWorkspaceID(ctx, workspaceID, storyVideoTypes, limit, offset, db)
+}
+
+// InvalidateArtifactCaches invalidates all caches related to an artifact
+func (r *TestimonialArtifactRepository) InvalidateArtifactCaches(ctx context.Context, workspaceID uuid.UUID, testimonialID *uuid.UUID, artifactID *uuid.UUID) {
+	// Invalidate specific artifact cache
+	if artifactID != nil {
+		cacheKey := fmt.Sprintf("artifact:%s", artifactID.String())
+		if err := r.DeleteCache(ctx, cacheKey, r.redis); err != nil {
+			r.logger.Warn("Failed to invalidate artifact cache",
+				zap.Error(err),
+				zap.String("cache_key", cacheKey))
+		}
+	}
+
+	// Invalidate testimonial artifacts list cache
+	if testimonialID != nil {
+		cacheKey := fmt.Sprintf("artifacts:testimonial:%s", testimonialID.String())
+		if err := r.DeleteCache(ctx, cacheKey, r.redis); err != nil {
+			r.logger.Warn("Failed to invalidate testimonial artifacts cache",
+				zap.Error(err),
+				zap.String("cache_key", cacheKey))
+		}
+
+		// CRITICAL: Invalidate the testimonial cache itself since FetchByTestimonialAndWorkspaceID
+		// includes artifacts in the response. When artifacts change, the cached testimonial is stale.
+		testimonialCacheKey := fmt.Sprintf("testimonial:%s:%s", workspaceID.String(), testimonialID.String())
+		if err := r.DeleteCache(ctx, testimonialCacheKey, r.redis); err != nil {
+			r.logger.Warn("Failed to invalidate testimonial cache",
+				zap.Error(err),
+				zap.String("cache_key", testimonialCacheKey))
+		}
+	}
+
+	// Invalidate workspace artifacts pattern (affects workspace queries)
+	pattern := fmt.Sprintf("artifacts:workspace:%s:*", workspaceID.String())
+	if err := r.DeleteCachePattern(ctx, pattern, r.redis); err != nil {
+		r.logger.Warn("Failed to invalidate workspace artifacts cache pattern",
+			zap.Error(err),
+			zap.String("pattern", pattern))
+	}
+
+	// CRITICAL: Invalidate testimonials list caches for this workspace
+	// because testimonial lists may include artifact counts or summaries
+	testimonialsListPattern := fmt.Sprintf("testimonials:list:%s:*", workspaceID.String())
+	if err := r.DeleteCachePattern(ctx, testimonialsListPattern, r.redis); err != nil {
+		r.logger.Warn("Failed to invalidate testimonials list cache pattern",
+			zap.Error(err),
+			zap.String("pattern", testimonialsListPattern))
+	}
+}
+
+// setSliceCache caches a slice of artifacts (helper for list caching)
+func (r *TestimonialArtifactRepository) setSliceCache(ctx context.Context, key string, artifacts []models.TestimonialArtifact, expiration time.Duration) error {
+	data, err := json.Marshal(artifacts)
+	if err != nil {
+		return fmt.Errorf("failed to marshal artifacts: %w", err)
+	}
+
+	if err := r.redis.Set(ctx, key, data, expiration).Err(); err != nil {
+		return fmt.Errorf("redis set error: %w", err)
+	}
+
+	return nil
+}
+
+// getSliceCache retrieves a cached slice of artifacts
+func (r *TestimonialArtifactRepository) getSliceCache(ctx context.Context, key string) ([]models.TestimonialArtifact, error) {
+	val, err := r.redis.Get(ctx, key).Result()
+	if err != nil {
+		if err == redis.Nil {
+			return nil, fmt.Errorf("cache miss")
+		}
+		return nil, fmt.Errorf("redis get error: %w", err)
+	}
+
+	var artifacts []models.TestimonialArtifact
+	if err := json.Unmarshal([]byte(val), &artifacts); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal cached artifacts: %w", err)
+	}
+
+	return artifacts, nil
+}
+
+// UpdateTranscriptSegments safely merges transcript segments into artifact's Data field
+// without overwriting other fields in the JSONB data column
+func (r *TestimonialArtifactRepository) UpdateTranscriptSegments(
+	ctx context.Context,
+	artifactID uuid.UUID,
+	segments models.TranscriptSegments,
+	db DB,
+) error {
+	// Marshal transcript segments to JSON
+	segmentsJSON, err := json.Marshal(segments)
+	if err != nil {
+		return fmt.Errorf("failed to marshal transcript segments: %w", err)
+	}
+
+	// Use PostgreSQL's jsonb_set to safely merge transcript_segments into existing data
+	// This preserves all other fields in the data JSONB column
+	query := `
+		UPDATE testimonial_artifacts
+		SET
+			data = jsonb_set(
+				COALESCE(data, '{}'::jsonb),
+				'{transcript_segments}',
+				$2::jsonb,
+				true
+			),
+			updated_at = NOW()
+		WHERE id = $1
+	`
+
+	result, err := db.ExecContext(ctx, query, artifactID, segmentsJSON)
+	if err != nil {
+		return fmt.Errorf("failed to update transcript segments: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("artifact not found: %s", artifactID)
+	}
+
+	r.logger.Info("Updated transcript segments in artifact",
+		zap.String("artifact_id", artifactID.String()),
+		zap.Int("segments_count", len(segments)))
+
+	// Invalidate cache
+	r.InvalidateArtifactCaches(ctx, uuid.Nil, nil, &artifactID)
+
+	return nil
+}
+
+// GetTranscriptSegments retrieves transcript segments from artifact's Data field
+func (r *TestimonialArtifactRepository) GetTranscriptSegments(
+	ctx context.Context,
+	artifactID uuid.UUID,
+	db DB,
+) (models.TranscriptSegments, error) {
+	query := `
+		SELECT data->'transcript_segments'
+		FROM testimonial_artifacts
+		WHERE id = $1
+	`
+
+	var segmentsJSON []byte
+	err := db.QueryRowContext(ctx, query, artifactID).Scan(&segmentsJSON)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("artifact not found: %s", artifactID)
+		}
+		return nil, fmt.Errorf("failed to query transcript segments: %w", err)
+	}
+
+	// Handle null case
+	if segmentsJSON == nil || string(segmentsJSON) == "null" {
+		return nil, nil
+	}
+
+	var segments models.TranscriptSegments
+	if err := json.Unmarshal(segmentsJSON, &segments); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal transcript segments: %w", err)
+	}
+
+	return segments, nil
 }

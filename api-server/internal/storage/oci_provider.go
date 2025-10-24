@@ -1519,6 +1519,149 @@ func (p *OCIProvider) Delete(ctx context.Context, objectPathOrURL string) error 
 	return nil
 }
 
+// CopyToPermanentStorage copies a temp file to permanent storage
+// Returns the permanent URL
+func (p *OCIProvider) CopyToPermanentStorage(ctx context.Context, tempURL, permanentPath string) (string, error) {
+	p.logger.Info("🔄 Copying temp file to permanent storage",
+		zap.String("temp_url", tempURL),
+		zap.String("permanent_path", permanentPath))
+
+	// Extract object path from temp URL
+	tempObjectPath := ""
+	if strings.Contains(tempURL, "/o/") {
+		parts := strings.Split(tempURL, "/o/")
+		if len(parts) > 1 {
+			tempObjectPath = parts[1]
+		}
+	} else {
+		tempObjectPath = tempURL
+	}
+
+	// Try server-side copy first (much faster if permissions allow)
+	copyRequest := objectstorage.CopyObjectRequest{
+		NamespaceName: common.String(p.config.Namespace),
+		BucketName:    common.String(p.config.Bucket),
+		CopyObjectDetails: objectstorage.CopyObjectDetails{
+			SourceObjectName:      common.String(tempObjectPath),
+			DestinationBucket:     common.String(p.config.Bucket),
+			DestinationNamespace:  common.String(p.config.Namespace),
+			DestinationObjectName: common.String(permanentPath),
+			DestinationRegion:     common.String(p.config.Region),
+		},
+	}
+
+	_, err := p.client.CopyObject(ctx, copyRequest)
+	if err != nil {
+		// Check if this is a permissions error
+		errStr := strings.ToLower(err.Error())
+		fmt.Println("CopyObject error:", errStr)
+		if strings.Contains(errStr, "insufficient") || strings.Contains(errStr, "permission") {
+			p.logger.Warn("⚠️  Server-side copy failed due to permissions, falling back to download+upload",
+				zap.String("temp_path", tempObjectPath),
+				zap.String("permanent_path", permanentPath))
+
+			// Fallback: Download temp file and re-upload to permanent location
+			return p.downloadAndReupload(ctx, tempObjectPath, permanentPath)
+		}
+
+		// For other errors, fail immediately
+		return "", fmt.Errorf("failed to copy object: %w", err)
+	}
+
+	// Generate public URL for permanent path
+	permanentURL := fmt.Sprintf("https://objectstorage.%s.oraclecloud.com/n/%s/b/%s/o/%s",
+		p.config.Region, p.config.Namespace, p.config.Bucket, permanentPath)
+
+	p.logger.Info("✅ Successfully copied to permanent storage (server-side)",
+		zap.String("permanent_url", permanentURL))
+
+	return permanentURL, nil
+}
+
+// downloadAndReupload is a fallback when server-side copy is not permitted
+// Downloads the source file and re-uploads to the destination
+func (p *OCIProvider) downloadAndReupload(ctx context.Context, sourcePath, destinationPath string) (string, error) {
+	p.logger.Info("📥 Starting download+upload fallback",
+		zap.String("source", sourcePath),
+		zap.String("destination", destinationPath))
+
+	// Step 1: Get the source object
+	getRequest := objectstorage.GetObjectRequest{
+		NamespaceName: common.String(p.config.Namespace),
+		BucketName:    common.String(p.config.Bucket),
+		ObjectName:    common.String(sourcePath),
+	}
+
+	getResponse, err := p.client.GetObject(ctx, getRequest)
+	if err != nil {
+		return "", fmt.Errorf("failed to download source object: %w", err)
+	}
+	defer getResponse.Content.Close()
+
+	// Step 2: Get content length and type
+	contentLength := int64(0)
+	if getResponse.ContentLength != nil {
+		contentLength = *getResponse.ContentLength
+	}
+
+	contentType := "video/mp4" // default
+	if getResponse.ContentType != nil {
+		contentType = *getResponse.ContentType
+	}
+
+	p.logger.Info("📦 Downloaded source file, uploading to permanent location",
+		zap.Int64("content_length", contentLength),
+		zap.String("content_type", contentType))
+
+	// Step 3: Upload to permanent location
+	// Use simple upload if file is small enough, otherwise use chunked upload
+	if contentLength > 0 && contentLength <= MaxSimpleUploadSize {
+		// Simple upload from the response body
+		url, err := p.simpleUpload(ctx, getResponse.Content, destinationPath, contentType, contentLength)
+		if err != nil {
+			return "", fmt.Errorf("failed to upload to permanent location: %w", err)
+		}
+
+		p.logger.Info("✅ Successfully copied via download+upload (simple)",
+			zap.String("url", url))
+		return url, nil
+	}
+
+	// For larger files, read to temp file then use chunked upload
+	tempFile, err := os.CreateTemp("", "oci-copy-*")
+	if err != nil {
+		return "", fmt.Errorf("failed to create temp file: %w", err)
+	}
+	defer os.Remove(tempFile.Name())
+	defer tempFile.Close()
+
+	// Copy response body to temp file
+	written, err := io.Copy(tempFile, getResponse.Content)
+	if err != nil {
+		return "", fmt.Errorf("failed to write to temp file: %w", err)
+	}
+
+	p.logger.Info("📝 Wrote to temp file, starting chunked upload",
+		zap.Int64("bytes_written", written))
+
+	// Reset file pointer
+	if _, err := tempFile.Seek(0, io.SeekStart); err != nil {
+		return "", fmt.Errorf("failed to reset temp file: %w", err)
+	}
+
+	// Upload using chunked upload
+	url, err := p.parallelChunkedUpload(ctx, tempFile, destinationPath, contentType, written)
+	if err != nil {
+		return "", fmt.Errorf("failed to upload to permanent location (chunked): %w", err)
+	}
+
+	p.logger.Info("✅ Successfully copied via download+upload (chunked)",
+		zap.String("url", url),
+		zap.Int64("bytes", written))
+
+	return url, nil
+}
+
 func (p *OCIProvider) UploadMedia(ctx context.Context, filePath string, data []byte, contentType string) (string, error) {
 	dataSize := int64(len(data))
 

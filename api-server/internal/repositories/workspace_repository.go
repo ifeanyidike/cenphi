@@ -18,6 +18,7 @@ type WorkspaceRepository interface {
 	// UpdateAny(ctx context.Context, updates map[string]any, id uuid.UUID, db DB) error
 	GetModelBrandContext(ctx context.Context, workspaceID uuid.UUID, db DB) (*models.BrandContext, error)
 	GetPbBrandContext(ctx context.Context, workspaceID uuid.UUID, db DB) (*pb.BrandContext, error)
+	GetBrandContextFromWorkspace(workspace *models.Workspace) (*pb.BrandContext, error)
 }
 
 type workspaceRepository struct {
@@ -174,6 +175,22 @@ func (s *workspaceRepository) GetPbBrandContext(ctx context.Context, workspaceID
 
 	if err != nil {
 		return nil, err
+	}
+
+	bc := &pb.BrandContext{}
+
+	if err := json.Unmarshal(c, bc); err != nil {
+		return nil, fmt.Errorf("failed to decode brand context JSON: %w", err)
+	}
+
+	return bc, nil
+}
+
+func (s *workspaceRepository) GetBrandContextFromWorkspace(workspace *models.Workspace) (*pb.BrandContext, error) {
+	c := workspace.BrandContext
+
+	if c == nil {
+		return &pb.BrandContext{}, nil
 	}
 
 	bc := &pb.BrandContext{}

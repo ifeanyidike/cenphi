@@ -2,6 +2,7 @@
 package routes
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -30,11 +31,19 @@ func RegisterRoutes(
 	googleDriveController controllers.GoogleDriveController,
 	aiProcessorController controllers.AIProcessorController,
 	presetController controllers.PresetController,
+	chatWithDataController controllers.ChatWithDataController,
+	vectorStoreController controllers.VectorStoreController,
+	studioController controllers.StudioController,
 	testController controllers.TestController,
+	publicShareController controllers.PublicShareController,
+	aiPostController controllers.AIPostController,
+	widgetController controllers.WidgetController,
+	seoTranscriptController controllers.SEOTranscriptController,
 	rateLimiter middleware.RateLimiter,
 ) {
 
 	RegisterWidget(&r)
+	RegisterSEOTranscriptRoutes(r, seoTranscriptController)
 
 	// Group all API routes under /api
 	r.Route("/api", func(r chi.Router) {
@@ -54,7 +63,13 @@ func RegisterRoutes(
 		RegisterGoogleDriveRoutes(r, googleDriveController, authMiddleware)
 		RegisterAIProcessorRoutes(r, aiProcessorController, rateLimiter, authMiddleware)
 		RegisterPresetRoutes(r, presetController, authMiddleware)
+		RegisterChatWithDataRoutes(r, chatWithDataController, authMiddleware)
+		RegisterVectorStoreRoutes(r, vectorStoreController, authMiddleware)
+		RegisterStudioRoutes(r, studioController, authMiddleware)
 		RegisterTestRoutes(r, testController)
+		RegisterPublicShareRoutes(r, publicShareController, authMiddleware)
+		RegisterAIPostRoutes(r, aiPostController, authMiddleware)
+		RegisterShareWidgetRoutes(r, widgetController)
 
 	})
 
@@ -158,54 +173,20 @@ func RegisterTestimonialRoutes(r chi.Router, controller controllers.TestimonialC
 			// Search and analytics
 			r.Post("/search", controller.SearchTestimonials)
 
+			// Vector store operations
+			r.Post("/{id}/upload-to-vector", controller.UploadToVector)
+
+			// AI features - read cached
+			r.Get("/{id}/platform-recommendations", controller.GetPlatformRecommendation)
+
+			// AI features - manual generation (POST to trigger computation)
+			r.Post("/{id}/generate-platform-recommendations", controller.GeneratePlatformRecommendation)
+
 			// Upload endpoint
 			//r.Post("/upload", controller.HandleTestimonialUpload)
 		})
 	})
 }
-
-// func RegisterAITestRoutes(r chi.Router, controller controllers.AITestController, rateLimiter middleware.RateLimiter) {
-// 	// controller := controllers.NewAITestController(aiClient, logger)
-
-// 	r.Group(func(r chi.Router) {
-// 		r.Use(rateLimiter.AIGenerationMiddleware())
-
-// 		r.Post("/brand-context", controller.ExtractBrandContext) // brand_context
-// 		r.Post("/transcribe", controller.TranscribeAudio)        // transcription
-// 		r.Post("/translate", controller.TranslateText)           // translation
-// 		r.Post("/sentiment", controller.AnalyzeSentiment)        // sentiment
-// 		r.Post("/highlights", controller.ExtractHighlights)      // highlight
-// 		r.Post("/fillers", controller.DetectFillers)             // filler
-// 		r.Post("/polish", controller.PolishText)                 // polish
-// 		r.Post("/generate-content", controller.GenerateContent)  // generation
-// 		// r.Post("/analyze-emotion", controller.AnalyzeEmotion)    // emotion
-// 	})
-
-// 	// GPU-intensive AI operations (10/hour per user)
-// 	r.Group(func(r chi.Router) {
-// 		r.Use(rateLimiter.AIGPUMiddleware())
-
-// 		r.Post("/optimize-platform", controller.OptimizeForPlatform) // optimizer
-// 		r.Post("/enhance-media", controller.EnhanceMedia)            // enhancement
-// 		r.Post("/generate-narration", controller.GenerateNarration)  // narration
-// 		r.Post("/smart-clips", controller.GenerateSmartClips)        // clipping
-// 		r.Post("/analyze-emotions", controller.AnalyzeEmotion)       // emotions
-// 		r.Post("/select-thumbnail", controller.SelectThumbnail)      // emotions
-// 		r.Post("/story-video", controller.GenerateStoryVideo)        // emotions
-// 	})
-
-// 	// Job management routes - use regular API rate limiting
-// 	r.Route("/jobs", func(r chi.Router) {
-// 		r.Use(rateLimiter.APIMiddleware()) // 100/minute
-
-// 		r.Get("/{jobID}/status", controller.GetJobStatus)
-// 		r.Get("/status", controller.GetBulkJobStatus)
-// 		r.Get("/cancel/{jobID}", controller.CancelJob)
-
-// 		r.Get("/stream", controller.StreamJobStatus)
-// 		r.Options("/stream", controller.HandleStreamingOptions) // CORS support
-// 	})
-// }
 
 func RegisterSocialRoutes(r chi.Router, controller controllers.SocialController, authMiddleware middleware.AuthMiddleware) {
 	// Public OAuth callback endpoint (no auth required)
@@ -296,6 +277,26 @@ func RegisterSSETestimonialMonitorRoutes(r chi.Router, tcc controllers.SSETestim
 }
 
 func RegisterTestimonialCollectionRoutes(r chi.Router, tcc controllers.TestimonialCollectionController, authMiddleware middleware.AuthMiddleware) {
+	// Public webhook endpoint for Vapi.ai (no authentication required)
+	r.Post("/webhooks/vapi", tcc.VapiWebhook)
+
+	// Test endpoint to validate webhook structure (for development only)
+	r.Post("/webhooks/vapi/test", func(w http.ResponseWriter, r *http.Request) {
+		var webhookData map[string]interface{}
+		if err := json.NewDecoder(r.Body).Decode(&webhookData); err != nil {
+			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			return
+		}
+
+		response := map[string]interface{}{
+			"success":       true,
+			"message":       "Webhook structure validated",
+			"received_data": webhookData,
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	})
 
 	r.Route("/collection/workspaces/{workspaceID}/testimonials", func(r chi.Router) {
 		// Main collection endpoints - support both text and video
@@ -304,11 +305,14 @@ func RegisterTestimonialCollectionRoutes(r chi.Router, tcc controllers.Testimoni
 
 		r.Group(func(r chi.Router) {
 			// r.Use(authMiddleware.VerifyToken)
-			r.Post("/upload/video", tcc.UploadVideo) // Direct video upload
+			r.Post("/upload/video", tcc.UploadVideo)            // Direct video upload (legacy)
+			r.Post("/upload/video/queue", tcc.QueueVideoUpload) // Queued video upload (new)
 			r.Post("/upload/csv", tcc.UploadCSV)
 			r.Post("/upload/excel", tcc.UploadXLS)
 			r.Post("/import/google-drive", tcc.ImportFromGoogleDrive)
 			r.Post("/request", tcc.SendTestimonialRequest)
+			r.Post("/voice/schedule", tcc.ScheduleVoiceTestimonial) // Voice testimonial scheduling
+			r.Post("/voice/instant", tcc.InstantVoiceTestimonial)   // Instant voice testimonial call
 		})
 
 	})
@@ -361,7 +365,9 @@ func RegisterAIProcessorRoutes(r chi.Router, controller controllers.AIProcessorC
 		r.Post("/ai/highlights/by-type", controller.ExtractHighlightsByType) // highlight by type
 		r.Post("/ai/highlights/save-order", controller.SaveHighlightOrder)   // save highlight order
 		r.Post("/ai/polish", controller.PolishText)                          // polish
+		r.Post("/ai/regenerate-content", controller.RegenerateContent)       // regenerate content (no save)
 		r.Post("/ai/generate-content", controller.GenerateContent)           // generation
+		r.Post("/ai/order-moments", controller.HandleOrderMoments)
 	})
 
 	// GPU-intensive AI operations (10/hour per user)
@@ -454,4 +460,157 @@ func RegisterPresetRoutes(r chi.Router, controller controllers.PresetController,
 			r.Get("/default/{workspace_id}", controller.GetDefaultPreset)
 		})
 	})
+}
+
+func RegisterVectorStoreRoutes(r chi.Router, controller controllers.VectorStoreController, authMiddleware middleware.AuthMiddleware) {
+	r.Route("/vector-store", func(r chi.Router) {
+		r.Group(func(r chi.Router) {
+			r.Use(authMiddleware.VerifyToken)
+
+			// File management for workspace vector stores
+			r.Get("/{workspace_id}/files", controller.ListFiles)
+			r.Post("/{workspace_id}/files", controller.UploadFile)
+			r.Delete("/{workspace_id}/files/{file_id}", controller.DeleteFile)
+			r.Post("/{workspace_id}/test-upload", controller.TestUpload)
+		})
+	})
+}
+
+func RegisterChatWithDataRoutes(r chi.Router, controller controllers.ChatWithDataController, authMiddleware middleware.AuthMiddleware) {
+	r.Route("/ai", func(r chi.Router) {
+		// Apply authentication middleware
+		r.Use(authMiddleware.VerifyToken)
+
+		// Chat endpoints
+		r.Post("/chat-with-data", controller.StreamChatResponse)
+		r.Get("/testimonial-stats/{workspaceId}", controller.GetTestimonialStats)
+	})
+}
+
+func RegisterStudioRoutes(r chi.Router, controller controllers.StudioController, authMiddleware middleware.AuthMiddleware) {
+	r.Route("/studio", func(r chi.Router) {
+		// Apply authentication middleware
+		r.Use(authMiddleware.VerifyToken)
+
+		// Session creation endpoint
+		r.Post("/sessions", controller.CreateSession)
+
+		// Get active sessions endpoint (for session recovery)
+		r.Get("/sessions", controller.GetActiveSessions)
+
+		// SSE streaming endpoint (no auth middleware to avoid connection issues)
+		r.Get("/sessions/{sessionID}/stream", controller.StreamStudioEvents)
+
+		// Session status check endpoint
+		r.Get("/sessions/{sessionID}/status", controller.GetSessionStatus)
+
+		// Session control endpoints
+		r.Post("/sessions/{sessionID}/pause", controller.PauseSession)
+		r.Post("/sessions/{sessionID}/resume", controller.ResumeSession)
+
+		// Stage control endpoints
+		r.Post("/sessions/{sessionID}/stages/{stageID}/skip", controller.SkipStage)
+		r.Post("/sessions/{sessionID}/stages/{stageID}/retry", controller.RetryStage)
+		r.Post("/sessions/{sessionID}/stages/{stageID}/accept", controller.AcceptStage)
+		r.Post("/sessions/{sessionID}/stages/{stageID}/save", controller.SaveStageResult)
+		r.Post("/sessions/{sessionID}/stages/{stageID}/select-clips", controller.SelectClips)
+		r.Post("/sessions/{sessionID}/stages/{stageID}/reorder-clips", controller.ReorderClips)
+
+		// Artifact endpoints
+		r.Get("/sessions/{sessionID}/artifacts", controller.GetSessionArtifacts)
+		r.Post("/artifacts/{artifactID}/refresh-url", controller.RefreshPreviewURL)
+
+		// Session lifecycle endpoints
+		r.Post("/sessions/{sessionID}/cancel", controller.CancelSession)
+		r.Post("/sessions/{sessionID}/finalize", controller.FinalizeSession)
+		r.Post("/sessions/{sessionID}/save", controller.SaveSession)
+
+		// Stage configuration endpoints
+		r.Post("/sessions/{sessionID}/stages/{stageID}/config", controller.UpdateStageConfig)
+		r.Post("/sessions/{sessionID}/stages/{stageID}/regenerate-text", controller.RegenerateTextOptimization)
+	})
+}
+
+func RegisterPublicShareRoutes(r chi.Router, controller controllers.PublicShareController, authMiddleware middleware.AuthMiddleware) {
+	// Protected routes - authenticated workspace/user
+	r.Route("/shares", func(r chi.Router) {
+		r.Use(authMiddleware.VerifyToken)
+
+		// Share management
+		r.Post("/", controller.CreateShare)
+		r.Get("/{id}", controller.GetShare)
+		r.Put("/{id}", controller.UpdateShare)
+		r.Delete("/{id}", controller.DeleteShare)
+
+		// Metrics and analytics
+		r.Get("/{id}/metrics", controller.GetMetrics)
+		r.Get("/{id}/events", controller.GetEvents)
+	})
+
+	// Workspace shares
+	r.Route("/workspaces/{workspaceId}/shares", func(r chi.Router) {
+		r.Use(authMiddleware.VerifyToken)
+		r.Get("/", controller.GetWorkspaceShares)
+	})
+
+	// Testimonial shares
+	r.Route("/testimonials/{testimonialId}/shares", func(r chi.Router) {
+		r.Use(authMiddleware.VerifyToken)
+		r.Get("/", controller.GetTestimonialShares)
+	})
+
+	// Artifact shares
+	r.Route("/artifacts/{artifactId}/shares", func(r chi.Router) {
+		r.Use(authMiddleware.VerifyToken)
+		r.Get("/", controller.GetArtifactShares)
+	})
+
+	// Public viewing endpoints - no authentication
+	r.Route("/share/{id}", func(r chi.Router) {
+		// View shared content (public page)
+		r.Get("/view", controller.GetShareWithContent)
+
+		// Track events
+		r.Post("/track", controller.TrackEvent)
+	})
+}
+
+func RegisterAIPostRoutes(r chi.Router, controller controllers.AIPostController, authMiddleware middleware.AuthMiddleware) {
+	r.Route("/testimonials/{id}/ai", func(r chi.Router) {
+		r.Use(authMiddleware.VerifyToken)
+
+		// Generate social media post suggestions
+		r.Post("/generate-posts", controller.GeneratePostsForTestimonial)
+
+		// Generate for specific platform
+		r.Post("/generate-posts/{platform}", controller.GeneratePostForPlatform)
+
+		// Generate variations for A/B testing
+		r.Post("/generate-variations/{platform}", controller.GeneratePostVariations)
+	})
+}
+
+func RegisterShareWidgetRoutes(r chi.Router, controller controllers.WidgetController) {
+	// Widget config endpoint (public - no auth required)
+	r.Get("/widget/config/{shareId}", controller.GetWidgetConfig)
+
+	// Widget embed code endpoint (public - no auth required)
+	// This is already under /api prefix, so it becomes /api/widget/embed/{shareId}
+	r.Get("/widget/embed/{shareId}", controller.GetWidgetEmbed)
+
+	// Serve widget JavaScript file
+	r.Get("/share-widget.js", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/javascript")
+		w.Header().Set("Cache-Control", "public, max-age=3600")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		http.ServeFile(w, r, "public/share-widget.js")
+	})
+}
+
+func RegisterSEOTranscriptRoutes(r chi.Router, controller controllers.SEOTranscriptController) {
+	// Public SEO-optimized transcript page (no auth required)
+	r.Get("/seo/transcript/{shareId}", controller.GetSEOTranscript)
+
+	// API endpoint for transcript data (public JSON)
+	r.Get("/api/transcripts/{shareId}", controller.GetTranscriptData)
 }

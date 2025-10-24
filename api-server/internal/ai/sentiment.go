@@ -10,6 +10,7 @@ import (
 
 	"github.com/ifeanyidike/cenphi/internal/cache"
 	"github.com/ifeanyidike/cenphi/internal/models"
+	"github.com/ifeanyidike/cenphi/internal/utils"
 )
 
 type SentimentResult struct {
@@ -79,7 +80,8 @@ func (s SentimentService) AnalyzeSentiments(ctx context.Context, texts []string,
 	}
 
 	var newResults []SentimentResult
-	if err := json.Unmarshal([]byte(response), &newResults); err != nil {
+	cleanedResponse := utils.CleanAIJSONResponse(response)
+	if err := json.Unmarshal([]byte(cleanedResponse), &newResults); err != nil {
 		return nil, fmt.Errorf("failed to parse sentiment response: %w", err)
 	}
 
@@ -119,7 +121,8 @@ func (s SentimentService) AnalyzeSentiment(ctx context.Context, text string, bra
 	}
 
 	var result SentimentResult
-	if err := json.Unmarshal([]byte(response), &result); err != nil {
+	cleanedResponse := utils.CleanAIJSONResponse(response)
+	if err := json.Unmarshal([]byte(cleanedResponse), &result); err != nil {
 		return SentimentResult{}, fmt.Errorf("failed to parse sentiment response: %w", err)
 	}
 
