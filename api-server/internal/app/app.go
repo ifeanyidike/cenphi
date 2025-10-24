@@ -180,6 +180,23 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 	sessionCleanupService := services.NewSessionCleanupService(db, sessionRepo, stageRepo, tempArtifactsRepo, artifactsRepo, tempStorageService, logger)
 	stepOrchestrator := ai.NewStepOrchestrator(sessionRepo, stageRepo, testimonialRepo, workspaceRepo, artifactsRepo, tempStorageService, sseManager, db, logger)
 
+	// Initialize step workers
+	platformOptWorker := ai.NewPlatformOptimizationStepsWorker(
+		media_intelligence, &aiServiceManager, cacheService, testimonialRepo,
+		workspaceRepo, artifactsRepo, tempStorageService, storageService.Provider, sseManager, db, logger)
+	clippingWorker := ai.NewClippingStepsWorker(
+		media_intelligence, &aiServiceManager, cacheService, testimonialRepo,
+		workspaceRepo, artifactsRepo, tempStorageService, storageService.Provider, sseManager, db, logger)
+	storyVideoWorker := ai.NewStoryVideoStepsWorker(
+		media_intelligence, &aiServiceManager, cacheService, testimonialRepo,
+		workspaceRepo, artifactsRepo, tempStorageService, storageService.Provider, sseManager, db, logger)
+
+	// Register handlers with the orchestrator
+	stepOrchestrator.RegisterPlatformOptimizationHandlers(platformOptWorker)
+	stepOrchestrator.RegisterCustomPipelineHandlers(platformOptWorker) // Reuses platform optimization handlers
+	stepOrchestrator.RegisterClippingHandlers(clippingWorker)
+	stepOrchestrator.RegisterStoryVideoHandlers(storyVideoWorker)
+
 	// Initialize WebSocket hub
 	// wsHub := services.NewWSHub(logger, aiClient, testimonialService)
 	// go wsHub.Run()
