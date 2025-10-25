@@ -294,7 +294,7 @@ func (m *SSEManager) CreateProcessingSessionWithID(sessionID, testimonialID, wor
 	m.sessions[sessionID] = session
 	m.mu.Unlock()
 
-	m.logger.Info("Created studio processing session",
+	m.logger.Debug("Created studio processing session",
 		zap.String("session_id", sessionID),
 		zap.String("testimonial_id", testimonialID),
 		zap.String("type", sessionType))
@@ -895,7 +895,7 @@ func (m *SSEManager) RestoreSession(session *ProcessingSession) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.sessions[session.ID] = session
-	m.logger.Info("Restored session to SSEManager",
+	m.logger.Debug("Restored session to SSEManager",
 		zap.String("session_id", session.ID),
 		zap.String("type", session.Type),
 		zap.String("status", session.Status))
@@ -911,9 +911,6 @@ func (m *SSEManager) StreamStudioEvents(ctx context.Context, w io.Writer, sessio
 
 	// Generate unique client ID
 	clientID := fmt.Sprintf("studio_client_%d", time.Now().UnixNano())
-	m.logger.Debug("New studio SSE client connected",
-		zap.String("clientID", clientID),
-		zap.String("sessionID", sessionID))
 
 	// Create channel for this client
 	clientChan := make(chan StudioEvent, 100)
@@ -921,13 +918,14 @@ func (m *SSEManager) StreamStudioEvents(ctx context.Context, w io.Writer, sessio
 	// Register client FIRST before sending any events
 	m.mu.Lock()
 	m.studioClients[clientID] = clientChan
+	totalClients := len(m.studioClients)
 	m.mu.Unlock()
 
-	// Log successful registration
-	m.logger.Debug("Studio SSE client registered",
+	// Only log at Info level on first client connection or when debugging
+	m.logger.Debug("Studio SSE client connected",
 		zap.String("clientID", clientID),
 		zap.String("sessionID", sessionID),
-		zap.Int("total_clients", len(m.studioClients)))
+		zap.Int("total_clients", totalClients))
 
 	// Get session data and send initial event with all stages
 	m.mu.RLock()

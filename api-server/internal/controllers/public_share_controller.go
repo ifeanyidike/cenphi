@@ -1,7 +1,9 @@
 package controllers
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"net"
 	"net/http"
 	"strconv"
@@ -9,8 +11,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/ifeanyidike/cenphi/internal/ffmpeg"
 	"github.com/ifeanyidike/cenphi/internal/models"
 	"github.com/ifeanyidike/cenphi/internal/repositories"
+	"github.com/ifeanyidike/cenphi/internal/storage"
 	"github.com/ifeanyidike/cenphi/internal/utils"
 	"go.uber.org/zap"
 )
@@ -21,6 +25,7 @@ type PublicShareController struct {
 	artifactRepo    repositories.TestimonialArtifactRepository
 	db              repositories.DB
 	logger          *zap.Logger
+	storageService  storage.StorageFactory
 }
 
 func NewPublicShareController(
@@ -28,6 +33,7 @@ func NewPublicShareController(
 	testimonialRepo repositories.TestimonialRepository,
 	artifactRepo repositories.TestimonialArtifactRepository,
 	db repositories.DB,
+	storageService storage.StorageFactory,
 	logger *zap.Logger,
 ) PublicShareController {
 	return PublicShareController{
@@ -35,6 +41,7 @@ func NewPublicShareController(
 		testimonialRepo: testimonialRepo,
 		artifactRepo:    artifactRepo,
 		db:              db,
+		storageService:  storageService,
 		logger:          logger,
 	}
 }
@@ -397,26 +404,31 @@ func (c PublicShareController) TrackEvent(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Validate event type
-	validEventTypes := map[string]bool{
-		"view":            true,
-		"play":            true,
-		"download":        true,
-		"copy_link":       true,
-		"copy":            true,
-		"share_linkedin":  true,
-		"linkedin_share":  true,
-		"share_twitter":   true,
-		"twitter_share":   true,
-		"share_facebook":  true,
-		"facebook_share":  true,
-		"share_whatsapp":  true,
-		"whatsapp_share":  true,
-		"share_email":     true,
-		"email_share":     true,
+	// Normalize event type to match database function expectations
+	// Database function expects: view, play, download, copy_link, share_*
+	eventType := req.EventType
+
+	// Map alternative event type names to canonical names
+	eventTypeMap := map[string]string{
+		"view":            "view",
+		"play":            "play",
+		"download":        "download",
+		"copy_link":       "copy_link",
+		"copy":            "copy_link", // Normalize 'copy' to 'copy_link'
+		"share_linkedin":  "share_linkedin",
+		"linkedin_share":  "share_linkedin", // Normalize to share_linkedin
+		"share_twitter":   "share_twitter",
+		"twitter_share":   "share_twitter", // Normalize to share_twitter
+		"share_facebook":  "share_facebook",
+		"facebook_share":  "share_facebook", // Normalize to share_facebook
+		"share_whatsapp":  "share_whatsapp",
+		"whatsapp_share":  "share_whatsapp", // Normalize to share_whatsapp
+		"share_email":     "share_email",
+		"email_share":     "share_email", // Normalize to share_email
 	}
 
-	if !validEventTypes[req.EventType] {
+	normalizedEventType, valid := eventTypeMap[eventType]
+	if !valid {
 		utils.RespondWithError(w, http.StatusBadRequest, "Invalid event type")
 		return
 	}
@@ -431,7 +443,7 @@ func (c PublicShareController) TrackEvent(w http.ResponseWriter, r *http.Request
 
 	event := &models.PublicShareEvent{
 		PublicShareID: id,
-		EventType:     req.EventType,
+		EventType:     normalizedEventType, // Use normalized event type
 		VisitorID:     req.VisitorID,
 		IPAddress:     &ipAddress,
 		UserAgent:     &userAgent,
@@ -444,7 +456,10 @@ func (c PublicShareController) TrackEvent(w http.ResponseWriter, r *http.Request
 		c.logger.Error("Failed to track event",
 			zap.Error(err),
 			zap.String("share_id", idStr),
-			zap.String("event_type", req.EventType))
+			zap.String("original_event_type", req.EventType),
+			zap.String("normalized_event_type", normalizedEventType),
+			zap.Any("visitor_id", req.VisitorID),
+			zap.String("ip_address", ipAddress))
 		utils.RespondWithError(w, http.StatusInternalServerError, "Failed to track event")
 		return
 	}
@@ -510,5 +525,173 @@ func (c PublicShareController) GetEvents(w http.ResponseWriter, r *http.Request)
 		"events":  events,
 		"total":   len(events),
 		"message": "Events retrieved successfully",
+	})
+}
+
+// ExportToGIF exports a testimonial or artifact to GIF format
+// POST /api/export/gif
+func (c PublicShareController) ExportToGIF(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		TestimonialID *uuid.UUID `json:"testimonial_id"`
+		ArtifactID    *uuid.UUID `json:"artifact_id"`
+		StartTime     float64    `json:"start_time"`     // Start time in seconds
+		Duration      float64    `json:"duration"`       // Duration in seconds
+		Width         int        `json:"width"`          // GIF width in pixels
+		FPS           int        `json:"fps"`            // Frames per second
+		Quality       string     `json:"quality"`        // "high", "medium", "low"
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	// Validate that either testimonial_id or artifact_id is provided
+	if req.TestimonialID == nil && req.ArtifactID == nil {
+		utils.RespondWithError(w, http.StatusBadRequest, "Either testimonial_id or artifact_id is required")
+		return
+	}
+
+	if req.TestimonialID != nil && req.ArtifactID != nil {
+		utils.RespondWithError(w, http.StatusBadRequest, "Cannot provide both testimonial_id and artifact_id")
+		return
+	}
+
+	// Set default values
+	if req.Width <= 0 {
+		req.Width = 480
+	}
+	if req.FPS <= 0 || req.FPS > 30 {
+		req.FPS = 15
+	}
+	if req.Duration <= 0 {
+		req.Duration = 5.0
+	}
+	if req.Quality == "" {
+		req.Quality = "medium"
+	}
+
+	// Validate quality parameter
+	validQualities := map[string]bool{"high": true, "medium": true, "low": true}
+	if !validQualities[req.Quality] {
+		utils.RespondWithError(w, http.StatusBadRequest, "Quality must be 'high', 'medium', or 'low'")
+		return
+	}
+
+	// Get the media URL based on source type
+	var mediaURL string
+	var sourceType string
+
+	if req.TestimonialID != nil {
+		// Get testimonial
+		testimonial, err := c.testimonialRepo.GetByID(r.Context(), *req.TestimonialID, c.db)
+		if err != nil {
+			c.logger.Error("Failed to get testimonial", zap.Error(err), zap.String("testimonial_id", req.TestimonialID.String()))
+			utils.RespondWithError(w, http.StatusNotFound, "Testimonial not found")
+			return
+		}
+
+		if testimonial.Type != "video" {
+			utils.RespondWithError(w, http.StatusBadRequest, "Only video testimonials can be exported to GIF")
+			return
+		}
+
+		if testimonial.MediaURL == nil || *testimonial.MediaURL == "" {
+			utils.RespondWithError(w, http.StatusBadRequest, "Testimonial has no media URL")
+			return
+		}
+
+		mediaURL = *testimonial.MediaURL
+		sourceType = "testimonial"
+	} else {
+		// Get artifact
+		artifact, err := c.artifactRepo.GetByID(r.Context(), *req.ArtifactID, c.db)
+		if err != nil {
+			c.logger.Error("Failed to get artifact", zap.Error(err), zap.String("artifact_id", req.ArtifactID.String()))
+			utils.RespondWithError(w, http.StatusNotFound, "Artifact not found")
+			return
+		}
+
+		if artifact.ContentType != "video/mp4" && artifact.ContentType != "video" {
+			utils.RespondWithError(w, http.StatusBadRequest, "Only video artifacts can be exported to GIF")
+			return
+		}
+
+		if artifact.AssetURL == nil || *artifact.AssetURL == "" {
+			utils.RespondWithError(w, http.StatusBadRequest, "Artifact has no asset URL")
+			return
+		}
+
+		mediaURL = *artifact.AssetURL
+		sourceType = "artifact"
+	}
+
+	c.logger.Info("Processing GIF export request",
+		zap.String("media_url", mediaURL),
+		zap.String("source_type", sourceType),
+		zap.Float64("start_time", req.StartTime),
+		zap.Float64("duration", req.Duration),
+		zap.Int("width", req.Width),
+		zap.Int("fps", req.FPS),
+		zap.String("quality", req.Quality))
+
+	// Initialize FFmpeg processor
+	processor := ffmpeg.NewProcessor(c.logger, c.storageService.Provider)
+	defer processor.Stop()
+
+	// Download media if it's a remote URL
+	// Use Background context to avoid being cancelled by request timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+
+	localPath, err := processor.DownloadMediaWithCleanup(ctx, mediaURL, 3)
+	if err != nil {
+		c.logger.Error("Failed to download media", zap.Error(err), zap.String("media_url", mediaURL))
+		utils.RespondWithError(w, http.StatusInternalServerError, "Failed to download media: "+err.Error())
+		return
+	}
+
+	// Export to GIF
+	result, err := processor.ExportToGIF(ctx, localPath, req.StartTime, req.Duration, req.Width, req.FPS, req.Quality)
+	if err != nil {
+		c.logger.Error("Failed to export to GIF", zap.Error(err))
+		utils.RespondWithError(w, http.StatusInternalServerError, "Failed to export to GIF: "+err.Error())
+		return
+	}
+
+	// Upload GIF to storage
+	sourceID := ""
+	if req.TestimonialID != nil {
+		sourceID = req.TestimonialID.String()
+	} else {
+		sourceID = req.ArtifactID.String()
+	}
+
+	storagePath := fmt.Sprintf("exports/gifs/%s/%s_%s.gif", sourceType, sourceID, uuid.New().String()[:8])
+	gifURL, err := c.storageService.Provider.Upload(ctx, result.OutputPath, storagePath, "image/gif")
+	if err != nil {
+		c.logger.Error("Failed to upload GIF to storage", zap.Error(err))
+		utils.RespondWithError(w, http.StatusInternalServerError, "Failed to upload GIF: "+err.Error())
+		return
+	}
+
+	// Clean up local files
+	processor.CleanupTempFiles(localPath, result.OutputPath)
+
+	c.logger.Info("GIF export completed successfully",
+		zap.String("gif_url", gifURL),
+		zap.Int64("file_size", result.FileSize),
+		zap.Float64("processing_time", result.ProcessingTime))
+
+	// Return GIF information
+	utils.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
+		"gif_url":         gifURL,
+		"file_size":       result.FileSize,
+		"width":           result.Width,
+		"duration":        result.Duration,
+		"fps":             req.FPS,
+		"quality":         req.Quality,
+		"processing_time": result.ProcessingTime,
+		"message":         "GIF exported successfully",
 	})
 }

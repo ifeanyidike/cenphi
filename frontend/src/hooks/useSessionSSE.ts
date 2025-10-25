@@ -521,8 +521,11 @@ export const useSessionSSE = (sessionId: string): UseSessionSSEReturn => {
               setSession((prev) => (prev ? { ...prev, status: "active" } : null));
               break;
 
-            case "session_cancelled":
+            case "job_cancelled": // Backend sends this event
+            case "session_cancelled": // Keep this for compatibility
+              console.log("[useSessionSSE] Session cancelled");
               setSession((prev) => (prev ? { ...prev, status: "cancelled" } : null));
+              disconnect(); // Close SSE connection since session is done
               break;
 
             case "error":

@@ -79,8 +79,10 @@ export class WorkspaceOrchestrator {
           runInAction(() => {
             workspaceHub.workspace = workspace;
             // Only set testimonials if not already loaded to prevent race condition
-            if (!workspaceHub.testimonialManager.testimonials ||
-                workspaceHub.testimonialManager.testimonials.length === 0) {
+            if (
+              !workspaceHub.testimonialManager.testimonials ||
+              workspaceHub.testimonialManager.testimonials.length === 0
+            ) {
               workspaceHub.testimonialManager.testimonials = testimonials || [];
             }
           });

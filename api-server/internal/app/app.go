@@ -224,7 +224,7 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 	sseTestimonialMonitor := controllers.NewSSETestimonialMonitor(cacheService, logger)
 	aiProcessorController := controllers.NewAIProcessorController(aiServiceManager, queueService, logger, cacheService, sseManager)
 	presetController := controllers.NewPresetController(presetService, logger)
-	publicShareController := controllers.NewPublicShareController(publicShareRepo, testimonialRepo, artifactsRepo, db, logger)
+	publicShareController := controllers.NewPublicShareController(publicShareRepo, testimonialRepo, artifactsRepo, db, *storageService, logger)
 	widgetController := controllers.NewWidgetController(publicShareRepo, testimonialRepo, artifactsRepo, db, logger)
 	vectorStoreController := controllers.NewVectorStoreController(vectorStoreService, logger)
 	aiPostController := controllers.NewAIPostController(aiClient, testimonialRepo, logger, db)
@@ -350,10 +350,18 @@ func (app *App) Mount() http.Handler {
 	// r.Use(middleware.Timeout(30 * time.Second))
 	r.Use(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// SSE endpoints must not have timeouts (long-lived connections)
+			if strings.Contains(r.URL.Path, "/stream") ||
+				strings.Contains(r.URL.Path, "/sse") {
+				h.ServeHTTP(w, r)
+				return
+			}
+			// Upload endpoints need longer timeout
 			if strings.Contains(r.URL.Path, "/upload") {
 				middleware.Timeout(5*time.Minute)(h).ServeHTTP(w, r)
 				return
 			}
+			// Default timeout for regular API requests
 			middleware.Timeout(30*time.Second)(h).ServeHTTP(w, r)
 		})
 	})

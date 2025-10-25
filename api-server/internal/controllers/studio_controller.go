@@ -104,7 +104,7 @@ func (c StudioController) StreamStudioEvents(w http.ResponseWriter, r *http.Requ
 			dbSession, err := c.sessionRepo.GetByID(r.Context(), sessionUUID, c.db)
 			if err == nil {
 				// Create session in SSEManager
-				c.logger.Info("Restoring session from database to SSEManager",
+				c.logger.Debug("Restoring session from database to SSEManager",
 					zap.String("session_id", sessionID))
 
 				// Convert testimonial ID
@@ -168,7 +168,7 @@ func (c StudioController) StreamStudioEvents(w http.ResponseWriter, r *http.Requ
 					Metadata:         make(map[string]interface{}),
 				}
 
-				c.logger.Info("Restored session from database to SSEManager with stages",
+				c.logger.Debug("Restored session from database to SSEManager with stages",
 					zap.String("session_id", sessionID),
 					zap.Int("stages_count", len(stagesMap)))
 

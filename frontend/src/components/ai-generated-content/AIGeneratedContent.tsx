@@ -26,6 +26,8 @@ import {
   ArrowUpRight,
   LayoutGrid,
   LayoutList,
+  CheckSquare,
+  Square,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -40,7 +42,7 @@ import { TestimonialArtifact } from "@/types/testimonial";
 import { formatDistanceToNow } from "date-fns";
 import VideoPreviewModal from "@/components/TestimonialDetail/VideoPreviewModal";
 import ContentEditModal from "./ContentEditModal";
-import ShareModal from "./ShareModal";
+import ShareDrawer from "./share-drawer/ShareDrawer";
 import {
   enhanceArtifacts,
   getContentStats,
@@ -81,6 +83,10 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
     const [hoveredVideo, setHoveredVideo] = useState<string | null>(null);
     const [playingPreview, setPlayingPreview] = useState<string | null>(null);
 
+    // Multi-select state
+    const [selectionMode, setSelectionMode] = useState(false);
+    const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+
     // Filters
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -103,10 +109,9 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
 
         try {
           // Use cached artifacts - aiArtifactsManager now has caching
-          const allArtifacts =
-            await aiArtifactsManager.getArtifactsByWorkspace(
-              currentWorkspace.id
-            );
+          const allArtifacts = await aiArtifactsManager.getArtifactsByWorkspace(
+            currentWorkspace.id
+          );
           const requiredArtifacts = allArtifacts.filter(
             (a) =>
               a.processing_type !== "sentiment_analysis" &&
@@ -301,10 +306,59 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
     const activeFiltersCount =
       selectedCategories.length + selectedPlatforms.length;
 
+    // Multi-select handlers
+    const toggleSelectionMode = () => {
+      setSelectionMode(!selectionMode);
+      if (selectionMode) {
+        // Exit selection mode - clear selections
+        setSelectedItems(new Set());
+      }
+    };
+
+    const toggleItemSelection = (artifactId: string) => {
+      setSelectedItems((prev) => {
+        const next = new Set(prev);
+        if (next.has(artifactId)) {
+          next.delete(artifactId);
+        } else {
+          next.add(artifactId);
+        }
+        return next;
+      });
+    };
+
+    const handleSelectAll = () => {
+      if (selectedItems.size === filteredArtifacts.length) {
+        setSelectedItems(new Set());
+      } else {
+        setSelectedItems(new Set(filteredArtifacts.map((a) => a.id)));
+      }
+    };
+
+    const handleShareSelected = () => {
+      if (selectedItems.size > 0) {
+        // Get all selected artifacts
+        const artifacts = filteredArtifacts.filter((a) =>
+          selectedItems.has(a.id)
+        );
+
+        if (artifacts.length > 0) {
+          // Use the first artifact as the main artifact, pass all as artifacts prop
+          setSharingArtifact(artifacts[0]);
+          // ShareDrawer will receive artifacts prop via the component below
+        }
+      }
+    };
+
+    const selectedArtifacts = useMemo(() => {
+      return filteredArtifacts.filter((a) => selectedItems.has(a.id));
+    }, [filteredArtifacts, selectedItems]);
+
     // Premium Video Card
     const renderVideoCard = (artifact: EnhancedArtifact, index: number) => {
       const TypeIcon = artifact.category.icon;
       const isHovered = hoveredVideo === artifact.id;
+      const isSelected = selectedItems.has(artifact.id);
 
       // Extract aspect ratio from artifact metadata
       const aspectRatio =
@@ -346,7 +400,28 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
             setPlayingPreview(null);
           }}
         >
-          <Card className="relative overflow-hidden border-0 bg-white shadow-sm hover:shadow-2xl transition-all duration-500 group/card">
+          <Card
+            className={`relative overflow-hidden border-0 bg-white shadow-sm hover:shadow-2xl transition-all duration-500 group/card ${isSelected ? "ring-4 ring-blue-500" : ""}`}
+          >
+            {/* Selection Checkbox */}
+            {selectionMode && (
+              <div
+                className="absolute top-3 left-3 z-20 cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleItemSelection(artifact.id);
+                }}
+              >
+                <div className="w-6 h-6 rounded-md bg-white/95 backdrop-blur-sm border-2 border-slate-300 flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
+                  {isSelected ? (
+                    <CheckSquare className="h-5 w-5 text-blue-600" />
+                  ) : (
+                    <Square className="h-5 w-5 text-slate-400" />
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Video Container */}
             <div
               className={`relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 overflow-hidden ${viewMode === "grid" ? "aspect-video" : getAspectRatioClass()}`}
@@ -554,6 +629,7 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
       const TypeIcon = artifact.category.icon;
       const content = artifact.text_content || "";
       const wordCount = content.split(/\s+/).filter(Boolean).length;
+      const isSelected = selectedItems.has(artifact.id);
 
       return (
         <motion.div
@@ -564,7 +640,28 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
           transition={{ delay: index * 0.03, duration: 0.4 }}
           className="group relative"
         >
-          <Card className="relative overflow-hidden border-0 bg-white shadow-sm hover:shadow-2xl transition-all duration-500">
+          <Card
+            className={`relative overflow-hidden border-0 bg-white shadow-sm hover:shadow-2xl transition-all duration-500 ${isSelected ? "ring-4 ring-blue-500" : ""}`}
+          >
+            {/* Selection Checkbox */}
+            {selectionMode && (
+              <div
+                className="absolute top-3 left-3 z-20 cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleItemSelection(artifact.id);
+                }}
+              >
+                <div className="w-6 h-6 rounded-md bg-white/95 backdrop-blur-sm border-2 border-slate-300 flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
+                  {isSelected ? (
+                    <CheckSquare className="h-5 w-5 text-blue-600" />
+                  ) : (
+                    <Square className="h-5 w-5 text-slate-400" />
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Gradient Background */}
             <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-blue-50/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
@@ -796,6 +893,24 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
                     items
                   </span>
                 </div>
+                <Button
+                  variant={selectionMode ? "default" : "outline"}
+                  size="sm"
+                  onClick={toggleSelectionMode}
+                  className={`h-10 px-4 text-[10px] ${selectionMode ? "bg-blue-600 hover:bg-blue-700" : "border-slate-200/50"}`}
+                >
+                  {selectionMode ? (
+                    <>
+                      <X className="h-3.5 w-3.5 mr-1.5" />
+                      Exit Selection
+                    </>
+                  ) : (
+                    <>
+                      <CheckSquare className="h-3.5 w-3.5 mr-1.5" />
+                      Select Multiple
+                    </>
+                  )}
+                </Button>
               </div>
             </div>
           </motion.div>
@@ -1135,6 +1250,82 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
               </div>
             )}
           </motion.div>
+
+          {/* Floating Multi-Select Action Bar */}
+          <AnimatePresence>
+            {selectionMode && selectedItems.size > 0 && (
+              <motion.div
+                initial={{ y: 100, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 100, opacity: 0 }}
+                transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50"
+              >
+                <Card className="border-0 shadow-2xl backdrop-blur-xl bg-white/95">
+                  <div className="px-6 py-4 flex items-center gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                        <CheckSquare className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">
+                          {selectedItems.size} item
+                          {selectedItems.size > 1 ? "s" : ""} selected
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {selectedItems.size > 1
+                            ? "Create carousel or share individually"
+                            : "Share or edit"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="w-px h-10 bg-slate-200" />
+
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleSelectAll}
+                        className="h-9 text-xs"
+                      >
+                        {selectedItems.size === filteredArtifacts.length ? (
+                          <>
+                            <X className="h-3.5 w-3.5 mr-1.5" />
+                            Deselect All
+                          </>
+                        ) : (
+                          <>
+                            <CheckSquare className="h-3.5 w-3.5 mr-1.5" />
+                            Select All
+                          </>
+                        )}
+                      </Button>
+
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={handleShareSelected}
+                        className="h-9 text-xs bg-blue-600 hover:bg-blue-700"
+                      >
+                        <Share2 className="h-3.5 w-3.5 mr-1.5" />
+                        {selectedItems.size > 1 ? "Create Carousel" : "Share"}
+                      </Button>
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={toggleSelectionMode}
+                        className="h-9 w-9 p-0"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Modals */}
@@ -1161,10 +1352,20 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
         </ModalPortal>
 
         {sharingArtifact && (
-          <ShareModal
+          <ShareDrawer
             artifact={sharingArtifact}
+            artifacts={
+              selectedArtifacts.length > 1 ? selectedArtifacts : undefined
+            }
             isOpen={!!sharingArtifact}
-            onOpenChange={(open) => !open && setSharingArtifact(null)}
+            onOpenChange={(open) => {
+              if (!open) {
+                setSharingArtifact(null);
+                // Exit selection mode and clear selections when drawer closes
+                setSelectionMode(false);
+                setSelectedItems(new Set());
+              }
+            }}
           />
         )}
       </div>

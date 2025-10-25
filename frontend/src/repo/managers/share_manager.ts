@@ -37,9 +37,11 @@ export interface PublicShareMetrics {
 }
 
 export interface CreateShareRequest {
+  workspace_id: string;
   share_type: "testimonial" | "artifact";
   testimonial_id?: string;
   artifact_id?: string;
+  description?: string;
   expires_at?: string;
   custom_branding?: Record<string, any>;
 }
@@ -218,7 +220,8 @@ export class ShareManager {
    * Returns existing active share or creates new one
    */
   async getOrCreateTestimonialShare(
-    testimonialId: string
+    testimonialId: string,
+    workspaceId: string
   ): Promise<PublicShare> {
     try {
       // Try to get existing shares
@@ -237,6 +240,7 @@ export class ShareManager {
 
       // Create new share
       return await this.createShare({
+        workspace_id: workspaceId,
         share_type: "testimonial",
         testimonial_id: testimonialId,
       });
@@ -249,7 +253,10 @@ export class ShareManager {
   /**
    * Get or create share for artifact
    */
-  async getOrCreateArtifactShare(artifactId: string): Promise<PublicShare> {
+  async getOrCreateArtifactShare(
+    artifactId: string,
+    workspaceId: string
+  ): Promise<PublicShare> {
     try {
       // Try to get existing shares
       const shares = await this.getArtifactShares(artifactId);
@@ -267,6 +274,7 @@ export class ShareManager {
 
       // Create new share
       return await this.createShare({
+        workspace_id: workspaceId,
         share_type: "artifact",
         artifact_id: artifactId,
       });

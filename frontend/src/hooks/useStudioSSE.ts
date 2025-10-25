@@ -28,7 +28,7 @@ export interface PreviewArtifact {
 
 export interface StudioEvent {
   id: string;
-  type: 'connection_established' | 'session_created' | 'job_created' | 'step_started' | 'step_progress' | 'preview_ready' | 'text_optimization_complete' | 'step_complete' | 'job_complete' | 'error' | 'heartbeat' | 'session_paused' | 'session_resumed' | 'clips_already_exist';
+  type: 'connection_established' | 'session_created' | 'job_created' | 'step_started' | 'step_progress' | 'preview_ready' | 'text_optimization_complete' | 'step_complete' | 'job_complete' | 'job_cancelled' | 'error' | 'heartbeat' | 'session_paused' | 'session_resumed' | 'clips_already_exist';
   session_id: string;
   stage_id?: string;
   job_id?: string;
@@ -320,6 +320,26 @@ export const useStudioSSE = (): UseStudioSSEReturn => {
             case 'job_complete':
               setSession(prev => prev ? { ...prev, isPaused: false } : null);
               setCurrentStep(null);
+              break;
+
+            case 'job_cancelled':
+              console.log('[SSE] Session cancelled');
+              // Mark all processing steps as cancelled
+              setSession(prev => {
+                if (!prev) return null;
+                return {
+                  ...prev,
+                  isPaused: false,
+                  steps: prev.steps.map(s =>
+                    s.status === 'in_progress' || s.status === 'pending'
+                      ? { ...s, status: 'failed', message: 'Session cancelled' }
+                      : s
+                  ),
+                };
+              });
+              setCurrentStep(null);
+              // Close the SSE connection since session is cancelled
+              stopSession();
               break;
 
             case 'session_paused':

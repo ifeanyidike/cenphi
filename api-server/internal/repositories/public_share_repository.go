@@ -533,7 +533,11 @@ func (r PublicShareRepository) TrackEvent(ctx context.Context, event *models.Pub
 
 	if err != nil {
 		if shouldCommit {
-			tx.Rollback()
+			if rbErr := tx.Rollback(); rbErr != nil {
+				r.logger.Warn("Failed to rollback transaction after insert error",
+					zap.Error(rbErr),
+					zap.String("original_error", err.Error()))
+			}
 		}
 		return fmt.Errorf("failed to insert event: %w", err)
 	}
@@ -547,14 +551,31 @@ func (r PublicShareRepository) TrackEvent(ctx context.Context, event *models.Pub
 	)
 
 	if err != nil {
+		r.logger.Error("Failed to execute increment_public_share_metric",
+			zap.Error(err),
+			zap.String("share_id", event.PublicShareID.String()),
+			zap.String("event_type", event.EventType),
+			zap.Any("visitor_id", event.VisitorID))
+
 		if shouldCommit {
-			tx.Rollback()
+			if rbErr := tx.Rollback(); rbErr != nil {
+				r.logger.Warn("Failed to rollback transaction after metrics error",
+					zap.Error(rbErr),
+					zap.String("original_error", err.Error()))
+			}
 		}
 		return fmt.Errorf("failed to update metrics: %w", err)
 	}
 
+	// Commit transaction if we started it
 	if shouldCommit {
 		if err := tx.Commit(); err != nil {
+			// If commit fails, try to rollback (though it may already be rolled back)
+			if rbErr := tx.Rollback(); rbErr != nil {
+				r.logger.Warn("Failed to rollback after commit failure",
+					zap.Error(rbErr),
+					zap.String("commit_error", err.Error()))
+			}
 			return fmt.Errorf("failed to commit transaction: %w", err)
 		}
 	}

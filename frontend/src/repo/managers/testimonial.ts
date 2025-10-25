@@ -224,16 +224,23 @@ export class TestimonialManager {
       if (testimonialId) {
         // Clear specific testimonial from cache
         if (this.testimonial?.id === testimonialId) {
-          console.log("[TestimonialManager] Invalidating cached testimonial:", testimonialId);
+          console.log(
+            "[TestimonialManager] Invalidating cached testimonial:",
+            testimonialId
+          );
           this.testimonial = null;
         }
         // Clear testimonials list to force refetch with updated artifacts
-        console.log("[TestimonialManager] Invalidating testimonials list cache");
+        console.log(
+          "[TestimonialManager] Invalidating testimonials list cache"
+        );
         this.testimonials = null;
         this.testimonialsIncludeArtifacts = false;
       } else {
         // Clear all cache
-        console.log("[TestimonialManager] Clearing all cached testimonial data");
+        console.log(
+          "[TestimonialManager] Clearing all cached testimonial data"
+        );
         this.testimonial = null;
         this.testimonials = null;
         this.testimonialsIncludeArtifacts = false;

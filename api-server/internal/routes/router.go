@@ -44,6 +44,7 @@ func RegisterRoutes(
 
 	RegisterWidget(&r)
 	RegisterSEOTranscriptRoutes(r, seoTranscriptController)
+	RegisterShareWidgetRoutes(r, widgetController) // Must be at root level, not under /api
 
 	// Group all API routes under /api
 	r.Route("/api", func(r chi.Router) {
@@ -69,7 +70,6 @@ func RegisterRoutes(
 		RegisterTestRoutes(r, testController)
 		RegisterPublicShareRoutes(r, publicShareController, authMiddleware)
 		RegisterAIPostRoutes(r, aiPostController, authMiddleware)
-		RegisterShareWidgetRoutes(r, widgetController)
 
 	})
 
@@ -94,6 +94,13 @@ func RegisterWidget(r *chi.Router) {
 	(*r).Get("/widgets.js", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("rendering widget.umd.cjs")
 		http.ServeFile(w, r, "public/widget.umd.cjs")
+	})
+	// Serve share widget JavaScript file at root level (public - no auth required)
+	(*r).Get("/share-widget.js", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/javascript")
+		w.Header().Set("Cache-Control", "public, max-age=3600")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		http.ServeFile(w, r, "public/share-widget.js")
 	})
 }
 
@@ -565,6 +572,14 @@ func RegisterPublicShareRoutes(r chi.Router, controller controllers.PublicShareC
 		r.Get("/", controller.GetArtifactShares)
 	})
 
+	// Export routes - authenticated
+	r.Route("/export", func(r chi.Router) {
+		r.Use(authMiddleware.VerifyToken)
+
+		// GIF export
+		r.Post("/gif", controller.ExportToGIF)
+	})
+
 	// Public viewing endpoints - no authentication
 	r.Route("/share/{id}", func(r chi.Router) {
 		// View shared content (public page)
@@ -594,17 +609,12 @@ func RegisterShareWidgetRoutes(r chi.Router, controller controllers.WidgetContro
 	// Widget config endpoint (public - no auth required)
 	r.Get("/widget/config/{shareId}", controller.GetWidgetConfig)
 
-	// Widget embed code endpoint (public - no auth required)
-	// This is already under /api prefix, so it becomes /api/widget/embed/{shareId}
-	r.Get("/widget/embed/{shareId}", controller.GetWidgetEmbed)
+	// IMPORTANT: Carousel route MUST come before {shareId} route to avoid path conflicts
+	// Carousel embed code endpoint (public - no auth required)
+	r.Get("/widget/embed/carousel", controller.GetCarouselEmbed)
 
-	// Serve widget JavaScript file
-	r.Get("/share-widget.js", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/javascript")
-		w.Header().Set("Cache-Control", "public, max-age=3600")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		http.ServeFile(w, r, "public/share-widget.js")
-	})
+	// Widget embed code endpoint (public - no auth required)
+	r.Get("/widget/embed/{shareId}", controller.GetWidgetEmbed)
 }
 
 func RegisterSEOTranscriptRoutes(r chi.Router, controller controllers.SEOTranscriptController) {

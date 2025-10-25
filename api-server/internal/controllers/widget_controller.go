@@ -3,6 +3,7 @@ package controllers
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -96,6 +97,9 @@ func (c WidgetController) GetWidgetConfig(w http.ResponseWriter, r *http.Request
 			testimonialData["author_role"] = *shareWithContent.Testimonial.AuthorTitle
 			testimonialData["author_title"] = *shareWithContent.Testimonial.AuthorTitle
 		}
+		if shareWithContent.Testimonial.AuthorAvatarURL != nil {
+			testimonialData["author_avatar"] = *shareWithContent.Testimonial.AuthorAvatarURL
+		}
 		if shareWithContent.Testimonial.MediaURL != nil {
 			// Widget checks for video_url (line 413) and media_url (line 413)
 			if shareWithContent.Testimonial.Type == "video" {
@@ -139,7 +143,7 @@ func (c WidgetController) GetWidgetConfig(w http.ResponseWriter, r *http.Request
 }
 
 // GetWidgetEmbed generates HTML embed code for a share
-// GET /api/widget/embed/{shareId}
+// GET /api/widget/embed/{shareId}?embedStyle=classic&compact=false
 func (c WidgetController) GetWidgetEmbed(w http.ResponseWriter, r *http.Request) {
 	shareID := chi.URLParam(r, "shareId")
 	id, err := uuid.Parse(shareID)
@@ -163,6 +167,23 @@ func (c WidgetController) GetWidgetEmbed(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// Get customization options from query params
+	embedStyle := r.URL.Query().Get("embedStyle")
+	if embedStyle == "" {
+		embedStyle = "cinematic" // Default to cinematic
+	}
+	// Validate embedStyle
+	validEmbedStyles := map[string]bool{"cinematic": true, "magazine": true, "floating": true, "minimal": true}
+	if !validEmbedStyles[embedStyle] {
+		embedStyle = "cinematic"
+	}
+
+	compact := r.URL.Query().Get("compact")
+	compactStr := "false"
+	if compact == "true" {
+		compactStr = "true"
+	}
+
 	// Get base URL from request (for absolute URLs)
 	scheme := "https"
 	if r.TLS == nil {
@@ -170,28 +191,24 @@ func (c WidgetController) GetWidgetEmbed(w http.ResponseWriter, r *http.Request)
 	}
 	baseURL := scheme + "://" + r.Host
 
-	// Generate embed code that works when embedded in any webpage
-	// The widget is wrapped in an IIFE (Immediately Invoked Function Expression)
-	// and uses window.CenphiShareWidget for global access
+	// Generate embed code with selected style
 	embedCode := fmt.Sprintf(`<!-- Cenphi Share Widget -->
 <div id="cenphi-widget-%s"></div>
-<script src="%s/api/share-widget.js"></script>
+<script src="%s/share-widget.js"></script>
 <script>
-  // Wait for the widget script to load
   (function() {
     if (typeof window.CenphiShareWidget !== 'undefined') {
       window.CenphiShareWidget.init({
         container: '#cenphi-widget-%s',
         shareId: '%s',
         apiUrl: '%s',
-        variant: 'premium',
+        embedStyle: '%s',
         theme: 'light',
-        autoplay: false,
+        compact: %s,
         showBranding: true,
-        width: '100%%',
-        maxWidth: '720px',
         enableAnimations: true,
-        showSocialShare: true
+        showRating: true,
+        showAvatar: true
       });
     } else {
       console.error('CenphiShareWidget not loaded');
@@ -203,11 +220,111 @@ func (c WidgetController) GetWidgetEmbed(w http.ResponseWriter, r *http.Request)
 		shareID,
 		shareID,
 		baseURL,
+		embedStyle,
+		compactStr,
 	)
 
-	utils.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
-		"share_id":   shareID,
-		"embed_code": embedCode,
-		"message":    "Embed code generated successfully",
-	})
+	// Return plain text embed code (not JSON) for ShareModal to display correctly
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(embedCode))
+}
+
+// GetCarouselEmbed generates HTML embed code for multiple shares in a carousel
+// GET /api/widget/embed/carousel?shareIds=id1,id2,id3&embedStyle=classic&carouselStyle=slide
+func (c WidgetController) GetCarouselEmbed(w http.ResponseWriter, r *http.Request) {
+	shareIDsParam := r.URL.Query().Get("shareIds")
+	if shareIDsParam == "" {
+		utils.RespondWithError(w, http.StatusBadRequest, "shareIds query parameter is required")
+		return
+	}
+
+	// Parse comma-separated share IDs
+	shareIDStrs := strings.Split(shareIDsParam, ",")
+	if len(shareIDStrs) == 0 {
+		utils.RespondWithError(w, http.StatusBadRequest, "At least one share ID is required")
+		return
+	}
+
+	// Validate all share IDs
+	for _, idStr := range shareIDStrs {
+		idStr = strings.TrimSpace(idStr)
+		_, err := uuid.Parse(idStr)
+		if err != nil {
+			utils.RespondWithError(w, http.StatusBadRequest, "Invalid share ID: "+idStr)
+			return
+		}
+	}
+
+	// Get customization options from query params
+	embedStyle := r.URL.Query().Get("embedStyle")
+	if embedStyle == "" {
+		embedStyle = "cinematic" // Default to cinematic
+	}
+	// Validate embedStyle
+	validEmbedStyles := map[string]bool{"cinematic": true, "magazine": true, "floating": true, "minimal": true}
+	if !validEmbedStyles[embedStyle] {
+		embedStyle = "cinematic"
+	}
+
+	carouselStyle := r.URL.Query().Get("carouselStyle")
+	if carouselStyle == "" {
+		carouselStyle = "slide" // Default to slide
+	}
+	// Validate carouselStyle
+	validCarouselStyles := map[string]bool{"slide": true, "stack": true, "fade": true, "multiItem": true}
+	if !validCarouselStyles[carouselStyle] {
+		carouselStyle = "slide"
+	}
+
+	// Get base URL from request
+	scheme := "https"
+	if r.TLS == nil {
+		scheme = "http"
+	}
+	baseURL := scheme + "://" + r.Host
+
+	// Generate carousel embed code with selected styles
+	shareIDsJSON := `["` + strings.Join(shareIDStrs, `","`) + `"]`
+	carouselID := "carousel-" + strings.TrimSpace(shareIDStrs[0])
+
+	embedCode := fmt.Sprintf(`<!-- Cenphi Carousel Widget -->
+<div id="cenphi-%s"></div>
+<script src="%s/share-widget.js"></script>
+<script>
+  (function() {
+    if (typeof window.CenphiShareWidget !== 'undefined') {
+      window.CenphiShareWidget.init({
+        container: '#cenphi-%s',
+        mode: 'carousel',
+        shareIds: %s,
+        apiUrl: '%s',
+        embedStyle: '%s',
+        carouselStyle: '%s',
+        theme: 'light',
+        showBranding: true,
+        enableAnimations: true,
+        carouselAutoplay: true,
+        carouselInterval: 6000,
+        showRating: true,
+        showAvatar: true,
+        disableTracking: false
+      });
+    } else {
+      console.error('CenphiShareWidget not loaded');
+    }
+  })();
+</script>`,
+		carouselID,
+		baseURL,
+		carouselID,
+		shareIDsJSON,
+		baseURL,
+		embedStyle,
+		carouselStyle,
+	)
+
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(embedCode))
 }
