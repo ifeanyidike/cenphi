@@ -117,7 +117,13 @@ func (tc *testController) TestGetSocialAuthURL(w http.ResponseWriter, r *http.Re
 	// Use a test user ID for testing (no auth required)
 	testUserID, _ := uuid.Parse("6fe5d4ae-3627-4103-af42-39fb40cc0a12")
 
-	authURL, err := tc.sharingClient.GetAuthURL(r.Context(), workspaceID, platform)
+	// Get return_url from query parameter or use default
+	returnURL := r.URL.Query().Get("return_url")
+	if returnURL == "" {
+		returnURL = "/settings" // Default return URL for testing
+	}
+
+	authURL, err := tc.sharingClient.GetAuthURL(r.Context(), workspaceID, platform, returnURL)
 	if err != nil {
 		tc.logger.Error("Failed to generate auth URL", zap.Error(err))
 		utils.RespondWithError(w, http.StatusInternalServerError, "Failed to generate authorization URL")
@@ -177,7 +183,7 @@ func (tc *testController) TestHandleOAuthCallback(w http.ResponseWriter, r *http
 			// UserID:      callbackData.UserID,
 		}
 
-		account, err := tc.sharingClient.HandleOAuthCallback(r.Context(), req)
+		account, oauthState, err := tc.sharingClient.HandleOAuthCallback(r.Context(), req)
 		if err != nil {
 			tc.logger.Error("Failed to handle social OAuth callback", zap.Error(err))
 			utils.RespondWithError(w, http.StatusBadRequest, "Failed to process OAuth callback")
@@ -185,9 +191,11 @@ func (tc *testController) TestHandleOAuthCallback(w http.ResponseWriter, r *http
 		}
 
 		utils.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
-			"message":  "Social OAuth successful",
-			"platform": callbackData.Platform,
-			"account":  account,
+			"message":     "Social OAuth successful",
+			"platform":    callbackData.Platform,
+			"account":     account,
+			"return_url":  oauthState.ReturnURL,
+			"workspace_id": oauthState.WorkspaceID,
 		})
 
 	default:

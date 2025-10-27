@@ -54,7 +54,7 @@ func (cdc *ChatWithDataController) StreamChatResponse(w http.ResponseWriter, r *
 	}
 
 	// Validate workspace access
-	err := cdc.chatService.ValidateWorkspaceAccess(r.Context())
+	userID, err := cdc.chatService.ValidateWorkspaceAccess(r.Context())
 	if err != nil {
 		cdc.logger.Error("Workspace access validation failed",
 			zap.Error(err),
@@ -65,10 +65,11 @@ func (cdc *ChatWithDataController) StreamChatResponse(w http.ResponseWriter, r *
 
 	cdc.logger.Info("Processing chat with data request",
 		zap.String("workspace_id", req.WorkspaceID.String()),
+		zap.String("user_id", userID.String()),
 		zap.String("message_preview", truncateString(req.Message, 100)))
 
 	// Stream the chat response
-	err = cdc.chatService.StreamChatResponse(r.Context(), req, w)
+	err = cdc.chatService.StreamChatResponse(r.Context(), req, w, userID)
 	if err != nil {
 		cdc.logger.Error("Failed to stream chat response", zap.Error(err))
 		// At this point, we may have already started streaming, so we can't return HTTP error
@@ -95,7 +96,7 @@ func (cdc *ChatWithDataController) GetTestimonialStats(w http.ResponseWriter, r 
 	}
 
 	// Validate workspace access
-	err = cdc.chatService.ValidateWorkspaceAccess(r.Context())
+	_, err = cdc.chatService.ValidateWorkspaceAccess(r.Context())
 	if err != nil {
 		http.Error(w, "Workspace not found or access denied", http.StatusForbidden)
 		return
@@ -123,11 +124,140 @@ func (cdc *ChatWithDataController) GetTestimonialStats(w http.ResponseWriter, r 
 		zap.String("workspace_id", workspaceID.String()))
 }
 
-// RegisterRoutes registers chat with data routes
-func (cdc *ChatWithDataController) RegisterRoutes(r chi.Router) {
-	r.Route("/ai", func(r chi.Router) {
-		r.Post("/chat-with-data", cdc.StreamChatResponse)
-		r.Get("/testimonial-stats/{workspaceId}", cdc.GetTestimonialStats)
+// GetConversationHistory retrieves active conversation sessions for a user
+func (cdc *ChatWithDataController) GetConversationHistory(w http.ResponseWriter, r *http.Request) {
+	workspaceIDStr := chi.URLParam(r, "workspaceId")
+	if workspaceIDStr == "" {
+		http.Error(w, "Missing workspace ID", http.StatusBadRequest)
+		return
+	}
+
+	workspaceID, err := uuid.Parse(workspaceIDStr)
+	if err != nil {
+		http.Error(w, "Invalid workspace ID", http.StatusBadRequest)
+		return
+	}
+
+	userID, err := cdc.chatService.ValidateWorkspaceAccess(r.Context())
+	// Validate workspace access
+	if err != nil {
+		http.Error(w, "Workspace not found or access denied", http.StatusForbidden)
+		return
+	}
+
+	// Get conversation history
+	limit := 10 // Default limit
+	sessions, err := cdc.chatService.GetConversationHistory(r.Context(), workspaceID, userID, limit)
+	if err != nil {
+		cdc.logger.Error("Failed to get conversation history", zap.Error(err))
+		http.Error(w, "Failed to retrieve conversation history", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"sessions": sessions,
+		"count":    len(sessions),
+	})
+}
+
+// GetConversationSession retrieves a specific conversation session
+func (cdc *ChatWithDataController) GetConversationSession(w http.ResponseWriter, r *http.Request) {
+	sessionIDStr := chi.URLParam(r, "sessionId")
+	if sessionIDStr == "" {
+		http.Error(w, "Missing session ID", http.StatusBadRequest)
+		return
+	}
+
+	sessionID, err := uuid.Parse(sessionIDStr)
+	if err != nil {
+		http.Error(w, "Invalid session ID", http.StatusBadRequest)
+		return
+	}
+
+	// Validate workspace access
+	if _, err := cdc.chatService.ValidateWorkspaceAccess(r.Context()); err != nil {
+		http.Error(w, "Workspace not found or access denied", http.StatusForbidden)
+		return
+	}
+
+	// Get the session
+	session, err := cdc.chatService.GetConversationSession(r.Context(), sessionID)
+	if err != nil {
+		cdc.logger.Error("Failed to get conversation session", zap.Error(err))
+		http.Error(w, "Session not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(session)
+}
+
+// DeactivateConversationSession ends a conversation session
+func (cdc *ChatWithDataController) DeactivateConversationSession(w http.ResponseWriter, r *http.Request) {
+	sessionIDStr := chi.URLParam(r, "sessionId")
+	if sessionIDStr == "" {
+		http.Error(w, "Missing session ID", http.StatusBadRequest)
+		return
+	}
+
+	sessionID, err := uuid.Parse(sessionIDStr)
+	if err != nil {
+		http.Error(w, "Invalid session ID", http.StatusBadRequest)
+		return
+	}
+
+	// Validate workspace access
+	if _, err := cdc.chatService.ValidateWorkspaceAccess(r.Context()); err != nil {
+		http.Error(w, "Workspace not found or access denied", http.StatusForbidden)
+		return
+	}
+
+	// Deactivate the session
+	if err := cdc.chatService.DeactivateConversationSession(r.Context(), sessionID); err != nil {
+		cdc.logger.Error("Failed to deactivate session", zap.Error(err))
+		http.Error(w, "Failed to end conversation", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": "Conversation ended successfully",
+	})
+}
+
+// GenerateFollowUpSuggestions generates contextual follow-up questions
+func (cdc *ChatWithDataController) GenerateFollowUpSuggestions(w http.ResponseWriter, r *http.Request) {
+	sessionIDStr := chi.URLParam(r, "sessionId")
+	if sessionIDStr == "" {
+		http.Error(w, "Missing session ID", http.StatusBadRequest)
+		return
+	}
+
+	sessionID, err := uuid.Parse(sessionIDStr)
+	if err != nil {
+		http.Error(w, "Invalid session ID", http.StatusBadRequest)
+		return
+	}
+
+	// Validate workspace access
+	if _, err := cdc.chatService.ValidateWorkspaceAccess(r.Context()); err != nil {
+		http.Error(w, "Workspace not found or access denied", http.StatusForbidden)
+		return
+	}
+
+	// Generate follow-up suggestions
+	suggestions, err := cdc.chatService.GenerateFollowUpSuggestions(r.Context(), sessionID)
+	if err != nil {
+		cdc.logger.Error("Failed to generate follow-up suggestions", zap.Error(err))
+		http.Error(w, "Failed to generate suggestions", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"suggestions": suggestions,
 	})
 }
 

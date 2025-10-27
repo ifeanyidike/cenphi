@@ -115,7 +115,7 @@
 // };
 
 import React, { useState } from "react";
-import { User, Sparkles, Copy, Download, Save, Check, FileDown, Loader2 } from "lucide-react";
+import { User, Sparkles, Copy, Download, Check, FileDown } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
@@ -123,7 +123,6 @@ import { Button } from "@/components/ui/button";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { marked } from "marked";
-import { authStore } from "@/stores/authStore";
 
 interface ChatMessageProps {
   message: {
@@ -133,18 +132,14 @@ interface ChatMessageProps {
     timestamp: Date;
   };
   isStreaming?: boolean;
-  workspaceId?: string;
 }
 
 export const ChatMessage: React.FC<ChatMessageProps> = ({
   message,
   isStreaming = false,
-  workspaceId,
 }) => {
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isSaved, setIsSaved] = useState(false);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(message.content);
@@ -257,55 +252,6 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
     }
   };
 
-  const handleSave = async () => {
-    if (!workspaceId) {
-      console.error("Cannot save: workspace ID is required");
-      return;
-    }
-
-    setIsSaving(true);
-
-    try {
-      const serverAddr = import.meta.env.VITE_API_URL;
-
-      // Get authentication token
-      const tokenInfo = await authStore.getToken();
-      const token = tokenInfo.token;
-
-      // Save the chat response as an artifact
-      const response = await fetch(`${serverAddr}/ai/save-artifact`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          processing_type: "chat_response",
-          text_content: message.content,
-          content_type: "markdown",
-          workspace_id: workspaceId,
-          is_user_saved: true,
-          is_streamed: false,
-          data: {
-            message_id: message.id,
-            timestamp: message.timestamp.toISOString(),
-            role: message.role,
-          },
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to save chat response: ${response.statusText}`);
-      }
-
-      setIsSaved(true);
-      setTimeout(() => setIsSaved(false), 3000);
-    } catch (error) {
-      console.error("Failed to save chat response:", error);
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   return (
     <div
@@ -595,30 +541,6 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                 <FileDown className="h-3 w-3 mr-1" />
                 PDF
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleSave}
-                disabled={isSaving || isSaved}
-                className="h-7 px-2 text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-100 disabled:opacity-50"
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                    Saving...
-                  </>
-                ) : isSaved ? (
-                  <>
-                    <Check className="h-3 w-3 mr-1 text-green-600" />
-                    Saved
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-3 w-3 mr-1" />
-                    Save
-                  </>
-                )}
-              </Button>
             </div>
           )}
         </div>
@@ -639,12 +561,20 @@ interface CodeBlockProps {
 }
 
 export const CodeBlock: React.FC<CodeBlockProps> = ({ language, children }) => {
+  // ALL hooks must be at the top, before any conditional returns
   const [Highlighter, setHighlighter] = React.useState<any>(null);
+  const [style, setStyle] = React.useState<any>(null);
 
   React.useEffect(() => {
     // Dynamically import to avoid TypeScript issues
     import("react-syntax-highlighter").then((mod) => {
       setHighlighter(() => mod.Prism);
+    });
+  }, []);
+
+  React.useEffect(() => {
+    import("react-syntax-highlighter/dist/esm/styles/prism").then((mod) => {
+      setStyle(mod.vscDarkPlus);
     });
   }, []);
 
@@ -661,15 +591,6 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({ language, children }) => {
       </div>
     );
   }
-
-  // Dynamic import of style
-  const [style, setStyle] = React.useState<any>(null);
-
-  React.useEffect(() => {
-    import("react-syntax-highlighter/dist/esm/styles/prism").then((mod) => {
-      setStyle(mod.vscDarkPlus);
-    });
-  }, []);
 
   return (
     <div className="my-4 rounded-lg overflow-hidden border border-gray-200 shadow-sm">

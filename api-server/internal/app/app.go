@@ -68,6 +68,7 @@ type App struct {
 	StudioController                controllers.StudioController
 	AIPostController                controllers.AIPostController
 	SEOTranscriptController         controllers.SEOTranscriptController
+	AnalyticsController             controllers.AnalyticsController
 	// Services
 	StorageService storage.StorageFactory
 	RateLimiter    *midware.RateLimiter
@@ -128,6 +129,7 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 	stageRepo := repositories.NewProcessingStageRepository(redisClient)
 	tempArtifactsRepo := repositories.NewTempArtifactsRepository(redisClient)
 	storageRepo := repositories.NewStorageRepository(redisClient)
+	analyticsRepo := repositories.NewAnalyticsRepository(redisClient)
 
 	sseManager := sse.NewSSEManager(cacheService, logger)
 	aiServiceManager := ai.NewAIServiceManager(cfg, cacheService, aiClient, audioExtractor, artifactsRepo, workspaceRepo, testimonialRepo, jobRepo, db, logger)
@@ -175,7 +177,9 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 		testimonialRepo, jobRepo, storageService, driveService, &mailingService, queueService,
 		aiServiceManager.AudioTranscriptionService, workspaceRepo, vectorStoreService, sseManager, db, redisClient, logger)
 	presetService := services.NewPresetService(db, logger, presetRepo)
-	chatWithDataService := services.NewChatWithDataService(logger, vectorStoreService, userRepo, &aiClient, db)
+	chatWithDataService := services.NewChatWithDataService(logger, vectorStoreService, userRepo, &aiClient, analyticsRepo, db)
+	analyticsService := services.NewAnalyticsService(logger, testimonialRepo, analyticsRepo, db)
+	exportService := services.NewExportService(logger, analyticsService, testimonialRepo, &artifactsRepo)
 	tempStorageService := storage.NewTempStorageService(db, storageRepo, storageService, logger)
 	sessionCleanupService := services.NewSessionCleanupService(db, sessionRepo, stageRepo, tempArtifactsRepo, artifactsRepo, tempStorageService, logger)
 	stepOrchestrator := ai.NewStepOrchestrator(sessionRepo, stageRepo, testimonialRepo, workspaceRepo, artifactsRepo, tempStorageService, sseManager, db, logger)
@@ -213,7 +217,7 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 	testimonialController := controllers.NewTestimonialController(testimonialService, logger)
 	workspaceController := controllers.NewWorkspaceController(workspaceService, testimonialService, logger)
 
-	socialController := controllers.NewSocialController(sharingService, logger)
+	socialController := controllers.NewSocialController(cfg, sharingService, logger)
 
 	aiTestController := controllers.NewAITestController(aiServiceManager, queueService, logger, cacheService)
 
@@ -230,6 +234,7 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 	aiPostController := controllers.NewAIPostController(aiClient, testimonialRepo, logger, db)
 	seoTranscriptController := controllers.NewSEOTranscriptController(testimonialRepo, &publicShareRepo, logger)
 	chatWithDataController := controllers.NewChatWithDataController(chatWithDataService, logger)
+	analyticsController := controllers.NewAnalyticsController(logger, analyticsService, chatWithDataService, exportService)
 	studioController := controllers.NewStudioController(db, sessionRepo, stageRepo, testimonialRepo, workspaceRepo, artifactsRepo, tempStorageService, sessionCleanupService, stepOrchestrator, media_intelligence, sseManager, logger)
 
 	// testimonialCollController := controllers.NewTestimonialCollectionController(testimonialCollService, logger)
@@ -282,6 +287,7 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 		AIPostController:                *aiPostController,
 		SEOTranscriptController:         *seoTranscriptController,
 		ChatWithDataController:          *chatWithDataController,
+		AnalyticsController:             *analyticsController,
 		StudioController:                studioController,
 		StorageService:                  *storageService,
 		QueueWorkers:                    queueWorkers,
@@ -384,6 +390,7 @@ func (app *App) Mount() http.Handler {
 		app.AIProcessorController,
 		app.PresetController,
 		app.ChatWithDataController,
+		app.AnalyticsController,
 		app.VectorStoreController,
 		app.StudioController,
 		app.TestController,

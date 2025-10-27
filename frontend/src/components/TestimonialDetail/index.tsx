@@ -498,7 +498,7 @@ const TestimonialDetail = observer(() => {
       openStudio("platform_optimization");
     } else if (featureId === "content_generation") {
       // Navigate to AI content hub or open content generation
-      navigate("/ai-content-hub");
+      navigate("/content-hub");
     } else {
       // Fallback: navigate to artifacts tab
       setActiveTab("artifacts");

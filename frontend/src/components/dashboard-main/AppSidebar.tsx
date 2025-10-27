@@ -104,10 +104,10 @@ export const AppSidebar = observer(
           isActive: isStudioRoute,
         },
         {
-          title: "AI Content Hub",
-          url: "/ai-content",
+          title: "Content Hub",
+          url: "/content-hub",
           icon: Sparkles,
-          isActive: currentPath === "/ai-content",
+          isActive: currentPath === "/content-hub",
         },
         {
           title: "Analytics",

@@ -3,6 +3,7 @@ package controllers
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/ifeanyidike/cenphi/internal/config"
 	"github.com/ifeanyidike/cenphi/internal/models"
 	"github.com/ifeanyidike/cenphi/internal/sharing"
 	"go.uber.org/zap"
@@ -18,12 +20,14 @@ import (
 type SocialController struct {
 	sharingClient sharing.SharingClient
 	logger        *zap.Logger
+	config        config.Config
 }
 
-func NewSocialController(sharingClient sharing.SharingClient, logger *zap.Logger) *SocialController {
+func NewSocialController(cfg config.Config, sharingClient sharing.SharingClient, logger *zap.Logger) *SocialController {
 	return &SocialController{
 		sharingClient: sharingClient,
 		logger:        logger,
+		config:        cfg,
 	}
 }
 
@@ -37,6 +41,7 @@ func NewSocialController(sharingClient sharing.SharingClient, logger *zap.Logger
 // @Produce json
 // @Param workspaceID path string true "Workspace ID"
 // @Param platform path string true "Platform (linkedin, facebook, twitter)"
+// @Param return_url query string false "URL to redirect user after OAuth (defaults to /settings)"
 // @Success 200 {object} map[string]string
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
@@ -67,6 +72,12 @@ func (c *SocialController) GetAuthURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get return_url from query parameter (optional)
+	returnURL := r.URL.Query().Get("return_url")
+	if returnURL == "" {
+		returnURL = "/settings" // Default to settings page
+	}
+
 	// Get user ID from context
 	// userID, err := middleware.GetUserFromContext(r.Context())
 	// if err != nil {
@@ -81,7 +92,7 @@ func (c *SocialController) GetAuthURL(w http.ResponseWriter, r *http.Request) {
 	// 	return
 	// }
 
-	authURL, err := c.sharingClient.GetAuthURL(r.Context(), workspaceID, platform)
+	authURL, err := c.sharingClient.GetAuthURL(r.Context(), workspaceID, platform, returnURL)
 	if err != nil {
 		c.logger.Error("Failed to generate auth URL", zap.Error(err))
 		c.respondError(w, http.StatusInternalServerError, "Failed to generate authorization URL", err)
@@ -123,12 +134,16 @@ func (c *SocialController) HandleOAuthCallback(w http.ResponseWriter, r *http.Re
 
 	if errorParam != "" {
 		c.logger.Error("OAuth error", zap.String("error", errorParam))
-		// Handle error appropriately
+		// Redirect to settings with error
+		redirectURL := fmt.Sprintf("%s/settings?error=%s", c.config.Server.BaseURL, errorParam)
+		http.Redirect(w, r, redirectURL, http.StatusFound)
 		return
 	}
 
 	if code == "" || state == "" {
-		c.respondError(w, http.StatusBadRequest, "Missing code or state parameter", nil)
+		// Redirect to settings with error
+		redirectURL := fmt.Sprintf("%s/settings?error=missing_parameters", c.config.Server.BaseURL)
+		http.Redirect(w, r, redirectURL, http.StatusFound)
 		return
 	}
 
@@ -140,18 +155,33 @@ func (c *SocialController) HandleOAuthCallback(w http.ResponseWriter, r *http.Re
 	// Validate request
 	if err := models.ValidateOAuthCallbackRequest(&req); err != nil {
 		c.logger.Error("OAuth callback validation failed", zap.Error(err))
-		c.respondError(w, http.StatusBadRequest, "Request validation failed", err)
+		redirectURL := fmt.Sprintf("%s/settings?error=validation_failed", c.config.Server.BaseURL)
+		http.Redirect(w, r, redirectURL, http.StatusFound)
 		return
 	}
 
-	account, err := c.sharingClient.HandleOAuthCallback(r.Context(), &req)
+	// Get both account and state (state contains returnURL)
+	account, oauthState, err := c.sharingClient.HandleOAuthCallback(r.Context(), &req)
 	if err != nil {
 		c.logger.Error("Failed to handle OAuth callback", zap.Error(err))
-		c.respondError(w, http.StatusInternalServerError, "Failed to connect account", err)
+		// Redirect to settings with error
+		redirectURL := fmt.Sprintf("%s/settings?error=connection_failed", c.config.Server.BaseURL)
+		http.Redirect(w, r, redirectURL, http.StatusFound)
 		return
 	}
 
-	c.respondSuccess(w, http.StatusOK, "Account connected successfully", account)
+	// Build redirect URL using returnURL from state
+	redirectURL := fmt.Sprintf("%s%s?platform=%s&status=connected&workspace_id=%s",
+		c.config.Server.BaseURL,
+		oauthState.ReturnURL,
+		account.Platform,
+		account.WorkspaceID.String())
+
+	c.logger.Info("Redirecting after OAuth success",
+		zap.String("redirect_url", redirectURL),
+		zap.String("platform", account.Platform))
+
+	http.Redirect(w, r, redirectURL, http.StatusFound)
 }
 
 // Account management endpoints

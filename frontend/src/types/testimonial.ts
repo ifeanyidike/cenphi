@@ -108,6 +108,9 @@ export type ProcessingType =
   | "text_polishing"
   | "translation"
   | "viral_analysis"
+  | "custom_pipeline"
+  | "data_analysis"
+  | "talk_to_data"
   | "narration";
 export interface TestimonialArtifact extends BaseEntity {
   testimonial_id: string;

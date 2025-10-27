@@ -881,7 +881,7 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
                 <div className="flex items-center gap-3 mb-2">
                   <div>
                     <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-                      AI Content Hub
+                      Content Hub
                     </h1>
                   </div>
                 </div>

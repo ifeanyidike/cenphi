@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 
@@ -552,6 +553,28 @@ func (r *testimonialRepository) FetchByWorkspaceID(ctx context.Context, workspac
 		argIndex++
 	}
 
+	// Date range filters
+	if filter.CreatedAfter != nil {
+		if tableRef != "" {
+			query += fmt.Sprintf(" AND %s.created_at >= $%d", tableRef, argIndex)
+		} else {
+			query += fmt.Sprintf(" AND created_at >= $%d", argIndex)
+		}
+		args = append(args, *filter.CreatedAfter)
+		argIndex++
+	}
+
+	if filter.CreatedBefore != nil {
+		if tableRef != "" {
+			query += fmt.Sprintf(" AND %s.created_at <= $%d", tableRef, argIndex)
+		} else {
+			query += fmt.Sprintf(" AND created_at <= $%d", argIndex)
+		}
+		args = append(args, *filter.CreatedBefore)
+		argIndex++
+	}
+
+	// Type filter (support both singular and array)
 	if filter.Type != "" {
 		if tableRef != "" {
 			query += fmt.Sprintf(" AND %s.type = $%d", tableRef, argIndex)
@@ -560,8 +583,17 @@ func (r *testimonialRepository) FetchByWorkspaceID(ctx context.Context, workspac
 		}
 		args = append(args, filter.Type)
 		argIndex++
+	} else if len(filter.Types) > 0 {
+		if tableRef != "" {
+			query += fmt.Sprintf(" AND %s.type = ANY($%d)", tableRef, argIndex)
+		} else {
+			query += fmt.Sprintf(" AND type = ANY($%d)", argIndex)
+		}
+		args = append(args, pq.Array(filter.Types))
+		argIndex++
 	}
 
+	// Rating filters
 	if filter.MinRating != nil {
 		if tableRef != "" {
 			query += fmt.Sprintf(" AND %s.rating >= $%d", tableRef, argIndex)
@@ -569,6 +601,84 @@ func (r *testimonialRepository) FetchByWorkspaceID(ctx context.Context, workspac
 			query += fmt.Sprintf(" AND rating >= $%d", argIndex)
 		}
 		args = append(args, *filter.MinRating)
+		argIndex++
+	}
+
+	if filter.MaxRating != nil {
+		if tableRef != "" {
+			query += fmt.Sprintf(" AND %s.rating <= $%d", tableRef, argIndex)
+		} else {
+			query += fmt.Sprintf(" AND rating <= $%d", argIndex)
+		}
+		args = append(args, *filter.MaxRating)
+		argIndex++
+	}
+
+	// Sentiment filter (convert sentiment labels to score ranges)
+	if len(filter.Sentiments) > 0 {
+		sentimentConditions := []string{}
+		for _, sentiment := range filter.Sentiments {
+			switch sentiment {
+			case "positive":
+				if tableRef != "" {
+					sentimentConditions = append(sentimentConditions, fmt.Sprintf("%s.sentiment_score >= 0.6", tableRef))
+				} else {
+					sentimentConditions = append(sentimentConditions, "sentiment_score >= 0.6")
+				}
+			case "neutral":
+				if tableRef != "" {
+					sentimentConditions = append(sentimentConditions, fmt.Sprintf("(%s.sentiment_score >= 0.4 AND %s.sentiment_score < 0.6)", tableRef, tableRef))
+				} else {
+					sentimentConditions = append(sentimentConditions, "(sentiment_score >= 0.4 AND sentiment_score < 0.6)")
+				}
+			case "negative":
+				if tableRef != "" {
+					sentimentConditions = append(sentimentConditions, fmt.Sprintf("%s.sentiment_score < 0.4", tableRef))
+				} else {
+					sentimentConditions = append(sentimentConditions, "sentiment_score < 0.4")
+				}
+			}
+		}
+		if len(sentimentConditions) > 0 {
+			query += " AND (" + strings.Join(sentimentConditions, " OR ") + ")"
+		}
+	}
+
+	// Collection method filter
+	if len(filter.CollectionMethods) > 0 {
+		if tableRef != "" {
+			query += fmt.Sprintf(" AND %s.collection_method = ANY($%d)", tableRef, argIndex)
+		} else {
+			query += fmt.Sprintf(" AND collection_method = ANY($%d)", argIndex)
+		}
+		args = append(args, pq.Array(filter.CollectionMethods))
+		argIndex++
+	}
+
+	// Company filter
+	if len(filter.Companies) > 0 {
+		if tableRef != "" {
+			query += fmt.Sprintf(" AND %s.author_company = ANY($%d)", tableRef, argIndex)
+		} else {
+			query += fmt.Sprintf(" AND author_company = ANY($%d)", argIndex)
+		}
+		// Convert []string to []*string for nullable field
+		companyPtrs := make([]*string, len(filter.Companies))
+		for i := range filter.Companies {
+			companyPtrs[i] = &filter.Companies[i]
+		}
+		args = append(args, pq.Array(companyPtrs))
+		argIndex++
+	}
+
+	// Tags filter (array overlap)
+	if len(filter.Tags) > 0 {
+		if tableRef != "" {
+			query += fmt.Sprintf(" AND %s.tags && $%d", tableRef, argIndex)
+		} else {
+			query += fmt.Sprintf(" AND tags && $%d", argIndex)
+		}
+		args = append(args, pq.Array(filter.Tags))
 		argIndex++
 	}
 

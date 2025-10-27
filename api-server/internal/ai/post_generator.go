@@ -298,6 +298,76 @@ Do not include markdown formatting, just the raw JSON array.`,
 	return variations, nil
 }
 
+// StreamLinkedInPost streams the generation of a LinkedIn post in real-time
+func (ai AIClient) StreamLinkedInPost(ctx context.Context, testimonial *models.Testimonial, writer func(chunk string) error) error {
+	content := extractTestimonialContent(testimonial)
+	if content == "" {
+		return fmt.Errorf("no content available in testimonial")
+	}
+
+	constraints := platformConstraints["linkedin"]
+
+	// Build prompt for LinkedIn
+	systemPrompt := fmt.Sprintf(`You are an expert LinkedIn content creator.
+
+Your task is to transform this customer testimonial into a compelling LinkedIn post that:
+- Matches a %s tone
+- Stays within %d characters (including spaces and hashtags)
+- Includes up to %d relevant, professional hashtags
+- Drives engagement and authenticity
+- Highlights customer success and value
+- Includes a subtle call-to-action
+
+Write the post directly - no JSON, no formatting, just the natural post text with hashtags at the end.`,
+		constraints.tone, constraints.maxLength, constraints.maxHashtags)
+
+	userPrompt := buildLinkedInUserPrompt(content, testimonial)
+
+	// Call LLM with streaming enabled
+	resp, err := ai.makeClaudeCall(ctx, userPrompt, systemPrompt, true)
+	if err != nil {
+		return fmt.Errorf("LLM streaming call failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Stream the response
+	return streamClaudeResponse(resp, writer)
+}
+
+func buildLinkedInUserPrompt(content string, testimonial *models.Testimonial) string {
+	var context strings.Builder
+	context.WriteString(fmt.Sprintf("Testimonial: %s\n\n", content))
+
+	if testimonial.AuthorName != nil {
+		context.WriteString(fmt.Sprintf("Author: %s\n", *testimonial.AuthorName))
+	}
+	if testimonial.AuthorCompany != nil {
+		context.WriteString(fmt.Sprintf("Company: %s\n", *testimonial.AuthorCompany))
+	}
+	if testimonial.AuthorTitle != nil {
+		context.WriteString(fmt.Sprintf("Title: %s\n", *testimonial.AuthorTitle))
+	}
+	if testimonial.Rating != nil {
+		context.WriteString(fmt.Sprintf("Rating: %d/5 stars\n", *testimonial.Rating))
+	}
+
+	prompt := fmt.Sprintf(`%s
+Create a compelling LinkedIn post based on this testimonial.
+
+Requirements:
+- Professional and engaging tone
+- Focus on the customer's success story and transformation
+- Make it authentic and relatable
+- Include 3-5 relevant professional hashtags at the end
+- Keep it concise but impactful
+- Add a subtle call-to-action
+
+Write naturally as if you're sharing a success story with your network.`,
+		context.String())
+
+	return prompt
+}
+
 func parsePostVariations(response, platform string) ([]*models.AIPostSuggestion, error) {
 	// Clean response
 	cleaned := strings.TrimSpace(response)

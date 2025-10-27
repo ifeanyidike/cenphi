@@ -29,6 +29,8 @@ import {
   CheckCircle,
   Eye,
   Image,
+  Images,
+  FileText,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -203,6 +205,9 @@ const ShareDrawer: React.FC<ShareDrawerProps> = ({
   const [shareStatus, setShareStatus] = useState<
     "idle" | "success" | "scheduled"
   >("idle");
+  const [isGeneratingLinkedInPost, setIsGeneratingLinkedInPost] =
+    useState(false);
+  const [useAIGenerated, setUseAIGenerated] = useState(true);
 
   const currentWorkspace = workspaceHub.workspace;
   const serverAddr = import.meta.env.VITE_API_URL;
@@ -472,8 +477,8 @@ const ShareDrawer: React.FC<ShareDrawerProps> = ({
       );
 
       if (response.ok) {
-        const data = await response.json();
-        const linkedinAccounts = data.filter(
+        const result = await response.json();
+        const linkedinAccounts = result.data.filter(
           (acc: any) => acc.platform === "linkedin"
         );
         setLinkedInAccounts(linkedinAccounts);
@@ -494,8 +499,12 @@ const ShareDrawer: React.FC<ShareDrawerProps> = ({
 
     setIsLoadingAccounts(true);
     try {
+      // Determine current path and pass it as return URL with tab indication
+      const currentPath = window.location.pathname;
+      const returnUrl = `${currentPath}?linkedin_connected=true&open_share_drawer=true`;
+
       const response = await fetch(
-        `${serverAddr}/social/workspaces/${currentWorkspace.id}/social/auth/linkedin`,
+        `${serverAddr}/social/workspaces/${currentWorkspace.id}/social/auth/linkedin?return_url=${encodeURIComponent(returnUrl)}`,
         {
           headers: {
             Authorization: `Bearer ${await authStore.getToken().then((r: any) => r.token)}`,
@@ -522,6 +531,7 @@ const ShareDrawer: React.FC<ShareDrawerProps> = ({
     if (!currentWorkspace?.id || !selectedAccount) return;
 
     setIsLoadingAI(true);
+    setError(null);
     try {
       const response = await fetch(
         `${serverAddr}/social/workspaces/${currentWorkspace.id}/ai/best-time`,
@@ -540,19 +550,113 @@ const ShareDrawer: React.FC<ShareDrawerProps> = ({
       );
 
       if (response.ok) {
-        const suggestion = await response.json();
-        setAiSuggestion(suggestion);
+        const result = await response.json();
+        // Unwrap the data field from the response
+        const suggestion = result.data || result;
 
-        const suggestedDate = new Date(suggestion.suggested_time);
-        setScheduledDate(suggestedDate.toISOString().split("T")[0]);
-        setScheduledTime(suggestedDate.toTimeString().slice(0, 5));
+        // Validate the suggestion data before using it
+        if (
+          suggestion &&
+          suggestion.suggested_time &&
+          typeof suggestion.confidence_score === "number"
+        ) {
+          setAiSuggestion(suggestion);
+
+          const suggestedDate = new Date(suggestion.suggested_time);
+          if (!isNaN(suggestedDate.getTime())) {
+            setScheduledDate(suggestedDate.toISOString().split("T")[0]);
+            setScheduledTime(suggestedDate.toTimeString().slice(0, 5));
+          }
+        } else {
+          console.error("Invalid AI suggestion response:", result);
+          setError(
+            "AI suggestion unavailable. Please try scheduling manually."
+          );
+        }
+      } else {
+        const errorData = await response.json();
+        console.error("Failed to get AI suggestion:", errorData);
+        setError("AI suggestion unavailable. Please try scheduling manually.");
       }
     } catch (error) {
       console.error("Failed to get AI suggestion:", error);
+      setError("AI suggestion unavailable. Please try scheduling manually.");
     } finally {
       setIsLoadingAI(false);
     }
   }, [currentWorkspace?.id, selectedAccount, artifact, serverAddr]);
+
+  const generateLinkedInPost = useCallback(async () => {
+    if (!artifact.testimonial_id) {
+      setError("No testimonial associated with this artifact");
+      return;
+    }
+
+    setIsGeneratingLinkedInPost(true);
+    setError(null);
+    setLinkedInMessage(""); // Clear existing message
+
+    try {
+      const token = await authStore.getToken().then((r: any) => r.token);
+
+      // Use fetch with streaming instead of EventSource (EventSource doesn't support custom headers)
+      const response = await fetch(
+        `${serverAddr}/testimonials/${artifact.testimonial_id}/ai/stream-linkedin-post`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok || !response.body) {
+        throw new Error("Failed to start stream");
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      let accumulatedPost = "";
+      let buffer = "";
+
+      // Read the stream
+      while (true) {
+        const { done, value } = await reader.read();
+
+        if (done) {
+          setIsGeneratingLinkedInPost(false);
+          break;
+        }
+
+        // Decode the chunk
+        buffer += decoder.decode(value, { stream: true });
+
+        // Process SSE messages in buffer
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || ""; // Keep incomplete line in buffer
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const data = line.slice(6); // Remove "data: " prefix
+            accumulatedPost += data;
+            setLinkedInMessage(accumulatedPost);
+          } else if (line.startsWith("event: done")) {
+            setIsGeneratingLinkedInPost(false);
+            return;
+          } else if (line.startsWith("event: error")) {
+            setError("Failed to generate AI post");
+            setIsGeneratingLinkedInPost(false);
+            return;
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Failed to generate LinkedIn post:", err);
+      setError("Failed to generate AI post. Please try again.");
+      setIsGeneratingLinkedInPost(false);
+    }
+  }, [artifact.testimonial_id, serverAddr]);
 
   const handleLinkedInShare = useCallback(async () => {
     if (!currentWorkspace?.id || !selectedAccount) return;
@@ -634,7 +738,6 @@ const ShareDrawer: React.FC<ShareDrawerProps> = ({
           body: JSON.stringify({
             content: linkedInMessage,
             social_account_id: selectedAccount,
-            testimonial_id: artifact.testimonial_id,
             testimonial_ids: testimonialIds,
             post_type: postType,
             media_urls: mediaUrls,
@@ -794,6 +897,46 @@ const ShareDrawer: React.FC<ShareDrawerProps> = ({
       getAITimeSuggestion();
     }
   }, [shareMode, selectedAccount, aiSuggestion, getAITimeSuggestion]);
+
+  // Handle OAuth return - automatically open drawer and select LinkedIn tab
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const linkedinConnected = urlParams.get("linkedin_connected");
+    const openShareDrawer = urlParams.get("open_share_drawer");
+
+    if (linkedinConnected === "true" && openShareDrawer === "true") {
+      // Open the drawer
+      onOpenChange(true);
+
+      // Select LinkedIn tab
+      setActiveTab("linkedin");
+
+      // Wait a bit for backend to persist the account, then reload accounts
+      setTimeout(() => {
+        loadLinkedInAccounts();
+      }, 800);
+
+      // Clean up URL parameters
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+    }
+  }, [onOpenChange, loadLinkedInAccounts]);
+
+  // Also check for OAuth return when drawer opens
+  useEffect(() => {
+    if (isOpen) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const linkedinConnected = urlParams.get("linkedin_connected");
+
+      if (linkedinConnected === "true") {
+        // OAuth just completed, ensure we select LinkedIn tab and reload accounts after a delay
+        setActiveTab("linkedin");
+        setTimeout(() => {
+          loadLinkedInAccounts();
+        }, 800);
+      }
+    }
+  }, [isOpen, loadLinkedInAccounts]);
 
   useEffect(() => {
     if (shareLink) {
@@ -1980,15 +2123,107 @@ const ShareDrawer: React.FC<ShareDrawerProps> = ({
 
                 {linkedInAccounts.length > 0 && (
                   <>
-                    {/* Content Preview */}
-                    {artifact.asset_url && (
-                      <div className="rounded-lg border border-slate-200/50 overflow-hidden bg-white/50">
-                        <video
-                          src={artifact.asset_url}
-                          className="w-full h-32 object-cover bg-slate-900"
-                          muted
+                    {/* Multi-Post Toggle */}
+                    {artifacts && artifacts.length > 1 && (
+                      <div className="flex items-center gap-2 p-3 rounded-lg border border-purple-200/50 bg-gradient-to-r from-purple-50/30 to-blue-50/30">
+                        <Checkbox
+                          id="linkedin-multi-post"
+                          checked={isCarouselMode}
+                          onCheckedChange={(checked) =>
+                            setIsCarouselMode(checked as boolean)
+                          }
                         />
+                        <Label
+                          htmlFor="linkedin-multi-post"
+                          className="text-[10px] font-semibold cursor-pointer flex items-center gap-1.5"
+                        >
+                          <Images className="h-3.5 w-3.5 text-purple-600" />
+                          Share multiple items in carousel (2-9 images)
+                        </Label>
                       </div>
+                    )}
+
+                    {/* Content Selection */}
+                    {isCarouselMode && artifacts && artifacts.length > 1 ? (
+                      <div className="space-y-3">
+                        <Label className="text-[11px] font-semibold text-slate-900">
+                          Select Items ({selectedArtifacts.length} selected)
+                        </Label>
+                        <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+                          {artifacts.map((item) => (
+                            <div
+                              key={item.id}
+                              className={cn(
+                                "relative p-2 rounded-lg border cursor-pointer transition-all",
+                                selectedArtifacts.includes(item.id)
+                                  ? "border-blue-500 bg-blue-50"
+                                  : "border-slate-200/50 bg-white/50 hover:bg-white"
+                              )}
+                              onClick={() => {
+                                if (selectedArtifacts.includes(item.id)) {
+                                  setSelectedArtifacts(
+                                    selectedArtifacts.filter(
+                                      (id) => id !== item.id
+                                    )
+                                  );
+                                } else {
+                                  if (selectedArtifacts.length < 9) {
+                                    setSelectedArtifacts([
+                                      ...selectedArtifacts,
+                                      item.id,
+                                    ]);
+                                  }
+                                }
+                              }}
+                            >
+                              <div className="absolute top-1 right-1 z-10">
+                                <Checkbox
+                                  checked={selectedArtifacts.includes(item.id)}
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              </div>
+                              {item.asset_url && (
+                                <div className="rounded overflow-hidden bg-slate-900 mb-1.5">
+                                  {item.content_type?.startsWith("video/") ? (
+                                    <video
+                                      src={item.asset_url}
+                                      className="w-full h-20 object-cover"
+                                      muted
+                                    />
+                                  ) : (
+                                    <img
+                                      src={item.asset_url}
+                                      alt=""
+                                      className="w-full h-20 object-cover"
+                                    />
+                                  )}
+                                </div>
+                              )}
+                              <p className="text-[9px] text-slate-600 truncate">
+                                {item.processing_type
+                                  .replace(/_/g, " ")
+                                  .replace(/\b\w/g, (l) => l.toUpperCase())}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                        {selectedArtifacts.length > 9 && (
+                          <p className="text-[9px] text-red-600">
+                            LinkedIn supports maximum 9 images in carousel
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      /* Single Post Preview */
+                      artifact.asset_url && (
+                        <div className="rounded-lg border border-slate-200/50 overflow-hidden bg-white/50">
+                          <video
+                            src={artifact.asset_url}
+                            className="w-full h-32 object-cover bg-slate-900"
+                            muted
+                          />
+                        </div>
+                      )
                     )}
 
                     {/* Share Timing */}
@@ -2120,19 +2355,85 @@ const ShareDrawer: React.FC<ShareDrawerProps> = ({
                     </div>
 
                     {/* Message */}
-                    <div className="space-y-2">
-                      <Label className="text-[11px] font-semibold text-slate-900">
-                        Message
-                      </Label>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-[11px] font-semibold text-slate-900">
+                          Message
+                        </Label>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setUseAIGenerated(!useAIGenerated)}
+                            className="flex items-center gap-1.5 text-[10px] text-slate-600 hover:text-slate-900 transition-colors"
+                          >
+                            {useAIGenerated ? (
+                              <>
+                                <Sparkles className="h-3 w-3 text-purple-600" />
+                                AI Mode
+                              </>
+                            ) : (
+                              <>
+                                <FileText className="h-3 w-3" />
+                                Manual Mode
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      {useAIGenerated && (
+                        <div className="p-3 rounded-lg border border-purple-200/50 bg-gradient-to-br from-purple-50/30 to-blue-50/30">
+                          <div className="flex items-start gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
+                              <Sparkles className="h-4 w-4 text-purple-600" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-[10px] font-semibold text-slate-900 mb-1">
+                                AI-Optimized Post
+                              </p>
+                              <p className="text-[9px] text-slate-600 mb-2">
+                                Generate an engaging LinkedIn post optimized for
+                                your audience
+                              </p>
+                              <Button
+                                onClick={generateLinkedInPost}
+                                disabled={isGeneratingLinkedInPost}
+                                size="sm"
+                                className="h-7 px-3 text-[10px] bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                              >
+                                {isGeneratingLinkedInPost ? (
+                                  <>
+                                    <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+                                    Generating...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Sparkles className="h-3 w-3 mr-1.5" />
+                                    Generate Post
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
                       <Textarea
                         value={linkedInMessage}
                         onChange={(e) => setLinkedInMessage(e.target.value)}
-                        placeholder="Write your LinkedIn post..."
+                        placeholder={
+                          useAIGenerated
+                            ? "Click 'Generate Post' to create AI-optimized content, or type your own message..."
+                            : "Write your LinkedIn post..."
+                        }
                         className="min-h-[100px] text-[11px]"
                         maxLength={3000}
                       />
                       <div className="flex justify-between text-[9px] text-slate-500">
-                        <span>Add hashtags and mentions for better reach</span>
+                        <span>
+                          {useAIGenerated
+                            ? "AI-generated content can be edited"
+                            : "Add hashtags and mentions for better reach"}
+                        </span>
                         <span>{linkedInMessage.length}/3000</span>
                       </div>
                     </div>

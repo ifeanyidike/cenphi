@@ -167,14 +167,14 @@ export const router = createBrowserRouter([
           },
           {
             path: "/studio/stories",
-            element: <Navigate to="/ai-content" replace />,
+            element: <Navigate to="/content-hub" replace />,
           },
           {
             path: "/studio/stories/:jobId",
-            element: <Navigate to="/ai-content" replace />,
+            element: <Navigate to="/content-hub" replace />,
           },
           {
-            path: "/ai-content",
+            path: "/content-hub",
             element: (
               <DashboardErrorBoundary
                 ErrorComponent={DashboardErrorComponent}

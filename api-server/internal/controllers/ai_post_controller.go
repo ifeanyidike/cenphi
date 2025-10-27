@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -200,4 +201,75 @@ func (c *AIPostController) GeneratePostVariations(w http.ResponseWriter, r *http
 		"count":          len(variations),
 		"variations":     variations,
 	})
+}
+
+// StreamLinkedInPost streams the generation of a LinkedIn post in real-time
+// POST /testimonials/{id}/ai/stream-linkedin-post
+func (c *AIPostController) StreamLinkedInPost(w http.ResponseWriter, r *http.Request) {
+	testimonialID := chi.URLParam(r, "id")
+	if testimonialID == "" {
+		http.Error(w, "testimonial ID required", http.StatusBadRequest)
+		return
+	}
+
+	id, err := uuid.Parse(testimonialID)
+	if err != nil {
+		http.Error(w, "invalid testimonial ID", http.StatusBadRequest)
+		return
+	}
+
+	// Get testimonial
+	testimonial, err := c.testimonialRepo.FetchByID(r.Context(), id, c.db)
+	if err != nil {
+		c.logger.Error("Failed to get testimonial",
+			zap.Error(err),
+			zap.String("testimonial_id", testimonialID))
+		http.Error(w, "testimonial not found", http.StatusNotFound)
+		return
+	}
+
+	// Set up SSE headers
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	// Flush headers immediately
+	if f, ok := w.(http.Flusher); ok {
+		f.Flush()
+	}
+
+	// Stream the LinkedIn post generation
+	err = c.aiClient.StreamLinkedInPost(r.Context(), testimonial, func(chunk string) error {
+		// Send SSE event
+		_, writeErr := fmt.Fprintf(w, "data: %s\n\n", chunk)
+		if writeErr != nil {
+			return writeErr
+		}
+
+		// Flush after each chunk
+		if f, ok := w.(http.Flusher); ok {
+			f.Flush()
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		c.logger.Error("Failed to stream LinkedIn post",
+			zap.Error(err),
+			zap.String("testimonial_id", testimonialID))
+		// Send error event
+		fmt.Fprintf(w, "event: error\ndata: %s\n\n", err.Error())
+		if f, ok := w.(http.Flusher); ok {
+			f.Flush()
+		}
+		return
+	}
+
+	// Send completion event
+	fmt.Fprintf(w, "event: done\ndata: {\"status\":\"completed\"}\n\n")
+	if f, ok := w.(http.Flusher); ok {
+		f.Flush()
+	}
 }

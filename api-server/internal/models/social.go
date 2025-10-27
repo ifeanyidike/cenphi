@@ -133,6 +133,7 @@ type OAuthState struct {
 	WorkspaceID uuid.UUID `json:"workspace_id"`
 	UserID      uuid.UUID `json:"user_id"`
 	Platform    string    `json:"platform"`
+	ReturnURL   string    `json:"return_url"` // URL to redirect user after OAuth
 	CreatedAt   time.Time `json:"created_at"`
 }
 

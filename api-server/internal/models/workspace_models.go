@@ -61,6 +61,11 @@ type Workspace struct {
 	UpdatedAt         time.Time       `json:"updated_at" db:"updated_at"`
 }
 
+type WorkspaceWithUserID struct {
+	Workspace
+	UserID uuid.UUID `json:"user_id" db:"user_id"`
+}
+
 type GetWorkspaceDataParam struct {
 	Workspace
 	Testimonials []Testimonial

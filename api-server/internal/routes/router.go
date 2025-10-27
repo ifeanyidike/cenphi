@@ -32,6 +32,7 @@ func RegisterRoutes(
 	aiProcessorController controllers.AIProcessorController,
 	presetController controllers.PresetController,
 	chatWithDataController controllers.ChatWithDataController,
+	analyticsController controllers.AnalyticsController,
 	vectorStoreController controllers.VectorStoreController,
 	studioController controllers.StudioController,
 	testController controllers.TestController,
@@ -65,6 +66,7 @@ func RegisterRoutes(
 		RegisterAIProcessorRoutes(r, aiProcessorController, rateLimiter, authMiddleware)
 		RegisterPresetRoutes(r, presetController, authMiddleware)
 		RegisterChatWithDataRoutes(r, chatWithDataController, authMiddleware)
+		RegisterAnalyticsRoutes(r, analyticsController, authMiddleware)
 		RegisterVectorStoreRoutes(r, vectorStoreController, authMiddleware)
 		RegisterStudioRoutes(r, studioController, authMiddleware)
 		RegisterTestRoutes(r, testController)
@@ -491,6 +493,33 @@ func RegisterChatWithDataRoutes(r chi.Router, controller controllers.ChatWithDat
 		// Chat endpoints
 		r.Post("/chat-with-data", controller.StreamChatResponse)
 		r.Get("/testimonial-stats/{workspaceId}", controller.GetTestimonialStats)
+
+		// Conversation session management
+		r.Get("/chat-with-data/sessions/{workspaceId}", controller.GetConversationHistory)
+		r.Get("/chat-with-data/sessions/detail/{sessionId}", controller.GetConversationSession)
+		r.Delete("/chat-with-data/sessions/{sessionId}", controller.DeactivateConversationSession)
+		r.Get("/chat-with-data/follow-ups/{sessionId}", controller.GenerateFollowUpSuggestions)
+	})
+}
+
+func RegisterAnalyticsRoutes(r chi.Router, controller controllers.AnalyticsController, authMiddleware middleware.AuthMiddleware) {
+	r.Route("/ai/analytics", func(r chi.Router) {
+		r.Use(authMiddleware.VerifyToken)
+
+		// Analytics endpoints
+		r.Get("/sentiment-timeline", controller.GetSentimentTimeline)
+		r.Post("/compare-periods", controller.ComparePeriods)
+		r.Get("/word-cloud", controller.GetWordCloud)
+		r.Get("/feature-heatmap", controller.GetFeatureHeatmap)
+
+		// Segment analysis endpoints
+		r.Get("/segments/{workspaceId}", controller.ListSegments)
+		r.Get("/segments/{segmentId}/analysis", controller.GetSegmentAnalysis)
+		r.Post("/segments", controller.CreateSegment)
+		r.Post("/segments/compare", controller.CompareSegments)
+
+		// Export endpoint
+		r.Get("/export", controller.ExportAnalytics)
 	})
 }
 
@@ -602,6 +631,9 @@ func RegisterAIPostRoutes(r chi.Router, controller controllers.AIPostController,
 
 		// Generate variations for A/B testing
 		r.Post("/generate-variations/{platform}", controller.GeneratePostVariations)
+
+		// Stream LinkedIn post generation (real-time)
+		r.Post("/stream-linkedin-post", controller.StreamLinkedInPost)
 	})
 }
 

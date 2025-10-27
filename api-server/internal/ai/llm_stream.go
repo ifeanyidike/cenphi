@@ -252,3 +252,52 @@ func (s *AIClient) streamClaude(ctx context.Context, prompt, systemPrompt string
 	}
 	return scanner.Err()
 }
+
+// streamClaudeResponse streams Claude API response using a writer callback
+func streamClaudeResponse(resp *http.Response, writer func(chunk string) error) error {
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("claude API error (%d): %s", resp.StatusCode, string(body))
+	}
+
+	scanner := bufio.NewScanner(resp.Body)
+	// Increase buffer size for large SSE lines
+	maxToken := 512 * 1024
+	buf := make([]byte, 0, 64*1024)
+	scanner.Buffer(buf, maxToken)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "data: ") {
+			data := strings.TrimPrefix(line, "data: ")
+
+			var streamResp struct {
+				Type  string `json:"type"`
+				Delta struct {
+					Type string `json:"type"`
+					Text string `json:"text"`
+				} `json:"delta"`
+			}
+
+			if err := json.Unmarshal([]byte(data), &streamResp); err != nil {
+				continue
+			}
+
+			if streamResp.Type == "content_block_delta" && streamResp.Delta.Type == "text_delta" {
+				// Send the text chunk to the writer
+				if err := writer(streamResp.Delta.Text); err != nil {
+					return fmt.Errorf("writer error: %w", err)
+				}
+			} else if streamResp.Type == "message_stop" {
+				// Stream complete
+				return nil
+			}
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("scanner error: %w", err)
+	}
+
+	return nil
+}

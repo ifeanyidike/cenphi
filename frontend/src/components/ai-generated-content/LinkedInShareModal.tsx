@@ -94,6 +94,8 @@ const LinkedInShareModal: React.FC<LinkedInShareModalProps> = ({
     "idle" | "sharing" | "scheduled" | "success" | "error"
   >("idle");
   const [error, setError] = useState<string | null>(null);
+  const [isGeneratingPost, setIsGeneratingPost] = useState(false);
+  const [useAIGenerated, setUseAIGenerated] = useState(true);
 
   const currentWorkspace = workspaceHub.workspace;
   const serverAddr = import.meta.env.VITE_API_URL;
@@ -123,8 +125,12 @@ const LinkedInShareModal: React.FC<LinkedInShareModalProps> = ({
 
     setIsLoadingAccounts(true);
     try {
+      // Determine current path and pass it as return URL with modal indication
+      const currentPath = window.location.pathname;
+      const returnUrl = `${currentPath}?linkedin_connected=true&open_linkedin_modal=true`;
+
       const response = await fetch(
-        `${serverAddr}/social/workspaces/${currentWorkspace.id}/social/auth/linkedin`,
+        `${serverAddr}/social/workspaces/${currentWorkspace.id}/social/auth/linkedin?return_url=${encodeURIComponent(returnUrl)}`,
         {
           headers: {
             Authorization: `Bearer ${await authStore.getToken().then((r: any) => r.token)}`,
@@ -192,6 +198,7 @@ const LinkedInShareModal: React.FC<LinkedInShareModalProps> = ({
     if (!currentWorkspace?.id || !selectedAccount) return;
 
     setIsLoadingAI(true);
+    setError(null);
     try {
       const response = await fetch(
         `${serverAddr}/social/workspaces/${currentWorkspace.id}/ai/best-time`,
@@ -210,20 +217,109 @@ const LinkedInShareModal: React.FC<LinkedInShareModalProps> = ({
       );
 
       if (response.ok) {
-        const suggestion = await response.json();
-        setAiSuggestion(suggestion);
+        const result = await response.json();
+        // Unwrap the data field from the response
+        const suggestion = result.data || result;
 
-        // Set the suggested time
-        const suggestedDate = new Date(suggestion.suggested_time);
-        setScheduledDate(suggestedDate.toISOString().split("T")[0]);
-        setScheduledTime(suggestedDate.toTimeString().slice(0, 5));
+        // Validate the suggestion data before using it
+        if (suggestion && suggestion.suggested_time && typeof suggestion.confidence_score === 'number') {
+          setAiSuggestion(suggestion);
+
+          // Set the suggested time
+          const suggestedDate = new Date(suggestion.suggested_time);
+          if (!isNaN(suggestedDate.getTime())) {
+            setScheduledDate(suggestedDate.toISOString().split("T")[0]);
+            setScheduledTime(suggestedDate.toTimeString().slice(0, 5));
+          }
+        } else {
+          console.error("Invalid AI suggestion response:", result);
+          setError("AI suggestion unavailable. Please try scheduling manually.");
+        }
+      } else {
+        const errorData = await response.json();
+        console.error("Failed to get AI suggestion:", errorData);
+        setError("AI suggestion unavailable. Please try scheduling manually.");
       }
     } catch (error) {
       console.error("Failed to get AI suggestion:", error);
+      setError("AI suggestion unavailable. Please try scheduling manually.");
     } finally {
       setIsLoadingAI(false);
     }
   }, [currentWorkspace?.id, selectedAccount, artifact, serverAddr]);
+
+  // Generate AI-optimized post with streaming
+  const generateAIPost = useCallback(async () => {
+    if (!artifact.testimonial_id) {
+      setError("No testimonial associated with this artifact");
+      return;
+    }
+
+    setIsGeneratingPost(true);
+    setError(null);
+    setCustomMessage(""); // Clear existing message
+
+    try {
+      const token = await authStore.getToken().then((r: any) => r.token);
+
+      // Use fetch with streaming
+      const response = await fetch(
+        `${serverAddr}/testimonials/${artifact.testimonial_id}/ai/stream-linkedin-post`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok || !response.body) {
+        throw new Error("Failed to start stream");
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      let accumulatedPost = "";
+      let buffer = "";
+
+      // Read the stream
+      while (true) {
+        const { done, value } = await reader.read();
+
+        if (done) {
+          setIsGeneratingPost(false);
+          break;
+        }
+
+        // Decode the chunk
+        buffer += decoder.decode(value, { stream: true });
+
+        // Process SSE messages in buffer
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || ""; // Keep incomplete line in buffer
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const data = line.slice(6); // Remove "data: " prefix
+            accumulatedPost += data;
+            setCustomMessage(accumulatedPost);
+          } else if (line.startsWith("event: done")) {
+            setIsGeneratingPost(false);
+            return;
+          } else if (line.startsWith("event: error")) {
+            setError("Failed to generate AI post");
+            setIsGeneratingPost(false);
+            return;
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Failed to generate AI post:", err);
+      setError("Failed to generate AI post. Please try again.");
+      setIsGeneratingPost(false);
+    }
+  }, [artifact.testimonial_id, serverAddr]);
 
   // Create and share post
   const handleShare = useCallback(async () => {
@@ -245,7 +341,6 @@ const LinkedInShareModal: React.FC<LinkedInShareModalProps> = ({
           body: JSON.stringify({
             content: customMessage || generateDefaultContent(),
             social_account_id: selectedAccount,
-            testimonial_id: artifact.testimonial_id,
             testimonial_ids: artifact.sourceTestimonials.map((t) => t.id),
             post_type: artifact.asset_url ? "video" : "text",
             media_urls: artifact.asset_url ? [artifact.asset_url] : [],
@@ -345,7 +440,20 @@ const LinkedInShareModal: React.FC<LinkedInShareModalProps> = ({
   // Initialize
   useEffect(() => {
     if (isOpen) {
-      loadLinkedInAccounts();
+      // Check if returning from OAuth
+      const urlParams = new URLSearchParams(window.location.search);
+      const linkedinConnected = urlParams.get("linkedin_connected");
+
+      if (linkedinConnected === "true") {
+        // Wait for backend to persist the account before loading
+        setTimeout(() => {
+          loadLinkedInAccounts();
+        }, 800);
+      } else {
+        // Normal load without delay
+        loadLinkedInAccounts();
+      }
+
       setCustomMessage(generateDefaultContent());
       setShareStatus("idle");
       setError(null);
@@ -709,17 +817,74 @@ const LinkedInShareModal: React.FC<LinkedInShareModalProps> = ({
 
               {/* Custom Message */}
               <div className="space-y-3">
-                <Label className="text-sm font-medium">Message</Label>
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium">Message</Label>
+                  <button
+                    onClick={() => setUseAIGenerated(!useAIGenerated)}
+                    className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-gray-900 transition-colors"
+                  >
+                    {useAIGenerated ? (
+                      <>
+                        <Sparkles className="h-3.5 w-3.5 text-purple-600" />
+                        AI Mode
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="h-3.5 w-3.5" />
+                        Manual Mode
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {useAIGenerated && (
+                  <Card className="border-purple-200/50 bg-gradient-to-br from-purple-50/30 to-blue-50/30">
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="w-9 h-9 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
+                          <Sparkles className="h-5 w-5 text-purple-600" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="text-sm font-semibold text-gray-900 mb-1">
+                            AI-Optimized Post
+                          </h4>
+                          <p className="text-xs text-gray-600 mb-3">
+                            Generate an engaging LinkedIn post optimized for your audience and content type
+                          </p>
+                          <Button
+                            onClick={generateAIPost}
+                            disabled={isGeneratingPost}
+                            size="sm"
+                            className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                          >
+                            {isGeneratingPost ? (
+                              <>
+                                <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+                                Generating...
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="h-3.5 w-3.5 mr-2" />
+                                Generate Post
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
                 <Textarea
                   value={customMessage}
                   onChange={(e) => setCustomMessage(e.target.value)}
-                  placeholder="Write your LinkedIn post..."
+                  placeholder={useAIGenerated ? "Click 'Generate Post' to create AI-optimized content, or type your own message..." : "Write your LinkedIn post..."}
                   className="min-h-[120px] text-sm"
                   maxLength={3000}
                 />
                 <div className="flex justify-between text-xs text-gray-500">
                   <span>
-                    Tip: Add relevant hashtags and mentions for better reach
+                    {useAIGenerated ? "AI-generated content can be edited to match your voice" : "Tip: Add relevant hashtags and mentions for better reach"}
                   </span>
                   <span>{customMessage.length}/3000</span>
                 </div>

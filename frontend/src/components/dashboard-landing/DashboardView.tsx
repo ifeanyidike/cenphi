@@ -264,7 +264,7 @@ const DashboardView: React.FC = observer(() => {
       {/* AI Generated Content Card */}
       {hasTestimonials && (
         <motion.div variants={itemVariants} className="mb-6">
-          <AIContentInsightsCard onNavigate={() => navigate(`/ai-content`)} />
+          <AIContentInsightsCard onNavigate={() => navigate(`/content-hub`)} />
         </motion.div>
       )}
 

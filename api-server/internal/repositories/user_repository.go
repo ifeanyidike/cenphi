@@ -22,6 +22,7 @@ type UserRepository interface {
 	FindByUID(ctx context.Context, uid string, db DB) (*models.User, error)
 	GetWorkspaceIDByUID(ctx context.Context, uid string, db DB) (uuid.UUID, error)
 	GetWorkspaceByUID(ctx context.Context, uid string, db DB) (models.Workspace, error)
+	GetWorkspaceAndUserIDByUID(ctx context.Context, uid string, db DB) (models.WorkspaceWithUserID, error)
 	FindAndJoinByUID(ctx context.Context, uid string, db DB) (*models.TeamMemberGetParams, error)
 	UpdateAnyByUid(ctx context.Context, updates map[string]any, uid string, db DB) error
 }
@@ -219,6 +220,39 @@ func (r *userRepository) GetWorkspaceByUID(ctx context.Context, uid string, db D
 		}
 		fmt.Printf("❌ Query error: %v\n", err)
 		return models.Workspace{}, err
+	}
+
+	return w, nil
+}
+
+func (r *userRepository) GetWorkspaceAndUserIDByUID(ctx context.Context, uid string, db DB) (models.WorkspaceWithUserID, error) {
+	start := time.Now()
+	fmt.Printf("🔍 Starting optimized GetWorkspaceIDByUID for uid: %s\n", uid)
+
+	// Optimized query - only get what we need
+	query := `
+        SELECT w.id, w.name, w.website_url, w.industry, w.plan, w.brand_context, w.total_testimonials, u.id
+        FROM workspaces w
+        INNER JOIN team_members t ON w.id = t.workspace_id
+		INNER JOIN users u ON u.id = t.user_id
+        WHERE u.firebase_uid::text = $1::text
+        LIMIT 1
+    `
+
+	var w models.WorkspaceWithUserID
+	err := db.QueryRowContext(ctx, query, uid).Scan(
+		&w.ID, &w.Name, &w.WebsiteURL, &w.Industry, &w.Plan, &w.BrandContext, &w.TotalTestimonials, &w.UserID)
+
+	duration := time.Since(start)
+	fmt.Printf("⏱️ Optimized query took: %v\n", duration)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			fmt.Printf("❌ No workspace with user data found for Firebase UID: %s\n", uid)
+			return models.WorkspaceWithUserID{}, fmt.Errorf("user not found or not associated with workspace")
+		}
+		fmt.Printf("❌ Query error: %v\n", err)
+		return models.WorkspaceWithUserID{}, err
 	}
 
 	return w, nil

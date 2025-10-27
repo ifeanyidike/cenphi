@@ -126,17 +126,21 @@ export class SocialManager {
   /**
    * Get OAuth authorization URL for connecting social accounts
    */
-  async getAuthURL(workspaceId: string, platform: string): Promise<string> {
+  async getAuthURL(workspaceId: string, platform: string, returnUrl?: string): Promise<string> {
     try {
       const { token } = await authStore.getToken();
-      const response = await axios.get(
-        `${this.server_addr}/workspaces/${workspaceId}/social/auth/${platform}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+
+      // Build URL with optional return_url parameter
+      let url = `${this.server_addr}/workspaces/${workspaceId}/social/auth/${platform}`;
+      if (returnUrl) {
+        url += `?return_url=${encodeURIComponent(returnUrl)}`;
+      }
+
+      const response = await axios.get(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       return response.data.data.auth_url;
     } catch (error: any) {
