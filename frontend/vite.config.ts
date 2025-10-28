@@ -20,7 +20,7 @@ export default defineConfig(({ mode }) => {
       port: 3000, // This is the port which we will use in Docker
       proxy: {
         "/api": {
-          target: env.VITE_API_URL,
+          target: env.VITE_API_BASE || "http://localhost:8081",
           changeOrigin: true,
           secure: false,
         },

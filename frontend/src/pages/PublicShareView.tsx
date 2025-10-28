@@ -101,14 +101,18 @@ const PublicShareView = observer(() => {
       }
 
       const data = await response.json();
-      console.log("PublicShareView - API Response:", JSON.stringify(data, null, 2));
+      console.log(
+        "PublicShareView - API Response:",
+        JSON.stringify(data, null, 2)
+      );
       setContent(data);
 
       // Track view event (with UUID visitor ID from localStorage or generate new one)
       let visitorId = localStorage.getItem("visitor_id");
 
       // Validate existing visitor ID - must be a proper UUID
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const uuidRegex =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
       if (!visitorId || !uuidRegex.test(visitorId)) {
         // Generate a proper UUID v4
         visitorId = crypto.randomUUID();
@@ -162,7 +166,8 @@ const PublicShareView = observer(() => {
   };
 
   const handleDownload = async () => {
-    const videoUrl = content?.testimonial?.video_url || content?.artifact?.asset_url;
+    const videoUrl =
+      content?.testimonial?.video_url || content?.artifact?.asset_url;
     if (!videoUrl || !shareId) return;
 
     try {
@@ -237,7 +242,7 @@ const PublicShareView = observer(() => {
         // imageUrl = `${appUrl}/api/thumbnails/${testimonial.id}`;
       }
     } else if (artifact) {
-      title = `${artifact?.artifact_type?.replace("_", " ").toUpperCase()} | Cenphi`;
+      title = `Content | Cenphi`;
       if (artifact.content) {
         description = artifact.content.substring(0, 160);
       }
@@ -412,7 +417,9 @@ const PublicShareView = observer(() => {
           </motion.div>
 
           {/* Video Testimonial or Artifact */}
-          {(testimonial?.video_url || (artifact?.asset_url && artifact?.content_type?.startsWith('video'))) && (
+          {(testimonial?.video_url ||
+            (artifact?.asset_url &&
+              artifact?.content_type?.startsWith("video"))) && (
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
@@ -637,50 +644,58 @@ const PublicShareView = observer(() => {
           )}
 
           {/* Artifact Content (Non-video artifacts) */}
-          {artifact && !testimonial && !(artifact.asset_url && artifact.content_type?.startsWith('video')) && (
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-            >
-              <Card className="border-gray-200">
-                <CardContent className="pt-6">
-                  <div className="mb-4">
-                    <Badge className="mb-2">
-                      {(artifact.processing_type || artifact.artifact_type || 'Content')
-                        .replace("_", " ")
-                        .toUpperCase()}
-                    </Badge>
-                    <p className="text-sm text-gray-500">
-                      {formatDate(artifact.created_at)}
-                    </p>
-                  </div>
-
-                  {artifact.content && (
-                    <div className="bg-gray-50 rounded-lg p-6 border border-gray-100">
-                      <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                        {artifact.content}
+          {artifact &&
+            !testimonial &&
+            !(
+              artifact.asset_url && artifact.content_type?.startsWith("video")
+            ) && (
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                <Card className="border-gray-200">
+                  <CardContent className="pt-6">
+                    <div className="mb-4">
+                      <Badge className="mb-2">
+                        {(
+                          artifact.processing_type ||
+                          artifact.artifact_type ||
+                          "Content"
+                        )
+                          .replace("_", " ")
+                          .toUpperCase()}
+                      </Badge>
+                      <p className="text-sm text-gray-500">
+                        {formatDate(artifact.created_at)}
                       </p>
                     </div>
-                  )}
 
-                  {artifact.asset_url && (
-                    <div className="mt-4">
-                      <Button
-                        onClick={() =>
-                          window.open(artifact.asset_url, "_blank")
-                        }
-                        className="bg-blue-600"
-                      >
-                        View Artifact
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
+                    {artifact.content && (
+                      <div className="bg-gray-50 rounded-lg p-6 border border-gray-100">
+                        <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                          {artifact.content}
+                        </p>
+                      </div>
+                    )}
+
+                    {artifact.asset_url && (
+                      <div className="mt-4">
+                        <Button
+                          onClick={() =>
+                            window.open(artifact.asset_url, "_blank")
+                          }
+                          className="bg-blue-600"
+                        >
+                          View Artifact
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
 
           {/* Trust Indicators */}
           <motion.div

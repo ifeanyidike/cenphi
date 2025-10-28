@@ -39,12 +39,10 @@ func RegisterRoutes(
 	publicShareController controllers.PublicShareController,
 	aiPostController controllers.AIPostController,
 	widgetController controllers.WidgetController,
-	seoTranscriptController controllers.SEOTranscriptController,
 	rateLimiter middleware.RateLimiter,
 ) {
 
 	RegisterWidget(&r)
-	RegisterSEOTranscriptRoutes(r, seoTranscriptController)
 	RegisterShareWidgetRoutes(r, widgetController) // Must be at root level, not under /api
 
 	// Group all API routes under /api
@@ -649,10 +647,3 @@ func RegisterShareWidgetRoutes(r chi.Router, controller controllers.WidgetContro
 	r.Get("/widget/embed/{shareId}", controller.GetWidgetEmbed)
 }
 
-func RegisterSEOTranscriptRoutes(r chi.Router, controller controllers.SEOTranscriptController) {
-	// Public SEO-optimized transcript page (no auth required)
-	r.Get("/seo/transcript/{shareId}", controller.GetSEOTranscript)
-
-	// API endpoint for transcript data (public JSON)
-	r.Get("/api/transcripts/{shareId}", controller.GetTranscriptData)
-}

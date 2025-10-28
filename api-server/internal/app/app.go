@@ -67,7 +67,6 @@ type App struct {
 	VectorStoreController           controllers.VectorStoreController
 	StudioController                controllers.StudioController
 	AIPostController                controllers.AIPostController
-	SEOTranscriptController         controllers.SEOTranscriptController
 	AnalyticsController             controllers.AnalyticsController
 	// Services
 	StorageService storage.StorageFactory
@@ -232,7 +231,6 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 	widgetController := controllers.NewWidgetController(publicShareRepo, testimonialRepo, artifactsRepo, db, logger)
 	vectorStoreController := controllers.NewVectorStoreController(vectorStoreService, logger)
 	aiPostController := controllers.NewAIPostController(aiClient, testimonialRepo, logger, db)
-	seoTranscriptController := controllers.NewSEOTranscriptController(testimonialRepo, &publicShareRepo, logger)
 	chatWithDataController := controllers.NewChatWithDataController(chatWithDataService, logger)
 	analyticsController := controllers.NewAnalyticsController(logger, analyticsService, chatWithDataService, exportService)
 	studioController := controllers.NewStudioController(db, sessionRepo, stageRepo, testimonialRepo, workspaceRepo, artifactsRepo, tempStorageService, sessionCleanupService, stepOrchestrator, media_intelligence, sseManager, logger)
@@ -285,7 +283,6 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 		WidgetController:                widgetController,
 		VectorStoreController:           *vectorStoreController,
 		AIPostController:                *aiPostController,
-		SEOTranscriptController:         *seoTranscriptController,
 		ChatWithDataController:          *chatWithDataController,
 		AnalyticsController:             *analyticsController,
 		StudioController:                studioController,
@@ -397,7 +394,6 @@ func (app *App) Mount() http.Handler {
 		app.PublicShareController,
 		app.AIPostController,
 		app.WidgetController,
-		app.SEOTranscriptController,
 		*app.RateLimiter,
 	)
 

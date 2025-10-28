@@ -169,8 +169,20 @@ func (r PublicShareRepository) GetWithMetrics(ctx context.Context, id uuid.UUID,
 	`
 
 	var share models.PublicShare
-	var metrics models.PublicShareMetrics
 	var metricsID sql.NullString
+	var metricsPublicShareID sql.NullString
+	var metricsViewCount sql.NullInt64
+	var metricsUniqueVisitorCount sql.NullInt64
+	var metricsPlayCount sql.NullInt64
+	var metricsDownloadCount sql.NullInt64
+	var metricsCopyLinkCount sql.NullInt64
+	var metricsLinkedInShareCount sql.NullInt64
+	var metricsTwitterShareCount sql.NullInt64
+	var metricsFacebookShareCount sql.NullInt64
+	var metricsWhatsAppShareCount sql.NullInt64
+	var metricsEmailShareCount sql.NullInt64
+	var metricsCreatedAt sql.NullTime
+	var metricsUpdatedAt sql.NullTime
 
 	err := db.QueryRowContext(ctx, query, id).Scan(
 		&share.ID,
@@ -188,19 +200,19 @@ func (r PublicShareRepository) GetWithMetrics(ctx context.Context, id uuid.UUID,
 		&share.CreatedAt,
 		&share.UpdatedAt,
 		&metricsID,
-		&metrics.PublicShareID,
-		&metrics.ViewCount,
-		&metrics.UniqueVisitorCount,
-		&metrics.PlayCount,
-		&metrics.DownloadCount,
-		&metrics.CopyLinkCount,
-		&metrics.LinkedInShareCount,
-		&metrics.TwitterShareCount,
-		&metrics.FacebookShareCount,
-		&metrics.WhatsAppShareCount,
-		&metrics.EmailShareCount,
-		&metrics.CreatedAt,
-		&metrics.UpdatedAt,
+		&metricsPublicShareID,
+		&metricsViewCount,
+		&metricsUniqueVisitorCount,
+		&metricsPlayCount,
+		&metricsDownloadCount,
+		&metricsCopyLinkCount,
+		&metricsLinkedInShareCount,
+		&metricsTwitterShareCount,
+		&metricsFacebookShareCount,
+		&metricsWhatsAppShareCount,
+		&metricsEmailShareCount,
+		&metricsCreatedAt,
+		&metricsUpdatedAt,
 	)
 
 	if err != nil {
@@ -210,8 +222,53 @@ func (r PublicShareRepository) GetWithMetrics(ctx context.Context, id uuid.UUID,
 		return nil, fmt.Errorf("failed to get share with metrics: %w", err)
 	}
 
+	// Only populate metrics if the LEFT JOIN returned data
 	if metricsID.Valid {
+		var metrics models.PublicShareMetrics
 		metrics.ID = uuid.MustParse(metricsID.String)
+
+		if metricsPublicShareID.Valid {
+			shareID := uuid.MustParse(metricsPublicShareID.String)
+			metrics.PublicShareID = shareID
+		}
+
+		if metricsViewCount.Valid {
+			metrics.ViewCount = int(metricsViewCount.Int64)
+		}
+		if metricsUniqueVisitorCount.Valid {
+			metrics.UniqueVisitorCount = int(metricsUniqueVisitorCount.Int64)
+		}
+		if metricsPlayCount.Valid {
+			metrics.PlayCount = int(metricsPlayCount.Int64)
+		}
+		if metricsDownloadCount.Valid {
+			metrics.DownloadCount = int(metricsDownloadCount.Int64)
+		}
+		if metricsCopyLinkCount.Valid {
+			metrics.CopyLinkCount = int(metricsCopyLinkCount.Int64)
+		}
+		if metricsLinkedInShareCount.Valid {
+			metrics.LinkedInShareCount = int(metricsLinkedInShareCount.Int64)
+		}
+		if metricsTwitterShareCount.Valid {
+			metrics.TwitterShareCount = int(metricsTwitterShareCount.Int64)
+		}
+		if metricsFacebookShareCount.Valid {
+			metrics.FacebookShareCount = int(metricsFacebookShareCount.Int64)
+		}
+		if metricsWhatsAppShareCount.Valid {
+			metrics.WhatsAppShareCount = int(metricsWhatsAppShareCount.Int64)
+		}
+		if metricsEmailShareCount.Valid {
+			metrics.EmailShareCount = int(metricsEmailShareCount.Int64)
+		}
+		if metricsCreatedAt.Valid {
+			metrics.CreatedAt = metricsCreatedAt.Time
+		}
+		if metricsUpdatedAt.Valid {
+			metrics.UpdatedAt = metricsUpdatedAt.Time
+		}
+
 		share.Metrics = &metrics
 	}
 
@@ -505,6 +562,46 @@ func (r PublicShareRepository) TrackEvent(ctx context.Context, event *models.Pub
 	now := time.Now()
 	if event.CreatedAt.IsZero() {
 		event.CreatedAt = now
+	}
+
+	// Deduplication: Check if same event from same visitor within last 5 minutes
+	if event.VisitorID != nil {
+		dedupeQuery := `
+			SELECT EXISTS(
+				SELECT 1 FROM public_share_events
+				WHERE public_share_id = $1
+				  AND event_type = $2
+				  AND visitor_id = $3
+				  AND created_at > NOW() - INTERVAL '5 minutes'
+			)
+		`
+		var exists bool
+		err := tx.QueryRowContext(ctx, dedupeQuery,
+			event.PublicShareID,
+			event.EventType,
+			event.VisitorID,
+		).Scan(&exists)
+
+		if err != nil {
+			r.logger.Warn("Failed to check for duplicate event",
+				zap.Error(err),
+				zap.String("share_id", event.PublicShareID.String()),
+				zap.String("event_type", event.EventType))
+		} else if exists {
+			// Duplicate event detected - skip insertion
+			r.logger.Debug("Skipping duplicate event",
+				zap.String("share_id", event.PublicShareID.String()),
+				zap.String("event_type", event.EventType),
+				zap.Any("visitor_id", event.VisitorID))
+
+			// Commit or no-op depending on who started the transaction
+			if shouldCommit {
+				if err := tx.Commit(); err != nil {
+					return fmt.Errorf("failed to commit transaction: %w", err)
+				}
+			}
+			return nil // Successfully ignored duplicate
+		}
 	}
 
 	// Insert event

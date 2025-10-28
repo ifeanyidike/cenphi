@@ -665,66 +665,10 @@ const ShareDrawer: React.FC<ShareDrawerProps> = ({
     setError(null);
 
     try {
-      // Determine post type and media URLs based on carousel mode
-      let postType: string;
-      let mediaUrls: string[];
-      let testimonialIds: string[];
-
-      if (isCarouselMode && artifacts && artifacts.length > 1) {
-        // Carousel mode with multiple artifacts
-        const artifactsToShare = artifacts.filter((a) =>
-          selectedArtifacts.includes(a.id)
-        );
-
-        // Collect media URLs
-        mediaUrls = artifactsToShare
-          .filter((a) => a.asset_url)
-          .map((a) => a.asset_url!);
-
-        // Collect testimonial IDs
-        testimonialIds = Array.from(
-          new Set(
-            artifactsToShare.flatMap((a) =>
-              a.sourceTestimonials.map((t) => t.id)
-            )
-          )
-        );
-
-        // Determine post type based on media
-        if (mediaUrls.length === 0) {
-          postType = "text";
-        } else {
-          // Check if all media are images or videos
-          const hasVideo = artifactsToShare.some((a) =>
-            a.content_type?.startsWith("video/")
-          );
-
-          if (hasVideo && mediaUrls.length > 1) {
-            // LinkedIn doesn't support video carousels
-            setError(
-              "LinkedIn only supports image carousels (2-9 images). Videos must be shared individually."
-            );
-            setIsSharing(false);
-            return;
-          } else if (hasVideo) {
-            postType = "video";
-          } else if (mediaUrls.length >= 2 && mediaUrls.length <= 9) {
-            // Image carousel (2-9 images)
-            postType = "carousel";
-          } else if (mediaUrls.length > 9) {
-            setError("LinkedIn supports maximum 9 images in carousel posts.");
-            setIsSharing(false);
-            return;
-          } else {
-            postType = "image";
-          }
-        }
-      } else {
-        // Single artifact mode
-        postType = artifact.asset_url ? "video" : "text";
-        mediaUrls = artifact.asset_url ? [artifact.asset_url] : [];
-        testimonialIds = artifact.sourceTestimonials.map((t) => t.id);
-      }
+      // Single artifact sharing
+      const postType = artifact.asset_url ? "video" : "text";
+      const mediaUrls = artifact.asset_url ? [artifact.asset_url] : [];
+      const testimonialIds = artifact.sourceTestimonials.map((t) => t.id);
 
       const token = await authStore.getToken().then((r: any) => r.token);
       const createResponse = await fetch(
@@ -2123,107 +2067,15 @@ const ShareDrawer: React.FC<ShareDrawerProps> = ({
 
                 {linkedInAccounts.length > 0 && (
                   <>
-                    {/* Multi-Post Toggle */}
-                    {artifacts && artifacts.length > 1 && (
-                      <div className="flex items-center gap-2 p-3 rounded-lg border border-purple-200/50 bg-gradient-to-r from-purple-50/30 to-blue-50/30">
-                        <Checkbox
-                          id="linkedin-multi-post"
-                          checked={isCarouselMode}
-                          onCheckedChange={(checked) =>
-                            setIsCarouselMode(checked as boolean)
-                          }
+                    {/* Content Preview */}
+                    {artifact.asset_url && (
+                      <div className="rounded-lg border border-slate-200/50 overflow-hidden bg-white/50">
+                        <video
+                          src={artifact.asset_url}
+                          className="w-full h-32 object-cover bg-slate-900"
+                          muted
                         />
-                        <Label
-                          htmlFor="linkedin-multi-post"
-                          className="text-[10px] font-semibold cursor-pointer flex items-center gap-1.5"
-                        >
-                          <Images className="h-3.5 w-3.5 text-purple-600" />
-                          Share multiple items in carousel (2-9 images)
-                        </Label>
                       </div>
-                    )}
-
-                    {/* Content Selection */}
-                    {isCarouselMode && artifacts && artifacts.length > 1 ? (
-                      <div className="space-y-3">
-                        <Label className="text-[11px] font-semibold text-slate-900">
-                          Select Items ({selectedArtifacts.length} selected)
-                        </Label>
-                        <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
-                          {artifacts.map((item) => (
-                            <div
-                              key={item.id}
-                              className={cn(
-                                "relative p-2 rounded-lg border cursor-pointer transition-all",
-                                selectedArtifacts.includes(item.id)
-                                  ? "border-blue-500 bg-blue-50"
-                                  : "border-slate-200/50 bg-white/50 hover:bg-white"
-                              )}
-                              onClick={() => {
-                                if (selectedArtifacts.includes(item.id)) {
-                                  setSelectedArtifacts(
-                                    selectedArtifacts.filter(
-                                      (id) => id !== item.id
-                                    )
-                                  );
-                                } else {
-                                  if (selectedArtifacts.length < 9) {
-                                    setSelectedArtifacts([
-                                      ...selectedArtifacts,
-                                      item.id,
-                                    ]);
-                                  }
-                                }
-                              }}
-                            >
-                              <div className="absolute top-1 right-1 z-10">
-                                <Checkbox
-                                  checked={selectedArtifacts.includes(item.id)}
-                                  onClick={(e) => e.stopPropagation()}
-                                />
-                              </div>
-                              {item.asset_url && (
-                                <div className="rounded overflow-hidden bg-slate-900 mb-1.5">
-                                  {item.content_type?.startsWith("video/") ? (
-                                    <video
-                                      src={item.asset_url}
-                                      className="w-full h-20 object-cover"
-                                      muted
-                                    />
-                                  ) : (
-                                    <img
-                                      src={item.asset_url}
-                                      alt=""
-                                      className="w-full h-20 object-cover"
-                                    />
-                                  )}
-                                </div>
-                              )}
-                              <p className="text-[9px] text-slate-600 truncate">
-                                {item.processing_type
-                                  .replace(/_/g, " ")
-                                  .replace(/\b\w/g, (l) => l.toUpperCase())}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                        {selectedArtifacts.length > 9 && (
-                          <p className="text-[9px] text-red-600">
-                            LinkedIn supports maximum 9 images in carousel
-                          </p>
-                        )}
-                      </div>
-                    ) : (
-                      /* Single Post Preview */
-                      artifact.asset_url && (
-                        <div className="rounded-lg border border-slate-200/50 overflow-hidden bg-white/50">
-                          <video
-                            src={artifact.asset_url}
-                            className="w-full h-32 object-cover bg-slate-900"
-                            muted
-                          />
-                        </div>
-                      )
                     )}
 
                     {/* Share Timing */}

@@ -1,7 +1,7 @@
 /**
  * AI Processing Studio - Standardized Entry Point & Context Management
  *
- * This component manages the AI studio workflow with smart context detection and fallbacks.
+ * This component manages the studio workflow with smart context detection and fallbacks.
  *
  * ### Entry Points (All Standardized):
  * 1. **Sidebar Link** (`/studio`) - Shows service selector, prompts for testimonial if needed
@@ -61,7 +61,11 @@ export type StudioContext =
   | { type: "best-moments"; testimonialIds?: string[] }
   | { type: "default" };
 
-type StudioStep = "service-selection" | "testimonial-selection" | "service-configuration" | "processing";
+type StudioStep =
+  | "service-selection"
+  | "testimonial-selection"
+  | "service-configuration"
+  | "processing";
 
 const Studio: React.FC = () => {
   const navigate = useNavigate();
@@ -93,7 +97,10 @@ const Studio: React.FC = () => {
     } else if (pathname === "/studio/optimize") {
       setSelectedService("platform_optimization");
       // Check if we need testimonial selection
-      if (context.type === 'default' && serviceRequiresContext('platform_optimization')) {
+      if (
+        context.type === "default" &&
+        serviceRequiresContext("platform_optimization")
+      ) {
         setCurrentStep("testimonial-selection");
       } else {
         setCurrentStep("service-configuration");
@@ -101,7 +108,7 @@ const Studio: React.FC = () => {
     } else if (pathname === "/studio/clipping") {
       setSelectedService("clipping");
       // Check if we need testimonial selection
-      if (context.type === 'default' && serviceRequiresContext('clipping')) {
+      if (context.type === "default" && serviceRequiresContext("clipping")) {
         setCurrentStep("testimonial-selection");
       } else {
         setCurrentStep("service-configuration");
@@ -110,7 +117,7 @@ const Studio: React.FC = () => {
       setSelectedService("story_video");
       // Story video can work with no context (best moments), but if no context and no query params,
       // show testimonial selector to let user choose
-      if (context.type === 'default' && !searchParams.get('context')) {
+      if (context.type === "default" && !searchParams.get("context")) {
         setCurrentStep("testimonial-selection");
       } else {
         setCurrentStep("service-configuration");
@@ -118,7 +125,7 @@ const Studio: React.FC = () => {
     } else if (pathname === "/studio/content") {
       setSelectedService("content_generation");
       // Content generation requires testimonials
-      if (context.type === 'default') {
+      if (context.type === "default") {
         setCurrentStep("testimonial-selection");
       } else {
         setCurrentStep("service-configuration");
@@ -126,7 +133,10 @@ const Studio: React.FC = () => {
     } else if (pathname === "/studio/custom") {
       setSelectedService("custom_pipeline");
       // Check if we need testimonial selection
-      if (context.type === 'default' && serviceRequiresContext('custom_pipeline')) {
+      if (
+        context.type === "default" &&
+        serviceRequiresContext("custom_pipeline")
+      ) {
         setCurrentStep("testimonial-selection");
       } else {
         setCurrentStep("service-configuration");
@@ -278,15 +288,17 @@ const Studio: React.FC = () => {
   // Check if service requires context (testimonial/clip selection)
   const serviceRequiresContext = (service: ServiceType): boolean => {
     // These services need at least a testimonial selected
-    return ['platform_optimization', 'clipping', 'custom_pipeline'].includes(service);
+    return ["platform_optimization", "clipping", "custom_pipeline"].includes(
+      service
+    );
   };
 
   const handleServiceSelect = (service: ServiceType) => {
     // Check if service requires context and we don't have it
-    if (serviceRequiresContext(service) && context.type === 'default') {
+    if (serviceRequiresContext(service) && context.type === "default") {
       // Show testimonial selector instead of service config
       setSelectedService(service);
-      setCurrentStep('testimonial-selection');
+      setCurrentStep("testimonial-selection");
       return;
     }
 
@@ -306,7 +318,7 @@ const Studio: React.FC = () => {
   const handleTestimonialSelect = (testimonialId: string) => {
     // Update context with selected testimonial
     const newContext: StudioContext = {
-      type: 'testimonial',
+      type: "testimonial",
       testimonialId,
     };
     setContext(newContext);
@@ -329,7 +341,7 @@ const Studio: React.FC = () => {
   const handleMultiTestimonialSelect = (testimonialIds: string[]) => {
     // Update context with multiple testimonials
     const newContext: StudioContext = {
-      type: 'multi-testimonial',
+      type: "multi-testimonial",
       testimonialIds,
     };
     setContext(newContext);
@@ -345,7 +357,7 @@ const Studio: React.FC = () => {
 
     if (selectedService) {
       const route = serviceRoutes[selectedService];
-      const testimonialIdsParam = testimonialIds.join(',');
+      const testimonialIdsParam = testimonialIds.join(",");
       navigate(`${route}?testimonialIds=${testimonialIdsParam}`);
     }
   };
@@ -353,7 +365,7 @@ const Studio: React.FC = () => {
   const handleBackToServiceSelection = () => {
     // Clear selected service and navigate back to main studio
     setSelectedService(null);
-    setCurrentStep('service-selection');
+    setCurrentStep("service-selection");
     navigate(`/studio`);
   };
 
@@ -375,176 +387,178 @@ const Studio: React.FC = () => {
   };
 
   return (
-      <div className="min-h-screen bg-white">
-        {/* Step 1: Service Selection */}
-        {currentStep === "service-selection" && (
-          <motion.div
-            key="service-selection"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3 }}
-          >
-            {isCheckingActiveSessions ? (
-              <div className="flex items-center justify-center min-h-[400px]">
-                <div className="text-center">
-                  <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
-                  <p className="text-slate-600">
-                    Checking for active sessions...
-                  </p>
-                </div>
+    <div className="min-h-screen bg-white">
+      {/* Step 1: Service Selection */}
+      {currentStep === "service-selection" && (
+        <motion.div
+          key="service-selection"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          transition={{ duration: 0.3 }}
+        >
+          {isCheckingActiveSessions ? (
+            <div className="flex items-center justify-center min-h-[400px]">
+              <div className="text-center">
+                <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-slate-600">
+                  Checking for active sessions...
+                </p>
               </div>
-            ) : (
-              <ServiceSelector
-                context={context}
-                onServiceSelect={handleServiceSelect}
-                onCancel={handleCancel}
-              />
-            )}
-          </motion.div>
-        )}
+            </div>
+          ) : (
+            <ServiceSelector
+              context={context}
+              onServiceSelect={handleServiceSelect}
+              onCancel={handleCancel}
+            />
+          )}
+        </motion.div>
+      )}
 
-        {/* Step 1.5: Testimonial Selection (when no context) */}
-        {currentStep === "testimonial-selection" && (
+      {/* Step 1.5: Testimonial Selection (when no context) */}
+      {currentStep === "testimonial-selection" && (
+        <motion.div
+          key="testimonial-selection"
+          initial={{ opacity: 0, x: 100 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -100 }}
+          transition={{ duration: 0.3 }}
+        >
+          <TestimonialSelector
+            selectedService={selectedService}
+            onTestimonialSelect={handleTestimonialSelect}
+            onMultiTestimonialSelect={handleMultiTestimonialSelect}
+            onCancel={handleBackToServiceSelection}
+          />
+        </motion.div>
+      )}
+
+      {/* Step 2: Service Configuration */}
+      {currentStep === "service-configuration" &&
+        selectedService === "platform_optimization" && (
           <motion.div
-            key="testimonial-selection"
+            key="platform-config"
             initial={{ opacity: 0, x: 100 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -100 }}
             transition={{ duration: 0.3 }}
           >
-            <TestimonialSelector
-              selectedService={selectedService}
-              onTestimonialSelect={handleTestimonialSelect}
-              onMultiTestimonialSelect={handleMultiTestimonialSelect}
-              onCancel={handleBackToServiceSelection}
+            <PlatformOptimizationConfig
+              context={context}
+              onBack={handleBackToServiceSelection}
+              onStartProcessing={handleStartProcessing}
             />
           </motion.div>
         )}
 
-        {/* Step 2: Service Configuration */}
-        {currentStep === "service-configuration" &&
-          selectedService === "platform_optimization" && (
-            <motion.div
-              key="platform-config"
-              initial={{ opacity: 0, x: 100 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -100 }}
-              transition={{ duration: 0.3 }}
-            >
-              <PlatformOptimizationConfig
-                context={context}
-                onBack={handleBackToServiceSelection}
-                onStartProcessing={handleStartProcessing}
-              />
-            </motion.div>
-          )}
-
-        {currentStep === "service-configuration" &&
-          selectedService === "clipping" && (
-            <motion.div
-              key="clipping-config"
-              initial={{ opacity: 0, x: 100 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -100 }}
-              transition={{ duration: 0.3 }}
-            >
-              <ClippingConfig
-                context={context}
-                onBack={handleBackToServiceSelection}
-                onStartProcessing={handleStartProcessing}
-              />
-            </motion.div>
-          )}
-
-        {currentStep === "service-configuration" &&
-          selectedService === "story_video" && (
-            <motion.div
-              key="story-video-config"
-              initial={{ opacity: 0, x: 100 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -100 }}
-              transition={{ duration: 0.3 }}
-            >
-              <StoryVideoConfig
-                context={context}
-                onBack={handleBackToServiceSelection}
-                onStartProcessing={handleStartProcessing}
-              />
-            </motion.div>
-          )}
-
-        {currentStep === "service-configuration" &&
-          selectedService === "content_generation" && (
-            <motion.div
-              key="content-generation-config"
-              initial={{ opacity: 0, x: 100 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -100 }}
-              transition={{ duration: 0.3 }}
-            >
-              <ContentGenerationConfig
-                context={context}
-                onBack={handleBackToServiceSelection}
-              />
-            </motion.div>
-          )}
-
-        {currentStep === "service-configuration" &&
-          selectedService === "custom_pipeline" && (
-            <motion.div
-              key="custom-pipeline-config"
-              initial={{ opacity: 0, x: 100 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -100 }}
-              transition={{ duration: 0.3 }}
-            >
-              <CustomPipelineConfig
-                context={context}
-                onBack={handleBackToServiceSelection}
-                onStartProcessing={handleStartProcessing}
-              />
-            </motion.div>
-          )}
-
-        {/* Step 3: Processing */}
-        {currentStep === "processing" &&
-          jobId &&
-          (selectedService === "platform_optimization" ||
-            selectedService === "clipping" ||
-            selectedService === "custom_pipeline") && (
-            <SessionStudio
-              sessionId={jobId}
-              testimonialId={
-                context.type === "testimonial" || context.type === "clip" || context.type === "selected-clips"
-                  ? context.testimonialId
-                  : undefined
-              }
-              onClose={handleProcessingComplete}
+      {currentStep === "service-configuration" &&
+        selectedService === "clipping" && (
+          <motion.div
+            key="clipping-config"
+            initial={{ opacity: 0, x: 100 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -100 }}
+            transition={{ duration: 0.3 }}
+          >
+            <ClippingConfig
+              context={context}
+              onBack={handleBackToServiceSelection}
+              onStartProcessing={handleStartProcessing}
             />
-          )}
+          </motion.div>
+        )}
 
-        {currentStep === "processing" &&
-          jobId &&
-          selectedService === "story_video" && (
-            <StoryVideoStudio
-              sessionId={jobId}
-              testimonialIds={
-                context.type === "multi-testimonial"
-                  ? context.testimonialIds
-                  : context.type === "testimonial"
-                    ? [context.testimonialId]
-                    : context.type === "best-moments" && context.testimonialIds
-                      ? context.testimonialIds
-                      : []
-              }
-              autoSelectBest={
-                context.type === "best-moments" && !context.testimonialIds
-              }
-              onClose={handleProcessingComplete}
+      {currentStep === "service-configuration" &&
+        selectedService === "story_video" && (
+          <motion.div
+            key="story-video-config"
+            initial={{ opacity: 0, x: 100 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -100 }}
+            transition={{ duration: 0.3 }}
+          >
+            <StoryVideoConfig
+              context={context}
+              onBack={handleBackToServiceSelection}
+              onStartProcessing={handleStartProcessing}
             />
-          )}
-      </div>
+          </motion.div>
+        )}
+
+      {currentStep === "service-configuration" &&
+        selectedService === "content_generation" && (
+          <motion.div
+            key="content-generation-config"
+            initial={{ opacity: 0, x: 100 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -100 }}
+            transition={{ duration: 0.3 }}
+          >
+            <ContentGenerationConfig
+              context={context}
+              onBack={handleBackToServiceSelection}
+            />
+          </motion.div>
+        )}
+
+      {currentStep === "service-configuration" &&
+        selectedService === "custom_pipeline" && (
+          <motion.div
+            key="custom-pipeline-config"
+            initial={{ opacity: 0, x: 100 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -100 }}
+            transition={{ duration: 0.3 }}
+          >
+            <CustomPipelineConfig
+              context={context}
+              onBack={handleBackToServiceSelection}
+              onStartProcessing={handleStartProcessing}
+            />
+          </motion.div>
+        )}
+
+      {/* Step 3: Processing */}
+      {currentStep === "processing" &&
+        jobId &&
+        (selectedService === "platform_optimization" ||
+          selectedService === "clipping" ||
+          selectedService === "custom_pipeline") && (
+          <SessionStudio
+            sessionId={jobId}
+            testimonialId={
+              context.type === "testimonial" ||
+              context.type === "clip" ||
+              context.type === "selected-clips"
+                ? context.testimonialId
+                : undefined
+            }
+            onClose={handleProcessingComplete}
+          />
+        )}
+
+      {currentStep === "processing" &&
+        jobId &&
+        selectedService === "story_video" && (
+          <StoryVideoStudio
+            sessionId={jobId}
+            testimonialIds={
+              context.type === "multi-testimonial"
+                ? context.testimonialIds
+                : context.type === "testimonial"
+                  ? [context.testimonialId]
+                  : context.type === "best-moments" && context.testimonialIds
+                    ? context.testimonialIds
+                    : []
+            }
+            autoSelectBest={
+              context.type === "best-moments" && !context.testimonialIds
+            }
+            onClose={handleProcessingComplete}
+          />
+        )}
+    </div>
   );
 };
 

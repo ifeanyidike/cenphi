@@ -31,7 +31,8 @@ import TestimonialDetailPage from "@/pages/TestimonialPage";
 import TempCapturePage from "@/pages/TempCapturePage";
 import AIGeneratedContentPage from "@/pages/AIGeneratedContentPage";
 import SettingsPage from "@/pages/SettingsPage";
-import Analytics from "@/pages/Analytics";
+import EnhancedAnalytics from "@/pages/EnhancedAnalytics";
+import SchedulingPage from "@/pages/SchedulingPage";
 import TalkToYourDataPage from "@/pages/TalkToYourDataPage";
 import VectorStoreTest from "@/pages/VectorStoreTest";
 import PublicShareView from "@/pages/PublicShareView";
@@ -202,13 +203,24 @@ export const router = createBrowserRouter([
                 ErrorComponent={DashboardErrorComponent}
                 componentName="Analytics"
               >
-                <Analytics />
+                <EnhancedAnalytics />
               </DashboardErrorBoundary>
             ),
           },
           {
             path: "/social/analytics",
             element: <Navigate to="/analytics" replace />,
+          },
+          {
+            path: "/scheduling",
+            element: (
+              <DashboardErrorBoundary
+                ErrorComponent={DashboardErrorComponent}
+                componentName="Scheduling"
+              >
+                <SchedulingPage />
+              </DashboardErrorBoundary>
+            ),
           },
           {
             path: "/talk-to-your-data",

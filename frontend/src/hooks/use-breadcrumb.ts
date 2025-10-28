@@ -39,7 +39,7 @@ const routeConfig: Record<string, RouteConfig> = {
     },
   },
   studio: {
-    label: "AI Studio",
+    label: "Studio",
     icon: Sparkles,
     children: {
       // Handle query params for tabs and services

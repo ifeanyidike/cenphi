@@ -344,6 +344,7 @@ const TestimonialDetail = observer(() => {
       | "story_video" = "platform_optimization"
   ) => {
     if (!testimonial?.id) return;
+    if (!pipeline) return navigate(`/studio?testimonialId=${testimonial.id}`);
 
     // Map pipeline to specific service route
     const routeMap = {
@@ -889,11 +890,13 @@ const TestimonialDetail = observer(() => {
                 </Badge>
               )}
               <Button
-                onClick={() => openStudio("platform_optimization")}
+                onClick={() =>
+                  navigate(`/studio?testimonialId=${testimonial.id}`)
+                }
                 className="bg-blue-600 hover:bg-blue-700 h-9 px-4"
               >
                 <Sparkles className="h-4 w-4 mr-2" />
-                <span className="text-sm font-medium">AI Studio</span>
+                <span className="text-sm font-medium">Studio</span>
               </Button>
               <Button variant="outline" className="h-9 px-4 border-slate-300">
                 <Share2 className="h-4 w-4 mr-2" />

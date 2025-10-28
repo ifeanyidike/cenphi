@@ -18,6 +18,7 @@ import {
   Share2,
   Wand2,
   BarChart3,
+  Calendar,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { workspaceHub } from "@/repo/workspace_hub";
@@ -114,6 +115,12 @@ export const AppSidebar = observer(
           url: "/analytics",
           icon: BarChart3,
           isActive: currentPath === "/analytics",
+        },
+        {
+          title: "Scheduling",
+          url: "/scheduling",
+          icon: Calendar,
+          isActive: currentPath === "/scheduling",
         },
         {
           title: "Talk to Data",

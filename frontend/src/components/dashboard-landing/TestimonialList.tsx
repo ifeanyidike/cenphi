@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import {
   Search,
@@ -443,10 +442,10 @@ const TestimonialList = ({
                 className="flex text-sm items-center justify-center space-x-1 bg-gradient-to-r from-slate-900 to-slate-700 text-white px-4 sm:px-6 py-3 rounded-xl hover:from-slate-800 hover:to-slate-600 transition-all duration-200 shadow-lg hover:shadow-xl font-medium whitespace-nowrap"
               >
                 <span className="hidden sm:inline">
-                  Process with AI Studio ({selectedTestimonials.length})
+                  Process with Studio ({selectedTestimonials.length})
                 </span>
                 <span className="sm:hidden">
-                  AI Studio ({selectedTestimonials.length})
+                  Studio ({selectedTestimonials.length})
                 </span>
               </button>
             )}
@@ -528,7 +527,6 @@ const TestimonialList = ({
               </div>
             </div>
           </div>
-
         </div>
       </div>
 
@@ -583,7 +581,7 @@ const TestimonialList = ({
           className="fixed bottom-0 left-0 right-0 z-50 transform transition-transform duration-300 ease-out"
           style={{
             paddingBottom: "env(safe-area-inset-bottom)",
-            animation: "slideUp 0.3s ease-out"
+            animation: "slideUp 0.3s ease-out",
           }}
         >
           <div className="bg-white/95 backdrop-blur-xl border-t border-slate-200 shadow-2xl">

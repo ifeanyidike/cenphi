@@ -230,7 +230,7 @@ func mapTestimonialForPublic(t *models.Testimonial) map[string]interface{} {
 	return result
 }
 
-// GetWorkspaceShares gets all shares for a workspace
+// GetWorkspaceShares gets all shares for a workspace with metrics
 // GET /api/workspaces/:workspaceId/shares
 func (c PublicShareController) GetWorkspaceShares(w http.ResponseWriter, r *http.Request) {
 	workspaceIDStr := chi.URLParam(r, "workspaceId")
@@ -248,9 +248,44 @@ func (c PublicShareController) GetWorkspaceShares(w http.ResponseWriter, r *http
 		return
 	}
 
+	// Fetch metrics for each share
+	sharesWithMetrics := make([]map[string]interface{}, len(shares))
+	for i, share := range shares {
+		shareMap := map[string]interface{}{
+			"id":                 share.ID,
+			"workspace_id":       share.WorkspaceID,
+			"share_type":         share.ShareType,
+			"testimonial_id":     share.TestimonialID,
+			"artifact_id":        share.ArtifactID,
+			"description":        share.Description,
+			"is_public":          share.IsPublic,
+			"is_active":          share.IsActive,
+			"password_protected": share.PasswordProtected,
+			"password_hash":      share.PasswordHash,
+			"expires_at":         share.ExpiresAt,
+			"custom_branding":    share.CustomBranding,
+			"created_at":         share.CreatedAt,
+			"updated_at":         share.UpdatedAt,
+		}
+
+		// Fetch metrics for this share
+		metrics, err := c.repo.GetMetrics(r.Context(), share.ID, db)
+		if err != nil {
+			// Log warning but don't fail the request
+			c.logger.Warn("Failed to get metrics for share",
+				zap.Error(err),
+				zap.String("share_id", share.ID.String()))
+			shareMap["metrics"] = nil
+		} else {
+			shareMap["metrics"] = metrics
+		}
+
+		sharesWithMetrics[i] = shareMap
+	}
+
 	utils.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
-		"shares":  shares,
-		"total":   len(shares),
+		"shares":  sharesWithMetrics,
+		"total":   len(sharesWithMetrics),
 		"message": "Shares retrieved successfully",
 	})
 }

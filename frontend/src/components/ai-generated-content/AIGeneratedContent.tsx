@@ -836,7 +836,7 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
             className="bg-gradient-to-r from-slate-900 to-slate-700 hover:from-slate-800 hover:to-slate-600 text-white h-10 px-6 text-[11px] shadow-lg"
           >
             <Sparkles className="h-3.5 w-3.5 mr-2" />
-            Explore AI Studio
+            Explore Studio
           </Button>
         </div>
       </motion.div>

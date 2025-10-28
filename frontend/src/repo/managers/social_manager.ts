@@ -343,6 +343,80 @@ export class SocialManager {
   }
 
   /**
+   * Update an existing post
+   */
+  async updatePost(
+    postId: string,
+    updateData: Partial<CreatePostRequest>
+  ): Promise<SocialPost> {
+    this.isLoading = true;
+    this.error = null;
+
+    try {
+      const { token } = await authStore.getToken();
+      const response = await axios.put(
+        `${this.server_addr}/social/posts/${postId}`,
+        updateData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const updatedPost = response.data.data;
+
+      runInAction(() => {
+        const index = this.posts.findIndex(p => p.id === postId);
+        if (index !== -1) {
+          this.posts[index] = updatedPost;
+        }
+        this.isLoading = false;
+      });
+
+      return updatedPost;
+    } catch (error: any) {
+      runInAction(() => {
+        this.error = error.response?.data?.message || "Failed to update post";
+        this.isLoading = false;
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Delete a post
+   */
+  async deletePost(postId: string): Promise<void> {
+    this.isLoading = true;
+    this.error = null;
+
+    try {
+      const { token } = await authStore.getToken();
+      await axios.delete(
+        `${this.server_addr}/social/posts/${postId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      runInAction(() => {
+        this.posts = this.posts.filter(p => p.id !== postId);
+        this.isLoading = false;
+      });
+    } catch (error: any) {
+      runInAction(() => {
+        this.error = error.response?.data?.message || "Failed to delete post";
+        this.isLoading = false;
+      });
+      throw error;
+    }
+  }
+
+  /**
    * Get posts filtered by testimonial ID
    */
   getPostsByTestimonial(testimonialId: string): SocialPost[] {

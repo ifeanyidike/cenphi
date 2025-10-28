@@ -128,7 +128,8 @@ class PublicShareManager {
         throw new Error("Failed to get share");
       }
 
-      const share = await response.json();
+      const data = await response.json();
+      const share = data.share || data;
 
       runInAction(() => {
         this.loading = false;
@@ -166,7 +167,8 @@ class PublicShareManager {
         throw new Error("Failed to get workspace shares");
       }
 
-      const shares = await response.json();
+      const data = await response.json();
+      const shares = data.shares || [];
 
       runInAction(() => {
         this.shares = shares;
@@ -207,7 +209,8 @@ class PublicShareManager {
         throw new Error("Failed to get testimonial shares");
       }
 
-      const shares = await response.json();
+      const data = await response.json();
+      const shares = data.shares || [];
 
       runInAction(() => {
         this.loading = false;
@@ -247,7 +250,8 @@ class PublicShareManager {
         throw new Error("Failed to get artifact shares");
       }
 
-      const shares = await response.json();
+      const data = await response.json();
+      const shares = data.shares || [];
 
       runInAction(() => {
         this.loading = false;
@@ -290,7 +294,8 @@ class PublicShareManager {
         throw new Error("Failed to update share");
       }
 
-      const share = await response.json();
+      const data = await response.json();
+      const share = data.share || data;
 
       runInAction(() => {
         const index = this.shares.findIndex((s) => s.id === shareId);
@@ -361,7 +366,8 @@ class PublicShareManager {
         throw new Error("Failed to get metrics");
       }
 
-      const metrics = await response.json();
+      const data = await response.json();
+      const metrics = data.metrics || data;
       return metrics;
     } catch (error) {
       console.error("Get metrics error:", error);
