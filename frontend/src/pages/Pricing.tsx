@@ -41,7 +41,7 @@ const pricingTiers: PricingTier[] = [
     id: "starter",
     name: "Starter",
     description:
-      "Perfect for small teams getting started with testimonial collection",
+      "Perfect for small teams getting started with testimonial collection.",
     monthlyPrice: 29,
     yearlyPrice: 290,
     features: {
