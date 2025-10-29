@@ -16,13 +16,24 @@ class ProgressPublisher:
     """
 
     def __init__(self):
-        self.redis_client = redis.Redis(
-            host=os.getenv("REDIS_HOST", "localhost"),
-            port=int(os.getenv("REDIS_PORT", 6379)),
-            db=int(os.getenv("REDIS_DB", 0)),
-            password=os.getenv("REDIS_PASSWORD"),
-            decode_responses=True
-        )
+        # Check if TLS is enabled (required for Upstash)
+        tls_enabled = os.getenv("REDIS_TLS_ENABLED", "false").lower() == "true"
+
+        redis_config = {
+            "host": os.getenv("REDIS_HOST", "localhost"),
+            "port": int(os.getenv("REDIS_PORT", 6379)),
+            "db": int(os.getenv("REDIS_DB", 0)),
+            "password": os.getenv("REDIS_PASSWORD"),
+            "decode_responses": True
+        }
+
+        # Enable TLS if configured
+        if tls_enabled:
+            redis_config["ssl"] = True
+            redis_config["ssl_cert_reqs"] = None  # Don't verify certificate
+            logger.info("Redis TLS enabled")
+
+        self.redis_client = redis.Redis(**redis_config)
         logger.info("ProgressPublisher initialized")
 
     def publish_step_progress(

@@ -30,13 +30,37 @@ type AuthMiddleware struct {
 }
 
 func NewAuthMiddleware(projectID string, logger *zap.Logger) (*AuthMiddleware, error) {
-	// Find Firebase credentials file
-	credentialsFile := "cenphiio-service-account.json"
-	path, err := config.FindFile(credentialsFile)
-	if err != nil {
-		return nil, fmt.Errorf("failed to find credentials file: %w", err)
+	// Check if running in Cloud Run (has ADC available)
+	isCloudRun := os.Getenv("K_SERVICE") != ""
+
+	var path string
+	var err error
+
+	if !isCloudRun {
+		// Local development: Find Firebase credentials file
+		// Try new project first, then fall back to old project
+		credentialFiles := []string{
+			"cenphi-ai-service-account.json",  // New project (cenphi-ai)
+			"cenphiio-service-account.json",   // Old project (cenphiio)
+		}
+
+		for _, credFile := range credentialFiles {
+			path, err = config.FindFile(credFile)
+			if err == nil {
+				logger.Info("Using Firebase credentials file",
+					zap.String("path", path),
+					zap.String("file", credFile))
+				break
+			}
+		}
+
+		if path == "" {
+			return nil, fmt.Errorf("failed to find credentials file (tried: %v)", credentialFiles)
+		}
+	} else {
+		// Cloud Run: Use Application Default Credentials
+		logger.Info("Running in Cloud Run, using Application Default Credentials")
 	}
-	logger.Info("Using Firebase credentials file", zap.String("path", path))
 
 	// Initialize certificate pool with system certs
 	rootCAs, err := x509.SystemCertPool()
@@ -141,9 +165,14 @@ func NewAuthMiddleware(projectID string, logger *zap.Logger) (*AuthMiddleware, e
 	// Create Firebase app with our custom client
 	ctx := context.Background()
 	opts := []option.ClientOption{
-		option.WithCredentialsFile(path),
 		option.WithHTTPClient(httpClient),
 	}
+
+	// Only add credentials file in local development
+	if !isCloudRun && path != "" {
+		opts = append(opts, option.WithCredentialsFile(path))
+	}
+	// In Cloud Run, ADC is automatically used when no explicit credentials are provided
 
 	app, err := firebase.NewApp(ctx, nil, opts...)
 	if err != nil {

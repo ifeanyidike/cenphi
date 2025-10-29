@@ -1,4 +1,4 @@
-# requirements-cloudrun-optimized.txt - SIZE OPTIMIZED for <600MB image
+# requirements-cloudrun.txt - SIZE OPTIMIZED for <600MB image
 
 # ============================================================================
 # SIZE OPTIMIZATIONS APPLIED:

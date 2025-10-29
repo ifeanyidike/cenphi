@@ -5,3 +5,4 @@ poetry.lock
 pyproject.toml
 encoded_key.txt
 cloudrun-service.*
+cloudrun-service-updated.*
