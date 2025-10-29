@@ -61,7 +61,9 @@ export class WorkspaceOrchestrator {
   async getWorkspaceData() {
     // If a fetch is already in progress, return that promise to prevent duplicate requests
     if (this.workspaceFetchPromise) {
-      console.log("⏳ Workspace fetch already in progress, returning existing promise");
+      console.log(
+        "⏳ Workspace fetch already in progress, returning existing promise"
+      );
       return this.workspaceFetchPromise;
     }
 
@@ -118,10 +120,16 @@ export class WorkspaceOrchestrator {
         }
       } else if (response.status === 404) {
         // User doesn't have a workspace yet - this is expected for new users
-        console.log("ℹ️  No workspace found for user - user needs to complete onboarding");
+        console.log(
+          "ℹ️  No workspace found for user - user needs to complete onboarding"
+        );
         return false;
       } else {
-        console.error("❌ Failed to fetch workspace:", response.status, response.statusText);
+        console.error(
+          "❌ Failed to fetch workspace:",
+          response.status,
+          response.statusText
+        );
         return false;
       }
     } catch (error) {
