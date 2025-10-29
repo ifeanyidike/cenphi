@@ -10,7 +10,9 @@ import {
   Users,
   TrendingUp,
   BarChart3,
+  Phone,
 } from "lucide-react";
+import { isFeatureEnabled } from "@/config/features";
 
 // Statistics for social proof
 const STATS = [
@@ -42,10 +44,13 @@ const EXAMPLE_TESTIMONIALS = [
 ];
 
 interface TypeSelectionProps {
-  onSelectType: (type: "video" | "text") => void;
+  onSelectType: (type: "video" | "text" | "voice") => void;
 }
 
 const TypeSelection: React.FC<TypeSelectionProps> = ({ onSelectType }) => {
+  const showVoiceAI = isFeatureEnabled('VOICE_AI_TESTIMONIALS');
+  const gridCols = showVoiceAI ? 'md:grid-cols-3' : 'md:grid-cols-2';
+
   return (
     <div className="relative max-w-6xl mx-auto">
       {/* Background elements */}
@@ -109,34 +114,34 @@ const TypeSelection: React.FC<TypeSelectionProps> = ({ onSelectType }) => {
           </motion.div>
 
           {/* Type Selection Cards */}
-          <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+          <div className={`grid ${gridCols} gap-6 max-w-6xl mx-auto`}>
             <motion.button
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.4 }}
-              whileHover={{ y: -4, scale: 1.02 }}
+              whileHover={{ y: -4, scale: 1.01 }}
               onClick={() => onSelectType("video")}
-              className="relative group p-6 bg-white border-2 border-gray-200 rounded-xl hover:border-blue-300 hover:shadow-lg transition-all text-left overflow-hidden"
+              className="relative group p-6 bg-white border-2 border-slate-200 rounded-xl hover:border-slate-400 hover:shadow-lg transition-all text-left overflow-hidden"
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-purple-50 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="absolute inset-0 bg-gradient-to-br from-slate-50 to-slate-100 opacity-0 group-hover:opacity-100 transition-opacity"></div>
               <div className="relative z-10">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <div className="w-12 h-12 bg-slate-700 rounded-lg flex items-center justify-center group-hover:bg-slate-900 transition-colors">
                     <Camera className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-gray-900">
+                    <h3 className="text-lg font-semibold text-slate-900">
                       Video Testimonial
                     </h3>
-                    <p className="text-sm text-gray-500">Recording studio</p>
+                    <p className="text-sm text-slate-500">Recording studio</p>
                   </div>
                 </div>
-                <p className="text-gray-600 mb-4 text-sm leading-relaxed">
+                <p className="text-slate-600 mb-4 text-sm leading-relaxed">
                   Record a personal video message with our recording studio.
                   More engaging and builds stronger trust.
                 </p>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3 text-sm text-gray-500">
+                  <div className="flex items-center gap-3 text-xs text-slate-500">
                     <div className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
                       <span>2 min max</span>
@@ -146,7 +151,7 @@ const TypeSelection: React.FC<TypeSelectionProps> = ({ onSelectType }) => {
                       <span>Guided</span>
                     </div>
                   </div>
-                  <div className="text-blue-600 font-semibold text-sm">
+                  <div className="text-slate-700 font-medium text-xs">
                     Recommended
                   </div>
                 </div>
@@ -157,29 +162,29 @@ const TypeSelection: React.FC<TypeSelectionProps> = ({ onSelectType }) => {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.5 }}
-              whileHover={{ y: -4, scale: 1.02 }}
+              whileHover={{ y: -4, scale: 1.01 }}
               onClick={() => onSelectType("text")}
-              className="relative group p-6 bg-white border-2 border-gray-200 rounded-xl hover:border-green-300 hover:shadow-lg transition-all text-left overflow-hidden"
+              className="relative group p-6 bg-white border-2 border-slate-200 rounded-xl hover:border-slate-400 hover:shadow-lg transition-all text-left overflow-hidden"
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-green-50 to-blue-50 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="absolute inset-0 bg-gradient-to-br from-slate-50 to-slate-100 opacity-0 group-hover:opacity-100 transition-opacity"></div>
               <div className="relative z-10">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-blue-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <div className="w-12 h-12 bg-slate-700 rounded-lg flex items-center justify-center group-hover:bg-slate-900 transition-colors">
                     <Star className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-gray-900">
+                    <h3 className="text-lg font-semibold text-slate-900">
                       Written Review
                     </h3>
-                    <p className="text-sm text-gray-500">Quick & detailed</p>
+                    <p className="text-sm text-slate-500">Quick & detailed</p>
                   </div>
                 </div>
-                <p className="text-gray-600 mb-4 text-sm leading-relaxed">
+                <p className="text-slate-600 mb-4 text-sm leading-relaxed">
                   Share your experience in writing with our guided form. Perfect
                   for detailed feedback.
                 </p>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3 text-sm text-gray-500">
+                  <div className="flex items-center gap-3 text-xs text-slate-500">
                     <div className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
                       <span>3 min</span>
@@ -189,12 +194,64 @@ const TypeSelection: React.FC<TypeSelectionProps> = ({ onSelectType }) => {
                       <span>Structured</span>
                     </div>
                   </div>
-                  <div className="text-green-600 font-semibold text-sm">
+                  <div className="text-slate-700 font-medium text-xs">
                     Fast Track
                   </div>
                 </div>
               </div>
             </motion.button>
+
+            {/* Voice AI Testimonial Option */}
+            {showVoiceAI && (
+              <div className="relative">
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.6 }}
+                  className="w-full relative p-6 bg-slate-50 border-2 border-slate-300 border-dashed rounded-xl text-left overflow-hidden cursor-not-allowed"
+                >
+                  <div className="absolute inset-0 bg-slate-100/50"></div>
+                  <div className="relative z-10 opacity-50">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-12 h-12 bg-slate-300 rounded-lg flex items-center justify-center">
+                        <Phone className="h-5 w-5 text-slate-500" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-slate-700">
+                          Voice Testimonial
+                        </h3>
+                        <p className="text-sm text-slate-500">AI-powered interview</p>
+                      </div>
+                    </div>
+                    <p className="text-slate-600 mb-4 text-sm leading-relaxed">
+                      Have a natural conversation with our AI assistant. We'll call you
+                      and guide you through sharing your experience.
+                    </p>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 text-xs text-slate-500">
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          <span>5 min call</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Target className="h-3 w-3" />
+                          <span>AI-guided</span>
+                        </div>
+                      </div>
+                      <div className="text-slate-600 font-medium text-xs">
+                        Premium
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+                {/* Coming Soon Badge */}
+                <div className="absolute -top-2 -right-2 z-20">
+                  <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-700 text-white border-2 border-white shadow-lg">
+                    Coming Soon
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

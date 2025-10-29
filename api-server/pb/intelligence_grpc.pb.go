@@ -122,8 +122,9 @@ var EmotionAnalysisService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	MediaEnhancementService_EnhanceMedia_FullMethodName      = "/intelligence.MediaEnhancementService/EnhanceMedia"
-	MediaEnhancementService_BatchEnhanceMedia_FullMethodName = "/intelligence.MediaEnhancementService/BatchEnhanceMedia"
+	MediaEnhancementService_EnhanceMedia_FullMethodName         = "/intelligence.MediaEnhancementService/EnhanceMedia"
+	MediaEnhancementService_BatchEnhanceMedia_FullMethodName    = "/intelligence.MediaEnhancementService/BatchEnhanceMedia"
+	MediaEnhancementService_AdaptiveEnhanceMedia_FullMethodName = "/intelligence.MediaEnhancementService/AdaptiveEnhanceMedia"
 )
 
 // MediaEnhancementServiceClient is the client API for MediaEnhancementService service.
@@ -132,6 +133,7 @@ const (
 type MediaEnhancementServiceClient interface {
 	EnhanceMedia(ctx context.Context, in *EnhanceRequest, opts ...grpc.CallOption) (*EnhanceResponse, error)
 	BatchEnhanceMedia(ctx context.Context, in *BatchEnhanceRequest, opts ...grpc.CallOption) (*BatchEnhanceResponse, error)
+	AdaptiveEnhanceMedia(ctx context.Context, in *AdaptiveEnhanceRequest, opts ...grpc.CallOption) (*AdaptiveEnhanceResponse, error)
 }
 
 type mediaEnhancementServiceClient struct {
@@ -162,12 +164,23 @@ func (c *mediaEnhancementServiceClient) BatchEnhanceMedia(ctx context.Context, i
 	return out, nil
 }
 
+func (c *mediaEnhancementServiceClient) AdaptiveEnhanceMedia(ctx context.Context, in *AdaptiveEnhanceRequest, opts ...grpc.CallOption) (*AdaptiveEnhanceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AdaptiveEnhanceResponse)
+	err := c.cc.Invoke(ctx, MediaEnhancementService_AdaptiveEnhanceMedia_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MediaEnhancementServiceServer is the server API for MediaEnhancementService service.
 // All implementations must embed UnimplementedMediaEnhancementServiceServer
 // for forward compatibility.
 type MediaEnhancementServiceServer interface {
 	EnhanceMedia(context.Context, *EnhanceRequest) (*EnhanceResponse, error)
 	BatchEnhanceMedia(context.Context, *BatchEnhanceRequest) (*BatchEnhanceResponse, error)
+	AdaptiveEnhanceMedia(context.Context, *AdaptiveEnhanceRequest) (*AdaptiveEnhanceResponse, error)
 	mustEmbedUnimplementedMediaEnhancementServiceServer()
 }
 
@@ -183,6 +196,9 @@ func (UnimplementedMediaEnhancementServiceServer) EnhanceMedia(context.Context, 
 }
 func (UnimplementedMediaEnhancementServiceServer) BatchEnhanceMedia(context.Context, *BatchEnhanceRequest) (*BatchEnhanceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method BatchEnhanceMedia not implemented")
+}
+func (UnimplementedMediaEnhancementServiceServer) AdaptiveEnhanceMedia(context.Context, *AdaptiveEnhanceRequest) (*AdaptiveEnhanceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AdaptiveEnhanceMedia not implemented")
 }
 func (UnimplementedMediaEnhancementServiceServer) mustEmbedUnimplementedMediaEnhancementServiceServer() {
 }
@@ -242,6 +258,24 @@ func _MediaEnhancementService_BatchEnhanceMedia_Handler(srv interface{}, ctx con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MediaEnhancementService_AdaptiveEnhanceMedia_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AdaptiveEnhanceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MediaEnhancementServiceServer).AdaptiveEnhanceMedia(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MediaEnhancementService_AdaptiveEnhanceMedia_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MediaEnhancementServiceServer).AdaptiveEnhanceMedia(ctx, req.(*AdaptiveEnhanceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // MediaEnhancementService_ServiceDesc is the grpc.ServiceDesc for MediaEnhancementService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -256,6 +290,10 @@ var MediaEnhancementService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "BatchEnhanceMedia",
 			Handler:    _MediaEnhancementService_BatchEnhanceMedia_Handler,
+		},
+		{
+			MethodName: "AdaptiveEnhanceMedia",
+			Handler:    _MediaEnhancementService_AdaptiveEnhanceMedia_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -545,6 +583,14 @@ var SmartClippingService_ServiceDesc = grpc.ServiceDesc{
 const (
 	PlatformOptimizerService_OptimizeMedia_FullMethodName      = "/intelligence.PlatformOptimizerService/OptimizeMedia"
 	PlatformOptimizerService_BatchOptimizeMedia_FullMethodName = "/intelligence.PlatformOptimizerService/BatchOptimizeMedia"
+	PlatformOptimizerService_RecommendPlatforms_FullMethodName = "/intelligence.PlatformOptimizerService/RecommendPlatforms"
+	PlatformOptimizerService_CropResize_FullMethodName         = "/intelligence.PlatformOptimizerService/CropResize"
+	PlatformOptimizerService_BurnCaptions_FullMethodName       = "/intelligence.PlatformOptimizerService/BurnCaptions"
+	PlatformOptimizerService_ApplyBranding_FullMethodName      = "/intelligence.PlatformOptimizerService/ApplyBranding"
+	PlatformOptimizerService_MixMusic_FullMethodName           = "/intelligence.PlatformOptimizerService/MixMusic"
+	PlatformOptimizerService_NormalizeAudio_FullMethodName     = "/intelligence.PlatformOptimizerService/NormalizeAudio"
+	PlatformOptimizerService_EnhanceVideo_FullMethodName       = "/intelligence.PlatformOptimizerService/EnhanceVideo"
+	PlatformOptimizerService_TextOptimization_FullMethodName   = "/intelligence.PlatformOptimizerService/TextOptimization"
 )
 
 // PlatformOptimizerServiceClient is the client API for PlatformOptimizerService service.
@@ -553,6 +599,16 @@ const (
 type PlatformOptimizerServiceClient interface {
 	OptimizeMedia(ctx context.Context, in *OptimizeRequest, opts ...grpc.CallOption) (*OptimizeResponse, error)
 	BatchOptimizeMedia(ctx context.Context, in *BatchOptimizeRequest, opts ...grpc.CallOption) (*BatchOptimizeResponse, error)
+	// IMPROVEMENT #2: Smart Platform Recommendation
+	RecommendPlatforms(ctx context.Context, in *PlatformRecommendRequest, opts ...grpc.CallOption) (*PlatformRecommendResponse, error)
+	// Step-by-step platform optimization methods
+	CropResize(ctx context.Context, in *CropResizeRequest, opts ...grpc.CallOption) (*CropResizeResponse, error)
+	BurnCaptions(ctx context.Context, in *BurnCaptionsRequest, opts ...grpc.CallOption) (*BurnCaptionsResponse, error)
+	ApplyBranding(ctx context.Context, in *ApplyBrandingRequest, opts ...grpc.CallOption) (*ApplyBrandingResponse, error)
+	MixMusic(ctx context.Context, in *MixMusicRequest, opts ...grpc.CallOption) (*MixMusicResponse, error)
+	NormalizeAudio(ctx context.Context, in *NormalizeAudioRequest, opts ...grpc.CallOption) (*NormalizeAudioResponse, error)
+	EnhanceVideo(ctx context.Context, in *EnhanceVideoRequest, opts ...grpc.CallOption) (*EnhanceVideoResponse, error)
+	TextOptimization(ctx context.Context, in *TextOptimizationRequest, opts ...grpc.CallOption) (*TextOptimizationResponse, error)
 }
 
 type platformOptimizerServiceClient struct {
@@ -583,12 +639,102 @@ func (c *platformOptimizerServiceClient) BatchOptimizeMedia(ctx context.Context,
 	return out, nil
 }
 
+func (c *platformOptimizerServiceClient) RecommendPlatforms(ctx context.Context, in *PlatformRecommendRequest, opts ...grpc.CallOption) (*PlatformRecommendResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PlatformRecommendResponse)
+	err := c.cc.Invoke(ctx, PlatformOptimizerService_RecommendPlatforms_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *platformOptimizerServiceClient) CropResize(ctx context.Context, in *CropResizeRequest, opts ...grpc.CallOption) (*CropResizeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CropResizeResponse)
+	err := c.cc.Invoke(ctx, PlatformOptimizerService_CropResize_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *platformOptimizerServiceClient) BurnCaptions(ctx context.Context, in *BurnCaptionsRequest, opts ...grpc.CallOption) (*BurnCaptionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BurnCaptionsResponse)
+	err := c.cc.Invoke(ctx, PlatformOptimizerService_BurnCaptions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *platformOptimizerServiceClient) ApplyBranding(ctx context.Context, in *ApplyBrandingRequest, opts ...grpc.CallOption) (*ApplyBrandingResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ApplyBrandingResponse)
+	err := c.cc.Invoke(ctx, PlatformOptimizerService_ApplyBranding_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *platformOptimizerServiceClient) MixMusic(ctx context.Context, in *MixMusicRequest, opts ...grpc.CallOption) (*MixMusicResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MixMusicResponse)
+	err := c.cc.Invoke(ctx, PlatformOptimizerService_MixMusic_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *platformOptimizerServiceClient) NormalizeAudio(ctx context.Context, in *NormalizeAudioRequest, opts ...grpc.CallOption) (*NormalizeAudioResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(NormalizeAudioResponse)
+	err := c.cc.Invoke(ctx, PlatformOptimizerService_NormalizeAudio_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *platformOptimizerServiceClient) EnhanceVideo(ctx context.Context, in *EnhanceVideoRequest, opts ...grpc.CallOption) (*EnhanceVideoResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(EnhanceVideoResponse)
+	err := c.cc.Invoke(ctx, PlatformOptimizerService_EnhanceVideo_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *platformOptimizerServiceClient) TextOptimization(ctx context.Context, in *TextOptimizationRequest, opts ...grpc.CallOption) (*TextOptimizationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(TextOptimizationResponse)
+	err := c.cc.Invoke(ctx, PlatformOptimizerService_TextOptimization_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // PlatformOptimizerServiceServer is the server API for PlatformOptimizerService service.
 // All implementations must embed UnimplementedPlatformOptimizerServiceServer
 // for forward compatibility.
 type PlatformOptimizerServiceServer interface {
 	OptimizeMedia(context.Context, *OptimizeRequest) (*OptimizeResponse, error)
 	BatchOptimizeMedia(context.Context, *BatchOptimizeRequest) (*BatchOptimizeResponse, error)
+	// IMPROVEMENT #2: Smart Platform Recommendation
+	RecommendPlatforms(context.Context, *PlatformRecommendRequest) (*PlatformRecommendResponse, error)
+	// Step-by-step platform optimization methods
+	CropResize(context.Context, *CropResizeRequest) (*CropResizeResponse, error)
+	BurnCaptions(context.Context, *BurnCaptionsRequest) (*BurnCaptionsResponse, error)
+	ApplyBranding(context.Context, *ApplyBrandingRequest) (*ApplyBrandingResponse, error)
+	MixMusic(context.Context, *MixMusicRequest) (*MixMusicResponse, error)
+	NormalizeAudio(context.Context, *NormalizeAudioRequest) (*NormalizeAudioResponse, error)
+	EnhanceVideo(context.Context, *EnhanceVideoRequest) (*EnhanceVideoResponse, error)
+	TextOptimization(context.Context, *TextOptimizationRequest) (*TextOptimizationResponse, error)
 	mustEmbedUnimplementedPlatformOptimizerServiceServer()
 }
 
@@ -604,6 +750,30 @@ func (UnimplementedPlatformOptimizerServiceServer) OptimizeMedia(context.Context
 }
 func (UnimplementedPlatformOptimizerServiceServer) BatchOptimizeMedia(context.Context, *BatchOptimizeRequest) (*BatchOptimizeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method BatchOptimizeMedia not implemented")
+}
+func (UnimplementedPlatformOptimizerServiceServer) RecommendPlatforms(context.Context, *PlatformRecommendRequest) (*PlatformRecommendResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RecommendPlatforms not implemented")
+}
+func (UnimplementedPlatformOptimizerServiceServer) CropResize(context.Context, *CropResizeRequest) (*CropResizeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CropResize not implemented")
+}
+func (UnimplementedPlatformOptimizerServiceServer) BurnCaptions(context.Context, *BurnCaptionsRequest) (*BurnCaptionsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BurnCaptions not implemented")
+}
+func (UnimplementedPlatformOptimizerServiceServer) ApplyBranding(context.Context, *ApplyBrandingRequest) (*ApplyBrandingResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ApplyBranding not implemented")
+}
+func (UnimplementedPlatformOptimizerServiceServer) MixMusic(context.Context, *MixMusicRequest) (*MixMusicResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method MixMusic not implemented")
+}
+func (UnimplementedPlatformOptimizerServiceServer) NormalizeAudio(context.Context, *NormalizeAudioRequest) (*NormalizeAudioResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method NormalizeAudio not implemented")
+}
+func (UnimplementedPlatformOptimizerServiceServer) EnhanceVideo(context.Context, *EnhanceVideoRequest) (*EnhanceVideoResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method EnhanceVideo not implemented")
+}
+func (UnimplementedPlatformOptimizerServiceServer) TextOptimization(context.Context, *TextOptimizationRequest) (*TextOptimizationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method TextOptimization not implemented")
 }
 func (UnimplementedPlatformOptimizerServiceServer) mustEmbedUnimplementedPlatformOptimizerServiceServer() {
 }
@@ -663,6 +833,150 @@ func _PlatformOptimizerService_BatchOptimizeMedia_Handler(srv interface{}, ctx c
 	return interceptor(ctx, in, info, handler)
 }
 
+func _PlatformOptimizerService_RecommendPlatforms_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PlatformRecommendRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PlatformOptimizerServiceServer).RecommendPlatforms(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PlatformOptimizerService_RecommendPlatforms_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PlatformOptimizerServiceServer).RecommendPlatforms(ctx, req.(*PlatformRecommendRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PlatformOptimizerService_CropResize_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CropResizeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PlatformOptimizerServiceServer).CropResize(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PlatformOptimizerService_CropResize_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PlatformOptimizerServiceServer).CropResize(ctx, req.(*CropResizeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PlatformOptimizerService_BurnCaptions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BurnCaptionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PlatformOptimizerServiceServer).BurnCaptions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PlatformOptimizerService_BurnCaptions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PlatformOptimizerServiceServer).BurnCaptions(ctx, req.(*BurnCaptionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PlatformOptimizerService_ApplyBranding_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ApplyBrandingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PlatformOptimizerServiceServer).ApplyBranding(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PlatformOptimizerService_ApplyBranding_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PlatformOptimizerServiceServer).ApplyBranding(ctx, req.(*ApplyBrandingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PlatformOptimizerService_MixMusic_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MixMusicRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PlatformOptimizerServiceServer).MixMusic(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PlatformOptimizerService_MixMusic_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PlatformOptimizerServiceServer).MixMusic(ctx, req.(*MixMusicRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PlatformOptimizerService_NormalizeAudio_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(NormalizeAudioRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PlatformOptimizerServiceServer).NormalizeAudio(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PlatformOptimizerService_NormalizeAudio_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PlatformOptimizerServiceServer).NormalizeAudio(ctx, req.(*NormalizeAudioRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PlatformOptimizerService_EnhanceVideo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EnhanceVideoRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PlatformOptimizerServiceServer).EnhanceVideo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PlatformOptimizerService_EnhanceVideo_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PlatformOptimizerServiceServer).EnhanceVideo(ctx, req.(*EnhanceVideoRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PlatformOptimizerService_TextOptimization_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TextOptimizationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PlatformOptimizerServiceServer).TextOptimization(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PlatformOptimizerService_TextOptimization_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PlatformOptimizerServiceServer).TextOptimization(ctx, req.(*TextOptimizationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // PlatformOptimizerService_ServiceDesc is the grpc.ServiceDesc for PlatformOptimizerService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -677,6 +991,38 @@ var PlatformOptimizerService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "BatchOptimizeMedia",
 			Handler:    _PlatformOptimizerService_BatchOptimizeMedia_Handler,
+		},
+		{
+			MethodName: "RecommendPlatforms",
+			Handler:    _PlatformOptimizerService_RecommendPlatforms_Handler,
+		},
+		{
+			MethodName: "CropResize",
+			Handler:    _PlatformOptimizerService_CropResize_Handler,
+		},
+		{
+			MethodName: "BurnCaptions",
+			Handler:    _PlatformOptimizerService_BurnCaptions_Handler,
+		},
+		{
+			MethodName: "ApplyBranding",
+			Handler:    _PlatformOptimizerService_ApplyBranding_Handler,
+		},
+		{
+			MethodName: "MixMusic",
+			Handler:    _PlatformOptimizerService_MixMusic_Handler,
+		},
+		{
+			MethodName: "NormalizeAudio",
+			Handler:    _PlatformOptimizerService_NormalizeAudio_Handler,
+		},
+		{
+			MethodName: "EnhanceVideo",
+			Handler:    _PlatformOptimizerService_EnhanceVideo_Handler,
+		},
+		{
+			MethodName: "TextOptimization",
+			Handler:    _PlatformOptimizerService_TextOptimization_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -788,6 +1134,14 @@ var ThumbnailService_ServiceDesc = grpc.ServiceDesc{
 const (
 	StoryModeService_GenerateStoryVideo_FullMethodName       = "/intelligence.StoryModeService/GenerateStoryVideo"
 	StoryModeService_BatchGenerateStoryVideos_FullMethodName = "/intelligence.StoryModeService/BatchGenerateStoryVideos"
+	StoryModeService_CollectClips_FullMethodName             = "/intelligence.StoryModeService/CollectClips"
+	StoryModeService_AIOrdering_FullMethodName               = "/intelligence.StoryModeService/AIOrdering"
+	StoryModeService_AssembleDraft_FullMethodName            = "/intelligence.StoryModeService/AssembleDraft"
+	StoryModeService_CollectAndAssembleClips_FullMethodName  = "/intelligence.StoryModeService/CollectAndAssembleClips"
+	StoryModeService_DetectHooks_FullMethodName              = "/intelligence.StoryModeService/DetectHooks"
+	StoryModeService_NormalizeVideoResolution_FullMethodName = "/intelligence.StoryModeService/NormalizeVideoResolution"
+	StoryModeService_AssembleStoryVideo_FullMethodName       = "/intelligence.StoryModeService/AssembleStoryVideo"
+	StoryModeService_AddIntroOutro_FullMethodName            = "/intelligence.StoryModeService/AddIntroOutro"
 )
 
 // StoryModeServiceClient is the client API for StoryModeService service.
@@ -796,6 +1150,17 @@ const (
 type StoryModeServiceClient interface {
 	GenerateStoryVideo(ctx context.Context, in *StoryModeRequest, opts ...grpc.CallOption) (*StoryModeResponse, error)
 	BatchGenerateStoryVideos(ctx context.Context, in *BatchStoryModeRequest, opts ...grpc.CallOption) (*BatchStoryModeResponse, error)
+	// Step-by-step story video methods (3-step workflow)
+	CollectClips(ctx context.Context, in *CollectClipsRequest, opts ...grpc.CallOption) (*CollectClipsResponse, error)
+	AIOrdering(ctx context.Context, in *AIOrderingRequest, opts ...grpc.CallOption) (*AIOrderingResponse, error)
+	AssembleDraft(ctx context.Context, in *AssembleDraftRequest, opts ...grpc.CallOption) (*AssembleDraftResponse, error)
+	CollectAndAssembleClips(ctx context.Context, in *CollectAndAssembleClipsRequest, opts ...grpc.CallOption) (*AssembleDraftResponse, error)
+	// IMPROVEMENT #3: Intelligent Hook Detection
+	DetectHooks(ctx context.Context, in *HookDetectionRequest, opts ...grpc.CallOption) (*HookDetectionResponse, error)
+	// Legacy/optional step-by-step methods
+	NormalizeVideoResolution(ctx context.Context, in *NormalizeVideoRequest, opts ...grpc.CallOption) (*NormalizeVideoResponse, error)
+	AssembleStoryVideo(ctx context.Context, in *AssembleStoryRequest, opts ...grpc.CallOption) (*AssembleStoryResponse, error)
+	AddIntroOutro(ctx context.Context, in *IntroOutroRequest, opts ...grpc.CallOption) (*IntroOutroResponse, error)
 }
 
 type storyModeServiceClient struct {
@@ -826,12 +1191,103 @@ func (c *storyModeServiceClient) BatchGenerateStoryVideos(ctx context.Context, i
 	return out, nil
 }
 
+func (c *storyModeServiceClient) CollectClips(ctx context.Context, in *CollectClipsRequest, opts ...grpc.CallOption) (*CollectClipsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CollectClipsResponse)
+	err := c.cc.Invoke(ctx, StoryModeService_CollectClips_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *storyModeServiceClient) AIOrdering(ctx context.Context, in *AIOrderingRequest, opts ...grpc.CallOption) (*AIOrderingResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AIOrderingResponse)
+	err := c.cc.Invoke(ctx, StoryModeService_AIOrdering_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *storyModeServiceClient) AssembleDraft(ctx context.Context, in *AssembleDraftRequest, opts ...grpc.CallOption) (*AssembleDraftResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AssembleDraftResponse)
+	err := c.cc.Invoke(ctx, StoryModeService_AssembleDraft_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *storyModeServiceClient) CollectAndAssembleClips(ctx context.Context, in *CollectAndAssembleClipsRequest, opts ...grpc.CallOption) (*AssembleDraftResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AssembleDraftResponse)
+	err := c.cc.Invoke(ctx, StoryModeService_CollectAndAssembleClips_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *storyModeServiceClient) DetectHooks(ctx context.Context, in *HookDetectionRequest, opts ...grpc.CallOption) (*HookDetectionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(HookDetectionResponse)
+	err := c.cc.Invoke(ctx, StoryModeService_DetectHooks_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *storyModeServiceClient) NormalizeVideoResolution(ctx context.Context, in *NormalizeVideoRequest, opts ...grpc.CallOption) (*NormalizeVideoResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(NormalizeVideoResponse)
+	err := c.cc.Invoke(ctx, StoryModeService_NormalizeVideoResolution_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *storyModeServiceClient) AssembleStoryVideo(ctx context.Context, in *AssembleStoryRequest, opts ...grpc.CallOption) (*AssembleStoryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AssembleStoryResponse)
+	err := c.cc.Invoke(ctx, StoryModeService_AssembleStoryVideo_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *storyModeServiceClient) AddIntroOutro(ctx context.Context, in *IntroOutroRequest, opts ...grpc.CallOption) (*IntroOutroResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(IntroOutroResponse)
+	err := c.cc.Invoke(ctx, StoryModeService_AddIntroOutro_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // StoryModeServiceServer is the server API for StoryModeService service.
 // All implementations must embed UnimplementedStoryModeServiceServer
 // for forward compatibility.
 type StoryModeServiceServer interface {
 	GenerateStoryVideo(context.Context, *StoryModeRequest) (*StoryModeResponse, error)
 	BatchGenerateStoryVideos(context.Context, *BatchStoryModeRequest) (*BatchStoryModeResponse, error)
+	// Step-by-step story video methods (3-step workflow)
+	CollectClips(context.Context, *CollectClipsRequest) (*CollectClipsResponse, error)
+	AIOrdering(context.Context, *AIOrderingRequest) (*AIOrderingResponse, error)
+	AssembleDraft(context.Context, *AssembleDraftRequest) (*AssembleDraftResponse, error)
+	CollectAndAssembleClips(context.Context, *CollectAndAssembleClipsRequest) (*AssembleDraftResponse, error)
+	// IMPROVEMENT #3: Intelligent Hook Detection
+	DetectHooks(context.Context, *HookDetectionRequest) (*HookDetectionResponse, error)
+	// Legacy/optional step-by-step methods
+	NormalizeVideoResolution(context.Context, *NormalizeVideoRequest) (*NormalizeVideoResponse, error)
+	AssembleStoryVideo(context.Context, *AssembleStoryRequest) (*AssembleStoryResponse, error)
+	AddIntroOutro(context.Context, *IntroOutroRequest) (*IntroOutroResponse, error)
 	mustEmbedUnimplementedStoryModeServiceServer()
 }
 
@@ -847,6 +1303,30 @@ func (UnimplementedStoryModeServiceServer) GenerateStoryVideo(context.Context, *
 }
 func (UnimplementedStoryModeServiceServer) BatchGenerateStoryVideos(context.Context, *BatchStoryModeRequest) (*BatchStoryModeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method BatchGenerateStoryVideos not implemented")
+}
+func (UnimplementedStoryModeServiceServer) CollectClips(context.Context, *CollectClipsRequest) (*CollectClipsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CollectClips not implemented")
+}
+func (UnimplementedStoryModeServiceServer) AIOrdering(context.Context, *AIOrderingRequest) (*AIOrderingResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AIOrdering not implemented")
+}
+func (UnimplementedStoryModeServiceServer) AssembleDraft(context.Context, *AssembleDraftRequest) (*AssembleDraftResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AssembleDraft not implemented")
+}
+func (UnimplementedStoryModeServiceServer) CollectAndAssembleClips(context.Context, *CollectAndAssembleClipsRequest) (*AssembleDraftResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CollectAndAssembleClips not implemented")
+}
+func (UnimplementedStoryModeServiceServer) DetectHooks(context.Context, *HookDetectionRequest) (*HookDetectionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DetectHooks not implemented")
+}
+func (UnimplementedStoryModeServiceServer) NormalizeVideoResolution(context.Context, *NormalizeVideoRequest) (*NormalizeVideoResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method NormalizeVideoResolution not implemented")
+}
+func (UnimplementedStoryModeServiceServer) AssembleStoryVideo(context.Context, *AssembleStoryRequest) (*AssembleStoryResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AssembleStoryVideo not implemented")
+}
+func (UnimplementedStoryModeServiceServer) AddIntroOutro(context.Context, *IntroOutroRequest) (*IntroOutroResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddIntroOutro not implemented")
 }
 func (UnimplementedStoryModeServiceServer) mustEmbedUnimplementedStoryModeServiceServer() {}
 func (UnimplementedStoryModeServiceServer) testEmbeddedByValue()                          {}
@@ -905,6 +1385,150 @@ func _StoryModeService_BatchGenerateStoryVideos_Handler(srv interface{}, ctx con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _StoryModeService_CollectClips_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CollectClipsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StoryModeServiceServer).CollectClips(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: StoryModeService_CollectClips_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StoryModeServiceServer).CollectClips(ctx, req.(*CollectClipsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _StoryModeService_AIOrdering_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AIOrderingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StoryModeServiceServer).AIOrdering(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: StoryModeService_AIOrdering_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StoryModeServiceServer).AIOrdering(ctx, req.(*AIOrderingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _StoryModeService_AssembleDraft_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AssembleDraftRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StoryModeServiceServer).AssembleDraft(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: StoryModeService_AssembleDraft_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StoryModeServiceServer).AssembleDraft(ctx, req.(*AssembleDraftRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _StoryModeService_CollectAndAssembleClips_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CollectAndAssembleClipsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StoryModeServiceServer).CollectAndAssembleClips(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: StoryModeService_CollectAndAssembleClips_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StoryModeServiceServer).CollectAndAssembleClips(ctx, req.(*CollectAndAssembleClipsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _StoryModeService_DetectHooks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(HookDetectionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StoryModeServiceServer).DetectHooks(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: StoryModeService_DetectHooks_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StoryModeServiceServer).DetectHooks(ctx, req.(*HookDetectionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _StoryModeService_NormalizeVideoResolution_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(NormalizeVideoRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StoryModeServiceServer).NormalizeVideoResolution(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: StoryModeService_NormalizeVideoResolution_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StoryModeServiceServer).NormalizeVideoResolution(ctx, req.(*NormalizeVideoRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _StoryModeService_AssembleStoryVideo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AssembleStoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StoryModeServiceServer).AssembleStoryVideo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: StoryModeService_AssembleStoryVideo_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StoryModeServiceServer).AssembleStoryVideo(ctx, req.(*AssembleStoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _StoryModeService_AddIntroOutro_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(IntroOutroRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StoryModeServiceServer).AddIntroOutro(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: StoryModeService_AddIntroOutro_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StoryModeServiceServer).AddIntroOutro(ctx, req.(*IntroOutroRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // StoryModeService_ServiceDesc is the grpc.ServiceDesc for StoryModeService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -919,6 +1543,38 @@ var StoryModeService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "BatchGenerateStoryVideos",
 			Handler:    _StoryModeService_BatchGenerateStoryVideos_Handler,
+		},
+		{
+			MethodName: "CollectClips",
+			Handler:    _StoryModeService_CollectClips_Handler,
+		},
+		{
+			MethodName: "AIOrdering",
+			Handler:    _StoryModeService_AIOrdering_Handler,
+		},
+		{
+			MethodName: "AssembleDraft",
+			Handler:    _StoryModeService_AssembleDraft_Handler,
+		},
+		{
+			MethodName: "CollectAndAssembleClips",
+			Handler:    _StoryModeService_CollectAndAssembleClips_Handler,
+		},
+		{
+			MethodName: "DetectHooks",
+			Handler:    _StoryModeService_DetectHooks_Handler,
+		},
+		{
+			MethodName: "NormalizeVideoResolution",
+			Handler:    _StoryModeService_NormalizeVideoResolution_Handler,
+		},
+		{
+			MethodName: "AssembleStoryVideo",
+			Handler:    _StoryModeService_AssembleStoryVideo_Handler,
+		},
+		{
+			MethodName: "AddIntroOutro",
+			Handler:    _StoryModeService_AddIntroOutro_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -1199,6 +1855,147 @@ var ViralAnalysisService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "BatchAnalyzeViralPotential",
 			Handler:    _ViralAnalysisService_BatchAnalyzeViralPotential_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "intelligence.proto",
+}
+
+const (
+	SessionManagementService_SaveProgress_FullMethodName   = "/intelligence.SessionManagementService/SaveProgress"
+	SessionManagementService_CleanupSession_FullMethodName = "/intelligence.SessionManagementService/CleanupSession"
+)
+
+// SessionManagementServiceClient is the client API for SessionManagementService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type SessionManagementServiceClient interface {
+	SaveProgress(ctx context.Context, in *SaveProgressRequest, opts ...grpc.CallOption) (*SaveProgressResponse, error)
+	CleanupSession(ctx context.Context, in *CleanupSessionRequest, opts ...grpc.CallOption) (*CleanupSessionResponse, error)
+}
+
+type sessionManagementServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewSessionManagementServiceClient(cc grpc.ClientConnInterface) SessionManagementServiceClient {
+	return &sessionManagementServiceClient{cc}
+}
+
+func (c *sessionManagementServiceClient) SaveProgress(ctx context.Context, in *SaveProgressRequest, opts ...grpc.CallOption) (*SaveProgressResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SaveProgressResponse)
+	err := c.cc.Invoke(ctx, SessionManagementService_SaveProgress_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sessionManagementServiceClient) CleanupSession(ctx context.Context, in *CleanupSessionRequest, opts ...grpc.CallOption) (*CleanupSessionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CleanupSessionResponse)
+	err := c.cc.Invoke(ctx, SessionManagementService_CleanupSession_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// SessionManagementServiceServer is the server API for SessionManagementService service.
+// All implementations must embed UnimplementedSessionManagementServiceServer
+// for forward compatibility.
+type SessionManagementServiceServer interface {
+	SaveProgress(context.Context, *SaveProgressRequest) (*SaveProgressResponse, error)
+	CleanupSession(context.Context, *CleanupSessionRequest) (*CleanupSessionResponse, error)
+	mustEmbedUnimplementedSessionManagementServiceServer()
+}
+
+// UnimplementedSessionManagementServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedSessionManagementServiceServer struct{}
+
+func (UnimplementedSessionManagementServiceServer) SaveProgress(context.Context, *SaveProgressRequest) (*SaveProgressResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SaveProgress not implemented")
+}
+func (UnimplementedSessionManagementServiceServer) CleanupSession(context.Context, *CleanupSessionRequest) (*CleanupSessionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CleanupSession not implemented")
+}
+func (UnimplementedSessionManagementServiceServer) mustEmbedUnimplementedSessionManagementServiceServer() {
+}
+func (UnimplementedSessionManagementServiceServer) testEmbeddedByValue() {}
+
+// UnsafeSessionManagementServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to SessionManagementServiceServer will
+// result in compilation errors.
+type UnsafeSessionManagementServiceServer interface {
+	mustEmbedUnimplementedSessionManagementServiceServer()
+}
+
+func RegisterSessionManagementServiceServer(s grpc.ServiceRegistrar, srv SessionManagementServiceServer) {
+	// If the following call pancis, it indicates UnimplementedSessionManagementServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&SessionManagementService_ServiceDesc, srv)
+}
+
+func _SessionManagementService_SaveProgress_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SaveProgressRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SessionManagementServiceServer).SaveProgress(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SessionManagementService_SaveProgress_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SessionManagementServiceServer).SaveProgress(ctx, req.(*SaveProgressRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SessionManagementService_CleanupSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CleanupSessionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SessionManagementServiceServer).CleanupSession(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SessionManagementService_CleanupSession_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SessionManagementServiceServer).CleanupSession(ctx, req.(*CleanupSessionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// SessionManagementService_ServiceDesc is the grpc.ServiceDesc for SessionManagementService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var SessionManagementService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "intelligence.SessionManagementService",
+	HandlerType: (*SessionManagementServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "SaveProgress",
+			Handler:    _SessionManagementService_SaveProgress_Handler,
+		},
+		{
+			MethodName: "CleanupSession",
+			Handler:    _SessionManagementService_CleanupSession_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

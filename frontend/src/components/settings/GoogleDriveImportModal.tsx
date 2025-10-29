@@ -19,6 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { workspaceHub } from "@/repo/workspace_hub";
+import { observer } from "mobx-react-lite";
 
 interface GoogleDriveFile {
   id: string;
@@ -128,6 +129,20 @@ const GoogleDriveImportModal: React.FC<GoogleDriveImportModalProps> = ({
   };
 
   const toggleFileSelection = (fileId: string) => {
+    const file = files.find(f => f.id === fileId);
+    const MAX_FILE_SIZE = 400 * 1024 * 1024; // 400MB in bytes
+
+    // Check file size before selection
+    if (file && file.size && file.size > MAX_FILE_SIZE) {
+      const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+      toast({
+        title: "File too large",
+        description: `${file.name} (${sizeMB} MB) exceeds the maximum file size of 400 MB`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     const newSelection = new Set(selectedFiles);
     if (newSelection.has(fileId)) {
       newSelection.delete(fileId);
@@ -138,10 +153,22 @@ const GoogleDriveImportModal: React.FC<GoogleDriveImportModalProps> = ({
   };
 
   const toggleSelectAll = () => {
+    const MAX_FILE_SIZE = 400 * 1024 * 1024; // 400MB in bytes
+
     if (selectedFiles.size === files.length) {
       setSelectedFiles(new Set());
     } else {
-      setSelectedFiles(new Set(files.map((file) => file.id)));
+      // Only select files that are under the size limit
+      const selectableFiles = files.filter(file => !file.size || file.size <= MAX_FILE_SIZE);
+      setSelectedFiles(new Set(selectableFiles.map((file) => file.id)));
+
+      const oversizedFiles = files.filter(file => file.size && file.size > MAX_FILE_SIZE);
+      if (oversizedFiles.length > 0) {
+        toast({
+          title: "Some files skipped",
+          description: `${oversizedFiles.length} file(s) exceed the 400 MB limit and were not selected`,
+        });
+      }
     }
   };
 
@@ -412,18 +439,24 @@ const GoogleDriveImportModal: React.FC<GoogleDriveImportModalProps> = ({
               <div className="divide-y divide-gray-100">
                 {files.map((file) => {
                   const isSelected = selectedFiles.has(file.id);
+                  const MAX_FILE_SIZE = 400 * 1024 * 1024; // 400MB in bytes
+                  const isOversized = file.size && file.size > MAX_FILE_SIZE;
 
                   return (
                     <motion.div
                       key={file.id}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className={`p-4 transition-all cursor-pointer hover:bg-gray-50 ${
+                      className={`p-4 transition-all ${
+                        isOversized
+                          ? "cursor-not-allowed opacity-60 bg-red-50/30"
+                          : "cursor-pointer hover:bg-gray-50"
+                      } ${
                         isSelected
                           ? "bg-blue-50 border-l-2 border-l-blue-500"
                           : ""
                       }`}
-                      onClick={() => toggleFileSelection(file.id)}
+                      onClick={() => !isOversized && toggleFileSelection(file.id)}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3 flex-1">
@@ -533,4 +566,4 @@ const GoogleDriveImportModal: React.FC<GoogleDriveImportModalProps> = ({
   );
 };
 
-export default GoogleDriveImportModal;
+export default observer(GoogleDriveImportModal);

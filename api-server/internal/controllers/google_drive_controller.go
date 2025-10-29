@@ -361,6 +361,19 @@ func (gdc *googleDriveController) ImportFile(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	// Validate file size (max 250MB)
+	const maxFileSize int64 = 250 * 1024 * 1024 // 250MB in bytes
+	if fileMetadata.Size > maxFileSize {
+		gdc.logger.Warn("File too large for import",
+			zap.String("file", fileMetadata.Name),
+			zap.Int64("size", fileMetadata.Size),
+			zap.Int64("max_size", maxFileSize))
+		sizeMB := float64(fileMetadata.Size) / (1024 * 1024)
+		utils.RespondWithError(w, http.StatusRequestEntityTooLarge,
+			fmt.Sprintf("File too large (%.1f MB). Maximum file size is 250 MB", sizeMB))
+		return
+	}
+
 	// Use existing bulk import service with single file
 	result, err := gdc.testimonialCollectionService.ProcessGoogleDriveImportWithAuth(
 		r.Context(),

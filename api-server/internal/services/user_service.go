@@ -90,7 +90,11 @@ func (s *userService) GetWorkspaceDataByUser(ctx context.Context) (*models.GetWo
 	}
 
 	if workspace.TotalTestimonials > 0 {
-		filter := models.TestimonialFilter{}
+		// Use lightweight query for dashboard performance - exclude artifacts
+		filter := models.TestimonialFilter{
+			ExcludeArtifacts: true,
+			Limit:            50,
+		}
 		if testimonials, err := s.repo.Testimonial().FetchByWorkspaceID(ctx, workspace.ID, filter, s.db); err != nil {
 			s.logger.Error("fetch testimonial in user workspace failed", zap.Error(err))
 			return &result, nil

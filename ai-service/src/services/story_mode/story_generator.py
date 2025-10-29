@@ -356,7 +356,7 @@ class StoryModeGenerator:
                 final_story_path, output_format, story_id, temp_files_local
             )
             
-            object_name = f"stories/{cache_key}.{output_format}"
+            object_name = f"temp/stories/{cache_key}.{output_format}"
             story_video_url = self.storage_manager.upload_file_with_retry(encoded_story_path, object_name)
             
             temp_files_local.append(encoded_story_path)
@@ -499,7 +499,7 @@ class StoryModeGenerator:
             file_size_bytes = os.path.getsize(encoded_story_path)
             file_size_mb = round(file_size_bytes / (1024 * 1024), 2)
             
-            object_name = f"stories/{cache_key}.{output_format}"
+            object_name = f"temp/stories/{cache_key}.{output_format}"
             story_video_url = self.storage_manager.upload_file_with_retry(encoded_story_path, object_name)
             
             temp_files_local.append(encoded_story_path)
@@ -1207,7 +1207,7 @@ class StoryModeGenerator:
         intro_text = story_script["intro_text"]
         # 1. Generate deterministic cache key
         cache_key = self._generate_intro_cache_key(company_name, intro_image_url, intro_text, brand_colors)
-        cache_path = f"cache/intros/{cache_key}.mp4"
+        cache_path = f"temp/cache/intros/{cache_key}.mp4"
         
         # 2. Try to download cached version
         cache_url = self.storage_manager.get_public_url_for_object(cache_path)
@@ -1249,7 +1249,7 @@ class StoryModeGenerator:
         outro_text = story_script["outro_text"]
         # 1. Generate deterministic cache key for outro
         cache_key = self._generate_outro_cache_key(company_name, outro_image_url, outro_text, brand_colors)
-        cache_path = f"cache/outros/{cache_key}.mp4"
+        cache_path = f"temp/cache/outros/{cache_key}.mp4"
         
         # 2. Try to download cached version
         # try:
@@ -1432,7 +1432,7 @@ class StoryModeGenerator:
             )
 
             logger.info(f"📊 Executing batch story combination with {quality_preset['preset']} preset")
-            result = self.ffmpeg_optimizer.execute_with_monitoring(batch_cmd, timeout=300)
+            result = self.ffmpeg_optimizer.optimize_and_execute(batch_cmd, timeout=300)
 
             if result.returncode == 0 and os.path.exists(output_path):
                 temp_files.append(output_path)
@@ -2343,7 +2343,7 @@ class StoryModeGenerator:
             ]
 
             logger.info(f"📊 Applying studio encoding with {quality_preset['preset']}, CRF {quality_preset['crf']}")
-            result = self.ffmpeg_optimizer.execute_with_monitoring(cmd, timeout=600)
+            result = self.ffmpeg_optimizer.optimize_and_execute(cmd, timeout=600)
 
             if result.returncode == 0 and os.path.exists(output_path):
                 temp_files.append(output_path)

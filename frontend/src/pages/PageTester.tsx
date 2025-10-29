@@ -1190,7 +1190,7 @@ LINKEDIN_REDIRECT_URI=http://localhost:8081/api/social/oauth/callback`}
       setLoading(true);
       try {
         const response = await fetch(
-          `http://localhost:8081/api/workspaces/${uploadData.workspace_id}/testimonials/upload/video`,
+          `http://localhost:8081/api/collection/workspaces/${uploadData.workspace_id}/testimonials/upload/video/queue`,
           {
             method: "POST",
             body: formData,

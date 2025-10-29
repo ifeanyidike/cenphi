@@ -25,6 +25,7 @@ import (
 	"github.com/ifeanyidike/cenphi/internal/sharing"
 	"github.com/ifeanyidike/cenphi/internal/sse"
 	"github.com/ifeanyidike/cenphi/internal/storage"
+	"github.com/ifeanyidike/cenphi/internal/vector_store"
 
 	"github.com/redis/go-redis/v9"
 
@@ -60,6 +61,13 @@ type App struct {
 	AIProcessorController           controllers.AIProcessorController
 	PresetController                controllers.PresetController
 	TestController                  controllers.TestController
+	PublicShareController           controllers.PublicShareController
+	WidgetController                controllers.WidgetController
+	ChatWithDataController          controllers.ChatWithDataController
+	VectorStoreController           controllers.VectorStoreController
+	StudioController                controllers.StudioController
+	AIPostController                controllers.AIPostController
+	AnalyticsController             controllers.AnalyticsController
 	// Services
 	StorageService storage.StorageFactory
 	RateLimiter    *midware.RateLimiter
@@ -116,10 +124,17 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 	artifactsRepo := repositories.NewTestimonialArtifactRepository(redisClient, logger)
 	driveRepo := repositories.NewGoogleDriveRepository(redisClient)
 	presetRepo := repositories.NewPresetRepository(redisClient)
+	sessionRepo := repositories.NewProcessingSessionRepository(redisClient)
+	stageRepo := repositories.NewProcessingStageRepository(redisClient)
+	tempArtifactsRepo := repositories.NewTempArtifactsRepository(redisClient)
+	storageRepo := repositories.NewStorageRepository(redisClient)
+	analyticsRepo := repositories.NewAnalyticsRepository(redisClient)
 
 	sseManager := sse.NewSSEManager(cacheService, logger)
 	aiServiceManager := ai.NewAIServiceManager(cfg, cacheService, aiClient, audioExtractor, artifactsRepo, workspaceRepo, testimonialRepo, jobRepo, db, logger)
-	testimonialService := services.NewTestimonialService(testimonialRepo, userRepo, storageService, db, redisClient, logger)
+	vectorStoreService := vector_store.NewVectorStoreService(logger, workspaceRepo, testimonialRepo, db)
+	publicShareRepo := repositories.NewPublicShareRepository(redisClient, logger, testimonialRepo, artifactsRepo)
+	testimonialService := services.NewTestimonialService(testimonialRepo, userRepo, storageService, vectorStoreService, media_intelligence, db, redisClient, logger)
 	userService := services.NewUserService(repo, db, logger)
 	teamMemberService := services.NewTeamMemberService(teamMemberRepo, db, logger)
 	onboardingService := services.NewOnboardingService(db, logger, repo, aiServiceManager)
@@ -159,8 +174,31 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 	driveService := services.NewDriveService(cfg.Google.Drive, cacheService, driveRepo, userRepo, db, logger)
 	testimonialCollService := services.NewTestimonialCollectionService(
 		testimonialRepo, jobRepo, storageService, driveService, &mailingService, queueService,
-		aiServiceManager.AudioTranscriptionService, db, redisClient, logger)
+		aiServiceManager.AudioTranscriptionService, workspaceRepo, vectorStoreService, sseManager, db, redisClient, logger)
 	presetService := services.NewPresetService(db, logger, presetRepo)
+	chatWithDataService := services.NewChatWithDataService(logger, vectorStoreService, userRepo, &aiClient, analyticsRepo, db)
+	analyticsService := services.NewAnalyticsService(logger, testimonialRepo, analyticsRepo, db)
+	exportService := services.NewExportService(logger, analyticsService, testimonialRepo, &artifactsRepo)
+	tempStorageService := storage.NewTempStorageService(db, storageRepo, storageService, logger)
+	sessionCleanupService := services.NewSessionCleanupService(db, sessionRepo, stageRepo, tempArtifactsRepo, artifactsRepo, tempStorageService, logger)
+	stepOrchestrator := ai.NewStepOrchestrator(sessionRepo, stageRepo, testimonialRepo, workspaceRepo, artifactsRepo, tempStorageService, sseManager, db, logger)
+
+	// Initialize step workers
+	platformOptWorker := ai.NewPlatformOptimizationStepsWorker(
+		media_intelligence, &aiServiceManager, cacheService, testimonialRepo,
+		workspaceRepo, artifactsRepo, tempStorageService, storageService.Provider, sseManager, db, logger)
+	clippingWorker := ai.NewClippingStepsWorker(
+		media_intelligence, &aiServiceManager, cacheService, testimonialRepo,
+		workspaceRepo, artifactsRepo, tempStorageService, storageService.Provider, sseManager, db, logger)
+	storyVideoWorker := ai.NewStoryVideoStepsWorker(
+		media_intelligence, &aiServiceManager, cacheService, testimonialRepo,
+		workspaceRepo, artifactsRepo, tempStorageService, storageService.Provider, sseManager, db, logger)
+
+	// Register handlers with the orchestrator
+	stepOrchestrator.RegisterPlatformOptimizationHandlers(platformOptWorker)
+	stepOrchestrator.RegisterCustomPipelineHandlers(platformOptWorker) // Reuses platform optimization handlers
+	stepOrchestrator.RegisterClippingHandlers(clippingWorker)
+	stepOrchestrator.RegisterStoryVideoHandlers(storyVideoWorker)
 
 	// Initialize WebSocket hub
 	// wsHub := services.NewWSHub(logger, aiClient, testimonialService)
@@ -178,17 +216,24 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 	testimonialController := controllers.NewTestimonialController(testimonialService, logger)
 	workspaceController := controllers.NewWorkspaceController(workspaceService, testimonialService, logger)
 
-	socialController := controllers.NewSocialController(sharingService, logger)
+	socialController := controllers.NewSocialController(cfg, sharingService, logger)
 
 	aiTestController := controllers.NewAITestController(aiServiceManager, queueService, logger, cacheService)
 
 	testimonialReqController := controllers.NewTestimonialRequestController(mailingService, logger)
 
 	googleDriveController := controllers.NewGoogleDriveController(cfg, driveService, testimonialCollService, logger)
-	testimonialCollController := controllers.NewTestimonialCollectionController(testimonialCollService, *driveService, aiServiceManager.AudioTranscriptionService, logger)
+	testimonialCollController := controllers.NewTestimonialCollectionController(testimonialCollService, *driveService, aiServiceManager.AudioTranscriptionService, queueService, logger)
 	sseTestimonialMonitor := controllers.NewSSETestimonialMonitor(cacheService, logger)
 	aiProcessorController := controllers.NewAIProcessorController(aiServiceManager, queueService, logger, cacheService, sseManager)
 	presetController := controllers.NewPresetController(presetService, logger)
+	publicShareController := controllers.NewPublicShareController(publicShareRepo, testimonialRepo, artifactsRepo, db, *storageService, logger)
+	widgetController := controllers.NewWidgetController(publicShareRepo, testimonialRepo, artifactsRepo, db, logger)
+	vectorStoreController := controllers.NewVectorStoreController(vectorStoreService, logger)
+	aiPostController := controllers.NewAIPostController(aiClient, testimonialRepo, logger, db)
+	chatWithDataController := controllers.NewChatWithDataController(chatWithDataService, logger)
+	analyticsController := controllers.NewAnalyticsController(logger, analyticsService, chatWithDataService, exportService)
+	studioController := controllers.NewStudioController(db, sessionRepo, stageRepo, testimonialRepo, workspaceRepo, artifactsRepo, tempStorageService, sessionCleanupService, stepOrchestrator, media_intelligence, sseManager, logger)
 
 	// testimonialCollController := controllers.NewTestimonialCollectionController(testimonialCollService, logger)
 	testController := controllers.NewTestController(driveService, sharingService, logger)
@@ -234,6 +279,13 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 		PresetController:                presetController,
 		AITestController:                *aiTestController,
 		TestController:                  testController,
+		PublicShareController:           publicShareController,
+		WidgetController:                widgetController,
+		VectorStoreController:           *vectorStoreController,
+		AIPostController:                *aiPostController,
+		ChatWithDataController:          *chatWithDataController,
+		AnalyticsController:             *analyticsController,
+		StudioController:                studioController,
 		StorageService:                  *storageService,
 		QueueWorkers:                    queueWorkers,
 		// WSHub:                  wsHub,
@@ -301,10 +353,18 @@ func (app *App) Mount() http.Handler {
 	// r.Use(middleware.Timeout(30 * time.Second))
 	r.Use(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// SSE endpoints must not have timeouts (long-lived connections)
+			if strings.Contains(r.URL.Path, "/stream") ||
+				strings.Contains(r.URL.Path, "/sse") {
+				h.ServeHTTP(w, r)
+				return
+			}
+			// Upload endpoints need longer timeout
 			if strings.Contains(r.URL.Path, "/upload") {
 				middleware.Timeout(5*time.Minute)(h).ServeHTTP(w, r)
 				return
 			}
+			// Default timeout for regular API requests
 			middleware.Timeout(30*time.Second)(h).ServeHTTP(w, r)
 		})
 	})
@@ -326,7 +386,14 @@ func (app *App) Mount() http.Handler {
 		app.GoogleDriveController,
 		app.AIProcessorController,
 		app.PresetController,
+		app.ChatWithDataController,
+		app.AnalyticsController,
+		app.VectorStoreController,
+		app.StudioController,
 		app.TestController,
+		app.PublicShareController,
+		app.AIPostController,
+		app.WidgetController,
 		*app.RateLimiter,
 	)
 

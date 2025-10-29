@@ -136,6 +136,7 @@ const GoogleDriveImport: React.FC = observer(() => {
         title: "Import failed",
         description: errorMessage,
         variant: "destructive",
+        style: { top: 50, right: 20, width: "400px", position: "fixed" },
       });
     } finally {
       setImporting(null);

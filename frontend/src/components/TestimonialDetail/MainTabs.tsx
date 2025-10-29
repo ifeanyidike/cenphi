@@ -52,7 +52,7 @@ const MainTabs: React.FC<MainTabsProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="font-medium text-sm">AI Features</span>
+            <span className="font-medium text-sm">Insights</span>
             {completedFeaturesCount > 0 && (
               <div className="flex items-center gap-1">
                 <Check className="h-3 w-3 text-green-600" />

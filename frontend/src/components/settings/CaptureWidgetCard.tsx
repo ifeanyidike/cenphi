@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { workspaceHub } from "@/repo/workspace_hub";
+import { observer } from "mobx-react-lite";
 
 interface WidgetConfig {
   primaryColor: string;
@@ -455,4 +456,4 @@ const CaptureWidgetCard: React.FC = () => {
   );
 };
 
-export default CaptureWidgetCard;
+export default observer(CaptureWidgetCard);

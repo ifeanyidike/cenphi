@@ -84,10 +84,11 @@ type DatabaseConfig struct {
 }
 
 type RedisConfig struct {
-	Host     string
-	Port     string
-	Password string
-	DB       int
+	Host       string
+	Port       string
+	Password   string
+	DB         int
+	TLSEnabled bool
 }
 
 type AWSConfig struct {
@@ -218,10 +219,11 @@ func NewConfig() Config {
 				),
 			},
 			Redis: RedisConfig{
-				Host:     os.Getenv("REDIS_HOST"),
-				Port:     os.Getenv("REDIS_PORT"),
-				Password: os.Getenv("REDIS_PASSWORD"),
-				DB:       0,
+				Host:       os.Getenv("REDIS_HOST"),
+				Port:       os.Getenv("REDIS_PORT"),
+				Password:   os.Getenv("REDIS_PASSWORD"),
+				DB:         0,
+				TLSEnabled: getEnvBool("REDIS_TLS_ENABLED", false),
 			},
 			RabbitMQ: RabbitMQConfig{
 				Host:     getEnvWithDefault("RABBITMQ_HOST", "rabbitmq"),

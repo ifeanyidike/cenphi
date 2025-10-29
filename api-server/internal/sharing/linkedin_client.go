@@ -23,7 +23,7 @@ import (
 )
 
 type LinkedInClient interface {
-	GetAuthURL(workspaceID, userID uuid.UUID) (string, error)
+	GetAuthURL(workspaceID, userID uuid.UUID, returnURL string) (string, error)
 	ExchangeCode(ctx context.Context, code, state string) (*models.LinkedInTokenResponse, *models.OAuthState, error)
 	GetProfile(ctx context.Context, accessToken string) (*models.LinkedInProfile, error)
 	CreatePost(ctx context.Context, accessToken, authorURN string, req *models.LinkedInPostRequest) (*models.LinkedInPostResponse, error)
@@ -492,8 +492,8 @@ func (s *linkedInClient) getAssetStatus(ctx context.Context, accessToken, assetU
 	return statusResp.Status, nil
 }
 
-func (s *linkedInClient) GetAuthURL(workspaceID, userID uuid.UUID) (string, error) {
-	state, err := s.generateState(workspaceID, userID, "linkedin")
+func (s *linkedInClient) GetAuthURL(workspaceID, userID uuid.UUID, returnURL string) (string, error) {
+	state, err := s.generateState(workspaceID, userID, "linkedin", returnURL)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate OAuth state: %w", err)
 	}
@@ -888,7 +888,7 @@ func (s *linkedInClient) ValidateToken(ctx context.Context, accessToken string) 
 }
 
 // Generate OAuth state with cryptographically secure random string
-func (s *linkedInClient) generateState(workspaceID, userID uuid.UUID, platform string) (string, error) {
+func (s *linkedInClient) generateState(workspaceID, userID uuid.UUID, platform, returnURL string) (string, error) {
 	// Generate secure random state token
 	randomBytes := make([]byte, 16)
 	if _, err := rand.Read(randomBytes); err != nil {
@@ -902,6 +902,7 @@ func (s *linkedInClient) generateState(workspaceID, userID uuid.UUID, platform s
 		WorkspaceID: workspaceID,
 		UserID:      userID,
 		Platform:    platform,
+		ReturnURL:   returnURL,
 		CreatedAt:   time.Now(),
 	}
 

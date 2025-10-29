@@ -277,9 +277,6 @@ func (j *JSONMap) Scan(value interface{}) error {
 }
 
 func (j JSONMap) Value() (driver.Value, error) {
-	if j == nil {
-		return "{}", nil
-	}
 	return json.Marshal(j)
 }
 
@@ -301,9 +298,6 @@ func (j *JSONArray) Scan(value interface{}) error {
 }
 
 func (j JSONArray) Value() (driver.Value, error) {
-	if j == nil {
-		return "[]", nil
-	}
 	return json.Marshal(j)
 }
 
@@ -330,17 +324,23 @@ type AuthorStats struct {
 }
 
 type TestimonialFilter struct {
-	Status        string     `json:"status"`
-	Type          string     `json:"type"`
-	MinRating     *int       `json:"min_rating"`
-	AuthorEmail   string     `json:"author_email"`
-	Tags          []string   `json:"tags"`
-	CreatedAfter  *time.Time `json:"created_after"`
-	CreatedBefore *time.Time `json:"created_before"`
-	SortBy        string     `json:"sort_by"`
-	SortOrder     string     `json:"sort_order"`
-	Limit         int        `json:"limit"`
-	Offset        int        `json:"offset"`
+	Status            string     `json:"status"`
+	Type              string     `json:"type"`  // Deprecated: use Types instead
+	Types             []string   `json:"types"` // Multiple types filter
+	MinRating         *int       `json:"min_rating"`
+	MaxRating         *int       `json:"max_rating"`
+	Sentiments        []string   `json:"sentiments"`         // positive, neutral, negative
+	CollectionMethods []string   `json:"collection_methods"` // widget, email, dashboard_import, drive_import
+	Companies         []string   `json:"companies"`
+	AuthorEmail       string     `json:"author_email"`
+	Tags              []string   `json:"tags"`
+	CreatedAfter      *time.Time `json:"created_after"`
+	CreatedBefore     *time.Time `json:"created_before"`
+	SortBy            string     `json:"sort_by"`
+	SortOrder         string     `json:"sort_order"`
+	Limit             int        `json:"limit"`
+	Offset            int        `json:"offset"`
+	ExcludeArtifacts  bool       `json:"exclude_artifacts"` // If true, skip loading artifacts (for list views)
 }
 
 // GetFilterFromParam creates a filter from URL query parameters

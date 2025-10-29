@@ -1,6 +1,16 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Sparkles, Video, BarChart3, Zap } from "lucide-react";
+import {
+  ArrowRight,
+  Sparkles,
+  Video,
+  BarChart3,
+  Zap,
+  MessageSquare,
+  Scissors,
+  Film,
+  Share2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 
@@ -10,7 +20,7 @@ const ServicesShowcase = () => {
 
   const services = [
     {
-      id: "ai-content",
+      id: "content-hub",
       title: "AI Content Generation",
       subtitle: "Transform testimonials into marketing content",
       description:
@@ -28,40 +38,112 @@ const ServicesShowcase = () => {
       metric: "5x faster content creation",
     },
     {
-      id: "video-processing",
-      title: "Video Processing",
-      subtitle: "Collect and enhance video testimonials",
+      id: "talk-to-data",
+      title: "Talk to Your Data",
+      subtitle: "AI-powered conversational analytics",
       description:
-        "Capture powerful video testimonials with our smart collection tools, then enhance them with AI-powered editing, transcription, and optimization.",
-      icon: Video,
-      color: "gray",
-      demo: <VideoProcessingDemo />,
+        "Ask questions about your testimonials in natural language and get instant insights. Chat with your data to discover trends, sentiments, and patterns you never knew existed.",
+      icon: MessageSquare,
+      color: "purple",
+      demo: <TalkToDataDemo />,
       features: [
-        "Smart video collection",
-        "Automated transcription",
-        "AI-powered editing",
-        "Platform optimization",
+        "Natural language queries",
+        "Instant sentiment analysis",
+        "Trend identification",
+        "Smart recommendations",
       ],
-      cta: "Process Videos",
-      metric: "89% completion rate",
+      cta: "Chat with Data",
+      metric: "Get insights in seconds",
+    },
+    {
+      id: "clipping",
+      title: "Smart Clipping",
+      subtitle: "Extract powerful highlight moments",
+      description:
+        "AI automatically identifies and extracts the most impactful moments from your video testimonials. Create short, engaging clips perfect for social media and ads.",
+      icon: Scissors,
+      color: "blue",
+      demo: <ClippingDemo />,
+      features: [
+        "AI highlight detection",
+        "Auto-clip generation",
+        "Multiple aspect ratios",
+        "Caption overlay",
+      ],
+      cta: "Create Clips",
+      metric: "10+ clips per testimonial",
+    },
+    {
+      id: "story-video",
+      title: "Story Video Generation",
+      subtitle: "Create compelling narrative videos",
+      description:
+        "Combine multiple testimonials into powerful story videos. AI selects the best moments, arranges them into a narrative flow, and adds professional transitions.",
+      icon: Film,
+      color: "purple",
+      demo: <StoryVideoDemo />,
+      features: [
+        "Multi-testimonial stories",
+        "AI-powered sequencing",
+        "Professional transitions",
+        "Brand customization",
+      ],
+      cta: "Generate Stories",
+      metric: "3x higher engagement",
+    },
+    {
+      id: "platform-optimization",
+      title: "Platform Optimization",
+      subtitle: "Optimize for every social channel",
+      description:
+        "Automatically adapt your testimonials for TikTok, Instagram, YouTube, LinkedIn and more. Perfect aspect ratios, captions, and formatting for each platform.",
+      icon: Share2,
+      color: "blue",
+      demo: <PlatformOptimizationDemo />,
+      features: [
+        "Multi-platform formats",
+        "Auto aspect ratio",
+        "Platform-specific captions",
+        "Optimized encoding",
+      ],
+      cta: "Optimize Content",
+      metric: "Reach 5+ platforms instantly",
     },
     {
       id: "analytics",
       title: "Performance Analytics",
       subtitle: "Track ROI and conversion impact",
       description:
-        "Get deep insights into how your testimonials perform across channels, track conversion rates, and measure the revenue impact of social proof.",
+        "Get deep insights into how your testimonials perform across channels, track conversion rates, sentiment trends, and measure the revenue impact of social proof.",
       icon: BarChart3,
-      color: "blue",
+      color: "purple",
       demo: <AnalyticsDemo />,
       features: [
-        "Conversion tracking",
-        "Revenue attribution",
-        "A/B testing insights",
-        "Channel performance",
+        "Sentiment timeline",
+        "Keyword analysis",
+        "Period comparison",
+        "Custom segments",
       ],
       cta: "View Analytics",
       metric: "+47% average conversion lift",
+    },
+    {
+      id: "video-processing",
+      title: "Video Processing",
+      subtitle: "Collect and enhance video testimonials",
+      description:
+        "Capture powerful video testimonials with our smart collection tools, then enhance them with AI-powered editing, noise removal, and quality improvements.",
+      icon: Video,
+      color: "blue",
+      demo: <VideoProcessingDemo />,
+      features: [
+        "Smart video collection",
+        "Automated transcription",
+        "Noise removal",
+        "Video enhancement",
+      ],
+      cta: "Process Videos",
+      metric: "89% completion rate",
     },
     {
       id: "automation",
@@ -70,7 +152,7 @@ const ServicesShowcase = () => {
       description:
         "Set up intelligent workflows that automatically request, collect, and organize testimonials from your customers at the perfect moments.",
       icon: Zap,
-      color: "gray",
+      color: "purple",
       demo: <AutomationDemo />,
       features: [
         "Automated requests",
@@ -90,6 +172,12 @@ const ServicesShowcase = () => {
       border: "border-blue-200",
       button: "bg-blue-600 hover:bg-blue-700",
     },
+    purple: {
+      bg: "bg-purple-50",
+      text: "text-purple-600",
+      border: "border-purple-200",
+      button: "bg-purple-600 hover:bg-purple-700",
+    },
     gray: {
       bg: "bg-gray-50",
       text: "text-gray-600",
@@ -108,7 +196,7 @@ const ServicesShowcase = () => {
         {/* Header */}
         <div className="text-center mb-8 sm:mb-12">
           <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-3 px-2">
-            Four powerful services that drive results
+            Eight powerful AI services that drive results
           </h2>
           <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto px-4">
             Each service works independently or together to maximize the impact
@@ -117,7 +205,7 @@ const ServicesShowcase = () => {
         </div>
 
         {/* Service Navigation */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-8 sm:mb-12">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-8 sm:mb-12">
           {services.map((service, index) => {
             const colors =
               colorClasses[service.color as keyof typeof colorClasses];
@@ -404,7 +492,7 @@ const AnalyticsDemo = () => (
 const AutomationDemo = () => (
   <div className="w-full max-w-md">
     <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-      <div className="bg-gray-600 text-white p-4">
+      <div className="bg-purple-600 text-white p-4">
         <h4 className="font-semibold">Smart Automation</h4>
       </div>
       <div className="p-6 space-y-3">
@@ -439,7 +527,7 @@ const AutomationDemo = () => (
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: i * 0.1 }}
-            className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
+            className="flex items-center gap-3 p-3 bg-purple-50 rounded-lg"
           >
             <span className="text-xl">{item.icon}</span>
             <div className="flex-1">
@@ -449,14 +537,242 @@ const AutomationDemo = () => (
             <div
               className={`px-2 py-1 rounded text-xs font-medium ${
                 item.status === "Active"
-                  ? "bg-blue-100 text-blue-700"
-                  : "bg-blue-100 text-blue-700"
+                  ? "bg-purple-100 text-purple-700"
+                  : "bg-purple-100 text-purple-700"
               }`}
             >
               {item.status}
             </div>
           </motion.div>
         ))}
+      </div>
+    </div>
+  </div>
+);
+
+const TalkToDataDemo = () => (
+  <div className="w-full max-w-md">
+    <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+      <div className="bg-purple-600 text-white p-4">
+        <h4 className="font-semibold">Talk to Your Data</h4>
+      </div>
+      <div className="p-6 space-y-4">
+        <div className="bg-purple-50 p-3 rounded-lg border border-purple-200">
+          <div className="flex items-start gap-2">
+            <MessageSquare className="h-4 w-4 text-purple-600 mt-0.5" />
+            <div className="text-sm text-gray-800">
+              "Show me sentiment analysis for testimonials from the last month"
+            </div>
+          </div>
+        </div>
+
+        <div className="text-center py-2">
+          <div className="inline-flex items-center gap-2 text-purple-600">
+            <div className="w-2 h-2 bg-purple-600 rounded-full animate-pulse"></div>
+            <span className="text-sm font-medium">AI is analyzing...</span>
+          </div>
+        </div>
+
+        <div className="bg-white border border-gray-200 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="h-4 w-4 text-purple-600" />
+            <span className="text-sm font-semibold">AI Response</span>
+          </div>
+          <div className="text-xs text-gray-700 space-y-2">
+            <p>Based on 47 testimonials from last month:</p>
+            <ul className="space-y-1 pl-4">
+              <li>• 89% positive sentiment (+12% vs previous)</li>
+              <li>• Top keywords: "easy", "helpful", "fast"</li>
+              <li>• NPS Score: 72</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+const ClippingDemo = () => (
+  <div className="w-full max-w-md">
+    <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+      <div className="bg-blue-600 text-white p-4">
+        <h4 className="font-semibold">Smart Clipping</h4>
+      </div>
+      <div className="p-6 space-y-3">
+        <div className="aspect-video bg-gray-900 rounded-lg relative overflow-hidden">
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Scissors className="h-12 w-12 text-white opacity-50" />
+          </div>
+          <div className="absolute top-2 left-2 bg-blue-500 text-white px-2 py-1 rounded text-xs">
+            3:45 - Full Video
+          </div>
+          <div className="absolute bottom-2 left-2 right-2 space-y-1">
+            {[
+              { start: "0:12", label: "Highlight 1", color: "bg-blue-500" },
+              { start: "1:24", label: "Highlight 2", color: "bg-purple-500" },
+              { start: "2:45", label: "Highlight 3", color: "bg-green-500" },
+            ].map((clip, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.2 }}
+                className={`${clip.color} text-white px-2 py-1 rounded text-xs flex items-center gap-2`}
+              >
+                <div className="w-1 h-1 bg-white rounded-full"></div>
+                <span>{clip.start}</span>
+                <span>-</span>
+                <span>{clip.label}</span>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2">
+          {["9:16", "1:1", "16:9"].map((ratio, i) => (
+            <div key={i} className="text-center">
+              <div className="bg-blue-50 border border-blue-200 rounded p-2 text-xs font-medium text-blue-600">
+                {ratio}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+const StoryVideoDemo = () => (
+  <div className="w-full max-w-md">
+    <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+      <div className="bg-purple-600 text-white p-4">
+        <h4 className="font-semibold">Story Video Generation</h4>
+      </div>
+      <div className="p-6 space-y-3">
+        <div className="text-xs text-gray-600 mb-2">
+          Combining 5 testimonials into a story...
+        </div>
+
+        <div className="space-y-2">
+          {[
+            {
+              name: "Sarah M.",
+              content: "Intro: Problem statement",
+              color: "bg-purple-50",
+            },
+            {
+              name: "John D.",
+              content: "Discovery moment",
+              color: "bg-blue-50",
+            },
+            {
+              name: "Lisa K.",
+              content: "Transformation story",
+              color: "bg-purple-50",
+            },
+            {
+              name: "Mike R.",
+              content: "Results & impact",
+              color: "bg-blue-50",
+            },
+            {
+              name: "Amy S.",
+              content: "Call to action",
+              color: "bg-purple-50",
+            },
+          ].map((clip, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.15 }}
+              className={`${clip.color} p-3 rounded-lg border flex items-center gap-3`}
+            >
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 to-blue-400 flex items-center justify-center text-white text-xs font-bold">
+                {i + 1}
+              </div>
+              <div className="flex-1">
+                <div className="text-sm font-medium">{clip.name}</div>
+                <div className="text-xs text-gray-600">{clip.content}</div>
+              </div>
+              <Film className="h-4 w-4 text-gray-400" />
+            </motion.div>
+          ))}
+        </div>
+
+        <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-3 rounded-lg border border-purple-200 text-center">
+          <div className="text-xs font-medium text-purple-700">
+            Final Story: 2:30 duration
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+const PlatformOptimizationDemo = () => (
+  <div className="w-full max-w-md">
+    <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+      <div className="bg-blue-600 text-white p-4">
+        <h4 className="font-semibold">Platform Optimization</h4>
+      </div>
+      <div className="p-6 space-y-3">
+        <div className="text-center mb-2">
+          <div className="inline-flex items-center gap-2 bg-blue-50 px-3 py-1 rounded-full text-xs font-medium text-blue-600">
+            <Share2 className="h-3 w-3" />
+            <span>1 video → 5 platforms</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            {
+              platform: "TikTok",
+              ratio: "9:16",
+              color: "bg-pink-50",
+              icon: "📱",
+            },
+            {
+              platform: "Instagram",
+              ratio: "1:1",
+              color: "bg-purple-50",
+              icon: "📸",
+            },
+            {
+              platform: "YouTube",
+              ratio: "16:9",
+              color: "bg-red-50",
+              icon: "🎥",
+            },
+            {
+              platform: "LinkedIn",
+              ratio: "1:1",
+              color: "bg-blue-50",
+              icon: "💼",
+            },
+          ].map((item, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: i * 0.1 }}
+              className={`${item.color} p-3 rounded-lg border text-center`}
+            >
+              <div className="text-2xl mb-1">{item.icon}</div>
+              <div className="text-xs font-medium mb-1">{item.platform}</div>
+              <div className="text-xs text-gray-600">{item.ratio}</div>
+              <div className="mt-2 text-xs text-green-600 font-medium">
+                ✓ Ready
+              </div>
+            </motion.div>
+          ))}
+        </div>
+
+        <div className="bg-green-50 border border-green-200 rounded-lg p-2 text-center">
+          <div className="text-xs font-medium text-green-700">
+            All formats exported with optimized captions
+          </div>
+        </div>
       </div>
     </div>
   </div>

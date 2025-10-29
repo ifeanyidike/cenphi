@@ -7,17 +7,19 @@ import json
 from typing import Dict, List, Any, Optional, Tuple
 import cv2
 import numpy as np
+from .smart_crop_v2 import SmartCropV2
 
 logger = logging.getLogger(__name__)
 
 
 class MediaProcessor:
     """Enhanced media processor with intelligent content-aware cropping"""
-    
+
     def __init__(self):
         # and self.device.type != 'cpu'
         self._storage_manager = None
         self._ffmpeg_optimizer = None
+        self._smart_crop_v2 = SmartCropV2()  # Initialize v2 smart crop
         self.encoding_presets = {
             "fast": {
                 "preset": "ultrafast",
@@ -536,60 +538,36 @@ class MediaProcessor:
             ]
 
     def detect_content_center(self, video_path: str, target_aspect: float, ENABLE_SMART_CROP = False, sample_frames: int = 5) -> Tuple[int, int]:
-        """Two-stage content detection"""
-        cap = None
+        """
+        Detect optimal content center using multi-strategy AI detection
+        Uses SmartCropV2 for improved accuracy
+        """
         try:
-            # Validate inputs
-            if target_aspect <= 0:
-                logger.warning("Invalid target aspect ratio")
-                return (960, 540)
-            
-            cap = cv2.VideoCapture(video_path)
-            if not cap.isOpened():
-                raise Exception("Cannot open video")
-            
-            width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-            height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-            total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-            
-            # Validation
-            if width <= 0 or height <= 0 or total_frames <= 0:
-                logger.warning(f"Invalid video properties: {width}x{height}, {total_frames} frames")
-                return (width // 2 if width > 0 else 960, height // 2 if height > 0 else 540)
-            
-            center_x, center_y = width // 2, height // 2
-            
-            # STAGE 1: Quick composition analysis
-            crop_analysis = self._analyze_crop_necessity(cap, width, height, total_frames, target_aspect)
-            
-            if not crop_analysis["needs_smart_crop"]:
-                logger.info(f"📐 Using center crop - {crop_analysis['reason']}")
-                return (center_x, center_y)
-            
-            # STAGE 2: Smart detection
-            smart_center = self._detect_smart_center(cap, width, height, total_frames, sample_frames)
-            
-            if smart_center:
-                logger.info(f"🎯 Smart crop: ({smart_center[0]}, {smart_center[1]}) - {crop_analysis['reason']}")
-                return smart_center
-            else:
-                logger.info("⚠️ Smart detection failed, using center")
-                return (center_x, center_y)
-            
+            logger.info("🔍 Using SmartCropV2 multi-strategy detection")
+            center = self._smart_crop_v2.detect_optimal_center(
+                video_path=video_path,
+                target_aspect=target_aspect,
+                sample_frames=sample_frames
+            )
+            return center
+
         except Exception as e:
-            logger.warning(f"Content detection failed: {e}")
-            # Robust fallback
+            logger.error(f"SmartCropV2 failed, using geometric center fallback: {e}")
+            # Fallback: get video dimensions and return center
+            cap = None
             try:
-                if cap and cap.isOpened():
+                cap = cv2.VideoCapture(video_path)
+                if cap.isOpened():
                     w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
                     h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
                     return (max(w // 2, 1), max(h // 2, 1))
             except:
                 pass
+            finally:
+                if cap:
+                    cap.release()
+
             return (960, 540)
-        finally:
-            if cap:
-                cap.release()
 
     def _analyze_crop_necessity(self, cap, width, height, total_frames, target_aspect) -> Dict[str, Any]:
         """Determine if smart cropping would improve the video"""
@@ -772,52 +750,83 @@ class MediaProcessor:
 
     def calculate_smart_crop_position(
         self,
-        source_width: int, 
-        source_height: int, 
-        target_width: int, 
+        source_width: int,
+        source_height: int,
+        target_width: int,
         target_height: int,
         content_center: Tuple[int, int]
     ) -> Dict[str, Any]:
         """
-        Calculate crop position with proper headroom and padding around faces
+        Calculate crop position that INCLUDES the detected subject
+        CRITICAL: For off-center subjects, we want to KEEP them in their relative position,
+        not force them to center. The crop should frame the subject, not center on it.
         """
         content_x, content_y = content_center
         source_aspect = source_width / source_height
         target_aspect = target_width / target_height
-        
+
+        logger.info(f"🎯 Calculating crop: source={source_width}x{source_height}, "
+                   f"target aspect={target_aspect:.3f}, subject at ({content_x}, {content_y})")
+
         if source_aspect > target_aspect:
-            # Source is wider - need to crop width
+            # Source is wider - need to crop width (e.g., 16:9 → 9:16 or 1:1)
             crop_height = source_height
             crop_width = int(source_height * target_aspect)
-            
-            # ADD HEADROOM: Assume face center should be in upper 1/3 of final crop
-            # This gives space above the head and shows upper body below
-            desired_face_y_in_crop = crop_height * 0.3  # Face at 30% from top
-            
-            # Calculate where crop should start vertically (usually 0 for width crops)
             crop_y = 0
-            
-            # Calculate horizontal crop position with face positioning
-            crop_x = max(0, min(content_x - crop_width // 2, source_width - crop_width))
-            
+
+            # IMPROVED STRATEGY: Ensure subject stays within crop bounds with good framing
+            # We want the subject to maintain their relative position in the frame
+
+            # Calculate subject's position as a percentage of source width
+            subject_position_ratio = content_x / source_width
+
+            # Calculate where subject would be in the final crop for different crop positions
+            # We want subject to be somewhere between 30-70% of the crop frame (good composition)
+
+            # Target: keep subject at roughly the same relative position, clamped to 30-70%
+            target_subject_position_in_crop = max(0.3, min(0.7, subject_position_ratio))
+
+            # Calculate crop_x such that subject ends up at target position within crop
+            # subject_x_in_crop = content_x - crop_x
+            # We want: (content_x - crop_x) / crop_width = target_subject_position_in_crop
+            # So: crop_x = content_x - (target_subject_position_in_crop * crop_width)
+            crop_x = int(content_x - (target_subject_position_in_crop * crop_width))
+
+            # Clamp to valid bounds
+            crop_x = max(0, min(crop_x, source_width - crop_width))
+
+            # Calculate where subject actually ended up
+            actual_subject_position = (content_x - crop_x) / crop_width if crop_width > 0 else 0.5
+
+            logger.info(f"📐 Width crop: subject at x={content_x} ({subject_position_ratio:.1%} of source), "
+                       f"targeting {target_subject_position_in_crop:.1%} in crop, "
+                       f"crop_x={crop_x}, actual position={actual_subject_position:.1%}")
+
         else:
-            # Source is taller - need to crop height  
+            # Source is taller - need to crop height (e.g., 9:16 → 1:1 or 16:9)
             crop_width = source_width
             crop_height = int(source_width / target_aspect)
-            
-            # ADD HEADROOM: Position face in upper portion of crop
-            desired_face_y_in_crop = crop_height * 0.3  # Face at 30% from top
-            
-            # Calculate where to start crop to achieve this face positioning
-            crop_start_y = content_y - desired_face_y_in_crop
-            
-            # Ensure crop stays within bounds
-            crop_y = max(0, min(int(crop_start_y), source_height - crop_height))
             crop_x = 0
-        
+
+            # IMPROVED: Position subject in the upper portion (headroom)
+            # But allow for off-center vertical positioning if needed
+
+            # Calculate desired position: subject at 30-35% from top (good headroom)
+            desired_subject_ratio = 0.33  # Subject at 1/3 from top
+            desired_subject_y_in_crop = crop_height * desired_subject_ratio
+
+            # Calculate where crop should start to put subject at desired position
+            crop_start_y = content_y - desired_subject_y_in_crop
+
+            # Clamp to ensure crop stays in bounds
+            crop_y = int(max(0, min(crop_start_y, source_height - crop_height)))
+
+            logger.info(f"📐 Height crop: desired subject ratio={desired_subject_ratio:.2f}, "
+                       f"crop_y={crop_y}, subject will be at y={(content_y - crop_y):.0f} in crop")
+
         return {
             "crop_x": crop_x,
-            "crop_y": crop_y, 
+            "crop_y": crop_y,
             "crop_width": crop_width,
             "crop_height": crop_height,
             "content_center": content_center

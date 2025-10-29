@@ -72,6 +72,7 @@ message EmotionSegment {
 service MediaEnhancementService {
   rpc EnhanceMedia(EnhanceRequest) returns (EnhanceResponse);
   rpc BatchEnhanceMedia(BatchEnhanceRequest) returns (BatchEnhanceResponse);
+  rpc AdaptiveEnhanceMedia(AdaptiveEnhanceRequest) returns (AdaptiveEnhanceResponse);
 }
 
 message EnhanceRequest {
@@ -121,6 +122,42 @@ message BatchEnhanceResponseOpt {
 
 message BatchEnhanceResponse {
   repeated BatchEnhanceResponseOpt response = 1;
+}
+
+// Scene-aware Adaptive Enhancement
+message AdaptiveEnhanceRequest {
+  string testimonial_id = 1;
+  string media_url = 2;
+  string quality_preset = 3; // "low", "medium", "high", "ultra"
+  int32 max_scene_samples = 4; // Max frames to sample for analysis
+  double sample_interval = 5; // Interval between samples in seconds
+  bool generate_preview = 6; // Generate quick preview instead of full enhancement
+  int32 preview_duration = 7; // Preview duration in seconds
+  int32 preview_start_time = 8; // Preview start time in seconds
+  string job_id = 9;
+}
+
+message SceneInfo {
+  string scene_type = 1; // "talking_head", "product_demo", "screen_recording", "b_roll", "mixed"
+  double start_time = 2;
+  double end_time = 3;
+  string lighting_quality = 4;
+  double avg_brightness = 5;
+  double contrast_level = 6;
+  string motion_level = 7;
+  bool face_detected = 8;
+  repeated string recommended_enhancements = 9;
+}
+
+message AdaptiveEnhanceResponse {
+  string enhanced_url = 1;
+  int32 scenes_analyzed = 2;
+  repeated string enhancements_applied = 3;
+  repeated SceneInfo scene_details = 4;
+  string dominant_scene_type = 5;
+  double processing_time = 6;
+  map<string, double> quality_improvement = 7;
+  string error = 8;
 }
 
 // ============================================================================
@@ -196,6 +233,7 @@ message ClippingRequest {
   string background_music = 5; // Optional
   string music_volume = 6; // Optional
   string job_id = 7;
+  string session_id = 8; // Session ID for temp storage paths
 }
 
 message Word {
@@ -267,6 +305,7 @@ message Clip {
   double size = 10;
   map<string, bool> social_media_ready = 11; // platform -> ready status
   string error = 12;
+  string highlight_id = 13; // ID of the highlight moment this clip was generated from (for tracking)
 }
 
 message ClippingRequestOpt {
@@ -294,6 +333,18 @@ message BatchClippingResponse {
 service PlatformOptimizerService {
   rpc OptimizeMedia(OptimizeRequest) returns (OptimizeResponse);
   rpc BatchOptimizeMedia(BatchOptimizeRequest) returns (BatchOptimizeResponse);
+
+  // IMPROVEMENT #2: Smart Platform Recommendation
+  rpc RecommendPlatforms(PlatformRecommendRequest) returns (PlatformRecommendResponse);
+
+  // Step-by-step platform optimization methods
+  rpc CropResize(CropResizeRequest) returns (CropResizeResponse);
+  rpc BurnCaptions(BurnCaptionsRequest) returns (BurnCaptionsResponse);
+  rpc ApplyBranding(ApplyBrandingRequest) returns (ApplyBrandingResponse);
+  rpc MixMusic(MixMusicRequest) returns (MixMusicResponse);
+  rpc NormalizeAudio(NormalizeAudioRequest) returns (NormalizeAudioResponse);
+  rpc EnhanceVideo(EnhanceVideoRequest) returns (EnhanceVideoResponse);
+  rpc TextOptimization(TextOptimizationRequest) returns (TextOptimizationResponse);
 }
 
 message OptimizeRequest {
@@ -360,6 +411,198 @@ message BatchOptimizeResponse {
   repeated OptimizeResponse responses = 1;
 }
 
+// Step-by-step Platform Optimization Messages
+
+message CropResizeRequest {
+  string testimonial_id = 1;
+  string media_url = 2;
+  string target_platform = 3; // "instagram_feed", "instagram_story", "tiktok", "youtube_shorts", etc.
+  string aspect_ratio = 4; // "9:16", "1:1", "16:9", etc.
+  string job_id = 5;
+  bool upload_intermediate = 6; // true = interactive mode (upload for preview), false = batch mode (no upload)
+  bool generate_fast_preview = 7; // true = generate 480p preview first for immediate feedback
+}
+
+message CropResizeResponse {
+  string cropped_url = 1; // Cloud URL (empty in batch mode)
+  string local_path = 2; // Container path for batch mode continuation
+  string aspect_ratio = 3;
+  double duration = 4;
+  double size = 5;
+  string error = 6;
+}
+
+message CaptionStyleConfig {
+  int32 font_size = 1;
+  string font_color = 2;
+  string background_color = 3;
+  string position = 4; // "top", "bottom", "center"
+}
+
+message BurnCaptionsRequest {
+  string testimonial_id = 1;
+  string media_url = 2;
+  repeated TranscriptSegment transcript_segments = 3;
+  string caption_style = 4; // "modern", "classic", "minimal", etc.
+  CaptionStyleConfig style_config = 5; // Optional detailed style configuration
+  string target_platform = 6; // Platform-specific caption styling
+  string job_id = 7;
+  bool upload_intermediate = 8; // true = interactive mode (upload for preview), false = batch mode (no upload)
+}
+
+message BurnCaptionsResponse {
+  string captioned_url = 1; // Cloud URL (empty in batch mode)
+  string local_path = 2; // Container path for batch mode continuation
+  int32 captions_added = 3;
+  string caption_style = 4;
+  double duration = 5;
+  double size = 6;
+  string error = 7;
+}
+
+message ApplyBrandingRequest {
+  string testimonial_id = 1;
+  string media_url = 2;
+  BrandingOptions branding = 3; // Logo and watermark options
+  string logo_position = 4; // "top-left", "top-right", "bottom-left", "bottom-right"
+  double logo_scale = 5;
+  string logo_url = 6; // Direct logo URL - used by ai-service
+  string watermark_url = 7; // Direct watermark URL - used by ai-service (DEPRECATED - use watermark_text instead)
+  BrandingConfig branding_config = 8; // Detailed config used by ai-service
+  string job_id = 9;
+  bool upload_intermediate = 10; // true = interactive mode (upload for preview), false = batch mode (no upload)
+  string watermark_text = 11; // Text to overlay as watermark (typically workspace name)
+  string watermark_position = 12; // Position for watermark text
+  string brand_color = 13; // Brand color for watermark
+}
+
+message BrandingConfig {
+  string logo_position = 1; // "top_right", "top_left", "bottom_right", "bottom_left"
+  double logo_opacity = 2; // 0.0 - 1.0
+  string logo_size = 3; // "small", "medium", "large"
+  string watermark_position = 4; // "top_right", "bottom_right", etc.
+  double watermark_opacity = 5; // 0.0 - 1.0
+}
+
+message ApplyBrandingResponse {
+  string branded_url = 1; // Cloud URL (empty in batch mode)
+  string local_path = 2; // Container path for batch mode continuation
+  repeated string applied_elements = 3; // ["logo", "watermark", "color_grading"]
+  double duration = 4;
+  double size = 5;
+  string error = 6;
+}
+
+message MixMusicRequest {
+  string testimonial_id = 1;
+  string media_url = 2;
+  string music_track = 3; // URL or preset name
+  string music_volume = 4; // "low", "medium", "high" or percentage
+  double fade_in_duration = 5;
+  double fade_out_duration = 6;
+  string job_id = 7;
+  bool upload_intermediate = 8; // true = interactive mode (upload for preview), false = batch mode (no upload)
+}
+
+message MixMusicResponse {
+  string music_mixed_url = 1; // Cloud URL (empty in batch mode) - matches ai-service response field
+  string local_path = 2; // Container path for batch mode continuation
+  string music_track = 3;
+  double duration = 4;
+  double size = 5;
+  string error = 6;
+}
+
+message TextOptimizationRequest {
+  string testimonial_id = 1;
+  string transcript = 2;
+  string target_platform = 3;
+  BrandContext brand_context = 4;
+  string optimization_goal = 5; // "engagement", "clarity", "brevity"
+  string job_id = 6;
+}
+
+message TextOptimizationResponse {
+  string optimized_text = 1;
+  repeated string improvements = 2; // ["removed_filler_words", "improved_clarity", "added_keywords"]
+  double readability_score = 3;
+  string error = 4;
+}
+
+message NormalizeAudioRequest {
+  string testimonial_id = 1;
+  string media_url = 2;
+  string target_platform = 3;
+  double target_loudness = 4; // LUFS target (-14 for streaming, -16 for broadcast)
+  string job_id = 5;
+  bool upload_intermediate = 6; // Usually false - processing step only
+}
+
+message NormalizeAudioResponse {
+  string normalized_url = 1; // Cloud URL (usually empty - processing step)
+  string local_path = 2; // Container path for continuation
+  double achieved_loudness = 3; // Actual LUFS achieved
+  bool normalization_applied = 4;
+  double duration = 5;
+  double size = 6;
+  string error = 7;
+}
+
+message EnhanceVideoRequest {
+  string testimonial_id = 1;
+  string media_url = 2;
+  string target_platform = 3;
+  string enhancement_level = 4; // "standard", "high", "premium" - matches ai-service field name
+  string job_id = 5;
+  bool upload_intermediate = 6; // true = final preview, false = batch mode
+}
+
+message EnhanceVideoResponse {
+  string enhanced_url = 1; // Cloud URL (empty in batch mode)
+  string local_path = 2; // Container path for batch mode continuation
+  repeated string applied_enhancements = 3; // ["platform_colors", "engagement_hook", "quality_boost"]
+  double quality_score = 4;
+  double duration = 5;
+  double size = 6;
+  string error = 7;
+}
+
+// IMPROVEMENT #2: Smart Platform Recommendation Messages
+
+message PlatformRecommendRequest {
+  string testimonial_id = 1;
+  string media_url = 2;
+  string transcript = 3;
+  google.protobuf.Struct sentiment_data = 4; // Sentiment analysis results
+  string industry = 5; // Business industry/niche
+  string current_aspect_ratio = 6; // Current video aspect ratio (e.g., "16:9")
+  double file_size_mb = 7; // Current file size in MB
+  double duration = 8; // Video duration in seconds
+}
+
+message PlatformRecommendation {
+  string platform = 1;
+  double score = 2; // 0.0 to 1.0
+  string confidence = 3; // "high", "medium", "low"
+  string recommended_aspect_ratio = 4;
+  repeated string reasons = 5; // Why this platform is recommended
+  repeated string optimization_tips = 6; // Platform-specific tips
+  string estimated_engagement = 7; // "very_high", "high", "medium", "low"
+}
+
+message PlatformRecommendResponse {
+  PlatformRecommendation primary_recommendation = 1;
+  repeated PlatformRecommendation alternative_platforms = 2;
+  repeated AvoidPlatform avoid_platforms = 3;
+  google.protobuf.Struct content_analysis = 4;
+  string error = 5;
+}
+
+message AvoidPlatform {
+  string platform = 1;
+  string reason = 2;
+}
+
 
 // ============================================================================
 // Thumbnail Service
@@ -388,6 +631,20 @@ message ThumbnailResponse {
 service StoryModeService {
   rpc GenerateStoryVideo (StoryModeRequest) returns (StoryModeResponse);
   rpc BatchGenerateStoryVideos (BatchStoryModeRequest) returns (BatchStoryModeResponse);
+
+  // Step-by-step story video methods (3-step workflow)
+  rpc CollectClips(CollectClipsRequest) returns (CollectClipsResponse);
+  rpc AIOrdering(AIOrderingRequest) returns (AIOrderingResponse);
+  rpc AssembleDraft(AssembleDraftRequest) returns (AssembleDraftResponse);
+  rpc CollectAndAssembleClips(CollectAndAssembleClipsRequest) returns (AssembleDraftResponse);
+
+  // IMPROVEMENT #3: Intelligent Hook Detection
+  rpc DetectHooks(HookDetectionRequest) returns (HookDetectionResponse);
+
+  // Legacy/optional step-by-step methods
+  rpc NormalizeVideoResolution(NormalizeVideoRequest) returns (NormalizeVideoResponse);
+  rpc AssembleStoryVideo(AssembleStoryRequest) returns (AssembleStoryResponse);
+  rpc AddIntroOutro(IntroOutroRequest) returns (IntroOutroResponse);
 }
 
 message TestimonialSegment {
@@ -452,6 +709,199 @@ message StoryModeResponse {
 
 message BatchStoryModeResponse {
   repeated string story_video_urls = 1;
+}
+
+// Step-by-step Story Video Messages (3-step workflow)
+
+message CollectClipsRequest {
+  string session_id = 1;
+  string workspace_id = 3;
+  string job_id = 5;
+  bool upload_intermediate = 6; // true = upload clips to cloud for preview, false = keep local only
+
+  // Option 1: Extract new clips from testimonials (API-server fetches highlights first)
+  repeated TestimonialSegment testimonial_segments = 2; // Testimonials with highlights to extract
+
+  // Option 2: Use already-extracted clips (API-server fetches clip metadata first)
+  repeated ClipInfo existing_clips = 7; // Already-extracted clips with metadata
+
+  // Note: Can use both options together (combine existing clips + extract new ones)
+}
+
+message ClipInfo {
+  string clip_id = 1;
+  string testimonial_id = 2;
+  string storage_path = 3; // Cloud storage path if uploaded, local path otherwise
+  string preview_url = 4; // Presigned URL for frontend preview
+  double start_time = 5;
+  double end_time = 6;
+  double duration = 7;
+  string highlight_type = 8;
+  string text_content = 9; // Transcript excerpt for this clip
+  google.protobuf.Struct metadata = 10;
+}
+
+message CollectClipsResponse {
+  repeated ClipInfo clips = 1;
+  int32 total_clips = 2;
+  double total_duration = 3;
+  string error = 4;
+}
+
+message AIOrderingRequest {
+  string session_id = 1;
+  repeated ClipInfo clips = 2; // Clips from CollectClips step
+  string ordering_strategy = 3; // "narrative", "emotional_arc", "chronological", "impact"
+  string brand_context = 4; // Optional brand/company context for ordering
+  string job_id = 5;
+}
+
+message AIOrderingResponse {
+  repeated ClipInfo ordered_clips = 1; // Same clips but reordered
+  string ordering_rationale = 2; // AI explanation of why this order makes sense
+  double confidence_score = 3; // 0.0-1.0 confidence in ordering quality
+  string error = 4;
+}
+
+message AssembleDraftRequest {
+  string session_id = 1;
+  string testimonial_id = 2; // Primary testimonial ID for tracking
+  repeated ClipInfo clips = 3; // Clips in desired order (from AIOrdering or manual)
+  string transition_type = 4; // "fade", "dissolve", "wipe", "slideright", "slidedown", "none"
+  double transition_duration = 5; // Duration in seconds
+  string job_id = 6;
+  bool upload_intermediate = 7; // true = upload assembled video for preview
+}
+
+message CollectAndAssembleClipsRequest {
+  string session_id = 1;
+  string workspace_id = 3;
+  string job_id = 5;
+  bool upload_intermediate = 6; // true = upload clips to cloud for preview, false = keep local only
+  repeated TestimonialSegment testimonial_segments = 2; // Testimonials with highlights to extract
+  // Option 2: Use already-extracted clips (API-server fetches clip metadata first)
+  repeated ClipInfo existing_clips = 7; // Already-extracted clips with metadata
+  double transition_duration = 8; // Duration in seconds
+  string transition_type = 9; // "fade", "dissolve", "wipe", "slideright", "slidedown", "none"
+}
+
+message AssembleDraftResponse {
+  string assembled_url = 1; // Cloud URL if upload_intermediate=true
+  string local_path = 2; // Local container path
+  double duration = 3;
+  double size = 4; // File size in MB
+  int32 clips_assembled = 5;
+  string error = 6;
+  int32 width = 7; // Video width in pixels
+  int32 height = 8; // Video height in pixels
+  string aspect_ratio = 9; // Aspect ratio as string (e.g. "16:9", "9:16", "1:1")
+}
+
+
+// Legacy step-by-step messages
+
+message AssembleStoryRequest {
+  string testimonial_id = 1; // Testimonial ID for tracking
+  repeated string clip_paths = 2; // Local or cloud paths to clips
+  string transition_type = 3; // "fade", "slide", "zoom", "none"
+  double transition_duration = 4; // Duration in seconds
+  string job_id = 5;
+  bool upload_intermediate = 6; // true = interactive mode (upload for preview), false = batch mode (no upload)
+}
+
+message AssembleStoryResponse {
+  string video_url = 1; // Cloud URL (empty in batch mode)
+  string local_path = 2; // Container path for batch mode continuation
+  double duration = 3;
+  double size = 4;
+  int32 clips_assembled = 5;
+  string error = 6;
+}
+
+message IntroOutroRequest {
+  string testimonial_id = 1; // Testimonial ID for tracking
+  string media_url = 2;
+  bool add_intro = 3; // true = add intro, false = skip intro
+  bool add_outro = 4; // true = add outro, false = skip outro
+  string job_id = 5;
+  bool upload_intermediate = 6; // true = interactive mode (upload for preview), false = batch mode (no upload)
+
+  // Custom text for intro/outro (both displayed and spoken)
+  // Frontend should construct these with company name from workspace
+  // Example: "Welcome. Thank you for choosing {company_name}. Here's what our customers have to say."
+  string intro_text = 11; // Optional custom intro text (if empty, uses default)
+  string outro_text = 12; // Optional custom outro text (if empty, uses default)
+
+  // Brand context for logo, colors, etc.
+  BrandContext brand_context = 13;
+  string workspace_name = 14; // Workspace name (used as brand name in voiceover)
+
+}
+
+message IntroOutroResponse {
+  string output_url = 1; // Cloud URL (empty in batch mode) - matches ai-service response field
+  string local_path = 2; // Container path for batch mode continuation
+  double duration = 3;
+  double size = 4;
+  string error = 5;
+  int32 width = 6; // Video width in pixels
+  int32 height = 7; // Video height in pixels
+  string aspect_ratio = 8; // Aspect ratio as string (e.g. "16:9", "9:16", "1:1")
+}
+
+// Hook Detection (IMPROVEMENT #3)
+message HookDetectionRequest {
+  string testimonial_id = 1;
+  string transcript = 2;
+  repeated TranscriptSegment transcript_segments = 3;
+  google.protobuf.Struct sentiment_data = 4;
+  double duration = 5;
+  string target_platform = 6; // Optional: optimize for specific platform
+  string target_position = 7; // Optional: "intro", "first_3_seconds", etc.
+  double max_duration = 8; // Optional: max hook duration in seconds
+  string job_id = 9;
+}
+
+message HookCandidate {
+  double start_time = 1;
+  double end_time = 2;
+  string text = 3;
+  string hook_type = 4; // "question", "surprise", "emotional", "statistic", "benefit", "problem"
+  double engagement_score = 5; // 0-10
+  string placement_recommendation = 6; // "intro", "first_3_seconds", "early", "middle", "closing"
+  string reasoning = 7;
+  repeated string keywords = 8;
+  HookCutTiming cut_timing = 9; // Recommended timing for extracting this hook
+}
+
+message HookCutTiming {
+  double start_time = 1; // Including pre-roll
+  double end_time = 2; // Including post-roll
+  double original_start = 3; // Original hook start
+  double original_end = 4; // Original hook end
+}
+
+message HookDetectionResponse {
+  repeated HookCandidate hooks = 1;
+  HookCandidate best_hook = 2; // Single best recommendation
+  int32 hooks_detected = 3;
+  string error = 4;
+}
+
+message NormalizeVideoRequest {
+  string testimonial_id = 1; // Testimonial ID for tracking
+  repeated string clip_urls = 2; // Multiple clips to normalize to same resolution
+  string target_resolution = 3; // "1080p", "720p", "auto" (picks highest common)
+  string job_id = 4;
+  bool upload_intermediate = 5; // Usually false - processing step only
+}
+
+message NormalizeVideoResponse {
+  repeated string normalized_urls = 1; // Cloud URLs (usually empty - processing step)
+  repeated string local_paths = 2; // Container paths for continuation
+  double duration = 3; // Total duration
+  double size = 4; // Total file size
+  string error = 5;
 }
 
 
@@ -544,4 +994,35 @@ message BatchViralAnalysisRequest {
 
 message BatchViralAnalysisResponse {
   repeated ViralAnalysisResponse responses = 1;
+}
+
+// ============================================================================
+// Session Management Service (for interactive step-by-step processing)
+// ============================================================================
+
+service SessionManagementService {
+  rpc SaveProgress(SaveProgressRequest) returns (SaveProgressResponse);
+  rpc CleanupSession(CleanupSessionRequest) returns (CleanupSessionResponse);
+}
+
+message SaveProgressRequest {
+  string job_id = 1;
+  string testimonial_id = 2;
+}
+
+message SaveProgressResponse {
+  string saved_url = 1; // Final uploaded URL
+  repeated string steps_completed = 2;
+  double duration = 3;
+  double size = 4;
+  string error = 5;
+}
+
+message CleanupSessionRequest {
+  string job_id = 1;
+}
+
+message CleanupSessionResponse {
+  bool success = 1;
+  string error = 2;
 }

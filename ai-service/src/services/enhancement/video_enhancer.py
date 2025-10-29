@@ -48,8 +48,9 @@ class VideoEnhancer:
         #     "professional": {"preset": "faster", "crf": "18", "profile": "high"},    # Was "slow", "16"  
         #     "enhanced": {"preset": "faster", "crf": "20", "profile": "high"}       # Was "medium", "18"
         # }
+        # High-quality encoding settings to match crop/branding quality
         self.encoding = {
-            "preset": "faster", "crf": "20", "profile": "high"
+            "preset": "medium", "crf": "17", "profile": "high"
         }
         
         logger.info("🤖 Enhancer initialized")
@@ -125,7 +126,7 @@ class VideoEnhancer:
                     return {"success": False, "error": "Temporary file creation failed"}
                 temp_files.append(temp_enhanced)
                 
-                result = self._apply_enhanced_traditional(current_video, temp_enhanced, video_info)
+                result = self._apply_enhanced_traditional(current_video, temp_enhanced, video_info, enable_grayscale)
                 if result["success"]:
                     if os.path.exists(temp_enhanced) and os.path.getsize(temp_enhanced) > 0:
                         current_video = temp_enhanced
@@ -196,7 +197,7 @@ class VideoEnhancer:
                 intermediate_path = self.file_manager.create_temp_video(prefix="pre_custom_")
                 temp_files.append(intermediate_path)
                 
-                result = self._apply_enhanced_traditional(input_path, intermediate_path, video_info)
+                result = self._apply_enhanced_traditional(input_path, intermediate_path, video_info, enable_grayscale)
                 if intermediate_path:
                     temp_files.append(intermediate_path)
                 
@@ -262,7 +263,7 @@ class VideoEnhancer:
             return optimized_path if os.path.exists(optimized_path) else input_path
         return input_path
 
-    def _apply_enhanced_traditional(self, input_path: str, output_path: str, video_info: Dict) -> Dict[str, Any]:
+    def _apply_enhanced_traditional(self, input_path: str, output_path: str, video_info: Dict, enable_grayscale: bool = False) -> Dict[str, Any]:
         """Traditional processing with spectacular results"""
         try:
             logger.info("🎬 Applying enhanced traditional processing...")
@@ -270,11 +271,11 @@ class VideoEnhancer:
             if not output_path or not output_path.strip():
                 logger.error("Invalid output_path provided to _apply_enhanced_traditional")
                 return {"success": False, "error": "Invalid output path"}
-            
+
             output_path = output_path.strip()
-            
+
             # SAFE: Smart filter selection based on content
-            video_filters = self._get_optimized_video_filters(video_info)
+            video_filters = self._get_optimized_video_filters(video_info, enable_grayscale)
             
             # SAFE: Keep your exact original audio filter logic
             audio_filters = []
@@ -301,21 +302,22 @@ class VideoEnhancer:
             if audio_filters:
                 cmd.extend(["-af", ",".join(audio_filters)])
             
-            # SAFE: Keep your exact original encoding logic
+            # HIGH QUALITY encoding to match crop/branding quality and prevent degradation
             cmd.extend([
                 "-c:v", "libx264",
-                "-preset", self.encoding.get("preset", "faster"),
-                "-crf", self.encoding.get("crf", "20"),
+                "-preset", self.encoding.get("preset", "medium"),
+                "-crf", self.encoding.get("crf", "17"),  # Excellent quality
                 "-profile:v", self.encoding.get("profile", "high"),
+                "-level", "4.1",  # H.264 level for HD content
                 "-pix_fmt", "yuv420p",
                 "-tune", "film",
-                "-x264-params", "ref=3:bframes=3:b-adapt=1:direct=auto:me=hex:subme=6", 
+                "-x264-params", "ref=5:bframes=3:me=umh:subme=7:trellis=2",  # Quality-focused params
                 "-threads", str(min(8, os.cpu_count())),
                 "-movflags", "+faststart+frag_keyframe"
             ])
-            
+
             if video_info.get("has_audio", False):
-                cmd.extend(["-c:a", "aac", "-b:a", "256k", "-ar", "48000"])
+                cmd.extend(["-c:a", "aac", "-b:a", "192k", "-ar", "48000"])  # Higher audio bitrate for quality
             
             cmd.append(output_path)
             
@@ -341,22 +343,25 @@ class VideoEnhancer:
             logger.error(f"Enhanced traditional processing failed: {e}")
             return {"success": False, "error": str(e)}
 
-    def _get_optimized_video_filters(self, video_info: Dict) -> List[str]:
+    def _get_optimized_video_filters(self, video_info: Dict, enable_grayscale: bool = False) -> List[str]:
         """SAFE: Only change the filter selection logic - everything else stays the same"""
-        
+
         # Get video characteristics
         width = video_info.get("width", 1920)
         height = video_info.get("height", 1080)
         duration = video_info.get("duration", 0)
         resolution = width * height
-        
-        # BALANCED: More natural enhancement filters to prevent grayscale appearance
+
+        # QUALITY-FOCUSED ENHANCEMENT: Improve clarity without changing colors
         base_filters = [
-            "eq=contrast=1.25:saturation=1.3:brightness=0.02:gamma=1.02",  # Reduced contrast, increased saturation
-            "colorbalance=rs=0.04:gs=0.02:bs=-0.02",  # More subtle color balance
-            "vibrance=intensity=0.25",  # Increased vibrance to maintain color richness
-            "unsharp=5:5:0.6:5:5:0.0",  # Slightly reduced sharpening
-            "curves=all='0/0 0.05/0.08 0.95/0.92 1/1'"  # Gentler S-curve
+            # Step 1: Smart sharpening for improved detail (primary quality improvement)
+            "unsharp=luma_msize_x=5:luma_msize_y=5:luma_amount=1.0:chroma_msize_x=5:chroma_msize_y=5:chroma_amount=0.0",
+
+            # Step 2: Gentle contrast boost ONLY - no color changes
+            "eq=contrast=1.10:saturation=1.0:brightness=0.0:gamma=1.0",  # Only contrast, natural colors
+
+            # Step 3: Subtle shadow/highlight detail recovery
+            "curves=all='0/0 0.05/0.04 0.5/0.50 0.95/0.96 1/1'"  # Minimal curve for detail
         ]
         
         # SAFE: Content-aware optimizations that don't conflict with existing services
@@ -364,10 +369,9 @@ class VideoEnhancer:
         
         # Only optimize for clear cases where it's safe and beneficial
         if resolution >= 8294400:  # 4K+ (3840x2160)
-            # Reduce sharpening intensity for 4K (prevent over-processing)
+            # Reduce sharpening for 4K (prevent over-processing)
             optimized_filters = [
-                f.replace("unsharp=5:5:0.7:5:5:0.0", "unsharp=5:5:0.5:5:5:0.0")
-                # f.replace("unsharp=4:4:0.7:4:4:0.0", "unsharp=4:4:0.5:4:4:0.0")
+                f.replace("luma_amount=0.8", "luma_amount=0.5") if "unsharp" in f else f
                 for f in optimized_filters
             ]
             logger.debug("Reduced sharpening intensity for 4K+ content")

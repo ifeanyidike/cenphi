@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"crypto/tls"
 	"database/sql"
 	"fmt"
 	"log"
@@ -89,11 +90,21 @@ func InitializeDatabase(cfg Config) (*sql.DB, *redis.Client, error) {
 		return nil, nil, err
 	}
 
-	redisClient := redis.NewClient(&redis.Options{
+	redisOptions := &redis.Options{
 		Addr:     fmt.Sprintf("%s:%s", cfg.Redis.Host, cfg.Redis.Port),
 		Password: cfg.Redis.Password,
 		DB:       cfg.Redis.DB,
-	})
+	}
+
+	// Enable TLS if configured (required for Upstash)
+	if cfg.Redis.TLSEnabled {
+		redisOptions.TLSConfig = &tls.Config{
+			MinVersion: tls.VersionTLS12,
+		}
+		log.Println("Redis TLS enabled")
+	}
+
+	redisClient := redis.NewClient(redisOptions)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

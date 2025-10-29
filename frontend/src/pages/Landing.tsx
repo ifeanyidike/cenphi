@@ -6,18 +6,29 @@ import ServicesShowcase from "@/components/landing/ServicesShowcase";
 import RevolutionizeCollection from "@/components/landing/RevolutionizeCollection";
 import SimpleProof from "@/components/landing/SimpleProof";
 import Footer from "@/components/custom/footer";
+import SEO from "@/components/SEO";
+import { pageSEO } from "@/config/seo";
 
 const LandingPage = observer(() => {
   return (
-    <div className="min-h-screen bg-white">
-      <Navbar />
-      <HomeLandingHero />
-      <FutureShowcase />
-      <ServicesShowcase />
-      <RevolutionizeCollection />
-      <SimpleProof />
-      <Footer />
-    </div>
+    <>
+      <SEO
+        title={pageSEO.home.title}
+        description={pageSEO.home.description}
+        keywords={pageSEO.home.keywords}
+        url={pageSEO.home.url}
+        structuredData={pageSEO.home.structuredData}
+      />
+      <div className="min-h-screen bg-white">
+        <Navbar />
+        <HomeLandingHero />
+        <FutureShowcase />
+        <ServicesShowcase />
+        <RevolutionizeCollection />
+        <SimpleProof />
+        <Footer />
+      </div>
+    </>
   );
 });
 

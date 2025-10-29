@@ -34,16 +34,31 @@ help:
 # Variables
 SERVICE_NAME = ai-service
 REGION = us-central1
-PROJECT_ID = cenphiio
-IMAGE_REPO = us-central1-docker.pkg.dev/cenphiio/cenphi-ai-service-repo
+PROJECT_ID = cenphi-ai
+IMAGE_REPO = us-central1-docker.pkg.dev/$$(gcloud config get-value project)/cenphi-ai-service-repo
 IMAGE_NAME = ai-service-grpc
 DOCKERFILE = Dockerfile.cloudrun
-YAML_FILE = cloudrun-deployment-service.yaml
+YAML_FILE = cloudrun-service-updated.yaml
 
 # Build and Deploy
 deploy:
 	@echo "🚀 Deploying AI Service..."
-	./cloudrun-deploy.sh
+	@echo "1️⃣  Building Docker image..."
+	@export IMAGE_TAG=$$(date +%Y%m%d-%H%M%S) && \
+	export IMAGE_REPO_FULL=$$(gcloud config get-value project 2>/dev/null | xargs -I {} echo "us-central1-docker.pkg.dev/{}/cenphi-ai-service-repo") && \
+	docker buildx build --platform linux/amd64 -f $(DOCKERFILE) -t $(IMAGE_NAME):$$IMAGE_TAG -t $(IMAGE_NAME):latest . && \
+	echo "2️⃣  Tagging image..." && \
+	docker tag $(IMAGE_NAME):$$IMAGE_TAG $$IMAGE_REPO_FULL/$(IMAGE_NAME):$$IMAGE_TAG && \
+	docker tag $(IMAGE_NAME):$$IMAGE_TAG $$IMAGE_REPO_FULL/$(IMAGE_NAME):latest && \
+	echo "3️⃣  Pushing to registry..." && \
+	docker push $$IMAGE_REPO_FULL/$(IMAGE_NAME):$$IMAGE_TAG && \
+	docker push $$IMAGE_REPO_FULL/$(IMAGE_NAME):latest && \
+	echo "4️⃣  Updating YAML with new image..." && \
+	sed "s|image: .*|image: $$IMAGE_REPO_FULL/$(IMAGE_NAME):$$IMAGE_TAG|" $(YAML_FILE) > $(YAML_FILE).tmp && \
+	mv $(YAML_FILE).tmp $(YAML_FILE) && \
+	echo "5️⃣  Deploying to Cloud Run..." && \
+	gcloud run services replace $(YAML_FILE) --region=$(REGION) && \
+	echo "✅ Deployment complete! Image tag: $$IMAGE_TAG"
 
 build:
 	@echo "🔨 Building Docker image..."
@@ -52,8 +67,11 @@ build:
 push: build
 	@echo "📤 Pushing to registry..."
 	@export IMAGE_TAG=$$(date +%Y%m%d-%H%M%S) && \
-	docker tag $(IMAGE_NAME):latest $(IMAGE_REPO)/$(IMAGE_NAME):$$IMAGE_TAG && \
-	docker push $(IMAGE_REPO)/$(IMAGE_NAME):$$IMAGE_TAG && \
+	export IMAGE_REPO_FULL=$$(gcloud config get-value project 2>/dev/null | xargs -I {} echo "us-central1-docker.pkg.dev/{}/cenphi-ai-service-repo") && \
+	docker tag $(IMAGE_NAME):latest $$IMAGE_REPO_FULL/$(IMAGE_NAME):$$IMAGE_TAG && \
+	docker tag $(IMAGE_NAME):latest $$IMAGE_REPO_FULL/$(IMAGE_NAME):latest && \
+	docker push $$IMAGE_REPO_FULL/$(IMAGE_NAME):$$IMAGE_TAG && \
+	docker push $$IMAGE_REPO_FULL/$(IMAGE_NAME):latest && \
 	echo "✅ Pushed with tag: $$IMAGE_TAG"
 
 # Cloud Run Management
@@ -76,6 +94,9 @@ revisions:
 traffic:
 	@echo "🚦 Traffic Allocation:"
 	gcloud run services describe $(SERVICE_NAME) --region=$(REGION) --format="table(status.traffic[].revisionName,status.traffic[].percent)"
+
+url:
+	@gcloud run services describe $(SERVICE_NAME) --region=$(REGION) --format="value(status.url)"
 
 # Testing & Development
 test-local:
@@ -107,7 +128,6 @@ check-deps:
 clean:
 	@echo "🧹 Cleaning local Docker images..."
 	-docker rmi $(IMAGE_NAME):latest 2>/dev/null || true
-	-docker rmi $$(docker images $(IMAGE_REPO)/$(IMAGE_NAME) -q) 2>/dev/null || true
 	@echo "✅ Cleanup complete"
 
 docker-clean:
@@ -148,12 +168,8 @@ debug:
 	@echo "Region: $(REGION)"
 	@echo "Project: $(PROJECT_ID)"
 	@echo "Current directory: $$(pwd)"
-	@echo "Deploy script exists: $$(test -f cloudrun-deploy.sh && echo "✅ Yes" || echo "❌ No")"
+	@echo "Dockerfile exists: $$(test -f $(DOCKERFILE) && echo "✅ Yes" || echo "❌ No")"
 	@echo "YAML file exists: $$(test -f $(YAML_FILE) && echo "✅ Yes" || echo "❌ No")"
-
-# Quick helpers
-url:
-	@gcloud run services describe $(SERVICE_NAME) --region=$(REGION) --format="value(status.url)"
 
 health:
 	@SERVICE_URL=$$(gcloud run services describe $(SERVICE_NAME) --region=$(REGION) --format="value(status.url)") && \

@@ -309,7 +309,7 @@ class NarrationGenerator:
         )
         
         cache_hash = hashlib.md5(cache_data.encode()).hexdigest()
-        return f"narration/{cache_hash}.wav"
+        return f"temp/narration/{cache_hash}.wav"
     
     def _synthesize_speech(self, text: str, voice_id: str, voice_settings: VoiceSettings, provider: str) -> str:
         """Synthesize speech using ElevenLabs with premium quality settings"""

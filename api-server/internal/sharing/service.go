@@ -20,8 +20,8 @@ import (
 
 type SharingClient interface {
 	// OAuth Management
-	GetAuthURL(ctx context.Context, workspaceID uuid.UUID, platform string) (string, error)
-	HandleOAuthCallback(ctx context.Context, req *models.OAuthCallbackRequest) (*models.SocialAccount, error)
+	GetAuthURL(ctx context.Context, workspaceID uuid.UUID, platform, returnURL string) (string, error)
+	HandleOAuthCallback(ctx context.Context, req *models.OAuthCallbackRequest) (*models.SocialAccount, *models.OAuthState, error)
 	DisconnectAccount(ctx context.Context, accountID uuid.UUID) error
 	RefreshAccountToken(ctx context.Context, accountID uuid.UUID) error
 
@@ -89,7 +89,7 @@ func NewSharingClient(
 }
 
 // OAuth Management
-func (s *sharingClient) GetAuthURL(ctx context.Context, workspaceID uuid.UUID, platform string) (string, error) {
+func (s *sharingClient) GetAuthURL(ctx context.Context, workspaceID uuid.UUID, platform, returnURL string) (string, error) {
 	userUID, err := middleware.GetUserFromContext(ctx)
 	if err != nil {
 		return "", err
@@ -102,29 +102,30 @@ func (s *sharingClient) GetAuthURL(ctx context.Context, workspaceID uuid.UUID, p
 
 	switch platform {
 	case "linkedin":
-		return s.linkedinClient.GetAuthURL(workspaceID, user.ID)
+		return s.linkedinClient.GetAuthURL(workspaceID, user.ID, returnURL)
 	default:
 		return "", fmt.Errorf("unsupported platform: %s", platform)
 	}
 }
 
-func (s *sharingClient) HandleOAuthCallback(ctx context.Context, req *models.OAuthCallbackRequest) (*models.SocialAccount, error) {
+func (s *sharingClient) HandleOAuthCallback(ctx context.Context, req *models.OAuthCallbackRequest) (*models.SocialAccount, *models.OAuthState, error) {
 	// Validate request
 	if err := models.ValidateOAuthCallbackRequest(req); err != nil {
-		return nil, fmt.Errorf("invalid callback request: %w", err)
+		return nil, nil, fmt.Errorf("invalid callback request: %w", err)
 	}
 
 	// Exchange code for tokens and get state - this validates the state internally
 	tokenResp, state, err := s.linkedinClient.ExchangeCode(ctx, req.Code, req.State)
 	if err != nil {
-		return nil, fmt.Errorf("failed to exchange OAuth code: %w", err)
+		return nil, nil, fmt.Errorf("failed to exchange OAuth code: %w", err)
 	}
 
 	switch state.Platform {
 	case "linkedin":
-		return s.handleLinkedInCallback(ctx, tokenResp, state)
+		account, err := s.handleLinkedInCallback(ctx, tokenResp, state)
+		return account, state, err
 	default:
-		return nil, fmt.Errorf("unsupported platform: %s", state.Platform)
+		return nil, nil, fmt.Errorf("unsupported platform: %s", state.Platform)
 	}
 }
 

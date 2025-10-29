@@ -6,6 +6,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { BreadcrumbNav } from "./BreadCrumbNav";
+import { GlobalProcessingMonitor } from "@/components/common/GlobalProcessingMonitor";
 
 import { observer } from "mobx-react-lite";
 import { PropsWithChildren } from "react";
@@ -47,6 +48,9 @@ export const DashboardWrapper = observer(({ children }: PropsWithChildren) => {
             {children}
           </motion.div>
         </div>
+
+        {/* Global Processing Monitor - Fixed position in bottom-right */}
+        <GlobalProcessingMonitor />
       </SidebarInset>
     </SidebarProvider>
   );

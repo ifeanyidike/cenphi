@@ -19,29 +19,29 @@ import {
   OnboardingErrorComponent,
   OnboardingLoadingComponent,
 } from "@/components/ComponentRegistry";
-import LoadingIndicator from "@/components/LoadingIndicator";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import DashboardErrorBoundary from "@/components/DashboardErrorBoundary";
 import DashboardProtectedRoute from "@/components/auth/protected_routes/Dashboard";
 import GenericProtectedRoute from "@/components/auth/protected_routes/Generic";
 import OnboardingProtectedRoute from "@/components/auth/protected_routes/Onboarding";
 import AuthPagesProtectedRoute from "@/components/auth/protected_routes/AuthPages";
 import BrandGuidePage from "@/pages/BrandGuidePage";
-// import AIServiceTester from "@/pages/AIServiceTester";
-// import Tester from "@/pages/PageTester";
-import AIStudioPage from "@/pages/aistudio";
+import Studio from "@/pages/Studio";
 import TestimonialDetailPage from "@/pages/TestimonialPage";
 import TempCapturePage from "@/pages/TempCapturePage";
 import AIGeneratedContentPage from "@/pages/AIGeneratedContentPage";
 import SettingsPage from "@/pages/SettingsPage";
-import SocialAnalytics from "@/pages/SocialAnalytics";
+import EnhancedAnalytics from "@/pages/EnhancedAnalytics";
+import SchedulingPage from "@/pages/SchedulingPage";
+import TalkToYourDataPage from "@/pages/TalkToYourDataPage";
+import PublicShareView from "@/pages/PublicShareView";
+import DashboardLayout from "@/components/dashboard-main/DashboardLayout";
+import TestimonialsDashboard from "@/pages/TestimonialsDashboard";
 
-// lazy load
+// lazy load (only for non-dashboard routes)
 const LandingPage = lazy(() => import("@/pages/Landing"));
 const Pricing = lazy(() => import("@/pages/Pricing"));
 const OnboardingPage = lazy(() => import("@/pages/OnboardingPage"));
-const TestimonialsDashboard = lazy(
-  () => import("@/pages/TestimonialsDashboard")
-);
 const NotFoundPage = lazy(() => import("@/pages/NotFoundPage"));
 
 export const router = createBrowserRouter([
@@ -53,110 +53,188 @@ export const router = createBrowserRouter([
     element: <DashboardProtectedRoute />,
     children: [
       {
-        path: "/dashboard",
-        element: (
-          <ErrorBoundary
-            ErrorComponent={DashboardErrorComponent}
-            LoadingComponent={LoadingIndicator}
-            componentName="Dashboard"
-          >
-            <TestimonialsDashboard />
-          </ErrorBoundary>
-        ),
+        element: <DashboardLayout />,
+        children: [
+          {
+            path: "/dashboard",
+            element: (
+              <DashboardErrorBoundary
+                ErrorComponent={DashboardErrorComponent}
+                componentName="Dashboard"
+              >
+                <TestimonialsDashboard />
+              </DashboardErrorBoundary>
+            ),
+          },
+          {
+            path: "/studio",
+            element: (
+              <DashboardErrorBoundary
+                ErrorComponent={DashboardErrorComponent}
+                componentName="Studio"
+              >
+                <Studio />
+              </DashboardErrorBoundary>
+            ),
+          },
+          {
+            path: "/studio/optimize",
+            element: (
+              <DashboardErrorBoundary
+                ErrorComponent={DashboardErrorComponent}
+                componentName="Studio"
+              >
+                <Studio />
+              </DashboardErrorBoundary>
+            ),
+          },
+          {
+            path: "/studio/clipping",
+            element: (
+              <DashboardErrorBoundary
+                ErrorComponent={DashboardErrorComponent}
+                componentName="Studio"
+              >
+                <Studio />
+              </DashboardErrorBoundary>
+            ),
+          },
+          {
+            path: "/studio/story",
+            element: (
+              <DashboardErrorBoundary
+                ErrorComponent={DashboardErrorComponent}
+                componentName="Studio"
+              >
+                <Studio />
+              </DashboardErrorBoundary>
+            ),
+          },
+          {
+            path: "/studio/content",
+            element: (
+              <DashboardErrorBoundary
+                ErrorComponent={DashboardErrorComponent}
+                componentName="Studio"
+              >
+                <Studio />
+              </DashboardErrorBoundary>
+            ),
+          },
+          {
+            path: "/studio/custom",
+            element: (
+              <DashboardErrorBoundary
+                ErrorComponent={DashboardErrorComponent}
+                componentName="Studio"
+              >
+                <Studio />
+              </DashboardErrorBoundary>
+            ),
+          },
+          {
+            path: "/detail/:testimonialId",
+            element: (
+              <DashboardErrorBoundary
+                ErrorComponent={DashboardErrorComponent}
+                componentName="DetailPage"
+              >
+                <TestimonialDetailPage />
+              </DashboardErrorBoundary>
+            ),
+          },
+          {
+            path: "/brand-guide",
+            element: (
+              <DashboardErrorBoundary
+                ErrorComponent={DashboardErrorComponent}
+                componentName="BrandGuide"
+              >
+                <BrandGuidePage />
+              </DashboardErrorBoundary>
+            ),
+          },
+          {
+            path: "/capture-page",
+            element: (
+              <DashboardErrorBoundary
+                ErrorComponent={DashboardErrorComponent}
+                componentName="CapturePage"
+              >
+                <TempCapturePage />
+              </DashboardErrorBoundary>
+            ),
+          },
+          {
+            path: "/studio/stories",
+            element: <Navigate to="/content-hub" replace />,
+          },
+          {
+            path: "/studio/stories/:jobId",
+            element: <Navigate to="/content-hub" replace />,
+          },
+          {
+            path: "/content-hub",
+            element: (
+              <DashboardErrorBoundary
+                ErrorComponent={DashboardErrorComponent}
+                componentName="AIGeneratedContent"
+              >
+                <AIGeneratedContentPage />
+              </DashboardErrorBoundary>
+            ),
+          },
+          {
+            path: "/settings",
+            element: (
+              <DashboardErrorBoundary
+                ErrorComponent={DashboardErrorComponent}
+                componentName="Settings"
+              >
+                <SettingsPage />
+              </DashboardErrorBoundary>
+            ),
+          },
+          {
+            path: "/analytics",
+            element: (
+              <DashboardErrorBoundary
+                ErrorComponent={DashboardErrorComponent}
+                componentName="Analytics"
+              >
+                <EnhancedAnalytics />
+              </DashboardErrorBoundary>
+            ),
+          },
+          {
+            path: "/social/analytics",
+            element: <Navigate to="/analytics" replace />,
+          },
+          {
+            path: "/scheduling",
+            element: (
+              <DashboardErrorBoundary
+                ErrorComponent={DashboardErrorComponent}
+                componentName="Scheduling"
+              >
+                <SchedulingPage />
+              </DashboardErrorBoundary>
+            ),
+          },
+          {
+            path: "/talk-to-your-data",
+            element: (
+              <DashboardErrorBoundary
+                ErrorComponent={DashboardErrorComponent}
+                componentName="TalkToYourData"
+              >
+                <TalkToYourDataPage />
+              </DashboardErrorBoundary>
+            ),
+          },
+        ], // End of DashboardLayout children
       },
-      {
-        path: "/studio",
-        element: (
-          <ErrorBoundary
-            ErrorComponent={DashboardErrorComponent}
-            LoadingComponent={LoadingIndicator}
-            componentName="Studio"
-          >
-            <AIStudioPage />
-          </ErrorBoundary>
-        ),
-      },
-      {
-        path: "/detail/:testimonialId",
-        element: (
-          <ErrorBoundary
-            ErrorComponent={DashboardErrorComponent}
-            LoadingComponent={LoadingIndicator}
-            componentName="DetailPage"
-          >
-            <TestimonialDetailPage />
-          </ErrorBoundary>
-        ),
-      },
-      {
-        path: "/brand-guide",
-        element: (
-          <ErrorBoundary
-            ErrorComponent={DashboardErrorComponent}
-            LoadingComponent={LoadingIndicator}
-            componentName="BrandGuide"
-          >
-            <BrandGuidePage />
-          </ErrorBoundary>
-        ),
-      },
-      {
-        path: "/capture-page",
-        element: (
-          <ErrorBoundary
-            ErrorComponent={DashboardErrorComponent}
-            LoadingComponent={LoadingIndicator}
-            componentName="CapturePage"
-          >
-            <TempCapturePage />
-          </ErrorBoundary>
-        ),
-      },
-      {
-        path: "/studio/stories",
-        element: <Navigate to="/ai-content" replace />,
-      },
-      {
-        path: "/studio/stories/:jobId",
-        element: <Navigate to="/ai-content" replace />,
-      },
-      {
-        path: "/ai-content",
-        element: (
-          <ErrorBoundary
-            ErrorComponent={DashboardErrorComponent}
-            LoadingComponent={LoadingIndicator}
-            componentName="AIGeneratedContent"
-          >
-            <AIGeneratedContentPage />
-          </ErrorBoundary>
-        ),
-      },
-      {
-        path: "/settings",
-        element: (
-          <ErrorBoundary
-            ErrorComponent={DashboardErrorComponent}
-            LoadingComponent={LoadingIndicator}
-            componentName="Settings"
-          >
-            <SettingsPage />
-          </ErrorBoundary>
-        ),
-      },
-      {
-        path: "/social/analytics",
-        element: (
-          <ErrorBoundary
-            ErrorComponent={DashboardErrorComponent}
-            LoadingComponent={LoadingIndicator}
-            componentName="SocialAnalytics"
-          >
-            <SocialAnalytics />
-          </ErrorBoundary>
-        ),
-      },
-    ],
+    ], // End of DashboardProtectedRoute children
   },
   {
     element: <OnboardingProtectedRoute />,
@@ -232,6 +310,12 @@ export const router = createBrowserRouter([
   {
     path: "/collect",
     element: <CollectionPage />,
+  },
+
+  // Public share view (no auth required)
+  {
+    path: "/share/:shareId/view",
+    element: <PublicShareView />,
   },
 
   {

@@ -39,46 +39,43 @@ class JobCancellationChecker:
             self.active_jobs.pop(job_id, None)
             self.cancelled_jobs.discard(job_id)
 
-    def handle_cancellation(self, job_id: str, context: grpc.ServicerContext) -> bool:
+    def handle_cancellation(self, job_id: str, context: grpc.ServicerContext = None) -> bool:
         """
         Handle cancellation for gRPC endpoints
-        
+
         Args:
-            job_id: Unique job identifier  
-            context: gRPC ServicerContext for cancellation detection
-            
+            job_id: Unique job identifier
+            context: gRPC ServicerContext for cancellation detection (optional)
+
         Returns:
             bool: True if job should be cancelled, False to continue
         """
         # Generate job_id if not provided
         if not job_id:
             job_id = str(uuid.uuid4())
-        
-        # Start tracking the job
-        self.start_job(job_id)
-        
-        # For synchronous gRPC, we need to use a callback-based approach
-        # Set up cancellation detection using context callback
-        cancelled_event = threading.Event()
-        
-        def on_rpc_done():
-            """Called when RPC is terminated (including cancellation)"""
-            cancelled_event.set()
-            # We can't distinguish between normal completion and cancellation
-            # in the callback, so we'll mark as potentially cancelled
+
+        # Initialize job tracking if not already tracked (but DON'T clear cancellation!)
+        with self._lock:
+            if job_id not in self.active_jobs and job_id not in self.cancelled_jobs:
+                self.active_jobs[job_id] = threading.Event()
+                logger.debug(f"Started tracking job {job_id}")
+
+        # Check if manually cancelled (e.g., via REST API) - do this FIRST
+        if self.check_cancellation(job_id):
+            logger.info(f"Job {job_id} was manually cancelled via API")
+            if context:
+                context.set_code(grpc.StatusCode.CANCELLED)
+                context.set_details(f"Job {job_id} was cancelled")
+            return True
+
+        # Check if context is already cancelled
+        if context and not context.is_active():
+            logger.info(f"Job {job_id} context is not active, marking as cancelled")
             self.cancel_job(job_id)
-        
-        try:
-            context.add_callback(on_rpc_done)
-        except Exception as e:
-            logger.warning(f"Could not add callback for cancellation detection: {e}")
-        
-        # Check if already cancelled (callback might have fired immediately)
-        if cancelled_event.is_set() or self.check_cancellation(job_id):
             context.set_code(grpc.StatusCode.CANCELLED)
             context.set_details(f"Job {job_id} was cancelled")
             return True
-        
+
         return False
 
     def handle_cancellation_simple(self, job_id: str) -> bool:

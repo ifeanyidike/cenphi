@@ -10,7 +10,7 @@ const ModalPortal = ({ isOpen, children }: Props) => {
 
   return createPortal(
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]"
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999]"
       style={{ margin: 0, padding: 0 }}
     >
       <motion.div

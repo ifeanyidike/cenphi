@@ -101,6 +101,11 @@ class MediaEnhancementServiceStub(object):
                 request_serializer=intelligence__pb2.BatchEnhanceRequest.SerializeToString,
                 response_deserializer=intelligence__pb2.BatchEnhanceResponse.FromString,
                 )
+        self.AdaptiveEnhanceMedia = channel.unary_unary(
+                '/intelligence.MediaEnhancementService/AdaptiveEnhanceMedia',
+                request_serializer=intelligence__pb2.AdaptiveEnhanceRequest.SerializeToString,
+                response_deserializer=intelligence__pb2.AdaptiveEnhanceResponse.FromString,
+                )
 
 
 class MediaEnhancementServiceServicer(object):
@@ -122,6 +127,12 @@ class MediaEnhancementServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def AdaptiveEnhanceMedia(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_MediaEnhancementServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -134,6 +145,11 @@ def add_MediaEnhancementServiceServicer_to_server(servicer, server):
                     servicer.BatchEnhanceMedia,
                     request_deserializer=intelligence__pb2.BatchEnhanceRequest.FromString,
                     response_serializer=intelligence__pb2.BatchEnhanceResponse.SerializeToString,
+            ),
+            'AdaptiveEnhanceMedia': grpc.unary_unary_rpc_method_handler(
+                    servicer.AdaptiveEnhanceMedia,
+                    request_deserializer=intelligence__pb2.AdaptiveEnhanceRequest.FromString,
+                    response_serializer=intelligence__pb2.AdaptiveEnhanceResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -180,6 +196,23 @@ class MediaEnhancementService(object):
         return grpc.experimental.unary_unary(request, target, '/intelligence.MediaEnhancementService/BatchEnhanceMedia',
             intelligence__pb2.BatchEnhanceRequest.SerializeToString,
             intelligence__pb2.BatchEnhanceResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def AdaptiveEnhanceMedia(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/intelligence.MediaEnhancementService/AdaptiveEnhanceMedia',
+            intelligence__pb2.AdaptiveEnhanceRequest.SerializeToString,
+            intelligence__pb2.AdaptiveEnhanceResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -419,6 +452,46 @@ class PlatformOptimizerServiceStub(object):
                 request_serializer=intelligence__pb2.BatchOptimizeRequest.SerializeToString,
                 response_deserializer=intelligence__pb2.BatchOptimizeResponse.FromString,
                 )
+        self.RecommendPlatforms = channel.unary_unary(
+                '/intelligence.PlatformOptimizerService/RecommendPlatforms',
+                request_serializer=intelligence__pb2.PlatformRecommendRequest.SerializeToString,
+                response_deserializer=intelligence__pb2.PlatformRecommendResponse.FromString,
+                )
+        self.CropResize = channel.unary_unary(
+                '/intelligence.PlatformOptimizerService/CropResize',
+                request_serializer=intelligence__pb2.CropResizeRequest.SerializeToString,
+                response_deserializer=intelligence__pb2.CropResizeResponse.FromString,
+                )
+        self.BurnCaptions = channel.unary_unary(
+                '/intelligence.PlatformOptimizerService/BurnCaptions',
+                request_serializer=intelligence__pb2.BurnCaptionsRequest.SerializeToString,
+                response_deserializer=intelligence__pb2.BurnCaptionsResponse.FromString,
+                )
+        self.ApplyBranding = channel.unary_unary(
+                '/intelligence.PlatformOptimizerService/ApplyBranding',
+                request_serializer=intelligence__pb2.ApplyBrandingRequest.SerializeToString,
+                response_deserializer=intelligence__pb2.ApplyBrandingResponse.FromString,
+                )
+        self.MixMusic = channel.unary_unary(
+                '/intelligence.PlatformOptimizerService/MixMusic',
+                request_serializer=intelligence__pb2.MixMusicRequest.SerializeToString,
+                response_deserializer=intelligence__pb2.MixMusicResponse.FromString,
+                )
+        self.NormalizeAudio = channel.unary_unary(
+                '/intelligence.PlatformOptimizerService/NormalizeAudio',
+                request_serializer=intelligence__pb2.NormalizeAudioRequest.SerializeToString,
+                response_deserializer=intelligence__pb2.NormalizeAudioResponse.FromString,
+                )
+        self.EnhanceVideo = channel.unary_unary(
+                '/intelligence.PlatformOptimizerService/EnhanceVideo',
+                request_serializer=intelligence__pb2.EnhanceVideoRequest.SerializeToString,
+                response_deserializer=intelligence__pb2.EnhanceVideoResponse.FromString,
+                )
+        self.TextOptimization = channel.unary_unary(
+                '/intelligence.PlatformOptimizerService/TextOptimization',
+                request_serializer=intelligence__pb2.TextOptimizationRequest.SerializeToString,
+                response_deserializer=intelligence__pb2.TextOptimizationResponse.FromString,
+                )
 
 
 class PlatformOptimizerServiceServicer(object):
@@ -440,6 +513,56 @@ class PlatformOptimizerServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def RecommendPlatforms(self, request, context):
+        """IMPROVEMENT #2: Smart Platform Recommendation
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def CropResize(self, request, context):
+        """Step-by-step platform optimization methods
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def BurnCaptions(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ApplyBranding(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def MixMusic(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def NormalizeAudio(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def EnhanceVideo(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def TextOptimization(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_PlatformOptimizerServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -452,6 +575,46 @@ def add_PlatformOptimizerServiceServicer_to_server(servicer, server):
                     servicer.BatchOptimizeMedia,
                     request_deserializer=intelligence__pb2.BatchOptimizeRequest.FromString,
                     response_serializer=intelligence__pb2.BatchOptimizeResponse.SerializeToString,
+            ),
+            'RecommendPlatforms': grpc.unary_unary_rpc_method_handler(
+                    servicer.RecommendPlatforms,
+                    request_deserializer=intelligence__pb2.PlatformRecommendRequest.FromString,
+                    response_serializer=intelligence__pb2.PlatformRecommendResponse.SerializeToString,
+            ),
+            'CropResize': grpc.unary_unary_rpc_method_handler(
+                    servicer.CropResize,
+                    request_deserializer=intelligence__pb2.CropResizeRequest.FromString,
+                    response_serializer=intelligence__pb2.CropResizeResponse.SerializeToString,
+            ),
+            'BurnCaptions': grpc.unary_unary_rpc_method_handler(
+                    servicer.BurnCaptions,
+                    request_deserializer=intelligence__pb2.BurnCaptionsRequest.FromString,
+                    response_serializer=intelligence__pb2.BurnCaptionsResponse.SerializeToString,
+            ),
+            'ApplyBranding': grpc.unary_unary_rpc_method_handler(
+                    servicer.ApplyBranding,
+                    request_deserializer=intelligence__pb2.ApplyBrandingRequest.FromString,
+                    response_serializer=intelligence__pb2.ApplyBrandingResponse.SerializeToString,
+            ),
+            'MixMusic': grpc.unary_unary_rpc_method_handler(
+                    servicer.MixMusic,
+                    request_deserializer=intelligence__pb2.MixMusicRequest.FromString,
+                    response_serializer=intelligence__pb2.MixMusicResponse.SerializeToString,
+            ),
+            'NormalizeAudio': grpc.unary_unary_rpc_method_handler(
+                    servicer.NormalizeAudio,
+                    request_deserializer=intelligence__pb2.NormalizeAudioRequest.FromString,
+                    response_serializer=intelligence__pb2.NormalizeAudioResponse.SerializeToString,
+            ),
+            'EnhanceVideo': grpc.unary_unary_rpc_method_handler(
+                    servicer.EnhanceVideo,
+                    request_deserializer=intelligence__pb2.EnhanceVideoRequest.FromString,
+                    response_serializer=intelligence__pb2.EnhanceVideoResponse.SerializeToString,
+            ),
+            'TextOptimization': grpc.unary_unary_rpc_method_handler(
+                    servicer.TextOptimization,
+                    request_deserializer=intelligence__pb2.TextOptimizationRequest.FromString,
+                    response_serializer=intelligence__pb2.TextOptimizationResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -498,6 +661,142 @@ class PlatformOptimizerService(object):
         return grpc.experimental.unary_unary(request, target, '/intelligence.PlatformOptimizerService/BatchOptimizeMedia',
             intelligence__pb2.BatchOptimizeRequest.SerializeToString,
             intelligence__pb2.BatchOptimizeResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def RecommendPlatforms(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/intelligence.PlatformOptimizerService/RecommendPlatforms',
+            intelligence__pb2.PlatformRecommendRequest.SerializeToString,
+            intelligence__pb2.PlatformRecommendResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def CropResize(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/intelligence.PlatformOptimizerService/CropResize',
+            intelligence__pb2.CropResizeRequest.SerializeToString,
+            intelligence__pb2.CropResizeResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def BurnCaptions(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/intelligence.PlatformOptimizerService/BurnCaptions',
+            intelligence__pb2.BurnCaptionsRequest.SerializeToString,
+            intelligence__pb2.BurnCaptionsResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def ApplyBranding(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/intelligence.PlatformOptimizerService/ApplyBranding',
+            intelligence__pb2.ApplyBrandingRequest.SerializeToString,
+            intelligence__pb2.ApplyBrandingResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def MixMusic(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/intelligence.PlatformOptimizerService/MixMusic',
+            intelligence__pb2.MixMusicRequest.SerializeToString,
+            intelligence__pb2.MixMusicResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def NormalizeAudio(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/intelligence.PlatformOptimizerService/NormalizeAudio',
+            intelligence__pb2.NormalizeAudioRequest.SerializeToString,
+            intelligence__pb2.NormalizeAudioResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def EnhanceVideo(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/intelligence.PlatformOptimizerService/EnhanceVideo',
+            intelligence__pb2.EnhanceVideoRequest.SerializeToString,
+            intelligence__pb2.EnhanceVideoResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def TextOptimization(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/intelligence.PlatformOptimizerService/TextOptimization',
+            intelligence__pb2.TextOptimizationRequest.SerializeToString,
+            intelligence__pb2.TextOptimizationResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -598,6 +897,46 @@ class StoryModeServiceStub(object):
                 request_serializer=intelligence__pb2.BatchStoryModeRequest.SerializeToString,
                 response_deserializer=intelligence__pb2.BatchStoryModeResponse.FromString,
                 )
+        self.CollectClips = channel.unary_unary(
+                '/intelligence.StoryModeService/CollectClips',
+                request_serializer=intelligence__pb2.CollectClipsRequest.SerializeToString,
+                response_deserializer=intelligence__pb2.CollectClipsResponse.FromString,
+                )
+        self.AIOrdering = channel.unary_unary(
+                '/intelligence.StoryModeService/AIOrdering',
+                request_serializer=intelligence__pb2.AIOrderingRequest.SerializeToString,
+                response_deserializer=intelligence__pb2.AIOrderingResponse.FromString,
+                )
+        self.AssembleDraft = channel.unary_unary(
+                '/intelligence.StoryModeService/AssembleDraft',
+                request_serializer=intelligence__pb2.AssembleDraftRequest.SerializeToString,
+                response_deserializer=intelligence__pb2.AssembleDraftResponse.FromString,
+                )
+        self.CollectAndAssembleClips = channel.unary_unary(
+                '/intelligence.StoryModeService/CollectAndAssembleClips',
+                request_serializer=intelligence__pb2.CollectAndAssembleClipsRequest.SerializeToString,
+                response_deserializer=intelligence__pb2.AssembleDraftResponse.FromString,
+                )
+        self.DetectHooks = channel.unary_unary(
+                '/intelligence.StoryModeService/DetectHooks',
+                request_serializer=intelligence__pb2.HookDetectionRequest.SerializeToString,
+                response_deserializer=intelligence__pb2.HookDetectionResponse.FromString,
+                )
+        self.NormalizeVideoResolution = channel.unary_unary(
+                '/intelligence.StoryModeService/NormalizeVideoResolution',
+                request_serializer=intelligence__pb2.NormalizeVideoRequest.SerializeToString,
+                response_deserializer=intelligence__pb2.NormalizeVideoResponse.FromString,
+                )
+        self.AssembleStoryVideo = channel.unary_unary(
+                '/intelligence.StoryModeService/AssembleStoryVideo',
+                request_serializer=intelligence__pb2.AssembleStoryRequest.SerializeToString,
+                response_deserializer=intelligence__pb2.AssembleStoryResponse.FromString,
+                )
+        self.AddIntroOutro = channel.unary_unary(
+                '/intelligence.StoryModeService/AddIntroOutro',
+                request_serializer=intelligence__pb2.IntroOutroRequest.SerializeToString,
+                response_deserializer=intelligence__pb2.IntroOutroResponse.FromString,
+                )
 
 
 class StoryModeServiceServicer(object):
@@ -619,6 +958,57 @@ class StoryModeServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def CollectClips(self, request, context):
+        """Step-by-step story video methods (3-step workflow)
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def AIOrdering(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def AssembleDraft(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def CollectAndAssembleClips(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def DetectHooks(self, request, context):
+        """IMPROVEMENT #3: Intelligent Hook Detection
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def NormalizeVideoResolution(self, request, context):
+        """Legacy/optional step-by-step methods
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def AssembleStoryVideo(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def AddIntroOutro(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_StoryModeServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -631,6 +1021,46 @@ def add_StoryModeServiceServicer_to_server(servicer, server):
                     servicer.BatchGenerateStoryVideos,
                     request_deserializer=intelligence__pb2.BatchStoryModeRequest.FromString,
                     response_serializer=intelligence__pb2.BatchStoryModeResponse.SerializeToString,
+            ),
+            'CollectClips': grpc.unary_unary_rpc_method_handler(
+                    servicer.CollectClips,
+                    request_deserializer=intelligence__pb2.CollectClipsRequest.FromString,
+                    response_serializer=intelligence__pb2.CollectClipsResponse.SerializeToString,
+            ),
+            'AIOrdering': grpc.unary_unary_rpc_method_handler(
+                    servicer.AIOrdering,
+                    request_deserializer=intelligence__pb2.AIOrderingRequest.FromString,
+                    response_serializer=intelligence__pb2.AIOrderingResponse.SerializeToString,
+            ),
+            'AssembleDraft': grpc.unary_unary_rpc_method_handler(
+                    servicer.AssembleDraft,
+                    request_deserializer=intelligence__pb2.AssembleDraftRequest.FromString,
+                    response_serializer=intelligence__pb2.AssembleDraftResponse.SerializeToString,
+            ),
+            'CollectAndAssembleClips': grpc.unary_unary_rpc_method_handler(
+                    servicer.CollectAndAssembleClips,
+                    request_deserializer=intelligence__pb2.CollectAndAssembleClipsRequest.FromString,
+                    response_serializer=intelligence__pb2.AssembleDraftResponse.SerializeToString,
+            ),
+            'DetectHooks': grpc.unary_unary_rpc_method_handler(
+                    servicer.DetectHooks,
+                    request_deserializer=intelligence__pb2.HookDetectionRequest.FromString,
+                    response_serializer=intelligence__pb2.HookDetectionResponse.SerializeToString,
+            ),
+            'NormalizeVideoResolution': grpc.unary_unary_rpc_method_handler(
+                    servicer.NormalizeVideoResolution,
+                    request_deserializer=intelligence__pb2.NormalizeVideoRequest.FromString,
+                    response_serializer=intelligence__pb2.NormalizeVideoResponse.SerializeToString,
+            ),
+            'AssembleStoryVideo': grpc.unary_unary_rpc_method_handler(
+                    servicer.AssembleStoryVideo,
+                    request_deserializer=intelligence__pb2.AssembleStoryRequest.FromString,
+                    response_serializer=intelligence__pb2.AssembleStoryResponse.SerializeToString,
+            ),
+            'AddIntroOutro': grpc.unary_unary_rpc_method_handler(
+                    servicer.AddIntroOutro,
+                    request_deserializer=intelligence__pb2.IntroOutroRequest.FromString,
+                    response_serializer=intelligence__pb2.IntroOutroResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -677,6 +1107,142 @@ class StoryModeService(object):
         return grpc.experimental.unary_unary(request, target, '/intelligence.StoryModeService/BatchGenerateStoryVideos',
             intelligence__pb2.BatchStoryModeRequest.SerializeToString,
             intelligence__pb2.BatchStoryModeResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def CollectClips(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/intelligence.StoryModeService/CollectClips',
+            intelligence__pb2.CollectClipsRequest.SerializeToString,
+            intelligence__pb2.CollectClipsResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def AIOrdering(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/intelligence.StoryModeService/AIOrdering',
+            intelligence__pb2.AIOrderingRequest.SerializeToString,
+            intelligence__pb2.AIOrderingResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def AssembleDraft(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/intelligence.StoryModeService/AssembleDraft',
+            intelligence__pb2.AssembleDraftRequest.SerializeToString,
+            intelligence__pb2.AssembleDraftResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def CollectAndAssembleClips(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/intelligence.StoryModeService/CollectAndAssembleClips',
+            intelligence__pb2.CollectAndAssembleClipsRequest.SerializeToString,
+            intelligence__pb2.AssembleDraftResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def DetectHooks(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/intelligence.StoryModeService/DetectHooks',
+            intelligence__pb2.HookDetectionRequest.SerializeToString,
+            intelligence__pb2.HookDetectionResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def NormalizeVideoResolution(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/intelligence.StoryModeService/NormalizeVideoResolution',
+            intelligence__pb2.NormalizeVideoRequest.SerializeToString,
+            intelligence__pb2.NormalizeVideoResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def AssembleStoryVideo(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/intelligence.StoryModeService/AssembleStoryVideo',
+            intelligence__pb2.AssembleStoryRequest.SerializeToString,
+            intelligence__pb2.AssembleStoryResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def AddIntroOutro(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/intelligence.StoryModeService/AddIntroOutro',
+            intelligence__pb2.IntroOutroRequest.SerializeToString,
+            intelligence__pb2.IntroOutroResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -889,5 +1455,111 @@ class ViralAnalysisService(object):
         return grpc.experimental.unary_unary(request, target, '/intelligence.ViralAnalysisService/BatchAnalyzeViralPotential',
             intelligence__pb2.BatchViralAnalysisRequest.SerializeToString,
             intelligence__pb2.BatchViralAnalysisResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+
+class SessionManagementServiceStub(object):
+    """============================================================================
+    Session Management Service (for interactive step-by-step processing)
+    ============================================================================
+
+    """
+
+    def __init__(self, channel):
+        """Constructor.
+
+        Args:
+            channel: A grpc.Channel.
+        """
+        self.SaveProgress = channel.unary_unary(
+                '/intelligence.SessionManagementService/SaveProgress',
+                request_serializer=intelligence__pb2.SaveProgressRequest.SerializeToString,
+                response_deserializer=intelligence__pb2.SaveProgressResponse.FromString,
+                )
+        self.CleanupSession = channel.unary_unary(
+                '/intelligence.SessionManagementService/CleanupSession',
+                request_serializer=intelligence__pb2.CleanupSessionRequest.SerializeToString,
+                response_deserializer=intelligence__pb2.CleanupSessionResponse.FromString,
+                )
+
+
+class SessionManagementServiceServicer(object):
+    """============================================================================
+    Session Management Service (for interactive step-by-step processing)
+    ============================================================================
+
+    """
+
+    def SaveProgress(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def CleanupSession(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+
+def add_SessionManagementServiceServicer_to_server(servicer, server):
+    rpc_method_handlers = {
+            'SaveProgress': grpc.unary_unary_rpc_method_handler(
+                    servicer.SaveProgress,
+                    request_deserializer=intelligence__pb2.SaveProgressRequest.FromString,
+                    response_serializer=intelligence__pb2.SaveProgressResponse.SerializeToString,
+            ),
+            'CleanupSession': grpc.unary_unary_rpc_method_handler(
+                    servicer.CleanupSession,
+                    request_deserializer=intelligence__pb2.CleanupSessionRequest.FromString,
+                    response_serializer=intelligence__pb2.CleanupSessionResponse.SerializeToString,
+            ),
+    }
+    generic_handler = grpc.method_handlers_generic_handler(
+            'intelligence.SessionManagementService', rpc_method_handlers)
+    server.add_generic_rpc_handlers((generic_handler,))
+
+
+ # This class is part of an EXPERIMENTAL API.
+class SessionManagementService(object):
+    """============================================================================
+    Session Management Service (for interactive step-by-step processing)
+    ============================================================================
+
+    """
+
+    @staticmethod
+    def SaveProgress(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/intelligence.SessionManagementService/SaveProgress',
+            intelligence__pb2.SaveProgressRequest.SerializeToString,
+            intelligence__pb2.SaveProgressResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def CleanupSession(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/intelligence.SessionManagementService/CleanupSession',
+            intelligence__pb2.CleanupSessionRequest.SerializeToString,
+            intelligence__pb2.CleanupSessionResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

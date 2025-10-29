@@ -120,10 +120,13 @@ func (qw *AIQueueWorker) handleClippingJob(ctx context.Context, msg queue.Messag
 		branding.LogoUrl = context.LogoUrl
 	}
 
+	// BUGFIX #15: Safe map access with nil check
 	var brandColor string
-	for k := range context.BrandColors {
-		brandColor = context.BrandColors[k]
-		break
+	if context.BrandColors != nil {
+		for k := range context.BrandColors {
+			brandColor = context.BrandColors[k]
+			break
+		}
 	}
 
 	if brandColor != "" {

@@ -13,11 +13,14 @@ import {
   AlertCircle,
   Copy,
   Check,
+  Sparkles,
+  Loader2,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { authStore } from "@/stores/authStore";
 
 interface EditableTextTestimonialProps {
   content: string;
@@ -50,6 +53,9 @@ const EditableTextTestimonial = ({
   >("idle");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showCopied, setShowCopied] = useState(false);
+  const [isImproving, setIsImproving] = useState(false);
+  const [aiImprovedText, setAiImprovedText] = useState("");
+  const [showAIPreview, setShowAIPreview] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Update content when prop changes
@@ -132,6 +138,77 @@ const EditableTextTestimonial = ({
     } catch (error) {
       console.error("Failed to copy:", error);
     }
+  };
+
+  const handleAIImprove = async () => {
+    if (!editedContent.trim()) return;
+
+    setIsImproving(true);
+    setAiImprovedText("");
+    setShowAIPreview(true);
+
+    try {
+      const { token } = await authStore.getToken();
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/ai/regenerate-content`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            text: editedContent,
+            preserve_authenticity: true,
+            target_style: "authentic",
+            prompt: "Improve this testimonial text while maintaining its authentic voice and specific details",
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to improve text: ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (!reader) {
+        throw new Error("Response body is not readable");
+      }
+
+      let accumulatedText = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        // Backend sends raw text chunks, not SSE format
+        const chunk = decoder.decode(value, { stream: true });
+
+        if (chunk) {
+          accumulatedText += chunk;
+          setAiImprovedText(accumulatedText);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to improve text:", error);
+      setSaveStatus("error");
+      setTimeout(() => setSaveStatus("idle"), 3000);
+    } finally {
+      setIsImproving(false);
+    }
+  };
+
+  const handleAcceptAIImprovement = () => {
+    setEditedContent(aiImprovedText);
+    setShowAIPreview(false);
+    setAiImprovedText("");
+  };
+
+  const handleRejectAIImprovement = () => {
+    setShowAIPreview(false);
+    setAiImprovedText("");
   };
 
   // Text metrics
@@ -251,6 +328,25 @@ const EditableTextTestimonial = ({
                   <RotateCcw className="h-3 w-3" />
                 </Button>
                 <Button
+                  onClick={handleAIImprove}
+                  variant="outline"
+                  size="sm"
+                  className="border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-700"
+                  disabled={isImproving || !editedContent.trim()}
+                >
+                  {isImproving ? (
+                    <>
+                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                      Improving...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      Improve with AI
+                    </>
+                  )}
+                </Button>
+                <Button
                   onClick={handleCancel}
                   variant="outline"
                   size="sm"
@@ -330,6 +426,81 @@ const EditableTextTestimonial = ({
       <CardContent className="pt-0">
         {isEditing ? (
           <div className="space-y-4">
+            {/* AI Preview Comparison */}
+            {showAIPreview && (
+              <div className="space-y-4 p-6 bg-purple-50/50 rounded-2xl border border-purple-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-purple-600" />
+                    <h4 className="text-sm font-semibold text-purple-900">
+                      AI Improvement Preview
+                    </h4>
+                    {isImproving && (
+                      <Loader2 className="h-3 w-3 text-purple-600 animate-spin" />
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      onClick={handleRejectAIImprovement}
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs hover:bg-purple-100"
+                      disabled={isImproving}
+                    >
+                      <X className="h-3 w-3 mr-1" />
+                      Reject
+                    </Button>
+                    <Button
+                      onClick={handleAcceptAIImprovement}
+                      size="sm"
+                      className="text-xs bg-purple-600 hover:bg-purple-700 text-white"
+                      disabled={isImproving || !aiImprovedText}
+                    >
+                      <Check className="h-3 w-3 mr-1" />
+                      Accept
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Original */}
+                  <div>
+                    <p className="text-xs font-medium text-slate-600 mb-2">
+                      Original
+                    </p>
+                    <div className="p-4 bg-white rounded-xl border border-slate-200 min-h-[200px] max-h-[400px] overflow-y-auto">
+                      <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
+                        {editedContent}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* AI Improved */}
+                  <div>
+                    <p className="text-xs font-medium text-purple-600 mb-2">
+                      AI Improved
+                    </p>
+                    <div className="p-4 bg-white rounded-xl border border-purple-200 min-h-[200px] max-h-[400px] overflow-y-auto">
+                      {isImproving && !aiImprovedText ? (
+                        <div className="flex items-center justify-center h-full">
+                          <Loader2 className="h-6 w-6 text-purple-600 animate-spin" />
+                        </div>
+                      ) : (
+                        <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
+                          {aiImprovedText}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-xs text-purple-700">
+                  Review the AI-improved version and accept to use it, or reject
+                  to keep your original text.
+                </p>
+              </div>
+            )}
+
             {/* Editing Interface */}
             <div className="relative">
               <textarea
@@ -346,6 +517,7 @@ const EditableTextTestimonial = ({
                   fontFamily:
                     'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                 }}
+                disabled={isImproving}
               />
 
               {/* Character limit warning */}

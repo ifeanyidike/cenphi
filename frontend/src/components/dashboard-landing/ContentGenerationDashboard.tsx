@@ -5,12 +5,8 @@ import {
   FileText,
   Target,
   Award,
-  TrendingUp,
   Star,
-  Brain,
   ArrowRight,
-  Loader2,
-  CheckCircle2,
   Users,
   ChevronDown,
   ChevronUp,
@@ -34,7 +30,7 @@ const CONTENT_TYPES = [
     value: "high",
   },
   {
-    id: "email_campaign",
+    id: "email",
     name: "Email Campaign",
     description: "Ready-to-send customer stories",
     estimatedTime: "30s",
@@ -43,7 +39,7 @@ const CONTENT_TYPES = [
     value: "high",
   },
   {
-    id: "blog_post",
+    id: "blog",
     name: "Blog Post",
     description: "Customer success article",
     estimatedTime: "60s",
@@ -52,7 +48,7 @@ const CONTENT_TYPES = [
     value: "medium",
   },
   {
-    id: "sales_deck_slide",
+    id: "sales_deck",
     name: "Sales Deck",
     description: "Presentation with social proof",
     estimatedTime: "50s",
@@ -71,11 +67,10 @@ interface SelectedTestimonial {
 
 interface ContentGenerationDashboardProps {
   onGenerateContent: (contentType: string, testimonialIds: string[]) => void;
-  isProcessing?: boolean;
 }
 
 const ContentGenerationDashboard: React.FC<ContentGenerationDashboardProps> =
-  observer(({ onGenerateContent, isProcessing = false }) => {
+  observer(({ onGenerateContent }) => {
     const [selectedContentType, setSelectedContentType] = useState<string>("");
     const [showTestimonialPreview, setShowTestimonialPreview] = useState(false);
     const [showContentTypes, setShowContentTypes] = useState(false);
@@ -142,15 +137,14 @@ const ContentGenerationDashboard: React.FC<ContentGenerationDashboardProps> =
 
     if (!hasEligibleTestimonials) {
       return (
-        <Card className="border border-gray-200">
+        <Card className="border border-slate-200">
           <CardContent className="p-3 text-center">
-            <FileText className="h-6 w-6 text-gray-400 mx-auto mb-2" />
-            <h3 className="text-sm font-medium text-gray-900 mb-1">
+            <FileText className="h-5 w-5 text-slate-400 mx-auto mb-1.5" />
+            <h3 className="text-xs font-medium text-slate-900 mb-1">
               Content Creation Ready Soon
             </h3>
-            <p className="text-xs text-gray-600">
-              Need testimonials with high sentiment (≥0.7) or good ratings (≥4
-              stars) for content generation
+            <p className="text-xs text-slate-600">
+              Need quality testimonials for content generation
             </p>
           </CardContent>
         </Card>
@@ -158,60 +152,41 @@ const ContentGenerationDashboard: React.FC<ContentGenerationDashboardProps> =
     }
 
     return (
-      <Card className="border border-purple-200 bg-purple-50/20">
-        <CardHeader className="p-4">
+      <Card className="border border-slate-200 bg-white shadow-sm">
+        <CardHeader className="p-3 pb-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded bg-purple-600 flex items-center justify-center">
-                <Sparkles className="h-4 w-4 text-white" />
+              <div className="w-7 h-7 rounded-lg bg-slate-900 flex items-center justify-center">
+                <Sparkles className="h-3.5 w-3.5 text-white" />
               </div>
-              <div>
-                <CardTitle className="text-base text-gray-900">
-                  Marketing Content
-                </CardTitle>
-                <p className="text-xs text-gray-600 mt-0.5">
-                  Generate sales materials from your testimonials
-                </p>
-              </div>
+              <CardTitle className="text-xs font-semibold text-slate-900">
+                Marketing Content
+              </CardTitle>
             </div>
-            <Badge
-              variant="secondary"
-              className="bg-purple-100 text-purple-700 border-purple-200 text-xs"
-            >
-              <Brain className="h-3 w-3 mr-1" />
-              AI
-            </Badge>
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-3 pt-0">
-          <div className="flex items-center justify-between p-2 bg-white rounded border border-gray-100">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1 text-xs">
-                <CheckCircle2 className="h-3 w-3 text-emerald-600" />
-                <span className="font-medium text-gray-900">
-                  {selectedTestimonials.length} selected
-                </span>
-              </div>
-              <div className="flex items-center gap-1 text-xs text-gray-600">
-                <TrendingUp className="h-3 w-3" />
-                <span>{(averageScore * 100).toFixed(0)}% avg</span>
-              </div>
-              <div className="flex items-center gap-1 text-xs text-gray-600">
-                <FileText className="h-3 w-3" />
-                <span>
-                  {selectedTestimonials.filter((t) => t.hasMetrics).length} with
-                  metrics
-                </span>
-              </div>
+        <CardContent className="space-y-2.5 pt-0 pb-3 px-3">
+          <div className="flex items-center justify-between p-2 bg-slate-50 rounded-lg border border-slate-200">
+            <div className="flex items-center gap-2 text-xs text-slate-600">
+              <span className="font-medium text-slate-900">
+                {selectedTestimonials.length} selected
+              </span>
+              <span>•</span>
+              <span>{(averageScore * 100).toFixed(0)}% avg quality</span>
+              <span>•</span>
+              <span>
+                {selectedTestimonials.filter((t) => t.hasMetrics).length} with
+                metrics
+              </span>
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setShowTestimonialPreview(!showTestimonialPreview)}
-              className="text-xs h-6 px-2"
+              className="text-xs h-6 px-2 text-slate-600 hover:text-slate-900"
             >
-              {showTestimonialPreview ? "Hide" : "Preview"}
+              {showTestimonialPreview ? "Hide" : "View"}
             </Button>
           </div>
 
@@ -228,41 +203,41 @@ const ContentGenerationDashboard: React.FC<ContentGenerationDashboardProps> =
                   .map(({ testimonial, score, hasMetrics }) => (
                     <div
                       key={testimonial.id}
-                      className="flex items-center justify-between p-2 bg-white rounded border border-gray-100"
+                      className="flex items-center justify-between p-2 bg-white rounded-lg border border-slate-200 hover:border-slate-300 transition-colors"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center">
-                          <Users className="h-3 w-3 text-gray-600" />
+                        <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center">
+                          <Users className="h-3 w-3 text-slate-600" />
                         </div>
                         <div>
-                          <p className="text-xs font-medium text-gray-900">
+                          <p className="text-xs font-medium text-slate-900">
                             {testimonial.author_name}
                           </p>
-                          <p className="text-xs text-gray-600">
+                          <p className="text-[10px] text-slate-500">
                             {testimonial.author_company}
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5">
                         <div className="flex items-center gap-0.5">
                           {[...Array(testimonial.rating || 0)].map((_, i) => (
                             <Star
                               key={i}
-                              className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400"
+                              className="h-2.5 w-2.5 fill-amber-400 text-amber-400"
                             />
                           ))}
                         </div>
                         {hasMetrics && (
                           <Badge
                             variant="outline"
-                            className="text-xs py-0 px-1 bg-emerald-50 text-emerald-600 border-emerald-200"
+                            className="text-[10px] py-0 px-1.5 bg-slate-100 text-slate-700 border-slate-300"
                           >
                             Metrics
                           </Badge>
                         )}
                         <Badge
                           variant="secondary"
-                          className="text-xs py-0 px-1 bg-purple-50 text-purple-700 border-purple-200"
+                          className="text-[10px] py-0 px-1.5 bg-slate-900 text-white border-slate-900"
                         >
                           {(score * 100).toFixed(0)}%
                         </Badge>
@@ -275,14 +250,14 @@ const ContentGenerationDashboard: React.FC<ContentGenerationDashboardProps> =
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-medium text-gray-900">
+              <h4 className="text-xs font-medium text-slate-900">
                 Content Type
               </h4>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowContentTypes(!showContentTypes)}
-                className="text-xs h-6 px-2"
+                className="text-xs h-6 px-2 text-slate-600 hover:text-slate-900"
               >
                 {showContentTypes ? (
                   <>
@@ -308,24 +283,24 @@ const ContentGenerationDashboard: React.FC<ContentGenerationDashboardProps> =
                     <button
                       key={type.id}
                       onClick={() => setSelectedContentType(type.id)}
-                      className={`p-2 rounded border text-left transition-all duration-200 ${
+                      className={`p-2.5 rounded-lg border text-left transition-all duration-200 ${
                         isSelected
-                          ? "border-purple-300 bg-purple-50"
-                          : "border-gray-200 hover:border-gray-300 bg-white"
+                          ? "border-slate-900 bg-slate-900 shadow-sm"
+                          : "border-slate-200 hover:border-slate-300 bg-white hover:shadow-sm"
                       }`}
                     >
-                      <div className="flex items-center gap-1 mb-1">
+                      <div className="flex items-center gap-1.5 mb-1">
                         <Icon
-                          className={`h-3 w-3 ${isSelected ? "text-purple-600" : "text-gray-600"}`}
+                          className={`h-3 w-3 ${isSelected ? "text-white" : "text-slate-600"}`}
                         />
                         <span
-                          className={`text-xs font-medium ${isSelected ? "text-purple-900" : "text-gray-900"}`}
+                          className={`text-xs font-medium ${isSelected ? "text-white" : "text-slate-900"}`}
                         >
                           {type.name}
                         </span>
                       </div>
                       <p
-                        className={`text-xs ${isSelected ? "text-purple-700" : "text-gray-600"}`}
+                        className={`text-[10px] ${isSelected ? "text-slate-300" : "text-slate-500"}`}
                       >
                         {type.description}
                       </p>
@@ -338,25 +313,16 @@ const ContentGenerationDashboard: React.FC<ContentGenerationDashboardProps> =
 
           <Button
             onClick={handleGenerateContent}
-            disabled={!selectedContentType || isProcessing}
-            className="w-full bg-purple-600 hover:bg-purple-700 text-white disabled:opacity-50 text-sm h-9"
+            disabled={!selectedContentType}
+            className="w-full bg-slate-900 hover:bg-slate-800 text-white disabled:opacity-50 disabled:bg-slate-300 text-xs h-8 shadow-sm"
           >
-            {isProcessing ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <FileText className="h-4 w-4 mr-2" />
-                Generate {selectedContentTypeInfo?.name || "Content"}
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </>
-            )}
+            <FileText className="h-3.5 w-3.5 mr-2" />
+            Generate {selectedContentTypeInfo?.name || "Content"}
+            <ArrowRight className="h-3.5 w-3.5 ml-2" />
           </Button>
 
-          <p className="text-xs text-gray-500 text-center">
-            Ready-to-use marketing materials in seconds
+          <p className="text-[10px] text-slate-500 text-center">
+            Professional marketing materials in seconds
           </p>
         </CardContent>
       </Card>

@@ -1,0 +1,94 @@
+# ============================================================================
+# Multi-stage Dockerfile for Cloud Run - API Server
+# Optimized for production deployment with minimal image size
+# ============================================================================
+
+# ============================================================================
+# Stage 1: Builder
+# ============================================================================
+FROM golang:1.24-alpine AS builder
+
+ENV CGO_ENABLED=0 \
+    GOOS=linux \
+    GOARCH=amd64
+
+# Install build dependencies
+RUN apk add --no-cache \
+    git \
+    make \
+    ca-certificates \
+    tzdata
+
+WORKDIR /build
+
+# Copy go mod files first for better layer caching
+COPY go.mod go.sum ./
+RUN go mod download && go mod verify
+
+# Copy source code
+COPY . .
+
+# Build the application with optimizations
+RUN go build \
+    -ldflags="-s -w -X main.Version=$(date +%Y%m%d-%H%M%S)" \
+    -trimpath \
+    -o api \
+    ./cmd
+
+# ============================================================================
+# Stage 2: Runtime (minimal production image)
+# ============================================================================
+FROM alpine:latest
+
+# Install runtime dependencies
+RUN apk add --no-cache \
+    ca-certificates \
+    tzdata \
+    curl \
+    ffmpeg \
+    bind-tools
+
+# Create app user for security
+RUN addgroup -g 1000 app && \
+    adduser -D -u 1000 -G app app
+
+# Create necessary directories
+RUN mkdir -p /app/certs /app/data /app/logs && \
+    chown -R app:app /app
+
+WORKDIR /app
+
+# Copy binary from builder
+COPY --from=builder /build/api ./api
+
+# Copy certificates from builder
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+
+# Copy public folder (if exists)
+COPY --chown=app:app public/ /app/public/
+
+# Download additional certificates for Google APIs
+RUN curl -sSL --retry 3 --retry-delay 5 \
+    https://pki.goog/roots.pem -o /app/certs/google_roots.pem || true && \
+    curl -sSL --retry 3 --retry-delay 5 \
+    https://curl.se/ca/cacert.pem -o /app/certs/cacert.pem || true && \
+    chown -R app:app /app/certs
+
+# Set environment variables
+ENV SSL_CERT_FILE=/app/certs/cacert.pem \
+    PORT=8081 \
+    GO_ENV=production \
+    TZ=UTC
+
+# Switch to non-root user
+USER app
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:${PORT}/health || exit 1
+
+# Expose port
+EXPOSE 8081
+
+# Run the application
+CMD ["/app/api"]

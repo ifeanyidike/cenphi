@@ -66,17 +66,22 @@ func (r *socialAccountRepository) CreateAccount(ctx context.Context, account *mo
 			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
 		)
 	`
-
-	platformDataJSON, err := json.Marshal(account.PlatformData)
-	if err != nil {
-		return fmt.Errorf("failed to marshal platform data: %w", err)
+	var platformDataJSON []byte
+	if account.PlatformData == nil {
+		platformDataJSON = []byte("{}")
+	} else {
+		data, err := json.Marshal(account.PlatformData)
+		if err != nil {
+			return fmt.Errorf("failed to marshal platform data: %w", err)
+		}
+		platformDataJSON = data
 	}
 
-	_, err = db.ExecContext(ctx, query,
+	_, err := db.ExecContext(ctx, query,
 		account.ID, account.WorkspaceID, account.UserID, account.Platform,
 		account.AccessToken, account.RefreshToken, account.TokenExpiresAt,
 		account.PlatformUserID, account.PlatformUsername, account.PlatformEmail,
-		account.AccountName, account.AccountType, platformDataJSON, pq.Array(account.Permissions),
+		account.AccountName, account.AccountType, string(platformDataJSON), pq.Array(account.Permissions),
 		account.Status, account.CreatedAt, account.UpdatedAt,
 	)
 
@@ -221,17 +226,23 @@ func (r *socialAccountRepository) UpdateAccount(ctx context.Context, account *mo
 		WHERE id = $1
 	`
 
-	platformDataJSON, err := json.Marshal(account.PlatformData)
-	if err != nil {
-		return fmt.Errorf("failed to marshal platform data: %w", err)
+	var platformDataJSON []byte
+	if account.PlatformData == nil {
+		platformDataJSON = []byte("{}")
+	} else {
+		data, err := json.Marshal(account.PlatformData)
+		if err != nil {
+			return fmt.Errorf("failed to marshal platform data: %w", err)
+		}
+		platformDataJSON = data
 	}
 
 	account.UpdatedAt = time.Now()
 
-	_, err = db.ExecContext(ctx, query,
+	_, err := db.ExecContext(ctx, query,
 		account.ID, account.AccessToken, account.RefreshToken, account.TokenExpiresAt,
 		account.PlatformUsername, account.PlatformEmail, account.AccountName,
-		account.AccountType, platformDataJSON, pq.Array(account.Permissions),
+		account.AccountType, string(platformDataJSON), pq.Array(account.Permissions),
 		account.Status, account.LastError, account.LastSyncAt, account.UpdatedAt,
 	)
 
@@ -282,32 +293,45 @@ func (r *socialPostRepository) CreatePost(ctx context.Context, post *models.Soci
 		)
 	`
 
-	platformDataJSON, err := json.Marshal(post.PlatformData)
-	if err != nil {
-		return fmt.Errorf("failed to marshal platform data: %w", err)
+	var platformDataJSON, errorDetailsJSON []byte
+
+	if post.PlatformData == nil {
+		platformDataJSON = []byte("{}")
+	} else {
+		data, err := json.Marshal(post.PlatformData)
+		if err != nil {
+			return fmt.Errorf("failed to marshal platform data: %w", err)
+		}
+		platformDataJSON = data
 	}
 
-	errorDetailsJSON, err := json.Marshal(post.ErrorDetails)
-	if err != nil {
-		return fmt.Errorf("failed to marshal error details: %w", err)
+	if post.ErrorDetails == nil {
+		errorDetailsJSON = []byte("{}")
+	} else {
+		data, err := json.Marshal(post.ErrorDetails)
+		if err != nil {
+			return fmt.Errorf("failed to marshal error details: %w", err)
+		}
+		errorDetailsJSON = data
 	}
 
 	// Convert TestimonialIDs to JSONB
 	var testimonialIDsJSON []byte
 	if len(post.TestimonialIDs) > 0 {
-		testimonialIDsJSON, err = json.Marshal(post.TestimonialIDs)
+		data, err := json.Marshal(post.TestimonialIDs)
 		if err != nil {
 			return fmt.Errorf("failed to marshal testimonial IDs: %w", err)
 		}
+		testimonialIDsJSON = data
 	}
 
-	_, err = db.ExecContext(ctx, query,
-		post.ID, post.WorkspaceID, post.TestimonialID, testimonialIDsJSON, post.SocialAccountID,
+	_, err := db.ExecContext(ctx, query,
+		post.ID, post.WorkspaceID, post.TestimonialID, string(testimonialIDsJSON), post.SocialAccountID,
 		post.Content, post.PostType, pq.Array(post.MediaURLs), pq.Array(post.Hashtags),
 		post.Platform, post.PlatformPostID, post.PlatformURL, post.Status,
 		post.ScheduledAt, post.PublishedAt, post.AiBestTime, post.AiBestTimeScore,
 		post.ViewsCount, post.LikesCount, post.CommentsCount, post.SharesCount,
-		platformDataJSON, errorDetailsJSON, post.RetryCount, post.MaxRetries,
+		string(platformDataJSON), string(errorDetailsJSON), post.RetryCount, post.MaxRetries,
 		post.LastMetricsSync, post.CreatedAt, post.UpdatedAt,
 	)
 
@@ -507,33 +531,46 @@ func (r *socialPostRepository) UpdatePost(ctx context.Context, post *models.Soci
 		WHERE id = $1
 	`
 
-	platformDataJSON, err := json.Marshal(post.PlatformData)
-	if err != nil {
-		return fmt.Errorf("failed to marshal platform data: %w", err)
+	var platformDataJSON, errorDetailsJSON []byte
+
+	if post.PlatformData == nil {
+		platformDataJSON = []byte("{}")
+	} else {
+		data, err := json.Marshal(post.PlatformData)
+		if err != nil {
+			return fmt.Errorf("failed to marshal platform data: %w", err)
+		}
+		platformDataJSON = data
 	}
 
-	errorDetailsJSON, err := json.Marshal(post.ErrorDetails)
-	if err != nil {
-		return fmt.Errorf("failed to marshal error details: %w", err)
+	if post.ErrorDetails == nil {
+		errorDetailsJSON = []byte("{}")
+	} else {
+		data, err := json.Marshal(post.ErrorDetails)
+		if err != nil {
+			return fmt.Errorf("failed to marshal error details: %w", err)
+		}
+		errorDetailsJSON = data
 	}
 
 	// Convert TestimonialIDs to JSONB
 	var testimonialIDsJSON []byte
 	if len(post.TestimonialIDs) > 0 {
-		testimonialIDsJSON, err = json.Marshal(post.TestimonialIDs)
+		data, err := json.Marshal(post.TestimonialIDs)
 		if err != nil {
 			return fmt.Errorf("failed to marshal testimonial IDs: %w", err)
 		}
+		testimonialIDsJSON = data
 	}
 
 	post.UpdatedAt = time.Now()
 
-	_, err = db.ExecContext(ctx, query,
-		post.ID, testimonialIDsJSON, post.Content, post.PostType, pq.Array(post.MediaURLs),
+	_, err := db.ExecContext(ctx, query,
+		post.ID, string(testimonialIDsJSON), post.Content, post.PostType, pq.Array(post.MediaURLs),
 		pq.Array(post.Hashtags), post.PlatformPostID, post.PlatformURL,
 		post.Status, post.ScheduledAt, post.PublishedAt, post.AiBestTime, post.AiBestTimeScore,
 		post.ViewsCount, post.LikesCount, post.CommentsCount, post.SharesCount,
-		platformDataJSON, errorDetailsJSON, post.RetryCount,
+		string(platformDataJSON), string(errorDetailsJSON), post.RetryCount,
 		post.LastMetricsSync, post.UpdatedAt,
 	)
 
@@ -572,21 +609,6 @@ func (r *socialPostRepository) DeletePost(ctx context.Context, id uuid.UUID, db 
 }
 
 func (r *socialPostRepository) GetPostsNeedingMetricsSync(ctx context.Context, platform string, since time.Time, limit int, db DB) ([]*models.SocialPost, error) {
-	// query := `
-	// 	SELECT id, workspace_id, testimonial_id, social_account_id, content, post_type,
-	// 		   media_urls, hashtags, platform, platform_post_id, platform_url,
-	// 		   status, scheduled_at, published_at, views_count, likes_count,
-	// 		   comments_count, shares_count, platform_data, error_details,
-	// 		   retry_count, max_retries, last_metrics_sync, created_at, updated_at
-	// 	FROM social_posts
-	// 	WHERE platform = $1
-	// 	  AND status = 'published'
-	// 	  AND platform_post_id IS NOT NULL
-	// 	  AND published_at >= $2
-	// 	  AND (last_metrics_sync IS NULL OR last_metrics_sync < NOW() - INTERVAL '1 hour')
-	// 	ORDER BY published_at DESC
-	// 	LIMIT $3
-	// `
 
 	query := fmt.Sprintf(`
         SELECT id, workspace_id, testimonial_id, social_account_id, content, post_type, 

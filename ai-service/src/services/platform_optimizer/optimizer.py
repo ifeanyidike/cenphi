@@ -257,9 +257,9 @@ class PlatformOptimizer:
                 enable_audio_normalization, remove_noise
             )
             
-            cache_url = self.storage_manager.get_public_url_for_object(f"optimized/{target_platform}/{cache_path}.mp4")
+            cache_url = self.storage_manager.get_public_url_for_object(f"temp/optimized/{target_platform}/{cache_path}.mp4")
             if self.storage_manager.check_url_exists(cache_url):
-                logger.info(f"✅ Using cached platform optimizer URL: optimized/{target_platform}/{cache_path}.mp4")
+                logger.info(f"✅ Using cached platform optimizer URL: temp/optimized/{target_platform}/{cache_path}.mp4")
                 return intelligence_pb2.OptimizeResponse(
                     success=True,
                     media_type="video",
@@ -475,14 +475,14 @@ class PlatformOptimizer:
                     upload_tasks = []
                     
                     # Main video upload
-                    # object_name = f"optimized/{target_platform}/{uuid.uuid4().hex}_{os.path.basename(final_media_path)}"
-                    object_name = f"optimized/{target_platform}/{cache_path}.mp4"
+                    # object_name = f"temp/optimized/{target_platform}/{uuid.uuid4().hex}_{os.path.basename(final_media_path)}"
+                    object_name = f"temp/optimized/{target_platform}/{cache_path}.mp4"
                     upload_tasks.append(("main_video", final_media_path, object_name))
                     
                     # Caption uploads
                     for caption_type, caption_path in caption_paths.items():
                         if caption_path and os.path.exists(caption_path):
-                            caption_object_name = f"captions/{target_platform}/{cache_path}_{os.path.basename(caption_path)}"
+                            caption_object_name = f"temp/captions/{target_platform}/{cache_path}_{os.path.basename(caption_path)}"
                             upload_tasks.append((caption_type, caption_path, caption_object_name))
                     
                     # Upload all files in parallel
@@ -725,7 +725,7 @@ class PlatformOptimizer:
             )
 
             logger.info(f"📊 Executing batch platform optimization with {quality_preset['preset']} preset")
-            result = self._ffmpeg_optimizer.execute_with_monitoring(batch_cmd, timeout=600)
+            result = self._ffmpeg_optimizer.optimize_and_execute(batch_cmd, timeout=600)
 
             if result.returncode == 0:
                 # Build success responses for each platform
@@ -735,7 +735,7 @@ class PlatformOptimizer:
                         cache_key = self.generate_optimization_cache_key(
                             media_url, platform, brand_context, optimization_options
                         )
-                        object_name = f"optimized/{platform}/{cache_key}.mp4"
+                        object_name = f"temp/optimized/{platform}/{cache_key}.mp4"
                         optimized_url = self.storage_manager.upload_file_with_retry(output_path, object_name)
 
                         results[platform] = intelligence_pb2.OptimizeResponse(

@@ -416,7 +416,7 @@ class MediaEnhancer:
         )
         
         cache_hash = hashlib.md5(cache_data.encode()).hexdigest()
-        return f"enhanced/{cache_hash}.mp4"
+        return f"temp/enhanced/{cache_hash}.mp4"
     
     def process_with_excellent_denoising(self, video_path: str, noise_reduction_level: str, temp_files: List[str], story_id: str) -> str:
         """

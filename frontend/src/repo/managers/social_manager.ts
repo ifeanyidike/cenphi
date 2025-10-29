@@ -126,17 +126,21 @@ export class SocialManager {
   /**
    * Get OAuth authorization URL for connecting social accounts
    */
-  async getAuthURL(workspaceId: string, platform: string): Promise<string> {
+  async getAuthURL(workspaceId: string, platform: string, returnUrl?: string): Promise<string> {
     try {
       const { token } = await authStore.getToken();
-      const response = await axios.get(
-        `${this.server_addr}/workspaces/${workspaceId}/social/auth/${platform}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+
+      // Build URL with optional return_url parameter
+      let url = `${this.server_addr}/workspaces/${workspaceId}/social/auth/${platform}`;
+      if (returnUrl) {
+        url += `?return_url=${encodeURIComponent(returnUrl)}`;
+      }
+
+      const response = await axios.get(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       return response.data.data.auth_url;
     } catch (error: any) {
@@ -334,6 +338,80 @@ export class SocialManager {
       );
     } catch (error: any) {
       this.error = error.response?.data?.message || "Failed to sync post metrics";
+      throw error;
+    }
+  }
+
+  /**
+   * Update an existing post
+   */
+  async updatePost(
+    postId: string,
+    updateData: Partial<CreatePostRequest>
+  ): Promise<SocialPost> {
+    this.isLoading = true;
+    this.error = null;
+
+    try {
+      const { token } = await authStore.getToken();
+      const response = await axios.put(
+        `${this.server_addr}/social/posts/${postId}`,
+        updateData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const updatedPost = response.data.data;
+
+      runInAction(() => {
+        const index = this.posts.findIndex(p => p.id === postId);
+        if (index !== -1) {
+          this.posts[index] = updatedPost;
+        }
+        this.isLoading = false;
+      });
+
+      return updatedPost;
+    } catch (error: any) {
+      runInAction(() => {
+        this.error = error.response?.data?.message || "Failed to update post";
+        this.isLoading = false;
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Delete a post
+   */
+  async deletePost(postId: string): Promise<void> {
+    this.isLoading = true;
+    this.error = null;
+
+    try {
+      const { token } = await authStore.getToken();
+      await axios.delete(
+        `${this.server_addr}/social/posts/${postId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      runInAction(() => {
+        this.posts = this.posts.filter(p => p.id !== postId);
+        this.isLoading = false;
+      });
+    } catch (error: any) {
+      runInAction(() => {
+        this.error = error.response?.data?.message || "Failed to delete post";
+        this.isLoading = false;
+      });
       throw error;
     }
   }

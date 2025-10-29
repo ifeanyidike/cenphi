@@ -12,6 +12,7 @@ import (
 
 	"github.com/ifeanyidike/cenphi/internal/cache"
 	"github.com/ifeanyidike/cenphi/internal/models"
+	"github.com/ifeanyidike/cenphi/internal/utils"
 )
 
 type FillerOccurrence struct {
@@ -87,7 +88,8 @@ func (s FillerDetectionService) detectFillersWithAI(ctx context.Context, transcr
 	}
 
 	var fillers []FillerOccurrence
-	if err := json.Unmarshal([]byte(response), &fillers); err != nil {
+	cleanedResponse := utils.CleanAIJSONResponse(response)
+	if err := json.Unmarshal([]byte(cleanedResponse), &fillers); err != nil {
 		return nil, fmt.Errorf("failed to parse filler detection response: %w", err)
 	}
 

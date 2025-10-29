@@ -3,12 +3,13 @@ import { TestimonialArtifact, ProcessingType } from "@/types/testimonial";
 import {
   Video,
   FileText,
-  Languages,
-  Mic,
-  TrendingUp,
   Target,
+  Sparkles,
   Instagram,
-  Youtube
+  Youtube,
+  Linkedin,
+  Twitter,
+  Facebook
 } from "lucide-react";
 
 export interface ContentCategory {
@@ -49,74 +50,47 @@ export interface EnhancedArtifact extends TestimonialArtifact {
   childArtifacts: TestimonialArtifact[];
 }
 
-// Content Categories Definition
+// Simplified Content Categories - Focus on actual services
 export const CONTENT_CATEGORIES: ContentCategory[] = [
   {
-    id: 'video_content',
-    label: 'Video Content',
-    description: 'Enhanced videos, story compilations, and clips',
-    icon: Video,
-    color: 'bg-blue-50 text-blue-700 border-blue-200',
-    types: ['enhancement', 'story_mode_generation', 'best_story_moments', 'clipping'],
+    id: 'platform_optimized_video',
+    label: 'Platform-Optimized Videos',
+    description: 'Videos optimized for specific social media platforms',
+    icon: Target,
+    color: 'bg-gradient-to-br from-purple-50 to-purple-100 text-purple-700 border-purple-200',
+    types: ['video_platform_optimization', 'custom_pipeline'],
     priority: 1
   },
   {
-    id: 'platform_optimized_video',
-    label: 'Platform Video',
-    description: 'Video content optimized for specific platforms',
-    icon: Target,
-    color: 'bg-purple-50 text-purple-700 border-purple-200',
-    types: ['video_platform_optimization'],
+    id: 'story_videos',
+    label: 'Story Videos',
+    description: 'Curated story compilations from best moments',
+    icon: Sparkles,
+    color: 'bg-gradient-to-br from-blue-50 to-blue-100 text-blue-700 border-blue-200',
+    types: ['story_mode_generation', 'best_story_moments'],
     priority: 2
   },
   {
-    id: 'platform_optimized_text',
-    label: 'Platform Text',
-    description: 'Text content optimized for specific platforms',
-    icon: Target,
-    color: 'bg-amber-50 text-amber-700 border-amber-200',
-    types: ['text_platform_optization'],
-    priority: 3
-  },
-  {
-    id: 'text_content',
-    label: 'Text Content',
-    description: 'Generated marketing copy and polished text',
+    id: 'generated_content',
+    label: 'Generated Content',
+    description: 'AI-generated marketing copy and content variations',
     icon: FileText,
-    color: 'bg-green-50 text-green-700 border-green-200',
-    types: ['content_generation', 'text_polishing'],
+    color: 'bg-gradient-to-br from-emerald-50 to-emerald-100 text-emerald-700 border-emerald-200',
+    types: ['content_generation'],
     priority: 3
   },
   {
-    id: 'translations',
-    label: 'Translations',
-    description: 'Multi-language versions of content',
-    icon: Languages,
-    color: 'bg-orange-50 text-orange-700 border-orange-200',
-    types: ['translation'],
+    id: 'data_insights',
+    label: 'Data Insights',
+    description: 'AI-powered insights from Talk to Your Data',
+    icon: Video,
+    color: 'bg-gradient-to-br from-cyan-50 to-cyan-100 text-cyan-700 border-cyan-200',
+    types: ['talk_to_data', 'data_analysis'],
     priority: 4
-  },
-  {
-    id: 'audio_content',
-    label: 'Audio Content',
-    description: 'Voice narrations and audio processing',
-    icon: Mic,
-    color: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-    types: ['narration'],
-    priority: 5
-  },
-  {
-    id: 'analysis',
-    label: 'Analysis & Insights',
-    description: 'Sentiment analysis, highlights, and viral insights',
-    icon: TrendingUp,
-    color: 'bg-rose-50 text-rose-700 border-rose-200',
-    types: ['sentiment_analysis', 'viral_analysis', 'highlight_extraction'],
-    priority: 6
   }
 ];
 
-// Platform Targets Definition
+// Platform Targets Definition - Focused on main platforms
 export const PLATFORM_TARGETS: PlatformTarget[] = [
   {
     id: 'instagram_reels',
@@ -124,7 +98,15 @@ export const PLATFORM_TARGETS: PlatformTarget[] = [
     icon: Instagram,
     aspectRatio: '9:16',
     maxDuration: '90s',
-    features: ['Vertical format', 'Captions', 'Trending audio']
+    features: ['Vertical', 'Captions', 'Trending audio']
+  },
+  {
+    id: 'instagram_feed',
+    name: 'Instagram Feed',
+    icon: Instagram,
+    aspectRatio: '1:1 / 4:5',
+    maxDuration: '60s',
+    features: ['Square/Portrait', 'Descriptive captions']
   },
   {
     id: 'instagram_stories',
@@ -132,7 +114,7 @@ export const PLATFORM_TARGETS: PlatformTarget[] = [
     icon: Instagram,
     aspectRatio: '9:16',
     maxDuration: '15s',
-    features: ['Vertical format', 'Quick consumption', 'Interactive elements']
+    features: ['Vertical', 'Quick consumption']
   },
   {
     id: 'tiktok',
@@ -140,23 +122,15 @@ export const PLATFORM_TARGETS: PlatformTarget[] = [
     icon: Video,
     aspectRatio: '9:16',
     maxDuration: '3min',
-    features: ['Vertical format', 'Algorithm optimized', 'Trending sounds']
+    features: ['Vertical', 'Algorithm optimized']
   },
   {
     id: 'linkedin',
     name: 'LinkedIn',
-    icon: Target,
-    aspectRatio: '16:9',
+    icon: Linkedin,
+    aspectRatio: '16:9 / 1:1',
     maxDuration: '10min',
-    features: ['Professional tone', 'Business focus', 'Longer content']
-  },
-  {
-    id: 'youtube',
-    name: 'YouTube',
-    icon: Youtube,
-    aspectRatio: '16:9',
-    maxDuration: 'Unlimited',
-    features: ['Horizontal format', 'Detailed content', 'SEO optimized']
+    features: ['Professional', 'Business focus']
   },
   {
     id: 'youtube_shorts',
@@ -164,15 +138,39 @@ export const PLATFORM_TARGETS: PlatformTarget[] = [
     icon: Youtube,
     aspectRatio: '9:16',
     maxDuration: '60s',
-    features: ['Vertical format', 'Quick engagement', 'Mobile-first']
+    features: ['Vertical', 'Mobile-first']
+  },
+  {
+    id: 'youtube',
+    name: 'YouTube',
+    icon: Youtube,
+    aspectRatio: '16:9',
+    maxDuration: 'Unlimited',
+    features: ['Horizontal', 'SEO optimized']
+  },
+  {
+    id: 'twitter',
+    name: 'Twitter/X',
+    icon: Twitter,
+    aspectRatio: '16:9 / 1:1',
+    maxDuration: '2m20s',
+    features: ['Quick engagement', 'Viral potential']
+  },
+  {
+    id: 'facebook',
+    name: 'Facebook',
+    icon: Facebook,
+    aspectRatio: '1:1 / 16:9',
+    maxDuration: '240min',
+    features: ['Emotional', 'Questions']
   }
 ];
 
-// Content Processing Levels - Based on actual processing relationships
+// Content Processing Levels
 export const PROCESSING_LEVELS = {
-  ORIGINAL: 1,    // Direct processing from testimonial (enhancement, clipping, etc)
-  DERIVED: 2,     // Processing from other artifacts (platform optimization of clips, etc)
-  COMPOSED: 3     // Multi-testimonial compositions (story videos, content generation)
+  ORIGINAL: 1,    // Direct processing from testimonial
+  DERIVED: 2,     // Processing from other artifacts
+  COMPOSED: 3     // Multi-testimonial compositions
 };
 
 // Helper Functions
@@ -220,7 +218,7 @@ export function buildContentLineage(
       sourceId: artifact.testimonial_id
     };
 
-    // Check for multi-testimonial content (compositions)
+    // Check for multi-testimonial content
     const testimonialIds = artifact.data?.testimonial_ids;
     const isStoryVideo = artifact.processing_type === 'story_mode_generation' ||
                         artifact.processing_type === 'best_story_moments';

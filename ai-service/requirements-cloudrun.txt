@@ -1,4 +1,4 @@
-# requirements-cloudrun-optimized.txt - SIZE OPTIMIZED for <600MB image
+# requirements-cloudrun.txt - SIZE OPTIMIZED for <600MB image
 
 # ============================================================================
 # SIZE OPTIMIZATIONS APPLIED:
@@ -34,6 +34,9 @@ together>=1.5.19,<2.0.0
 grpcio>=1.73.1,<2.0.0
 grpcio-reflection>=1.60.0,<1.65.0
 protobuf>=4.25.3,<5.0.0
+
+# Cache and Message Queue (ESSENTIAL for progress publishing)
+redis>=5.0.0,<6.0.0
 
 # System Utilities
 psutil>=5.9.0,<6.0.0

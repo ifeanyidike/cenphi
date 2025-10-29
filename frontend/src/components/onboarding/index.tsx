@@ -47,11 +47,6 @@ const Onboarding: React.FC<OnboardingProps> = observer(() => {
     })();
   }, []);
 
-  // const checkExistingWorkspace = async () => {
-  //   const hasWorkspace = await workspaceHub.getWorkspaceData();
-  //   if (hasWorkspace) navigate("/dashboard");
-  // };
-
   const handleBusinessInfoNext = async (info: BusinessInfo) => {
     setIsLoading(true);
     setError(null);
@@ -62,7 +57,6 @@ const Onboarding: React.FC<OnboardingProps> = observer(() => {
         info.websiteUrl || ""
       );
       if (workspaceId) setWorkspaceId(workspaceId.toString());
-      console.log("workspace id", workspaceId);
       window.history.replaceState(null, "", "/onboarding?flow=active");
       setBusinessInfo(info);
       setCurrentStep("intent");
@@ -167,7 +161,6 @@ const Onboarding: React.FC<OnboardingProps> = observer(() => {
         return (
           <CaptureScreen
             onTestimonialCreated={handleTestimonialCreated}
-            onError={handleError}
             workspaceId={workspaceId || ""}
             intent={selectedIntent}
             onSkip={() => navigate("/dashboard")}

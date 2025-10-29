@@ -44,6 +44,9 @@ RUN mkdir -p /app/certs /app/data
 COPY --from=builder /app/api /app/api
 COPY --from=builder /app/certs/ /app/certs/
 
+# Copy public directory directly (not from builder, as it's in source)
+COPY public/ /app/public/
+
 # Copy the entrypoint script
 COPY scripts/docker-entrypoint.sh /app/docker-entrypoint.sh
 # Fix line endings and make executable

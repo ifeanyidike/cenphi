@@ -528,13 +528,17 @@ class VisualOverlay:
         # Copy audio from original (? means optional, won't fail if no audio)
         cmd.extend(["-map", "0:a?"])
         
-        # Output encoding settings
+        # Output encoding settings - HIGH QUALITY to preserve video quality
         cmd.extend([
             "-c:v", "libx264",
-            "-preset", "fast",
-            "-crf", "23",
+            "-crf", "17",  # Excellent quality (lower = better)
+            "-preset", "medium",  # Balanced preset
+            "-x264-params", "ref=5:bframes=3:me=umh:subme=7:trellis=2",  # Quality-focused params
+            "-pix_fmt", "yuv420p",  # Ensure compatibility
+            "-profile:v", "high",  # Use high profile for better compression
+            "-level", "4.1",  # H.264 level for HD content
             "-c:a", "aac",
-            "-b:a", "128k",
+            "-b:a", "192k",  # Higher audio bitrate for quality
             "-movflags", "+faststart",
             output_path
         ])

@@ -2133,6 +2133,173 @@ func (p *Processor) StreamUpload(ctx context.Context, filePath string, destinati
 	return p.storageProvider.UploadChunked(ctx, filePath, destinationPath, contentType, 10*1024*1024)
 }
 
+// ExportToGIF exports a video or video segment to GIF format
+func (p *Processor) ExportToGIF(ctx context.Context, inputPath string, startTime, duration float64,
+	width int, fps int, quality string) (*ProcessingResult, error) {
+
+	p.Logger.Info("Exporting video to GIF",
+		zap.String("input", inputPath),
+		zap.Float64("startTime", startTime),
+		zap.Float64("duration", duration),
+		zap.Int("width", width),
+		zap.Int("fps", fps),
+		zap.String("quality", quality),
+	)
+
+	procStartTime := time.Now()
+
+	// Defaults
+	if width <= 0 {
+		width = 480
+	}
+	if fps <= 0 || fps > 30 {
+		fps = 15
+	}
+	if duration <= 0 {
+		duration = 5.0
+	}
+
+	// Quality presets -> palette/dither/max_colors
+	paletteStats := "stats_mode=full"
+	ditherMode := "bayer:bayer_scale=3"
+	maxColors := 256
+	switch strings.ToLower(quality) {
+	case "high":
+		paletteStats = "stats_mode=full"
+		ditherMode = "bayer:bayer_scale=5"
+		maxColors = 256
+	case "medium":
+		paletteStats = "stats_mode=full"
+		ditherMode = "bayer:bayer_scale=3"
+		maxColors = 128
+	case "low":
+		paletteStats = "stats_mode=diff"
+		ditherMode = "sierra2_4a"
+		maxColors = 64
+	default:
+		// keep defaults
+	}
+
+	// Prepare output and temp paths
+	outputID := uuid.New().String()[:8]
+	baseName := fmt.Sprintf("gif_export_%s", outputID)
+	outputPath := filepath.Join(p.OutputDir, "gifs", baseName+".gif")
+
+	if err := os.MkdirAll(filepath.Dir(outputPath), 0o755); err != nil {
+		return nil, fmt.Errorf("failed to create output directory: %v", err)
+	}
+	if err := os.MkdirAll(p.TempDir, 0o755); err != nil {
+		return nil, fmt.Errorf("failed to create temp dir: %v", err)
+	}
+
+	paletteFile := filepath.Join(p.TempDir, fmt.Sprintf("palette_%s.png", outputID))
+	// best-effort cleanup
+	defer func() { _ = os.Remove(paletteFile) }()
+
+	// Build palette filter (FFmpeg 6.x supports stats_mode and max_colors)
+	paletteFilter := fmt.Sprintf("fps=%d,scale=%d:-1:flags=lanczos,palettegen=%s:max_colors=%d",
+		fps, width, paletteStats, maxColors)
+
+	// Step 1: Generate palette
+	paletteArgs := []string{"-y"}
+	if startTime > 0 {
+		// fast seek (approximate). For frame-accurate, move -ss AFTER -i.
+		paletteArgs = append(paletteArgs, "-ss", formatTimestamp(startTime))
+	}
+	paletteArgs = append(paletteArgs,
+		"-i", inputPath,
+		"-t", fmt.Sprintf("%.2f", duration),
+		"-vf", paletteFilter,
+		// "-map", "0:v", // optional for clarity; palettegen will use video input
+		paletteFile,
+	)
+
+	p.Logger.Debug("Running palette generation command", zap.Strings("args", paletteArgs))
+	paletteCmd := exec.CommandContext(ctx, p.FFmpegPath, paletteArgs...)
+	paletteOutput, err := paletteCmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("palette generation error: %v, output: %s", err, string(paletteOutput))
+	}
+
+	// Validate palette file exists and is non-empty
+	if fi, err := os.Stat(paletteFile); err != nil {
+		return nil, fmt.Errorf("palette generation produced no file: %v", err)
+	} else if fi.Size() == 0 {
+		return nil, fmt.Errorf("palette file is empty")
+	}
+
+	// Step 2: Generate GIF using palette
+	// Note: do NOT use -map here. Let filter_complex produce single GIF stream.
+	gifFilter := fmt.Sprintf("fps=%d,scale=%d:-1:flags=lanczos[x];[x][1:v]paletteuse=dither=%s",
+		fps, width, ditherMode)
+
+	gifArgs := []string{"-y"}
+	if startTime > 0 {
+		// fast seek before input for speed (approximate). For frame-accurate, put -ss after -i.
+		gifArgs = append(gifArgs, "-ss", formatTimestamp(startTime))
+	}
+	gifArgs = append(gifArgs,
+		"-i", inputPath, // input 0: video
+		"-i", paletteFile, // input 1: palette
+		"-t", fmt.Sprintf("%.2f", duration),
+		"-filter_complex", gifFilter,
+		"-fps_mode", "passthrough", // avoid deprecated -vsync 0 warning
+		"-loop", "0", // infinite loop
+		outputPath,
+	)
+
+	p.Logger.Debug("Running GIF generation command", zap.Strings("args", gifArgs))
+	gifCmd := exec.CommandContext(ctx, p.FFmpegPath, gifArgs...)
+	gifOutput, err := gifCmd.CombinedOutput()
+	if err != nil {
+		// include ffmpeg output to help debugging
+		return nil, fmt.Errorf("GIF generation error: %v, output: %s", err, string(gifOutput))
+	}
+
+	// Stat the output safely
+	var fileSize int64
+	if fi, err := os.Stat(outputPath); err == nil {
+		fileSize = fi.Size()
+	} else {
+		p.Logger.Warn("Failed to stat GIF output", zap.Error(err))
+		fileSize = 0
+	}
+
+	// Build combined command string for logging/debugging
+	combinedCmd := fmt.Sprintf("%s %s && %s %s",
+		p.FFmpegPath, strings.Join(paletteArgs, " "),
+		p.FFmpegPath, strings.Join(gifArgs, " "),
+	)
+
+	result := &ProcessingResult{
+		OutputPath:     outputPath,
+		OutputURL:      pathToURL(outputPath),
+		Width:          width,
+		Duration:       duration,
+		FileSize:       fileSize,
+		Format:         "gif",
+		ProcessingTime: time.Since(procStartTime).Seconds(),
+		Command:        combinedCmd,
+		AppliedFilters: []string{paletteFilter, gifFilter},
+		AppliedOptions: []string{
+			fmt.Sprintf("fps=%d", fps),
+			fmt.Sprintf("width=%d", width),
+			fmt.Sprintf("duration=%.1fs", duration),
+			"quality=" + quality,
+			fmt.Sprintf("max_colors=%d", maxColors),
+			"dither=" + ditherMode,
+		},
+	}
+
+	p.Logger.Info("GIF export completed successfully",
+		zap.String("output", outputPath),
+		zap.Int64("fileSize", fileSize),
+		zap.Float64("processingTime", result.ProcessingTime),
+	)
+
+	return result, nil
+}
+
 // guessContentTypeFromPath guesses the content type from a file path
 func guessContentTypeFromPath(path string) string {
 	ext := strings.ToLower(filepath.Ext(path))

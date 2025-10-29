@@ -317,3 +317,15 @@ h1 {
     justify-content: center;
   }
 }
+
+/* Selection Banner Animation */
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}

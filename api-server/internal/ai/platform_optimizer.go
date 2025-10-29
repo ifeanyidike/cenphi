@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/ifeanyidike/cenphi/internal/cache"
 	"github.com/ifeanyidike/cenphi/internal/repositories"
+	"github.com/ifeanyidike/cenphi/internal/utils"
 	"github.com/ifeanyidike/cenphi/pb"
 )
 
@@ -96,15 +97,21 @@ func (s PlatformOptimizerService) OptimizeText(ctx context.Context, text string,
 		return nil, fmt.Errorf("AI optimization failed: empty response")
 	}
 
-	response = strings.TrimSpace(response)
+	response = utils.CleanAIJSONResponse(response)
+	fmt.Printf("[DEBUG] After cleaning, response length: %d, first 100 chars: %s\n", len(response), response[:min(100, len(response))])
+
 	if !strings.HasPrefix(response, "{") {
 		return nil, fmt.Errorf("AI optimization failed: invalid response format - expected JSON but got: %s", response[:min(100, len(response))])
 	}
 
 	var result OptimizationResult
 	if err := json.Unmarshal([]byte(response), &result); err != nil {
-		return nil, fmt.Errorf("failed to parse optimization response: %w - response was: %s", err, response[:min(200, len(response))])
+		fmt.Printf("[DEBUG] JSON unmarshal failed. Response length: %d\n", len(response))
+		fmt.Printf("[DEBUG] Full response: %s\n", response)
+		return nil, fmt.Errorf("failed to parse optimization response: %w - response length: %d", err, len(response))
 	}
+
+	fmt.Printf("[DEBUG] Successfully parsed optimization result. Content length: %d\n", len(result.Content))
 
 	if result.Content == "" {
 		return nil, fmt.Errorf("AI optimization failed: no content in response")
@@ -112,6 +119,62 @@ func (s PlatformOptimizerService) OptimizeText(ctx context.Context, text string,
 
 	result.Platform = targetPlatform
 	return &result, nil
+}
+
+// OptimizeForPlatformStream streams the text optimization response via callback
+// This allows real-time preview of text generation without waiting for completion
+func (s PlatformOptimizerService) OptimizeForPlatformStream(
+	ctx context.Context,
+	workspaceID, text string,
+	brandContext *pb.BrandContext,
+	targetPlatform string,
+	customPrompt string,
+	onChunk func(chunk string, isComplete bool, result *OptimizationResult) error,
+) error {
+	systemPrompt := "You are a social media expert."
+	optimizationPrompt := s.buildOptimizationPrompt(text, brandContext, targetPlatform, customPrompt)
+
+	// Stream the AI response using channel-based streaming
+	streamChan, err := s.aiClient.Stream(ctx, optimizationPrompt, systemPrompt)
+	if err != nil {
+		return fmt.Errorf("AI streaming failed: %w", err)
+	}
+
+	fullResponse := ""
+	for chunk := range streamChan {
+		if chunk.Error != nil {
+			return fmt.Errorf("streaming error: %w", chunk.Error)
+		}
+
+		if chunk.Content != "" {
+			fullResponse += chunk.Content
+			// Send chunk to callback for real-time display
+			if err := onChunk(chunk.Content, false, nil); err != nil {
+				return err
+			}
+		}
+	}
+
+	// Parse the complete response
+	fullResponse = utils.CleanAIJSONResponse(fullResponse)
+
+	if !strings.HasPrefix(fullResponse, "{") {
+		return fmt.Errorf("invalid response format - expected JSON")
+	}
+
+	var result OptimizationResult
+	if err := json.Unmarshal([]byte(fullResponse), &result); err != nil {
+		return fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	if result.Content == "" {
+		return fmt.Errorf("no content in response")
+	}
+
+	result.Platform = targetPlatform
+
+	// Send final complete result
+	return onChunk("", true, &result)
 }
 
 // func (s PlatformOptimizerService) optimizeMedia(ctx context.Context, mediaURL, targetPlatform string) (string, error) {
