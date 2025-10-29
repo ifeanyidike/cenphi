@@ -106,6 +106,24 @@ func (r *processingSessionRepository) Create(ctx context.Context, session *model
 }
 
 func (r *processingSessionRepository) GetByID(ctx context.Context, id uuid.UUID, db *sql.DB) (*models.ProcessingSession, error) {
+	// Try cache first
+	cacheKey := fmt.Sprintf("session:%s", id.String())
+
+	// Attempt to get from cache
+	cachedData, err := r.redis.Get(ctx, cacheKey).Result()
+	if err == nil {
+		// Cache hit - unmarshal and return
+		var session models.ProcessingSession
+		if unmarshalErr := json.Unmarshal([]byte(cachedData), &session); unmarshalErr == nil {
+			return &session, nil
+		}
+		// If unmarshal fails, continue to DB query
+	} else if err != redis.Nil {
+		// Redis error (not a cache miss) - log but continue to DB
+		fmt.Printf("⚠️ Session cache error: %v\n", err)
+	}
+
+	// Cache miss or error - query database
 	query := `
 		SELECT id, testimonial_id, workspace_id, session_type, status, current_stage_id,
 			   accepted_versions, selected_stages, auto_proceed, paused_at, paused_by_user,
@@ -116,7 +134,7 @@ func (r *processingSessionRepository) GetByID(ctx context.Context, id uuid.UUID,
 	`
 
 	var session models.ProcessingSession
-	err := db.QueryRowContext(ctx, query, id).Scan(
+	err = db.QueryRowContext(ctx, query, id).Scan(
 		&session.ID,
 		&session.TestimonialID,
 		&session.WorkspaceID,
@@ -140,6 +158,16 @@ func (r *processingSessionRepository) GetByID(ctx context.Context, id uuid.UUID,
 
 	if err != nil {
 		return nil, err
+	}
+
+	// Cache the result for 5 minutes (sessions change frequently)
+	sessionData, marshalErr := json.Marshal(session)
+	if marshalErr == nil {
+		cacheErr := r.redis.Set(ctx, cacheKey, sessionData, 5*time.Minute).Err()
+		if cacheErr != nil {
+			// Log warning but don't fail the request
+			fmt.Printf("⚠️ Failed to cache session: %v\n", cacheErr)
+		}
 	}
 
 	return &session, nil
@@ -288,13 +316,33 @@ func (r *processingSessionRepository) Update(ctx context.Context, session *model
 		session.CompletedAt,
 	)
 
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Invalidate cache after successful update
+	cacheKey := fmt.Sprintf("session:%s", session.ID.String())
+	if delErr := r.redis.Del(ctx, cacheKey).Err(); delErr != nil {
+		fmt.Printf("⚠️ Failed to invalidate session cache: %v\n", delErr)
+	}
+
+	return nil
 }
 
 func (r *processingSessionRepository) UpdateStatus(ctx context.Context, id uuid.UUID, status string, db *sql.DB) error {
 	query := `UPDATE processing_sessions SET status = $2, updated_at = $3 WHERE id = $1`
 	_, err := db.ExecContext(ctx, query, id, status, time.Now())
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Invalidate cache after successful update
+	cacheKey := fmt.Sprintf("session:%s", id.String())
+	if delErr := r.redis.Del(ctx, cacheKey).Err(); delErr != nil {
+		fmt.Printf("⚠️ Failed to invalidate session cache: %v\n", delErr)
+	}
+
+	return nil
 }
 
 func (r *processingSessionRepository) Pause(ctx context.Context, id uuid.UUID, pausedByUser bool, db *sql.DB) error {
@@ -306,7 +354,17 @@ func (r *processingSessionRepository) Pause(ctx context.Context, id uuid.UUID, p
 
 	now := time.Now()
 	_, err := db.ExecContext(ctx, query, id, models.SessionStatusPaused, now, pausedByUser, now)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Invalidate cache after successful pause
+	cacheKey := fmt.Sprintf("session:%s", id.String())
+	if delErr := r.redis.Del(ctx, cacheKey).Err(); delErr != nil {
+		fmt.Printf("⚠️ Failed to invalidate session cache: %v\n", delErr)
+	}
+
+	return nil
 }
 
 func (r *processingSessionRepository) Resume(ctx context.Context, id uuid.UUID, resumeFromStageID *string, db *sql.DB) error {
@@ -317,7 +375,17 @@ func (r *processingSessionRepository) Resume(ctx context.Context, id uuid.UUID, 
 	`
 
 	_, err := db.ExecContext(ctx, query, id, models.SessionStatusActive, resumeFromStageID, time.Now())
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Invalidate cache after successful resume
+	cacheKey := fmt.Sprintf("session:%s", id.String())
+	if delErr := r.redis.Del(ctx, cacheKey).Err(); delErr != nil {
+		fmt.Printf("⚠️ Failed to invalidate session cache: %v\n", delErr)
+	}
+
+	return nil
 }
 
 func (r *processingSessionRepository) UpdateProgress(ctx context.Context, id uuid.UUID, completedSteps, skippedSteps int, db *sql.DB) error {
@@ -328,13 +396,33 @@ func (r *processingSessionRepository) UpdateProgress(ctx context.Context, id uui
 	`
 
 	_, err := db.ExecContext(ctx, query, id, completedSteps, skippedSteps, time.Now())
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Invalidate cache after successful progress update
+	cacheKey := fmt.Sprintf("session:%s", id.String())
+	if delErr := r.redis.Del(ctx, cacheKey).Err(); delErr != nil {
+		fmt.Printf("⚠️ Failed to invalidate session cache: %v\n", delErr)
+	}
+
+	return nil
 }
 
 func (r *processingSessionRepository) Delete(ctx context.Context, id uuid.UUID, db *sql.DB) error {
 	query := `DELETE FROM processing_sessions WHERE id = $1`
 	_, err := db.ExecContext(ctx, query, id)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Invalidate cache after successful delete
+	cacheKey := fmt.Sprintf("session:%s", id.String())
+	if delErr := r.redis.Del(ctx, cacheKey).Err(); delErr != nil {
+		fmt.Printf("⚠️ Failed to invalidate session cache: %v\n", delErr)
+	}
+
+	return nil
 }
 
 func (r *processingSessionRepository) GetActiveByTestimonialID(ctx context.Context, testimonialID uuid.UUID, db *sql.DB) ([]*models.ProcessingSession, error) {

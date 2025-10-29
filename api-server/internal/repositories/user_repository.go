@@ -162,9 +162,27 @@ func (r *userRepository) FindByEmail(ctx context.Context, firebase_uid string, d
 
 func (r *userRepository) GetWorkspaceIDByUID(ctx context.Context, uid string, db DB) (uuid.UUID, error) {
 	start := time.Now()
-	fmt.Printf("🔍 Starting optimized GetWorkspaceIDByUID for uid: %s\n", uid)
 
-	// Optimized query - only get what we need
+	// Try cache first
+	cacheKey := fmt.Sprintf("workspace_id:uid:%s", uid)
+	cachedWorkspaceID, err := r.redis.Get(ctx, cacheKey).Result()
+	if err == nil {
+		// Cache hit - parse UUID and return
+		workspaceID, parseErr := uuid.Parse(cachedWorkspaceID)
+		if parseErr == nil {
+			fmt.Printf("✅ Cache HIT for workspace_id (uid: %s) in %v\n", uid, time.Since(start))
+			return workspaceID, nil
+		}
+		// If parse fails, continue to DB query (corrupted cache)
+		fmt.Printf("⚠️ Cache data corrupted, falling back to DB\n")
+	} else if err != redis.Nil {
+		// Redis error (not a cache miss) - log but continue to DB
+		fmt.Printf("⚠️ Redis error: %v, falling back to DB\n", err)
+	}
+
+	// Cache miss or error - query database
+	fmt.Printf("🔍 Cache MISS - querying DB for uid: %s\n", uid)
+
 	query := `
         SELECT t.workspace_id
         FROM users u
@@ -174,10 +192,9 @@ func (r *userRepository) GetWorkspaceIDByUID(ctx context.Context, uid string, db
     `
 
 	var workspaceID uuid.UUID
-	err := db.QueryRowContext(ctx, query, uid).Scan(&workspaceID)
+	err = db.QueryRowContext(ctx, query, uid).Scan(&workspaceID)
 
 	duration := time.Since(start)
-	fmt.Printf("⏱️ Optimized query took: %v\n", duration)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -188,7 +205,14 @@ func (r *userRepository) GetWorkspaceIDByUID(ctx context.Context, uid string, db
 		return uuid.Nil, err
 	}
 
-	fmt.Printf("✅ Found workspaceID: %s in %v\n", workspaceID, duration)
+	// Cache the result for 1 hour (workspace membership rarely changes)
+	cacheErr := r.redis.Set(ctx, cacheKey, workspaceID.String(), 1*time.Hour).Err()
+	if cacheErr != nil {
+		// Log warning but don't fail the request
+		fmt.Printf("⚠️ Failed to cache workspace_id: %v\n", cacheErr)
+	}
+
+	fmt.Printf("✅ Found workspaceID: %s in %v (cached for 1h)\n", workspaceID, duration)
 	return workspaceID, nil
 }
 
