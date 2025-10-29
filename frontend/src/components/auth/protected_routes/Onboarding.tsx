@@ -2,30 +2,25 @@ import { Navigate, Outlet } from "react-router-dom";
 import { observer } from "mobx-react-lite";
 import { authStore } from "@/stores/authStore";
 import LoadingIndicator from "@/components/LoadingIndicator";
-import { workspaceHub } from "@/repo/workspace_hub";
-import { useEffect, useState } from "react";
 
 // OnboardingProtectedRoute.tsx
 const OnboardingProtectedRoute = observer(() => {
-  const [userExists, setUserExists] = useState(false);
-  const [loading, setLoading] = useState(false);
+  if (authStore.loading) return <LoadingIndicator />;
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      if (!workspaceHub.workspace) {
-        setLoading(true);
-        const exists = await workspaceHub.checkUserExists();
-        setUserExists(!!exists);
-        setLoading(false);
-      }
-    };
-    fetchUser();
-  }, []);
+  // Not authenticated → redirect to login
+  if (!authStore.isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
 
-  if (authStore.loading || loading) return <LoadingIndicator />;
-  if (userExists) return <Outlet />;
+  // Authenticated but email not verified → redirect to verification page
+  if (authStore.user && !authStore.user.emailVerified) {
+    return <Navigate to="/verify-email-pending" replace />;
+  }
 
-  return <Navigate to="/login" replace />;
+  // Email verified → allow access to onboarding
+  // The Onboarding component itself will handle checking if workspace exists
+  // and redirect to dashboard if needed
+  return <Outlet />;
 });
 
 export default OnboardingProtectedRoute;

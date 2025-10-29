@@ -90,6 +90,10 @@ class AuthStore {
     delete this.errors[key as AuthErrorField];
   }
 
+  public clearFieldError(field: AuthErrorField) {
+    delete this.errors[field];
+  }
+
   public clearAllErrors() {
     this.errors = {} as AuthErrors;
   }
@@ -106,16 +110,20 @@ class AuthStore {
       const result = await getRedirectResult(auth);
       if (result) {
         this.user = result.user;
-        this.registerUser(
+        await this.registerUser(
           result,
           this.user.displayName || "",
           this.user.email!
         );
         console.log("registration successful redirect....");
-        // Navigate to onboarding after successful redirect
+
+        // Check if user has workspace and redirect accordingly
+        await this.redirectAfterSocialLogin();
       }
     } catch (error: any) {
-      this.setError(FirebaseErrorHandler.checkFirebaseErrorsAndThrow(error));
+      const formattedError = FirebaseErrorHandler.formatError(error);
+      this.setError(formattedError);
+      console.error("Redirect result error:", formattedError);
       throw error;
     }
   }
@@ -157,10 +165,14 @@ class AuthStore {
         creds.user.email!
       );
       console.log("registration successful redirect in social login....");
-      window.location.href = "/onboarding";
+
+      // Check if user has workspace and redirect accordingly
+      await this.redirectAfterSocialLogin();
       return creds;
     } catch (error: any) {
-      this.setError(FirebaseErrorHandler.checkFirebaseErrorsAndThrow(error));
+      const formattedError = FirebaseErrorHandler.formatError(error);
+      this.setError(formattedError);
+      console.error("Social login popup error:", formattedError);
 
       // If popup was blocked, try redirect method
       if (error.code === "auth/popup-blocked") {
@@ -203,7 +215,9 @@ class AuthStore {
 
       await signInWithRedirect(auth, authProvider);
     } catch (error: any) {
-      this.setError(FirebaseErrorHandler.checkFirebaseErrorsAndThrow(error));
+      const formattedError = FirebaseErrorHandler.formatError(error);
+      this.setError(formattedError);
+      console.error("Social login redirect error:", formattedError);
       throw error;
     } finally {
       this.setLoading(false);
@@ -296,7 +310,9 @@ class AuthStore {
       await this.registerUser(cred, name, email, true);
       return cred;
     } catch (error: any) {
-      this.setError(FirebaseErrorHandler.checkFirebaseErrorsAndThrow(error));
+      const formattedError = FirebaseErrorHandler.formatError(error);
+      this.setError(formattedError);
+      console.error("Signup error:", formattedError);
     } finally {
       this.setLoading(false);
     }
@@ -328,8 +344,9 @@ class AuthStore {
 
       return cred;
     } catch (error: any) {
-      console.error("login error", error);
-      this.setError(FirebaseErrorHandler.checkFirebaseErrorsAndThrow(error));
+      const formattedError = FirebaseErrorHandler.formatError(error);
+      this.setError(formattedError);
+      console.error("Login error:", formattedError);
     } finally {
       this.setLoading(false);
     }
@@ -347,7 +364,9 @@ class AuthStore {
       this.setError();
       await signOut(auth);
     } catch (error: any) {
-      this.setError(FirebaseErrorHandler.checkFirebaseErrorsAndThrow(error));
+      const formattedError = FirebaseErrorHandler.formatError(error);
+      this.setError(formattedError);
+      console.error("Logout error:", formattedError);
     } finally {
       this.setLoading(false);
     }
@@ -377,7 +396,9 @@ class AuthStore {
       await sendPasswordResetEmail(auth, email);
       return "Password reset email sent successfully.";
     } catch (error: any) {
-      this.setError(FirebaseErrorHandler.checkFirebaseErrorsAndThrow(error));
+      const formattedError = FirebaseErrorHandler.formatError(error);
+      this.setError(formattedError);
+      console.error("Password reset request error:", formattedError);
     } finally {
       this.setLoading(false);
     }
@@ -604,6 +625,33 @@ class AuthStore {
     }
 
     return { token, currentUser };
+  }
+
+  /**
+   * Check if user has workspace and redirect accordingly after social login
+   * New users → /onboarding
+   * Existing users with workspace → /dashboard
+   */
+  private async redirectAfterSocialLogin(): Promise<void> {
+    try {
+      // Dynamically import to avoid circular dependency
+      const { workspaceHub } = await import("@/repo/workspace_hub");
+
+      // Check if user has workspace
+      const hasWorkspace = await workspaceHub.getWorkspaceData();
+
+      if (hasWorkspace) {
+        // Existing user with workspace → go to dashboard
+        window.location.href = "/dashboard";
+      } else {
+        // New user without workspace → go to onboarding
+        window.location.href = "/onboarding";
+      }
+    } catch (error) {
+      console.error("Error checking workspace after social login:", error);
+      // Default to onboarding if check fails
+      window.location.href = "/onboarding";
+    }
   }
 }
 

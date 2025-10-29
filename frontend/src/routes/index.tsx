@@ -4,6 +4,7 @@ import { createBrowserRouter, Navigate } from "react-router-dom";
 import { Login } from "@/pages/Login";
 import { Signup } from "@/pages/SignUp";
 import ResetPasswordPage from "@/pages/ResetPassword";
+import VerifyEmailPending from "@/pages/VerifyEmailPending";
 
 import EmailPage from "@/pages/EmailPage";
 
@@ -255,12 +256,13 @@ export const router = createBrowserRouter([
   },
 
   {
+    // Email verification and password reset - should work without login
+    path: "/authflow",
+    element: <AuthFlow />,
+  },
+  {
     element: <GenericProtectedRoute />,
     children: [
-      {
-        path: "/authflow",
-        element: <AuthFlow />,
-      },
       {
         path: "/checkout",
         element: (
@@ -304,6 +306,11 @@ export const router = createBrowserRouter([
         element: <ResetPasswordPage />,
       },
     ],
+  },
+  {
+    // Email verification pending - accessible to authenticated users
+    path: "/verify-email-pending",
+    element: <VerifyEmailPending />,
   },
 
   // Testimonial collection from email links

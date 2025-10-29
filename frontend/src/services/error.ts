@@ -21,7 +21,7 @@ const AUTH_ERROR_MAPPINGS: Record<string, ErrorMapping> = {
   // Email-related errors
   "auth/email-already-in-use": {
     field: "email",
-    message: "Email already in use. Please sign in or use a different email.",
+    message: "This email is already registered. Please sign in instead or use a different email.",
   },
   "auth/invalid-email": {
     field: "email",
