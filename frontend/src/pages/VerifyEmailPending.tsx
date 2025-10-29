@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Mail, CheckCircle, ArrowRight, RefreshCcw, Sparkles } from "lucide-react";
+import { Mail, CheckCircle, ArrowRight, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { authStore } from "@/stores/authStore";
 import { sendEmailVerification } from "firebase/auth";
@@ -24,7 +24,10 @@ const VerifyEmailPending = observer(() => {
 
   useEffect(() => {
     if (resendCooldown > 0) {
-      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+      const timer = setTimeout(
+        () => setResendCooldown(resendCooldown - 1),
+        1000
+      );
       return () => clearTimeout(timer);
     }
   }, [resendCooldown]);
@@ -51,7 +54,9 @@ const VerifyEmailPending = observer(() => {
       navigate("/onboarding", { replace: true });
     } else {
       // Not verified yet
-      alert("Email not verified yet. Please check your inbox and click the verification link.");
+      alert(
+        "Email not verified yet. Please check your inbox and click the verification link."
+      );
     }
   };
 
@@ -73,14 +78,6 @@ const VerifyEmailPending = observer(() => {
             className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto relative"
           >
             <Mail className="w-8 h-8 text-white" strokeWidth={1.5} />
-            <motion.div
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.5 }}
-              className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center"
-            >
-              <Sparkles className="w-3 h-3 text-white" />
-            </motion.div>
           </motion.div>
 
           {/* Title */}
@@ -91,9 +88,7 @@ const VerifyEmailPending = observer(() => {
             <p className="text-sm text-gray-600 leading-relaxed">
               We've sent a verification link to
             </p>
-            <p className="text-sm font-medium text-gray-900">
-              {email}
-            </p>
+            <p className="text-sm font-medium text-gray-900">{email}</p>
           </div>
 
           {/* Instructions */}
@@ -167,12 +162,14 @@ const VerifyEmailPending = observer(() => {
               variant="outline"
               className="w-full border-gray-200 text-gray-700 hover:bg-gray-50 h-11 text-sm font-medium rounded-lg transition-all duration-200"
             >
-              <RefreshCcw className={`w-4 h-4 mr-2 ${resendCooldown > 0 ? 'animate-spin' : ''}`} />
+              <RefreshCcw
+                className={`w-4 h-4 mr-2 ${resendCooldown > 0 ? "animate-spin" : ""}`}
+              />
               {resendCooldown > 0
                 ? `Resend in ${resendCooldown}s`
                 : resendSuccess
-                ? "Email sent!"
-                : "Resend verification email"}
+                  ? "Email sent!"
+                  : "Resend verification email"}
             </Button>
           </div>
 
