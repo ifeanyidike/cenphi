@@ -1,17 +1,19 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Mail, CheckCircle, ArrowRight, RefreshCcw } from "lucide-react";
+import { Mail, CheckCircle, ArrowRight, RefreshCcw, AlertCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { authStore } from "@/stores/authStore";
 import { sendEmailVerification } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import { observer } from "mobx-react-lite";
+import SimpleModalPortal from "@/utils/SimpleModalPortal";
 
 const VerifyEmailPending = observer(() => {
   const navigate = useNavigate();
   const [resendCooldown, setResendCooldown] = useState(0);
   const [resendSuccess, setResendSuccess] = useState(false);
   const [email, setEmail] = useState("");
+  const [showNotVerifiedModal, setShowNotVerifiedModal] = useState(false);
 
   useEffect(() => {
     if (authStore.user?.email) {
@@ -54,9 +56,7 @@ const VerifyEmailPending = observer(() => {
       navigate("/onboarding", { replace: true });
     } else {
       // Not verified yet
-      alert(
-        "Email not verified yet. Please check your inbox and click the verification link."
-      );
+      setShowNotVerifiedModal(true);
     }
   };
 
@@ -206,6 +206,68 @@ const VerifyEmailPending = observer(() => {
           </p>
         </motion.div>
       </motion.div>
+
+      {/* Not Verified Modal */}
+      <SimpleModalPortal
+        isOpen={showNotVerifiedModal}
+        onClose={() => setShowNotVerifiedModal(false)}
+      >
+        <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
+          {/* Header */}
+          <div className="flex items-start justify-between p-5 border-b border-gray-200">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center">
+                <AlertCircle className="h-5 w-5 text-yellow-600" />
+              </div>
+              <h2 className="text-base font-semibold text-gray-900">
+                Email Not Verified
+              </h2>
+            </div>
+            <button
+              onClick={() => setShowNotVerifiedModal(false)}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="p-5">
+            <p className="text-sm text-gray-600 leading-relaxed">
+              Your email hasn't been verified yet. Please check your inbox for{" "}
+              <span className="font-medium text-gray-900">{email}</span> and
+              click the verification link.
+            </p>
+            <div className="mt-4 p-3 bg-indigo-50 rounded-lg">
+              <p className="text-xs text-indigo-700">
+                💡 Don't forget to check your spam folder if you can't find the
+                email.
+              </p>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="flex items-center justify-end gap-3 p-5 border-t border-gray-200 bg-gray-50">
+            <Button
+              variant="outline"
+              onClick={() => setShowNotVerifiedModal(false)}
+              className="text-gray-700 border-gray-300 hover:bg-gray-100 h-9 px-4 text-sm"
+            >
+              Got it
+            </Button>
+            <Button
+              onClick={() => {
+                setShowNotVerifiedModal(false);
+                handleResendEmail();
+              }}
+              disabled={resendCooldown > 0}
+              className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white h-9 px-4 text-sm"
+            >
+              Resend Email
+            </Button>
+          </div>
+        </div>
+      </SimpleModalPortal>
     </div>
   );
 });

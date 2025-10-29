@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { Download } from "lucide-react";
+import { Download, AlertCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import GoogleDriveImportModal from "./GoogleDriveImportModal";
 import GoogleDriveIcon from "./GoogleDriveIcon";
 import { workspaceHub } from "@/repo/workspace_hub";
 import { authStore } from "@/stores/authStore";
 import { observer } from "mobx-react-lite";
+import SimpleModalPortal from "@/utils/SimpleModalPortal";
 
 interface ImportSource {
   id: string;
@@ -35,6 +36,10 @@ const DataImportCard: React.FC = observer(() => {
     source?: ImportSource;
   }>({ open: false });
   const [connectedAccounts, setConnectedAccounts] = useState<any[]>([]);
+  const [connectionWarning, setConnectionWarning] = useState<{
+    show: boolean;
+    providerName: string;
+  }>({ show: false, providerName: "" });
 
   useEffect(() => {
     loadConnectedAccounts();
@@ -102,7 +107,7 @@ const DataImportCard: React.FC = observer(() => {
   const handleImportClick = (source: ImportSource) => {
     if (source.requiresConnection && !isConnected(source.connectionProvider)) {
       const providerName = source.connectionProvider === 'google' ? 'Google Drive' : source.connectionProvider;
-      alert(`Please connect to ${providerName} first in the Integrations section.`);
+      setConnectionWarning({ show: true, providerName });
       return;
     }
 
@@ -234,6 +239,74 @@ const DataImportCard: React.FC = observer(() => {
         onClose={() => setImportModal({ open: false })}
         source={importModal.source}
       />
+
+      {/* Connection Warning Modal */}
+      <SimpleModalPortal
+        isOpen={connectionWarning.show}
+        onClose={() => setConnectionWarning({ show: false, providerName: "" })}
+      >
+        <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
+          {/* Header */}
+          <div className="flex items-start justify-between p-5 border-b border-gray-200">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                <AlertCircle className="h-5 w-5 text-blue-600" />
+              </div>
+              <h2 className="text-base font-semibold text-gray-900">
+                Connection Required
+              </h2>
+            </div>
+            <button
+              onClick={() =>
+                setConnectionWarning({ show: false, providerName: "" })
+              }
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="p-5">
+            <p className="text-sm text-gray-600 leading-relaxed">
+              To import data, you need to connect your{" "}
+              <span className="font-medium text-gray-900">
+                {connectionWarning.providerName}
+              </span>{" "}
+              account first.
+            </p>
+            <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+              <p className="text-xs text-blue-700">
+                💡 You can connect your account in the{" "}
+                <span className="font-medium">Integrations</span> section.
+              </p>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="flex items-center justify-end gap-3 p-5 border-t border-gray-200 bg-gray-50">
+            <Button
+              variant="outline"
+              onClick={() =>
+                setConnectionWarning({ show: false, providerName: "" })
+              }
+              className="text-gray-700 border-gray-300 hover:bg-gray-100 h-9 px-4 text-sm"
+            >
+              Close
+            </Button>
+            <Button
+              onClick={() => {
+                setConnectionWarning({ show: false, providerName: "" });
+                // Navigate to integrations section
+                window.location.hash = "integrations";
+              }}
+              className="bg-blue-600 hover:bg-blue-700 text-white h-9 px-4 text-sm"
+            >
+              Go to Integrations
+            </Button>
+          </div>
+        </div>
+      </SimpleModalPortal>
     </div>
   );
 });
