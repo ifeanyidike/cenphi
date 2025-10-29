@@ -34,7 +34,6 @@ import SettingsPage from "@/pages/SettingsPage";
 import EnhancedAnalytics from "@/pages/EnhancedAnalytics";
 import SchedulingPage from "@/pages/SchedulingPage";
 import TalkToYourDataPage from "@/pages/TalkToYourDataPage";
-import VectorStoreTest from "@/pages/VectorStoreTest";
 import PublicShareView from "@/pages/PublicShareView";
 import DashboardLayout from "@/components/dashboard-main/DashboardLayout";
 import TestimonialsDashboard from "@/pages/TestimonialsDashboard";
@@ -230,17 +229,6 @@ export const router = createBrowserRouter([
                 componentName="TalkToYourData"
               >
                 <TalkToYourDataPage />
-              </DashboardErrorBoundary>
-            ),
-          },
-          {
-            path: "/vector-store-test",
-            element: (
-              <DashboardErrorBoundary
-                ErrorComponent={DashboardErrorComponent}
-                componentName="VectorStoreTest"
-              >
-                <VectorStoreTest />
               </DashboardErrorBoundary>
             ),
           },
