@@ -562,16 +562,16 @@ class AuthStore {
   /**
    * Clear errors for specific fields when user starts typing
    * This should be called from form input handlers
-   */
-  public clearFieldError(field: AuthErrorField) {
-    if (this.errors[field]) {
-      delete this.errors[field];
-    }
-    // Also clear generic errors when user interacts with form
-    if (this.errors.generic && field !== "generic") {
-      delete this.errors.generic;
-    }
-  }
+  //  */
+  // public clearFieldError(field: AuthErrorField) {
+  //   if (this.errors[field]) {
+  //     delete this.errors[field];
+  //   }
+  //   // Also clear generic errors when user interacts with form
+  //   if (this.errors.generic && field !== "generic") {
+  //     delete this.errors.generic;
+  //   }
+  // }
 
   /**
    * Check if there are any errors
