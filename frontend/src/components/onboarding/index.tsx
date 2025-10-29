@@ -37,15 +37,36 @@ const Onboarding: React.FC<OnboardingProps> = observer(() => {
   const [error, setError] = useState<string | null>(null);
   const [loadingOnboarding, setLoadingOnboarding] = useState(true);
 
-  // Check if user already has workspace
+  // Check if user already has workspace (only run once on mount)
   useEffect(() => {
-    (async () => {
-      setLoadingOnboarding(true);
-      const hasWorkspace = await workspaceHub.getWorkspaceData();
-      setLoadingOnboarding(false);
-      if (hasWorkspace) navigate("/dashboard");
-    })();
-  }, []);
+    let isMounted = true;
+
+    const checkWorkspace = async () => {
+      try {
+        setLoadingOnboarding(true);
+        const hasWorkspace = await workspaceHub.getWorkspaceData();
+
+        if (isMounted) {
+          setLoadingOnboarding(false);
+          if (hasWorkspace) {
+            // User already has workspace, redirect to dashboard
+            navigate("/dashboard", { replace: true });
+          }
+        }
+      } catch (error) {
+        console.error("Error checking workspace:", error);
+        if (isMounted) {
+          setLoadingOnboarding(false);
+        }
+      }
+    };
+
+    checkWorkspace();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [navigate]);
 
   const handleBusinessInfoNext = async (info: BusinessInfo) => {
     setIsLoading(true);

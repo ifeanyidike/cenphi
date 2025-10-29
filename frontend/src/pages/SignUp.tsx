@@ -33,8 +33,9 @@ export const Signup = observer(() => {
     try {
       const result = await authStore.signup(name, email, password);
       if (result) {
-        // Redirect to onboarding after successful signup
-        navigate("/dashboard", { replace: true });
+        // Redirect to verification pending page after successful email/password signup
+        // Email verification was already sent in authStore.signup()
+        navigate("/verify-email-pending", { replace: true });
       }
     } catch (error) {
       // Error is already handled in authStore.signup()

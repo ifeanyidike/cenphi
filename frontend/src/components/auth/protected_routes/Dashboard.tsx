@@ -9,34 +9,73 @@ import { Navigate, Outlet, useLocation } from "react-router-dom";
 
 const DashboardProtectedRoute = observer(() => {
   const location = useLocation();
-  const [loadingWorkspace, setLoadingWorkspace] = useState(true);
+  const [loadingWorkspace, setLoadingWorkspace] = useState(false);
   const [workspaceLoaded, setWorkspaceLoaded] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchWorkspace = async () => {
-      setLoadingWorkspace(true);
-      if (!workspaceHub.workspace) {
-        const loaded = await workspaceHub.getWorkspaceData();
-        setWorkspaceLoaded(!!loaded);
+      if (!isMounted) return;
+
+      // Don't fetch if auth is still loading
+      if (authStore.loading) {
+        return;
       }
-      setLoadingWorkspace(false);
+
+      // Don't fetch if not authenticated
+      if (!authStore.isAuthenticated) {
+        return;
+      }
+
+      setLoadingWorkspace(true);
+      // Only fetch if we don't already have workspace data
+      if (!workspaceHub.workspace?.id) {
+        const loaded = await workspaceHub.getWorkspaceData();
+        if (isMounted) {
+          setWorkspaceLoaded(!!loaded);
+          setLoadingWorkspace(false);
+        }
+      } else {
+        // Workspace already loaded
+        if (isMounted) {
+          setWorkspaceLoaded(true);
+          setLoadingWorkspace(false);
+        }
+      }
     };
+
     fetchWorkspace();
-  }, []);
 
-  if (loadingWorkspace) return <LoadingIndicator />;
+    return () => {
+      isMounted = false;
+    };
+  }, [authStore.loading, authStore.isAuthenticated]);
 
-  if (!workspaceHub.workspace?.id && !workspaceLoaded) {
-    return <Navigate to="/onboarding" replace />;
+  // Show loading while auth is initializing
+  if (authStore.loading) {
+    return <LoadingIndicator />;
   }
 
-  if (!authStore.loading && !authStore.isAuthenticated) {
+  // Redirect to login if not authenticated
+  if (!authStore.isAuthenticated) {
     const from = location.pathname + location.search;
     return <Navigate to="/login" state={{ from }} replace />;
   }
 
-  if (authStore.loading) {
+  // Authenticated but email not verified → redirect to verification page
+  if (authStore.user && !authStore.user.emailVerified) {
+    return <Navigate to="/verify-email-pending" replace />;
+  }
+
+  // Show loading while checking workspace
+  if (loadingWorkspace) {
     return <LoadingIndicator />;
+  }
+
+  // Redirect to onboarding if no workspace
+  if (!workspaceHub.workspace?.id && !workspaceLoaded) {
+    return <Navigate to="/onboarding" replace />;
   }
 
   return (

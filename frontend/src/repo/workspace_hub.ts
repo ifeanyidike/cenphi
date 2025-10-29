@@ -15,6 +15,7 @@ export class WorkspaceOrchestrator {
   public ID: string | null = null;
   public workspace: Workspace | null = null;
   public testimonialManager: TestimonialManager;
+  private workspaceFetchPromise: Promise<boolean> | null = null;
 
   /**
    * Constructs a new WorkspaceOrchestrator instance.
@@ -58,10 +59,38 @@ export class WorkspaceOrchestrator {
   }
 
   async getWorkspaceData() {
+    // If a fetch is already in progress, return that promise to prevent duplicate requests
+    if (this.workspaceFetchPromise) {
+      console.log(
+        "⏳ Workspace fetch already in progress, returning existing promise"
+      );
+      return this.workspaceFetchPromise;
+    }
+
+    // If workspace is already loaded, return true immediately
+    if (this.workspace?.id) {
+      console.log("✅ Workspace already loaded:", this.workspace.id);
+      return true;
+    }
+
+    // Create new fetch promise
+    this.workspaceFetchPromise = this._fetchWorkspaceData();
+
+    try {
+      const result = await this.workspaceFetchPromise;
+      return result;
+    } finally {
+      // Clear the promise after fetch completes (success or failure)
+      this.workspaceFetchPromise = null;
+    }
+  }
+
+  private async _fetchWorkspaceData(): Promise<boolean> {
     try {
       const { token } = await authStore.getToken();
-      if (!token) return;
+      if (!token) return false;
 
+      console.log("🔄 Fetching workspace data...");
       const response = await fetch(
         `${import.meta.env.VITE_API_URL}/users/workspace`,
         {
@@ -73,7 +102,7 @@ export class WorkspaceOrchestrator {
 
       if (response.ok) {
         const data = await response.json();
-        console.log("data", data);
+        console.log("✅ Workspace data received:", data.id);
         if (data.id) {
           const { testimonials, ...workspace } = data;
           runInAction(() => {
@@ -89,10 +118,25 @@ export class WorkspaceOrchestrator {
 
           return true;
         }
+      } else if (response.status === 404) {
+        // User doesn't have a workspace yet - this is expected for new users
+        console.log(
+          "ℹ️  No workspace found for user - user needs to complete onboarding"
+        );
+        return false;
+      } else {
+        console.error(
+          "❌ Failed to fetch workspace:",
+          response.status,
+          response.statusText
+        );
+        return false;
       }
     } catch (error) {
-      console.error("Error checking workspace:", error);
+      console.error("❌ Error checking workspace:", error);
+      return false;
     }
+    return false;
   }
 
   async checkUserExists() {

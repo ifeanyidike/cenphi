@@ -1,11 +1,13 @@
 import { observer } from "mobx-react-lite";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { authStore } from "@/stores/authStore";
 import { LoginForm } from "@/components/auth/LoginForm";
 import Footer from "@/components/custom/footer";
 
 export const Login = observer(() => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const successMessage = (location.state as any)?.message;
 
   const handleSubmit = async ({
     email,
@@ -32,6 +34,7 @@ export const Login = observer(() => {
       <LoginForm
         isLoading={authStore.loading}
         onSubmit={(data) => handleSubmit(data)}
+        successMessage={successMessage}
       />
       <Footer />
     </div>

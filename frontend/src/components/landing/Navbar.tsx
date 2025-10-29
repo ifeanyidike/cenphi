@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ChevronDown, Sparkles, Video, BarChart3, Zap } from "lucide-react";
+import { ChevronDown, Sparkles, Video, BarChart3, Zap, LayoutDashboard, LogOut } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { authStore } from "@/stores/authStore";
+import { observer } from "mobx-react-lite";
 
-const Navbar = () => {
+const Navbar = observer(() => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -203,30 +205,66 @@ const Navbar = () => {
 
           {/* CTAs */}
           <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate("/login")}
-              className={`text-xs font-medium h-8 px-3 rounded-full border transition-all duration-500 ${
-                isScrolled
-                  ? "text-white/90 hover:text-white hover:bg-white/10 border-white/20"
-                  : "text-gray-700 hover:text-gray-900 hover:bg-gray-100 border-gray-300"
-              }`}
-            >
-              Sign in
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => navigate("/signup")}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 text-xs font-medium h-8 px-4 rounded-full shadow-lg hover:shadow-blue-500/25 transition-all duration-300 border-0"
-            >
-              Get started
-            </Button>
+            {authStore.isAuthenticated ? (
+              <>
+                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${
+                  isScrolled
+                    ? "text-white/70 bg-white/10"
+                    : "text-gray-600 bg-gray-100"
+                }`}>
+                  <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
+                  Logged in
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => navigate("/dashboard")}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 text-xs font-medium h-8 px-4 rounded-full shadow-lg hover:shadow-blue-500/25 transition-all duration-300 border-0 flex items-center gap-2"
+                >
+                  <LayoutDashboard className="h-3 w-3" />
+                  Dashboard
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => authStore.logout()}
+                  className={`text-xs font-medium h-8 px-3 rounded-full border transition-all duration-500 flex items-center gap-2 ${
+                    isScrolled
+                      ? "text-white/90 hover:text-white hover:bg-white/10 border-white/20"
+                      : "text-gray-700 hover:text-gray-900 hover:bg-gray-100 border-gray-300"
+                  }`}
+                >
+                  <LogOut className="h-3 w-3" />
+                  Logout
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate("/login")}
+                  className={`text-xs font-medium h-8 px-3 rounded-full border transition-all duration-500 ${
+                    isScrolled
+                      ? "text-white/90 hover:text-white hover:bg-white/10 border-white/20"
+                      : "text-gray-700 hover:text-gray-900 hover:bg-gray-100 border-gray-300"
+                  }`}
+                >
+                  Sign in
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => navigate("/signup")}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 text-xs font-medium h-8 px-4 rounded-full shadow-lg hover:shadow-blue-500/25 transition-all duration-300 border-0"
+                >
+                  Get started
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>
     </motion.nav>
   );
-};
+});
 
 export default Navbar;

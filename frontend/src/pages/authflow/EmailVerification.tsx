@@ -3,7 +3,6 @@ import { getAuth, applyActionCode, sendEmailVerification } from "firebase/auth";
 import { CheckCircle, AlertTriangle, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Footer from "@/components/custom/footer";
-import { FirebaseErrorHandler } from "@/services/error";
 import { authStore } from "@/stores/authStore";
 import { observer } from "mobx-react-lite";
 import Navbar from "@/components/landing/Navbar";
@@ -28,25 +27,32 @@ const EmailVerificationPage: React.FC<Props> = observer((props) => {
   useEffect(() => {
     const verifyEmail = async () => {
       try {
-        // const actionCode = new URLSearchParams(window.location.search).get(
-        //   "oobCode"
-        // );
-        // const mode = new URLSearchParams(window.location.search).get("mode");
-
         if (!props.oobCode || props.mode !== "verifyEmail") {
           throw new Error("Invalid verification link");
         }
 
+        // Apply the email verification code (works even if not logged in)
+        // This will throw if the code is already used, expired, or invalid
         await applyActionCode(auth, props.oobCode);
-        const resp = await authStore.verifyEmail();
 
-        if (resp?.error) {
-          setStatus("error");
-          setErrorMessage(resp.error);
-          return;
+        // If we reach here, the code was successfully applied
+        // Check if user is currently logged in
+        const currentUser = auth.currentUser;
+
+        if (currentUser) {
+          // User is logged in - reload to update emailVerified status
+          await currentUser.reload();
+
+          // Call backend to verify email
+          const resp = await authStore.verifyEmail();
+          if (resp?.error) {
+            setStatus("error");
+            setErrorMessage(resp.error);
+            return;
+          }
         }
 
-        // If successful, update status
+        // Verification successful - code was valid and applied
         setStatus("success");
 
         // Start countdown for redirect
@@ -54,8 +60,17 @@ const EmailVerificationPage: React.FC<Props> = observer((props) => {
           setCountdown((prev) => {
             if (prev <= 1) {
               clearInterval(timer);
-              // Redirect to onboarding
-              navigate("/pricing?workflow=onboarding");
+              // If user is logged in, go to onboarding
+              // If not logged in, go to login page
+              if (auth.currentUser) {
+                navigate("/onboarding");
+              } else {
+                navigate("/login", {
+                  state: {
+                    message: "Email verified! Please log in to continue.",
+                  },
+                });
+              }
               return 0;
             }
             return prev - 1;
@@ -63,13 +78,24 @@ const EmailVerificationPage: React.FC<Props> = observer((props) => {
         }, 1000);
 
         return () => clearInterval(timer);
-      } catch (error) {
+      } catch (error: any) {
+        console.log("Verification error:", error);
         setStatus("error");
-        console.log("error", error);
-        setErrorMessage(
-          FirebaseErrorHandler.checkFirebaseErrorsAndThrow(error)
-          // error instanceof Error ? error.message : "Verification failed"
-        );
+
+        // Handle different error codes
+        if (error.code === "auth/invalid-action-code") {
+          setErrorMessage(
+            "This verification link has expired, already been used, or is invalid. Please request a new verification email."
+          );
+        } else if (error.code === "auth/expired-action-code") {
+          setErrorMessage(
+            "This verification link has expired. Please request a new verification email."
+          );
+        } else {
+          const errorMsg =
+            error instanceof Error ? error.message : "Verification failed";
+          setErrorMessage(errorMsg);
+        }
       }
     };
 
@@ -117,16 +143,40 @@ const EmailVerificationPage: React.FC<Props> = observer((props) => {
 
                   <div className="bg-gray-50 rounded-md p-3 mb-4">
                     <p className="text-xs text-gray-700">
-                      Redirecting to onboarding in{" "}
-                      <span className="font-medium">{countdown}</span> seconds
+                      {auth.currentUser ? (
+                        <>
+                          Redirecting to onboarding in{" "}
+                          <span className="font-medium">{countdown}</span>{" "}
+                          seconds
+                        </>
+                      ) : (
+                        <>
+                          Redirecting to login in{" "}
+                          <span className="font-medium">{countdown}</span>{" "}
+                          seconds
+                        </>
+                      )}
                     </p>
                   </div>
 
                   <Button
-                    onClick={() => navigate("/pricing?workflow=onboarding")}
+                    onClick={() => {
+                      if (auth.currentUser) {
+                        navigate("/onboarding");
+                      } else {
+                        navigate("/login", {
+                          state: {
+                            message:
+                              "Email verified! Please log in to continue.",
+                          },
+                        });
+                      }
+                    }}
                     className="w-full text-sm h-9"
                   >
-                    Continue to Onboarding
+                    {auth.currentUser
+                      ? "Continue to Onboarding"
+                      : "Continue to Login"}
                   </Button>
                 </div>
               )}
