@@ -12,21 +12,19 @@ import {
   Minus,
   Trash2,
   Sparkles,
-  ArrowRight,
   FileText,
   Calendar,
   Building2,
   BarChart3,
   ExternalLink,
   X,
-  Video,
-  Mic,
   Brain,
 } from "lucide-react";
 import { Testimonial } from "@/types/testimonial";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import ConfirmDialog from "../common/ConfirmDialog";
+import { observer } from "mobx-react-lite";
 
 interface TestimonialCardProps {
   testimonial: Testimonial;
@@ -48,7 +46,8 @@ const TestimonialCard = ({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const getSentimentIcon = (score: number) => {
-    if (score >= 0.7) return <TrendingUp className="w-4 h-4 text-emerald-600" />;
+    if (score >= 0.7)
+      return <TrendingUp className="w-4 h-4 text-emerald-600" />;
     if (score >= 0.4) return <Minus className="w-4 h-4 text-amber-600" />;
     return <TrendingDown className="w-4 h-4 text-red-600" />;
   };
@@ -60,7 +59,8 @@ const TestimonialCard = ({
   };
 
   const getSentimentColor = (score: number) => {
-    if (score >= 0.7) return "text-emerald-700 bg-emerald-50 border-emerald-200";
+    if (score >= 0.7)
+      return "text-emerald-700 bg-emerald-50 border-emerald-200";
     if (score >= 0.4) return "text-amber-700 bg-amber-50 border-amber-200";
     return "text-red-700 bg-red-50 border-red-200";
   };
@@ -186,7 +186,9 @@ const TestimonialCard = ({
             </div>
             <div className="flex flex-col sm:flex-row items-end sm:items-center text-xs text-gray-500">
               <Calendar className="w-3 h-3 mr-1 hidden sm:inline" />
-              <span className="text-right sm:text-left">{formatDate(testimonial.created_at)}</span>
+              <span className="text-right sm:text-left">
+                {formatDate(testimonial.created_at)}
+              </span>
             </div>
           </div>
 
@@ -226,7 +228,9 @@ const TestimonialCard = ({
                 {testimonial.processing_status === "completed" && (
                   <div className="ml-auto flex items-center gap-1 px-2 py-0.5 bg-emerald-50 border border-emerald-200 rounded-full">
                     <Brain className="w-3 h-3 text-emerald-600" />
-                    <span className="text-xs font-medium text-emerald-700">AI Enhanced</span>
+                    <span className="text-xs font-medium text-emerald-700">
+                      AI Enhanced
+                    </span>
                   </div>
                 )}
               </div>
@@ -374,4 +378,4 @@ const VideoModal: React.FC<{
   );
 };
 
-export default TestimonialCard;
+export default observer(TestimonialCard);

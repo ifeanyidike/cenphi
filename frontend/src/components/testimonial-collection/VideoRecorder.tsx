@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { useJobProgress } from "@/hooks/useJobProgress";
 import { workspaceHub } from "@/repo/workspace_hub";
 import PersonalDetailsForm from "./PersonalDetailsForm";
+import { observer } from "mobx-react-lite";
 
 interface TestimonialFormData {
   name: string;
@@ -686,4 +687,4 @@ const VideoRecorder: React.FC<VideoRecorderProps> = ({
   );
 };
 
-export default VideoRecorder;
+export default observer(VideoRecorder);

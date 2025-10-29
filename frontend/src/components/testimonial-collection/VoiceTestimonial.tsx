@@ -28,7 +28,7 @@ interface VoiceTestimonialProps {
 export interface VoiceTestimonialData {
   phoneNumber: string;
   consent: boolean;
-  callTiming: 'instant' | 'scheduled';
+  callTiming: "instant" | "scheduled";
   preferredCallTime: string;
   timezone: string;
   additionalNotes?: string;
@@ -40,39 +40,41 @@ const VoiceTestimonial: React.FC<VoiceTestimonialProps> = ({
   formData,
   workspaceId,
 }) => {
-  const [step, setStep] = useState<'consent' | 'phone' | 'timing' | 'schedule'>('consent');
+  const [step, setStep] = useState<"consent" | "phone" | "timing" | "schedule">(
+    "consent"
+  );
   const [voiceData, setVoiceData] = useState<VoiceTestimonialData>({
-    phoneNumber: '',
+    phoneNumber: "",
     consent: false,
-    callTiming: 'instant',
-    preferredCallTime: '',
+    callTiming: "instant",
+    preferredCallTime: "",
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    additionalNotes: '',
+    additionalNotes: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
 
   const validatePhone = (phone: string) => {
-    const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
-    return phoneRegex.test(phone.replace(/[\s\-\(\)]/g, ''));
+    const phoneRegex = /^[+]?[1-9][\d]{0,15}$/;
+    return phoneRegex.test(phone.replace(/[\s\-()]/g, ""));
   };
 
   const handleConsentNext = () => {
     if (!voiceData.consent) {
-      setErrors({ consent: 'Please agree to the voice call consent' });
+      setErrors({ consent: "Please agree to the voice call consent" });
       return;
     }
     setErrors({});
-    setStep('phone');
+    setStep("phone");
   };
 
   const handlePhoneNext = () => {
     const newErrors: Record<string, string> = {};
 
     if (!voiceData.phoneNumber.trim()) {
-      newErrors.phoneNumber = 'Phone number is required';
+      newErrors.phoneNumber = "Phone number is required";
     } else if (!validatePhone(voiceData.phoneNumber)) {
-      newErrors.phoneNumber = 'Please enter a valid phone number';
+      newErrors.phoneNumber = "Please enter a valid phone number";
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -81,20 +83,20 @@ const VoiceTestimonial: React.FC<VoiceTestimonialProps> = ({
     }
 
     setErrors({});
-    setStep('timing');
+    setStep("timing");
   };
 
   const handleTimingNext = () => {
-    if (voiceData.callTiming === 'instant') {
+    if (voiceData.callTiming === "instant") {
       handleInstantCall();
     } else {
-      setStep('schedule');
+      setStep("schedule");
     }
   };
 
   const handleScheduleCall = async () => {
     if (!voiceData.preferredCallTime) {
-      setErrors({ schedule: 'Please select a preferred call time' });
+      setErrors({ schedule: "Please select a preferred call time" });
       return;
     }
 
@@ -103,8 +105,8 @@ const VoiceTestimonial: React.FC<VoiceTestimonialProps> = ({
       // Call the API to schedule the voice testimonial
       await scheduleVoiceCall();
       onComplete();
-    } catch (error) {
-      setErrors({ schedule: 'Failed to schedule call. Please try again.' });
+    } catch {
+      setErrors({ schedule: "Failed to schedule call. Please try again." });
     } finally {
       setIsLoading(false);
     }
@@ -118,9 +120,12 @@ const VoiceTestimonial: React.FC<VoiceTestimonialProps> = ({
       await instantVoiceCall();
       onComplete();
     } catch (error) {
-      console.error('Error initiating instant voice call:', error);
+      console.error("Error initiating instant voice call:", error);
       setErrors({
-        instant: error instanceof Error ? error.message : 'Failed to initiate call. Please try again.'
+        instant:
+          error instanceof Error
+            ? error.message
+            : "Failed to initiate call. Please try again.",
       });
     } finally {
       setIsLoading(false);
@@ -129,27 +134,30 @@ const VoiceTestimonial: React.FC<VoiceTestimonialProps> = ({
 
   const scheduleVoiceCall = async () => {
     // This will integrate with your backend API
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/collection/workspaces/${workspaceId}/testimonials/voice/schedule`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        workspaceId,
-        customerName: formData.name,
-        customerEmail: formData.email,
-        customerPhone: voiceData.phoneNumber,
-        company: formData.company,
-        preferredCallTime: voiceData.preferredCallTime,
-        timezone: voiceData.timezone,
-        additionalNotes: voiceData.additionalNotes,
-        rating: formData.rating,
-        initialText: formData.textContent,
-      }),
-    });
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL}/collection/workspaces/${workspaceId}/testimonials/voice/schedule`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          workspaceId,
+          customerName: formData.name,
+          customerEmail: formData.email,
+          customerPhone: voiceData.phoneNumber,
+          company: formData.company,
+          preferredCallTime: voiceData.preferredCallTime,
+          timezone: voiceData.timezone,
+          additionalNotes: voiceData.additionalNotes,
+          rating: formData.rating,
+          initialText: formData.textContent,
+        }),
+      }
+    );
 
     if (!response.ok) {
-      throw new Error('Failed to schedule voice call');
+      throw new Error("Failed to schedule voice call");
     }
 
     return response.json();
@@ -157,25 +165,28 @@ const VoiceTestimonial: React.FC<VoiceTestimonialProps> = ({
 
   const instantVoiceCall = async () => {
     // Call instantly - no scheduling
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/collection/workspaces/${workspaceId}/testimonials/voice/instant`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        workspaceId,
-        customerName: formData.name,
-        customerEmail: formData.email,
-        customerPhone: voiceData.phoneNumber,
-        company: formData.company,
-        additionalNotes: voiceData.additionalNotes,
-        rating: formData.rating,
-        initialText: formData.textContent,
-      }),
-    });
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL}/collection/workspaces/${workspaceId}/testimonials/voice/instant`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          workspaceId,
+          customerName: formData.name,
+          customerEmail: formData.email,
+          customerPhone: voiceData.phoneNumber,
+          company: formData.company,
+          additionalNotes: voiceData.additionalNotes,
+          rating: formData.rating,
+          initialText: formData.textContent,
+        }),
+      }
+    );
 
     if (!response.ok) {
-      throw new Error('Failed to initiate instant voice call');
+      throw new Error("Failed to initiate instant voice call");
     }
 
     return response.json();
@@ -184,8 +195,8 @@ const VoiceTestimonial: React.FC<VoiceTestimonialProps> = ({
   const getTimeSlots = () => {
     const slots = [];
     for (let hour = 9; hour <= 17; hour++) {
-      for (let minute of [0, 30]) {
-        const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+      for (const minute of [0, 30]) {
+        const time = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
         slots.push(time);
       }
     }
@@ -226,13 +237,17 @@ const VoiceTestimonial: React.FC<VoiceTestimonialProps> = ({
             <div className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
               <span className="text-xs font-medium text-slate-600">2</span>
             </div>
-            <span>We'll have a 5-minute guided conversation about your experience</span>
+            <span>
+              We'll have a 5-minute guided conversation about your experience
+            </span>
           </div>
           <div className="flex items-start gap-2">
             <div className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
               <span className="text-xs font-medium text-slate-600">3</span>
             </div>
-            <span>Your testimonial will be transcribed and processed automatically</span>
+            <span>
+              Your testimonial will be transcribed and processed automatically
+            </span>
           </div>
         </div>
       </div>
@@ -241,10 +256,13 @@ const VoiceTestimonial: React.FC<VoiceTestimonialProps> = ({
         <div className="flex items-start gap-2 p-3 bg-slate-50 rounded-lg">
           <Shield className="h-4 w-4 text-slate-600 mt-0.5 flex-shrink-0" />
           <div className="text-xs">
-            <p className="font-medium text-slate-900 mb-1">Privacy & Recording</p>
+            <p className="font-medium text-slate-900 mb-1">
+              Privacy & Recording
+            </p>
             <p className="text-slate-700">
-              Your call will be recorded and transcribed for testimonial purposes only.
-              We protect your privacy and never share your information.
+              Your call will be recorded and transcribed for testimonial
+              purposes only. We protect your privacy and never share your
+              information.
             </p>
           </div>
         </div>
@@ -259,9 +277,9 @@ const VoiceTestimonial: React.FC<VoiceTestimonialProps> = ({
             className="mt-1 h-4 w-4 text-slate-600 focus:ring-slate-500 border-slate-300 rounded"
           />
           <span className="text-xs text-slate-700">
-            I consent to receive a phone call and have my conversation recorded and
-            transcribed for testimonial purposes. I understand this call will take
-            approximately 5 minutes.
+            I consent to receive a phone call and have my conversation recorded
+            and transcribed for testimonial purposes. I understand this call
+            will take approximately 5 minutes.
           </span>
         </label>
 
@@ -360,26 +378,39 @@ const VoiceTestimonial: React.FC<VoiceTestimonialProps> = ({
             type="radio"
             name="callTiming"
             value="instant"
-            checked={voiceData.callTiming === 'instant'}
-            onChange={(e) => setVoiceData({ ...voiceData, callTiming: e.target.value as 'instant' | 'scheduled' })}
+            checked={voiceData.callTiming === "instant"}
+            onChange={(e) =>
+              setVoiceData({
+                ...voiceData,
+                callTiming: e.target.value as "instant" | "scheduled",
+              })
+            }
             className="sr-only"
           />
-          <div className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
-            voiceData.callTiming === 'instant'
-              ? 'border-slate-900 bg-slate-50'
-              : 'border-slate-200 hover:border-slate-300'
-          }`}>
+          <div
+            className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
+              voiceData.callTiming === "instant"
+                ? "border-slate-900 bg-slate-50"
+                : "border-slate-200 hover:border-slate-300"
+            }`}
+          >
             <div className="flex items-center gap-3">
-              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                voiceData.callTiming === 'instant' ? 'border-slate-900' : 'border-slate-300'
-              }`}>
-                {voiceData.callTiming === 'instant' && (
+              <div
+                className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                  voiceData.callTiming === "instant"
+                    ? "border-slate-900"
+                    : "border-slate-300"
+                }`}
+              >
+                {voiceData.callTiming === "instant" && (
                   <div className="w-2 h-2 rounded-full bg-slate-900"></div>
                 )}
               </div>
               <div className="flex-1">
                 <div className="font-medium text-slate-900">Call Me Now</div>
-                <div className="text-sm text-slate-600">Get your testimonial call within the next few minutes</div>
+                <div className="text-sm text-slate-600">
+                  Get your testimonial call within the next few minutes
+                </div>
               </div>
               <Phone className="h-5 w-5 text-slate-400" />
             </div>
@@ -391,26 +422,41 @@ const VoiceTestimonial: React.FC<VoiceTestimonialProps> = ({
             type="radio"
             name="callTiming"
             value="scheduled"
-            checked={voiceData.callTiming === 'scheduled'}
-            onChange={(e) => setVoiceData({ ...voiceData, callTiming: e.target.value as 'instant' | 'scheduled' })}
+            checked={voiceData.callTiming === "scheduled"}
+            onChange={(e) =>
+              setVoiceData({
+                ...voiceData,
+                callTiming: e.target.value as "instant" | "scheduled",
+              })
+            }
             className="sr-only"
           />
-          <div className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
-            voiceData.callTiming === 'scheduled'
-              ? 'border-slate-900 bg-slate-50'
-              : 'border-slate-200 hover:border-slate-300'
-          }`}>
+          <div
+            className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
+              voiceData.callTiming === "scheduled"
+                ? "border-slate-900 bg-slate-50"
+                : "border-slate-200 hover:border-slate-300"
+            }`}
+          >
             <div className="flex items-center gap-3">
-              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                voiceData.callTiming === 'scheduled' ? 'border-slate-900' : 'border-slate-300'
-              }`}>
-                {voiceData.callTiming === 'scheduled' && (
+              <div
+                className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                  voiceData.callTiming === "scheduled"
+                    ? "border-slate-900"
+                    : "border-slate-300"
+                }`}
+              >
+                {voiceData.callTiming === "scheduled" && (
                   <div className="w-2 h-2 rounded-full bg-slate-900"></div>
                 )}
               </div>
               <div className="flex-1">
-                <div className="font-medium text-slate-900">Schedule for Later</div>
-                <div className="text-sm text-slate-600">Choose a specific time that works best for you</div>
+                <div className="font-medium text-slate-900">
+                  Schedule for Later
+                </div>
+                <div className="text-sm text-slate-600">
+                  Choose a specific time that works best for you
+                </div>
               </div>
               <Calendar className="h-5 w-5 text-slate-400" />
             </div>
@@ -475,12 +521,20 @@ const VoiceTestimonial: React.FC<VoiceTestimonialProps> = ({
         <div className="bg-slate-50 rounded-lg p-3">
           <div className="flex items-center gap-2 mb-2">
             <Clock className="h-3 w-3 text-slate-600" />
-            <span className="text-xs font-medium text-slate-900">Call Details</span>
+            <span className="text-xs font-medium text-slate-900">
+              Call Details
+            </span>
           </div>
           <div className="text-xs text-slate-600 space-y-0.5">
-            <p><strong>Duration:</strong> ~5 minutes</p>
-            <p><strong>Your timezone:</strong> {voiceData.timezone}</p>
-            <p><strong>Phone:</strong> {voiceData.phoneNumber}</p>
+            <p>
+              <strong>Duration:</strong> ~5 minutes
+            </p>
+            <p>
+              <strong>Your timezone:</strong> {voiceData.timezone}
+            </p>
+            <p>
+              <strong>Phone:</strong> {voiceData.phoneNumber}
+            </p>
           </div>
         </div>
       </div>
@@ -496,18 +550,22 @@ const VoiceTestimonial: React.FC<VoiceTestimonialProps> = ({
           className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden"
         >
           <div className="p-6">
-            {step === 'consent' && renderConsentStep()}
-            {step === 'phone' && renderPhoneStep()}
-            {step === 'timing' && renderTimingStep()}
-            {step === 'schedule' && renderScheduleStep()}
+            {step === "consent" && renderConsentStep()}
+            {step === "phone" && renderPhoneStep()}
+            {step === "timing" && renderTimingStep()}
+            {step === "schedule" && renderScheduleStep()}
 
             <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-200">
               <button
-                onClick={step === 'consent' ? onBack : () => {
-                  if (step === 'phone') setStep('consent');
-                  if (step === 'timing') setStep('phone');
-                  if (step === 'schedule') setStep('timing');
-                }}
+                onClick={
+                  step === "consent"
+                    ? onBack
+                    : () => {
+                        if (step === "phone") setStep("consent");
+                        if (step === "timing") setStep("phone");
+                        if (step === "schedule") setStep("timing");
+                      }
+                }
                 className="flex items-center gap-1 px-3 py-2 text-xs text-slate-600 hover:text-slate-800 transition-colors"
               >
                 <ArrowLeft className="h-3 w-3" />
@@ -516,10 +574,13 @@ const VoiceTestimonial: React.FC<VoiceTestimonialProps> = ({
 
               <button
                 onClick={
-                  step === 'consent' ? handleConsentNext :
-                  step === 'phone' ? handlePhoneNext :
-                  step === 'timing' ? handleTimingNext :
-                  handleScheduleCall
+                  step === "consent"
+                    ? handleConsentNext
+                    : step === "phone"
+                      ? handlePhoneNext
+                      : step === "timing"
+                        ? handleTimingNext
+                        : handleScheduleCall
                 }
                 disabled={isLoading}
                 className="flex items-center gap-1 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-sm font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -527,15 +588,17 @@ const VoiceTestimonial: React.FC<VoiceTestimonialProps> = ({
                 {isLoading ? (
                   <>
                     <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
-                    {step === 'timing' && voiceData.callTiming === 'instant' ? 'Starting Call...' : 'Scheduling...'}
+                    {step === "timing" && voiceData.callTiming === "instant"
+                      ? "Starting Call..."
+                      : "Scheduling..."}
                   </>
-                ) : step === 'schedule' ? (
+                ) : step === "schedule" ? (
                   <>
                     <Check className="h-3 w-3" />
                     Schedule Call
                   </>
-                ) : step === 'timing' ? (
-                  voiceData.callTiming === 'instant' ? (
+                ) : step === "timing" ? (
+                  voiceData.callTiming === "instant" ? (
                     <>
                       <Phone className="h-3 w-3" />
                       Call Me Now

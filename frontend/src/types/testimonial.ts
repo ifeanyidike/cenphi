@@ -82,6 +82,7 @@ export interface Testimonial extends BaseEntity {
   collection_method: CollectionMethod;
   rating?: number; // 1-5
   metadata: Record<string, any>;
+  views_count: number;
 
   conversion_count: number;
 

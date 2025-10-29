@@ -1,7 +1,6 @@
 // components/TestimonialDetail/PlatformRecommendations.tsx
 import { useState, useEffect } from "react";
 import {
-  Target,
   AlertCircle,
   TrendingUp,
   Sparkles,
@@ -13,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { authStore } from "@/stores/authStore";
+import { observer } from "mobx-react-lite";
 
 interface Platform {
   platform: string;
@@ -69,10 +69,10 @@ const ENGAGEMENT_LEVELS = {
   low: { label: "Low", color: "text-slate-600 bg-slate-50" },
 };
 
-export default function PlatformRecommendations({
+const PlatformRecommendations = ({
   testimonialId,
   onOptimize,
-}: PlatformRecommendationsProps) {
+}: PlatformRecommendationsProps) => {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -301,17 +301,19 @@ export default function PlatformRecommendations({
               Why This Platform
             </h5>
             <div className="space-y-2">
-              {primary.reasons.slice(0, expanded ? undefined : 2).map((reason, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 border border-slate-100"
-                >
-                  <CheckCircle className="w-4 h-4 text-slate-700 flex-shrink-0 mt-0.5" />
-                  <p className="text-xs text-slate-700 leading-relaxed">
-                    {reason}
-                  </p>
-                </div>
-              ))}
+              {primary.reasons
+                .slice(0, expanded ? undefined : 2)
+                .map((reason, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 border border-slate-100"
+                  >
+                    <CheckCircle className="w-4 h-4 text-slate-700 flex-shrink-0 mt-0.5" />
+                    <p className="text-xs text-slate-700 leading-relaxed">
+                      {reason}
+                    </p>
+                  </div>
+                ))}
             </div>
 
             {primary.reasons.length > 2 && !expanded && (
@@ -435,4 +437,6 @@ export default function PlatformRecommendations({
       )}
     </div>
   );
-}
+};
+
+export default observer(PlatformRecommendations);

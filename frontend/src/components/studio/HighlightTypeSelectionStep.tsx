@@ -24,6 +24,7 @@ import * as momentHelpers from "@/utils/momentHelpers";
 import { workspaceHub } from "@/repo/workspace_hub";
 import { authStore } from "@/stores/authStore";
 import { runInAction } from "mobx";
+import { observer } from "mobx-react-lite";
 
 interface HighlightTypeSelectionStepProps {
   testimonial: Testimonial;
@@ -237,12 +238,17 @@ const HighlightTypeSelectionStep: React.FC<HighlightTypeSelectionStepProps> = ({
 
       // Refresh testimonial to get new highlights
       // IMPORTANT: Pass false to include artifacts
-      await workspaceHub.testimonialManager.fetchTestimonial(testimonial.id, false);
+      await workspaceHub.testimonialManager.fetchTestimonial(
+        testimonial.id,
+        false
+      );
 
       // Mark type as available
       setAvailableTypes((prev) => new Set([...prev, type]));
 
-      console.log("[HighlightTypeSelectionStep] Highlights generated and refreshed, proceeding to next step");
+      console.log(
+        "[HighlightTypeSelectionStep] Highlights generated and refreshed, proceeding to next step"
+      );
 
       // Proceed to next step
       onComplete(type);
@@ -450,4 +456,4 @@ const HighlightTypeSelectionStep: React.FC<HighlightTypeSelectionStepProps> = ({
   );
 };
 
-export default HighlightTypeSelectionStep;
+export default observer(HighlightTypeSelectionStep);

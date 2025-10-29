@@ -369,7 +369,7 @@ const Studio: React.FC = () => {
     navigate(`/studio`);
   };
 
-  const handleStartProcessing = (jobId: string, _autoProceed?: boolean) => {
+  const handleStartProcessing = (jobId: string) => {
     // Note: autoProceed is stored in the session on backend and read from session data by processing components
     // We keep the parameter for compatibility but don't use it here
     setJobId(jobId);

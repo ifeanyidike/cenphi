@@ -147,7 +147,7 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
     }, [enhancedArtifacts]);
 
     const filteredArtifacts = useMemo(() => {
-      let filtered = enhancedArtifacts.filter((artifact) => {
+      const filtered = enhancedArtifacts.filter((artifact) => {
         if (searchQuery) {
           const searchLower = searchQuery.toLowerCase();
           const content = artifact.text_content || "";

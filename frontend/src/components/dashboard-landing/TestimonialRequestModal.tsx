@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import Papa from "papaparse";
 import { workspaceHub } from "@/repo/workspace_hub";
+import { observer } from "mobx-react-lite";
 
 interface TestimonialRequestModalProps {
   isOpen: boolean;
@@ -478,4 +479,4 @@ const TestimonialRequestModal: React.FC<TestimonialRequestModalProps> = ({
   );
 };
 
-export default TestimonialRequestModal;
+export default observer(TestimonialRequestModal);

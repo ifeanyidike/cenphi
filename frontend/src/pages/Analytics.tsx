@@ -26,15 +26,12 @@ import {
   Search,
   Download,
   Eye,
-  Play,
   Copy,
   Share2,
   TrendingUp,
   Users,
   Link2,
-  Calendar,
   BarChart3,
-  MessageSquare,
   Heart,
   Linkedin,
   Twitter,
@@ -45,10 +42,7 @@ import {
   publicShareManager,
   PublicShare,
 } from "@/repo/managers/public_share_manager";
-import {
-  socialManager,
-  SocialPost,
-} from "@/repo/managers/social_manager";
+import { socialManager, SocialPost } from "@/repo/managers/social_manager";
 import { workspaceHub } from "@/repo/workspace_hub";
 import { useToast } from "@/hooks/use-toast";
 
@@ -78,6 +72,7 @@ const Analytics = observer(() => {
     if (workspaceHub.workspace?.id) {
       loadData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceHub.workspace?.id]);
 
   const loadData = async () => {
@@ -94,7 +89,9 @@ const Analytics = observer(() => {
 
     try {
       const [sharesData, postsData] = await Promise.all([
-        publicShareManager.getWorkspaceShares(workspaceHub.workspace.id).catch(() => []),
+        publicShareManager
+          .getWorkspaceShares(workspaceHub.workspace.id)
+          .catch(() => []),
         socialManager.getPosts(workspaceHub.workspace.id, 100).catch(() => []),
       ]);
 
@@ -110,7 +107,7 @@ const Analytics = observer(() => {
             }
           })
         );
-        setShares(sharesWithMetrics);
+        setShares(sharesWithMetrics as any);
       } else {
         setShares([]);
       }
@@ -299,7 +296,15 @@ const Analytics = observer(() => {
 
     let csvContent: string;
     if (activeTab === "shares") {
-      const headers = ["ID", "Type", "Status", "Views", "Visitors", "Engagement", "Created"];
+      const headers = [
+        "ID",
+        "Type",
+        "Status",
+        "Views",
+        "Visitors",
+        "Engagement",
+        "Created",
+      ];
       const rows = (data as PublicShare[]).map((share) => [
         share.id,
         share.share_type,
@@ -309,9 +314,20 @@ const Analytics = observer(() => {
         (share.metrics?.play_count || 0) + (share.metrics?.download_count || 0),
         share.created_at,
       ]);
-      csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+      csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join(
+        "\n"
+      );
     } else {
-      const headers = ["Platform", "Content", "Status", "Views", "Likes", "Comments", "Shares", "Published"];
+      const headers = [
+        "Platform",
+        "Content",
+        "Status",
+        "Views",
+        "Likes",
+        "Comments",
+        "Shares",
+        "Published",
+      ];
       const rows = (data as SocialPost[]).map((post) => [
         post.platform,
         `"${post.content.replace(/"/g, '""')}"`,
@@ -322,7 +338,9 @@ const Analytics = observer(() => {
         post.shares_count,
         post.published_at || post.created_at,
       ]);
-      csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+      csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join(
+        "\n"
+      );
     }
 
     const blob = new Blob([csvContent], { type: "text/csv" });
@@ -336,597 +354,716 @@ const Analytics = observer(() => {
 
   return (
     <div className="space-y-5">
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-lg font-semibold text-gray-900">Analytics</h1>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Track performance of your shared content and social media posts
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={downloadCSV} variant="outline" size="sm">
-              <Download className="h-3.5 w-3.5 mr-1.5" />
-              <span className="text-xs">Export</span>
-            </Button>
-            <Button
-              onClick={refreshData}
-              disabled={loading || refreshing}
-              variant="outline"
-              size="sm"
-            >
-              <RefreshCw
-                className={`h-3.5 w-3.5 mr-1.5 ${refreshing ? "animate-spin" : ""}`}
-              />
-              <span className="text-xs">
-                {refreshing ? "Updating..." : "Refresh"}
-              </span>
-            </Button>
-          </div>
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-lg font-semibold text-gray-900">Analytics</h1>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Track performance of your shared content and social media posts
+          </p>
         </div>
+        <div className="flex gap-2">
+          <Button onClick={downloadCSV} variant="outline" size="sm">
+            <Download className="h-3.5 w-3.5 mr-1.5" />
+            <span className="text-xs">Export</span>
+          </Button>
+          <Button
+            onClick={refreshData}
+            disabled={loading || refreshing}
+            variant="outline"
+            size="sm"
+          >
+            <RefreshCw
+              className={`h-3.5 w-3.5 mr-1.5 ${refreshing ? "animate-spin" : ""}`}
+            />
+            <span className="text-xs">
+              {refreshing ? "Updating..." : "Refresh"}
+            </span>
+          </Button>
+        </div>
+      </div>
 
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "shares" | "social")}>
-          <TabsList className="grid w-full max-w-md grid-cols-2 h-9">
-            <TabsTrigger value="shares" className="text-xs">
-              Public Shares
-            </TabsTrigger>
-            <TabsTrigger value="social" className="text-xs">
-              Social Posts
-            </TabsTrigger>
-          </TabsList>
+      {/* Tabs */}
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => setActiveTab(v as "shares" | "social")}
+      >
+        <TabsList className="grid w-full max-w-md grid-cols-2 h-9">
+          <TabsTrigger value="shares" className="text-xs">
+            Public Shares
+          </TabsTrigger>
+          <TabsTrigger value="social" className="text-xs">
+            Social Posts
+          </TabsTrigger>
+        </TabsList>
 
-          {/* Public Shares Tab */}
-          <TabsContent value="shares" className="space-y-4 mt-5">
-            {/* Share Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
-              <Card className="border-gray-200">
-                <CardContent className="p-3.5">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <div className="p-1.5 bg-blue-50 rounded-lg">
-                      <Link2 className="h-3.5 w-3.5 text-blue-600" />
-                    </div>
-                    <span className="text-[10px] font-medium text-gray-600 uppercase tracking-wide">
-                      Total Shares
-                    </span>
-                  </div>
-                  <div className="text-xl font-semibold text-gray-900">
-                    {shareMetrics.totalShares}
-                  </div>
-                  <div className="text-[10px] text-gray-500 mt-0.5">
-                    {shareMetrics.activeShares} active
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-gray-200">
-                <CardContent className="p-3.5">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <div className="p-1.5 bg-emerald-50 rounded-lg">
-                      <Eye className="h-3.5 w-3.5 text-emerald-600" />
-                    </div>
-                    <span className="text-[10px] font-medium text-gray-600 uppercase tracking-wide">
-                      Total Views
-                    </span>
-                  </div>
-                  <div className="text-xl font-semibold text-gray-900">
-                    {shareMetrics.totalViews.toLocaleString()}
-                  </div>
-                  <div className="text-[10px] text-gray-500 mt-0.5">
-                    Across all shares
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-gray-200">
-                <CardContent className="p-3.5">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <div className="p-1.5 bg-purple-50 rounded-lg">
-                      <Users className="h-3.5 w-3.5 text-purple-600" />
-                    </div>
-                    <span className="text-[10px] font-medium text-gray-600 uppercase tracking-wide">
-                      Unique Visitors
-                    </span>
-                  </div>
-                  <div className="text-xl font-semibold text-gray-900">
-                    {shareMetrics.uniqueVisitors.toLocaleString()}
-                  </div>
-                  <div className="text-[10px] text-gray-500 mt-0.5">
-                    {shareMetrics.totalViews > 0
-                      ? ((shareMetrics.uniqueVisitors / shareMetrics.totalViews) * 100).toFixed(0)
-                      : 0}
-                    % unique rate
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-gray-200">
-                <CardContent className="p-3.5">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <div className="p-1.5 bg-indigo-50 rounded-lg">
-                      <TrendingUp className="h-3.5 w-3.5 text-indigo-600" />
-                    </div>
-                    <span className="text-[10px] font-medium text-gray-600 uppercase tracking-wide">
-                      Engagement
-                    </span>
-                  </div>
-                  <div className="text-xl font-semibold text-gray-900">
-                    {shareMetrics.totalEngagement.toLocaleString()}
-                  </div>
-                  <div className="text-[10px] text-gray-500 mt-0.5">
-                    Plays + Downloads
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-gray-200">
-                <CardContent className="p-3.5">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <div className="p-1.5 bg-amber-50 rounded-lg">
-                      <BarChart3 className="h-3.5 w-3.5 text-amber-600" />
-                    </div>
-                    <span className="text-[10px] font-medium text-gray-600 uppercase tracking-wide">
-                      Avg per Share
-                    </span>
-                  </div>
-                  <div className="text-xl font-semibold text-gray-900">
-                    {shareMetrics.totalShares > 0
-                      ? Math.round(shareMetrics.totalViews / shareMetrics.totalShares)
-                      : 0}
-                  </div>
-                  <div className="text-[10px] text-gray-500 mt-0.5">
-                    Average views
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Share Filters */}
+        {/* Public Shares Tab */}
+        <TabsContent value="shares" className="space-y-4 mt-5">
+          {/* Share Metrics */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
             <Card className="border-gray-200">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold text-gray-900">
-                  Filters
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-                  <Select value={shareType} onValueChange={setShareType}>
-                    <SelectTrigger className="h-8 text-xs border-gray-200">
-                      <SelectValue placeholder="All Types" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all" className="text-xs">All Types</SelectItem>
-                      <SelectItem value="testimonial" className="text-xs">Testimonials</SelectItem>
-                      <SelectItem value="artifact" className="text-xs">Artifacts</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <Select value={shareStatus} onValueChange={setShareStatus}>
-                    <SelectTrigger className="h-8 text-xs border-gray-200">
-                      <SelectValue placeholder="All Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all" className="text-xs">All Status</SelectItem>
-                      <SelectItem value="active" className="text-xs">Active</SelectItem>
-                      <SelectItem value="inactive" className="text-xs">Inactive</SelectItem>
-                      <SelectItem value="expired" className="text-xs">Expired</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <Select value={shareDateRange} onValueChange={setShareDateRange}>
-                    <SelectTrigger className="h-8 text-xs border-gray-200">
-                      <SelectValue placeholder="All Time" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all" className="text-xs">All Time</SelectItem>
-                      <SelectItem value="7days" className="text-xs">Last 7 days</SelectItem>
-                      <SelectItem value="30days" className="text-xs">Last 30 days</SelectItem>
-                      <SelectItem value="90days" className="text-xs">Last 90 days</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <div className="md:col-span-2">
-                    <div className="relative">
-                      <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-gray-400" />
-                      <Input
-                        placeholder="Search by ID..."
-                        value={shareSearch}
-                        onChange={(e) => setShareSearch(e.target.value)}
-                        className="pl-7 h-8 text-xs border-gray-200"
-                      />
-                    </div>
+              <CardContent className="p-3.5">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className="p-1.5 bg-blue-50 rounded-lg">
+                    <Link2 className="h-3.5 w-3.5 text-blue-600" />
                   </div>
+                  <span className="text-[10px] font-medium text-gray-600 uppercase tracking-wide">
+                    Total Shares
+                  </span>
+                </div>
+                <div className="text-xl font-semibold text-gray-900">
+                  {shareMetrics.totalShares}
+                </div>
+                <div className="text-[10px] text-gray-500 mt-0.5">
+                  {shareMetrics.activeShares} active
                 </div>
               </CardContent>
             </Card>
 
-            {/* Shares Table */}
             <Card className="border-gray-200">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold text-gray-900">
-                  Public Shares ({filteredShares.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-gray-200">
-                        <TableHead className="text-[11px] text-gray-600 font-semibold">Share ID</TableHead>
-                        <TableHead className="text-[11px] text-gray-600 font-semibold">Type</TableHead>
-                        <TableHead className="text-[11px] text-gray-600 font-semibold">Status</TableHead>
-                        <TableHead className="text-[11px] text-gray-600 font-semibold text-right">Views</TableHead>
-                        <TableHead className="text-[11px] text-gray-600 font-semibold text-right">Visitors</TableHead>
-                        <TableHead className="text-[11px] text-gray-600 font-semibold text-right">Engagement</TableHead>
-                        <TableHead className="text-[11px] text-gray-600 font-semibold">Created</TableHead>
-                        <TableHead className="text-[11px] text-gray-600 font-semibold w-16"></TableHead>
+              <CardContent className="p-3.5">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className="p-1.5 bg-emerald-50 rounded-lg">
+                    <Eye className="h-3.5 w-3.5 text-emerald-600" />
+                  </div>
+                  <span className="text-[10px] font-medium text-gray-600 uppercase tracking-wide">
+                    Total Views
+                  </span>
+                </div>
+                <div className="text-xl font-semibold text-gray-900">
+                  {shareMetrics.totalViews.toLocaleString()}
+                </div>
+                <div className="text-[10px] text-gray-500 mt-0.5">
+                  Across all shares
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-gray-200">
+              <CardContent className="p-3.5">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className="p-1.5 bg-purple-50 rounded-lg">
+                    <Users className="h-3.5 w-3.5 text-purple-600" />
+                  </div>
+                  <span className="text-[10px] font-medium text-gray-600 uppercase tracking-wide">
+                    Unique Visitors
+                  </span>
+                </div>
+                <div className="text-xl font-semibold text-gray-900">
+                  {shareMetrics.uniqueVisitors.toLocaleString()}
+                </div>
+                <div className="text-[10px] text-gray-500 mt-0.5">
+                  {shareMetrics.totalViews > 0
+                    ? (
+                        (shareMetrics.uniqueVisitors /
+                          shareMetrics.totalViews) *
+                        100
+                      ).toFixed(0)
+                    : 0}
+                  % unique rate
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-gray-200">
+              <CardContent className="p-3.5">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className="p-1.5 bg-indigo-50 rounded-lg">
+                    <TrendingUp className="h-3.5 w-3.5 text-indigo-600" />
+                  </div>
+                  <span className="text-[10px] font-medium text-gray-600 uppercase tracking-wide">
+                    Engagement
+                  </span>
+                </div>
+                <div className="text-xl font-semibold text-gray-900">
+                  {shareMetrics.totalEngagement.toLocaleString()}
+                </div>
+                <div className="text-[10px] text-gray-500 mt-0.5">
+                  Plays + Downloads
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-gray-200">
+              <CardContent className="p-3.5">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className="p-1.5 bg-amber-50 rounded-lg">
+                    <BarChart3 className="h-3.5 w-3.5 text-amber-600" />
+                  </div>
+                  <span className="text-[10px] font-medium text-gray-600 uppercase tracking-wide">
+                    Avg per Share
+                  </span>
+                </div>
+                <div className="text-xl font-semibold text-gray-900">
+                  {shareMetrics.totalShares > 0
+                    ? Math.round(
+                        shareMetrics.totalViews / shareMetrics.totalShares
+                      )
+                    : 0}
+                </div>
+                <div className="text-[10px] text-gray-500 mt-0.5">
+                  Average views
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Share Filters */}
+          <Card className="border-gray-200">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold text-gray-900">
+                Filters
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                <Select value={shareType} onValueChange={setShareType}>
+                  <SelectTrigger className="h-8 text-xs border-gray-200">
+                    <SelectValue placeholder="All Types" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all" className="text-xs">
+                      All Types
+                    </SelectItem>
+                    <SelectItem value="testimonial" className="text-xs">
+                      Testimonials
+                    </SelectItem>
+                    <SelectItem value="artifact" className="text-xs">
+                      Artifacts
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={shareStatus} onValueChange={setShareStatus}>
+                  <SelectTrigger className="h-8 text-xs border-gray-200">
+                    <SelectValue placeholder="All Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all" className="text-xs">
+                      All Status
+                    </SelectItem>
+                    <SelectItem value="active" className="text-xs">
+                      Active
+                    </SelectItem>
+                    <SelectItem value="inactive" className="text-xs">
+                      Inactive
+                    </SelectItem>
+                    <SelectItem value="expired" className="text-xs">
+                      Expired
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select
+                  value={shareDateRange}
+                  onValueChange={setShareDateRange}
+                >
+                  <SelectTrigger className="h-8 text-xs border-gray-200">
+                    <SelectValue placeholder="All Time" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all" className="text-xs">
+                      All Time
+                    </SelectItem>
+                    <SelectItem value="7days" className="text-xs">
+                      Last 7 days
+                    </SelectItem>
+                    <SelectItem value="30days" className="text-xs">
+                      Last 30 days
+                    </SelectItem>
+                    <SelectItem value="90days" className="text-xs">
+                      Last 90 days
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <div className="md:col-span-2">
+                  <div className="relative">
+                    <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-gray-400" />
+                    <Input
+                      placeholder="Search by ID..."
+                      value={shareSearch}
+                      onChange={(e) => setShareSearch(e.target.value)}
+                      className="pl-7 h-8 text-xs border-gray-200"
+                    />
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Shares Table */}
+          <Card className="border-gray-200">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold text-gray-900">
+                Public Shares ({filteredShares.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-gray-200">
+                      <TableHead className="text-[11px] text-gray-600 font-semibold">
+                        Share ID
+                      </TableHead>
+                      <TableHead className="text-[11px] text-gray-600 font-semibold">
+                        Type
+                      </TableHead>
+                      <TableHead className="text-[11px] text-gray-600 font-semibold">
+                        Status
+                      </TableHead>
+                      <TableHead className="text-[11px] text-gray-600 font-semibold text-right">
+                        Views
+                      </TableHead>
+                      <TableHead className="text-[11px] text-gray-600 font-semibold text-right">
+                        Visitors
+                      </TableHead>
+                      <TableHead className="text-[11px] text-gray-600 font-semibold text-right">
+                        Engagement
+                      </TableHead>
+                      <TableHead className="text-[11px] text-gray-600 font-semibold">
+                        Created
+                      </TableHead>
+                      <TableHead className="text-[11px] text-gray-600 font-semibold w-16"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {showLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-12">
+                          <div className="flex flex-col items-center gap-2">
+                            <RefreshCw className="h-5 w-5 text-gray-400 animate-spin" />
+                            <span className="text-xs text-gray-500">
+                              Loading...
+                            </span>
+                          </div>
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {showLoading ? (
-                        <TableRow>
-                          <TableCell colSpan={8} className="text-center py-12">
-                            <div className="flex flex-col items-center gap-2">
-                              <RefreshCw className="h-5 w-5 text-gray-400 animate-spin" />
-                              <span className="text-xs text-gray-500">Loading...</span>
+                    ) : filteredShares.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-12">
+                          <div className="flex flex-col items-center gap-3">
+                            <div className="p-3 bg-gray-50 rounded-full">
+                              <Link2 className="h-6 w-6 text-gray-400" />
                             </div>
-                          </TableCell>
-                        </TableRow>
-                      ) : filteredShares.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={8} className="text-center py-12">
-                            <div className="flex flex-col items-center gap-3">
-                              <div className="p-3 bg-gray-50 rounded-full">
-                                <Link2 className="h-6 w-6 text-gray-400" />
-                              </div>
-                              <div className="space-y-1">
-                                <p className="text-sm font-medium text-gray-900">
-                                  {shares.length === 0 ? "No public shares yet" : "No shares match filters"}
-                                </p>
-                                <p className="text-xs text-gray-500 max-w-sm">
-                                  {shares.length === 0
-                                    ? "Create public share links to track their performance"
-                                    : "Try adjusting your filters"}
-                                </p>
-                              </div>
+                            <div className="space-y-1">
+                              <p className="text-sm font-medium text-gray-900">
+                                {shares.length === 0
+                                  ? "No public shares yet"
+                                  : "No shares match filters"}
+                              </p>
+                              <p className="text-xs text-gray-500 max-w-sm">
+                                {shares.length === 0
+                                  ? "Create public share links to track their performance"
+                                  : "Try adjusting your filters"}
+                              </p>
                             </div>
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        filteredShares.map((share) => {
-                          const shareStatusText = !share.is_active
-                            ? "inactive"
-                            : share.expires_at && new Date(share.expires_at) < new Date()
-                              ? "expired"
-                              : "active";
-
-                          return (
-                            <TableRow key={share.id} className="border-gray-100">
-                              <TableCell className="max-w-[150px]">
-                                <p className="text-[11px] text-gray-900 font-mono truncate">
-                                  {share.id.split("-")[0]}...
-                                </p>
-                              </TableCell>
-                              <TableCell>
-                                <Badge
-                                  variant="outline"
-                                  className={`text-[10px] px-1.5 py-0 ${
-                                    share.share_type === "testimonial"
-                                      ? "bg-blue-50 text-blue-700 border-blue-200"
-                                      : "bg-purple-50 text-purple-700 border-purple-200"
-                                  }`}
-                                >
-                                  {share.share_type === "testimonial" ? "Testimonial" : "Artifact"}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>{getStatusBadge(shareStatusText)}</TableCell>
-                              <TableCell className="text-right">
-                                <span className="text-xs font-medium text-gray-900">
-                                  {(share.metrics?.view_count || 0).toLocaleString()}
-                                </span>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <span className="text-xs font-medium text-gray-900">
-                                  {(share.metrics?.unique_visitor_count || 0).toLocaleString()}
-                                </span>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <span className="text-xs font-medium text-gray-900">
-                                  {((share.metrics?.play_count || 0) + (share.metrics?.download_count || 0)).toLocaleString()}
-                                </span>
-                              </TableCell>
-                              <TableCell>
-                                <div className="space-y-0.5">
-                                  <div className="text-xs text-gray-900">{formatDate(share.created_at)}</div>
-                                  <div className="text-[10px] text-gray-500">{formatTime(share.created_at)}</div>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex gap-1">
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => copyShareLink(share.id)}
-                                    className="h-6 w-6 p-0"
-                                    title="Copy link"
-                                  >
-                                    <Copy className="h-3 w-3" />
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    asChild
-                                    className="h-6 w-6 p-0"
-                                    title="Open"
-                                  >
-                                    <a href={`/share/${share.id}/view`} target="_blank" rel="noopener noreferrer">
-                                      <ExternalLink className="h-3 w-3" />
-                                    </a>
-                                  </Button>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Social Posts Tab */}
-          <TabsContent value="social" className="space-y-4 mt-5">
-            {/* Social Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-              <Card className="border-gray-200">
-                <CardContent className="p-3.5">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <div className="p-1.5 bg-blue-50 rounded-lg">
-                      <Share2 className="h-3.5 w-3.5 text-blue-600" />
-                    </div>
-                    <span className="text-[10px] font-medium text-gray-600 uppercase tracking-wide">
-                      Total Posts
-                    </span>
-                  </div>
-                  <div className="text-xl font-semibold text-gray-900">
-                    {socialMetrics.totalPosts}
-                  </div>
-                  <div className="text-[10px] text-gray-500 mt-0.5">
-                    {socialMetrics.publishedPosts} published
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-gray-200">
-                <CardContent className="p-3.5">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <div className="p-1.5 bg-emerald-50 rounded-lg">
-                      <Eye className="h-3.5 w-3.5 text-emerald-600" />
-                    </div>
-                    <span className="text-[10px] font-medium text-gray-600 uppercase tracking-wide">
-                      Total Views
-                    </span>
-                  </div>
-                  <div className="text-xl font-semibold text-gray-900">
-                    {socialMetrics.totalViews.toLocaleString()}
-                  </div>
-                  <div className="text-[10px] text-gray-500 mt-0.5">
-                    Across all posts
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-gray-200">
-                <CardContent className="p-3.5">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <div className="p-1.5 bg-purple-50 rounded-lg">
-                      <Heart className="h-3.5 w-3.5 text-purple-600" />
-                    </div>
-                    <span className="text-[10px] font-medium text-gray-600 uppercase tracking-wide">
-                      Engagement
-                    </span>
-                  </div>
-                  <div className="text-xl font-semibold text-gray-900">
-                    {socialMetrics.totalEngagement.toLocaleString()}
-                  </div>
-                  <div className="text-[10px] text-gray-500 mt-0.5">
-                    Likes + Comments
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-gray-200">
-                <CardContent className="p-3.5">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <div className="p-1.5 bg-amber-50 rounded-lg">
-                      <BarChart3 className="h-3.5 w-3.5 text-amber-600" />
-                    </div>
-                    <span className="text-[10px] font-medium text-gray-600 uppercase tracking-wide">
-                      Avg per Post
-                    </span>
-                  </div>
-                  <div className="text-xl font-semibold text-gray-900">
-                    {socialMetrics.totalPosts > 0
-                      ? Math.round(socialMetrics.totalEngagement / socialMetrics.totalPosts)
-                      : 0}
-                  </div>
-                  <div className="text-[10px] text-gray-500 mt-0.5">
-                    Average engagement
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Social Filters */}
-            <Card className="border-gray-200">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold text-gray-900">
-                  Filters
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                  <Select value={socialPlatform} onValueChange={setSocialPlatform}>
-                    <SelectTrigger className="h-8 text-xs border-gray-200">
-                      <SelectValue placeholder="All Platforms" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all" className="text-xs">All Platforms</SelectItem>
-                      <SelectItem value="linkedin" className="text-xs">LinkedIn</SelectItem>
-                      <SelectItem value="twitter" className="text-xs">Twitter</SelectItem>
-                      <SelectItem value="facebook" className="text-xs">Facebook</SelectItem>
-                      <SelectItem value="instagram" className="text-xs">Instagram</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <Select value={socialStatus} onValueChange={setSocialStatus}>
-                    <SelectTrigger className="h-8 text-xs border-gray-200">
-                      <SelectValue placeholder="All Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all" className="text-xs">All Status</SelectItem>
-                      <SelectItem value="published" className="text-xs">Published</SelectItem>
-                      <SelectItem value="scheduled" className="text-xs">Scheduled</SelectItem>
-                      <SelectItem value="draft" className="text-xs">Draft</SelectItem>
-                      <SelectItem value="failed" className="text-xs">Failed</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <div className="md:col-span-2">
-                    <div className="relative">
-                      <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-gray-400" />
-                      <Input
-                        placeholder="Search posts..."
-                        value={socialSearch}
-                        onChange={(e) => setSocialSearch(e.target.value)}
-                        className="pl-7 h-8 text-xs border-gray-200"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Social Posts Table */}
-            <Card className="border-gray-200">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold text-gray-900">
-                  Social Posts ({filteredPosts.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-gray-200">
-                        <TableHead className="text-[11px] text-gray-600 font-semibold">Content</TableHead>
-                        <TableHead className="text-[11px] text-gray-600 font-semibold">Platform</TableHead>
-                        <TableHead className="text-[11px] text-gray-600 font-semibold">Status</TableHead>
-                        <TableHead className="text-[11px] text-gray-600 font-semibold text-right">Views</TableHead>
-                        <TableHead className="text-[11px] text-gray-600 font-semibold text-right">Likes</TableHead>
-                        <TableHead className="text-[11px] text-gray-600 font-semibold text-right">Comments</TableHead>
-                        <TableHead className="text-[11px] text-gray-600 font-semibold">Date</TableHead>
-                        <TableHead className="text-[11px] text-gray-600 font-semibold w-12"></TableHead>
+                          </div>
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {showLoading ? (
-                        <TableRow>
-                          <TableCell colSpan={8} className="text-center py-12">
-                            <div className="flex flex-col items-center gap-2">
-                              <RefreshCw className="h-5 w-5 text-gray-400 animate-spin" />
-                              <span className="text-xs text-gray-500">Loading...</span>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ) : filteredPosts.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={8} className="text-center py-12">
-                            <div className="flex flex-col items-center gap-3">
-                              <div className="p-3 bg-gray-50 rounded-full">
-                                <Share2 className="h-6 w-6 text-gray-400" />
-                              </div>
-                              <div className="space-y-1">
-                                <p className="text-sm font-medium text-gray-900">
-                                  {socialPosts.length === 0 ? "No social posts yet" : "No posts match filters"}
-                                </p>
-                                <p className="text-xs text-gray-500 max-w-sm">
-                                  {socialPosts.length === 0
-                                    ? "Publish content to social media to track performance"
-                                    : "Try adjusting your filters"}
-                                </p>
-                              </div>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        filteredPosts.map((post) => (
-                          <TableRow key={post.id} className="border-gray-100">
-                            <TableCell className="max-w-md">
-                              <p className="text-xs text-gray-900 line-clamp-2">
-                                {post.content}
+                    ) : (
+                      filteredShares.map((share) => {
+                        const shareStatusText = !share.is_active
+                          ? "inactive"
+                          : share.expires_at &&
+                              new Date(share.expires_at) < new Date()
+                            ? "expired"
+                            : "active";
+
+                        return (
+                          <TableRow key={share.id} className="border-gray-100">
+                            <TableCell className="max-w-[150px]">
+                              <p className="text-[11px] text-gray-900 font-mono truncate">
+                                {share.id.split("-")[0]}...
                               </p>
                             </TableCell>
                             <TableCell>
-                              <div className="flex items-center gap-1.5">
-                                {getPlatformIcon(post.platform)}
-                                <span className="text-xs text-gray-900 capitalize">
-                                  {post.platform}
-                                </span>
-                              </div>
+                              <Badge
+                                variant="outline"
+                                className={`text-[10px] px-1.5 py-0 ${
+                                  share.share_type === "testimonial"
+                                    ? "bg-blue-50 text-blue-700 border-blue-200"
+                                    : "bg-purple-50 text-purple-700 border-purple-200"
+                                }`}
+                              >
+                                {share.share_type === "testimonial"
+                                  ? "Testimonial"
+                                  : "Artifact"}
+                              </Badge>
                             </TableCell>
-                            <TableCell>{getStatusBadge(post.status)}</TableCell>
+                            <TableCell>
+                              {getStatusBadge(shareStatusText)}
+                            </TableCell>
                             <TableCell className="text-right">
                               <span className="text-xs font-medium text-gray-900">
-                                {post.views_count.toLocaleString()}
+                                {(
+                                  share.metrics?.view_count || 0
+                                ).toLocaleString()}
                               </span>
                             </TableCell>
                             <TableCell className="text-right">
                               <span className="text-xs font-medium text-gray-900">
-                                {post.likes_count.toLocaleString()}
+                                {(
+                                  share.metrics?.unique_visitor_count || 0
+                                ).toLocaleString()}
                               </span>
                             </TableCell>
                             <TableCell className="text-right">
                               <span className="text-xs font-medium text-gray-900">
-                                {post.comments_count.toLocaleString()}
+                                {(
+                                  (share.metrics?.play_count || 0) +
+                                  (share.metrics?.download_count || 0)
+                                ).toLocaleString()}
                               </span>
                             </TableCell>
                             <TableCell>
-                              <div className="text-xs text-gray-900">
-                                {post.published_at
-                                  ? formatDate(post.published_at)
-                                  : post.scheduled_at
-                                    ? `Scheduled ${formatDate(post.scheduled_at)}`
-                                    : formatDate(post.created_at)}
+                              <div className="space-y-0.5">
+                                <div className="text-xs text-gray-900">
+                                  {formatDate(share.created_at)}
+                                </div>
+                                <div className="text-[10px] text-gray-500">
+                                  {formatTime(share.created_at)}
+                                </div>
                               </div>
                             </TableCell>
                             <TableCell>
-                              {post.platform_url && (
+                              <div className="flex gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => copyShareLink(share.id)}
+                                  className="h-6 w-6 p-0"
+                                  title="Copy link"
+                                >
+                                  <Copy className="h-3 w-3" />
+                                </Button>
                                 <Button
                                   size="sm"
                                   variant="ghost"
                                   asChild
                                   className="h-6 w-6 p-0"
-                                  title="View post"
+                                  title="Open"
                                 >
-                                  <a href={post.platform_url} target="_blank" rel="noopener noreferrer">
+                                  <a
+                                    href={`/share/${share.id}/view`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
                                     <ExternalLink className="h-3 w-3" />
                                   </a>
                                 </Button>
-                              )}
+                              </div>
                             </TableCell>
                           </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Social Posts Tab */}
+        <TabsContent value="social" className="space-y-4 mt-5">
+          {/* Social Metrics */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            <Card className="border-gray-200">
+              <CardContent className="p-3.5">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className="p-1.5 bg-blue-50 rounded-lg">
+                    <Share2 className="h-3.5 w-3.5 text-blue-600" />
+                  </div>
+                  <span className="text-[10px] font-medium text-gray-600 uppercase tracking-wide">
+                    Total Posts
+                  </span>
+                </div>
+                <div className="text-xl font-semibold text-gray-900">
+                  {socialMetrics.totalPosts}
+                </div>
+                <div className="text-[10px] text-gray-500 mt-0.5">
+                  {socialMetrics.publishedPosts} published
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
-        </Tabs>
+
+            <Card className="border-gray-200">
+              <CardContent className="p-3.5">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className="p-1.5 bg-emerald-50 rounded-lg">
+                    <Eye className="h-3.5 w-3.5 text-emerald-600" />
+                  </div>
+                  <span className="text-[10px] font-medium text-gray-600 uppercase tracking-wide">
+                    Total Views
+                  </span>
+                </div>
+                <div className="text-xl font-semibold text-gray-900">
+                  {socialMetrics.totalViews.toLocaleString()}
+                </div>
+                <div className="text-[10px] text-gray-500 mt-0.5">
+                  Across all posts
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-gray-200">
+              <CardContent className="p-3.5">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className="p-1.5 bg-purple-50 rounded-lg">
+                    <Heart className="h-3.5 w-3.5 text-purple-600" />
+                  </div>
+                  <span className="text-[10px] font-medium text-gray-600 uppercase tracking-wide">
+                    Engagement
+                  </span>
+                </div>
+                <div className="text-xl font-semibold text-gray-900">
+                  {socialMetrics.totalEngagement.toLocaleString()}
+                </div>
+                <div className="text-[10px] text-gray-500 mt-0.5">
+                  Likes + Comments
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-gray-200">
+              <CardContent className="p-3.5">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className="p-1.5 bg-amber-50 rounded-lg">
+                    <BarChart3 className="h-3.5 w-3.5 text-amber-600" />
+                  </div>
+                  <span className="text-[10px] font-medium text-gray-600 uppercase tracking-wide">
+                    Avg per Post
+                  </span>
+                </div>
+                <div className="text-xl font-semibold text-gray-900">
+                  {socialMetrics.totalPosts > 0
+                    ? Math.round(
+                        socialMetrics.totalEngagement / socialMetrics.totalPosts
+                      )
+                    : 0}
+                </div>
+                <div className="text-[10px] text-gray-500 mt-0.5">
+                  Average engagement
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Social Filters */}
+          <Card className="border-gray-200">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold text-gray-900">
+                Filters
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <Select
+                  value={socialPlatform}
+                  onValueChange={setSocialPlatform}
+                >
+                  <SelectTrigger className="h-8 text-xs border-gray-200">
+                    <SelectValue placeholder="All Platforms" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all" className="text-xs">
+                      All Platforms
+                    </SelectItem>
+                    <SelectItem value="linkedin" className="text-xs">
+                      LinkedIn
+                    </SelectItem>
+                    <SelectItem value="twitter" className="text-xs">
+                      Twitter
+                    </SelectItem>
+                    <SelectItem value="facebook" className="text-xs">
+                      Facebook
+                    </SelectItem>
+                    <SelectItem value="instagram" className="text-xs">
+                      Instagram
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={socialStatus} onValueChange={setSocialStatus}>
+                  <SelectTrigger className="h-8 text-xs border-gray-200">
+                    <SelectValue placeholder="All Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all" className="text-xs">
+                      All Status
+                    </SelectItem>
+                    <SelectItem value="published" className="text-xs">
+                      Published
+                    </SelectItem>
+                    <SelectItem value="scheduled" className="text-xs">
+                      Scheduled
+                    </SelectItem>
+                    <SelectItem value="draft" className="text-xs">
+                      Draft
+                    </SelectItem>
+                    <SelectItem value="failed" className="text-xs">
+                      Failed
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <div className="md:col-span-2">
+                  <div className="relative">
+                    <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-gray-400" />
+                    <Input
+                      placeholder="Search posts..."
+                      value={socialSearch}
+                      onChange={(e) => setSocialSearch(e.target.value)}
+                      className="pl-7 h-8 text-xs border-gray-200"
+                    />
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Social Posts Table */}
+          <Card className="border-gray-200">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold text-gray-900">
+                Social Posts ({filteredPosts.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-gray-200">
+                      <TableHead className="text-[11px] text-gray-600 font-semibold">
+                        Content
+                      </TableHead>
+                      <TableHead className="text-[11px] text-gray-600 font-semibold">
+                        Platform
+                      </TableHead>
+                      <TableHead className="text-[11px] text-gray-600 font-semibold">
+                        Status
+                      </TableHead>
+                      <TableHead className="text-[11px] text-gray-600 font-semibold text-right">
+                        Views
+                      </TableHead>
+                      <TableHead className="text-[11px] text-gray-600 font-semibold text-right">
+                        Likes
+                      </TableHead>
+                      <TableHead className="text-[11px] text-gray-600 font-semibold text-right">
+                        Comments
+                      </TableHead>
+                      <TableHead className="text-[11px] text-gray-600 font-semibold">
+                        Date
+                      </TableHead>
+                      <TableHead className="text-[11px] text-gray-600 font-semibold w-12"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {showLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-12">
+                          <div className="flex flex-col items-center gap-2">
+                            <RefreshCw className="h-5 w-5 text-gray-400 animate-spin" />
+                            <span className="text-xs text-gray-500">
+                              Loading...
+                            </span>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : filteredPosts.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-12">
+                          <div className="flex flex-col items-center gap-3">
+                            <div className="p-3 bg-gray-50 rounded-full">
+                              <Share2 className="h-6 w-6 text-gray-400" />
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-sm font-medium text-gray-900">
+                                {socialPosts.length === 0
+                                  ? "No social posts yet"
+                                  : "No posts match filters"}
+                              </p>
+                              <p className="text-xs text-gray-500 max-w-sm">
+                                {socialPosts.length === 0
+                                  ? "Publish content to social media to track performance"
+                                  : "Try adjusting your filters"}
+                              </p>
+                            </div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredPosts.map((post) => (
+                        <TableRow key={post.id} className="border-gray-100">
+                          <TableCell className="max-w-md">
+                            <p className="text-xs text-gray-900 line-clamp-2">
+                              {post.content}
+                            </p>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1.5">
+                              {getPlatformIcon(post.platform)}
+                              <span className="text-xs text-gray-900 capitalize">
+                                {post.platform}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>{getStatusBadge(post.status)}</TableCell>
+                          <TableCell className="text-right">
+                            <span className="text-xs font-medium text-gray-900">
+                              {post.views_count.toLocaleString()}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <span className="text-xs font-medium text-gray-900">
+                              {post.likes_count.toLocaleString()}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <span className="text-xs font-medium text-gray-900">
+                              {post.comments_count.toLocaleString()}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-xs text-gray-900">
+                              {post.published_at
+                                ? formatDate(post.published_at)
+                                : post.scheduled_at
+                                  ? `Scheduled ${formatDate(post.scheduled_at)}`
+                                  : formatDate(post.created_at)}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {post.platform_url && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                asChild
+                                className="h-6 w-6 p-0"
+                                title="View post"
+                              >
+                                <a
+                                  href={post.platform_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  <ExternalLink className="h-3 w-3" />
+                                </a>
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 });

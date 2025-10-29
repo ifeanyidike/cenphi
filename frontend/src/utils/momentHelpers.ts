@@ -35,14 +35,16 @@ export function parseMomentsFromArtifacts(
       // Determine highlight type from parent level only
       // If highlight_type exists, use it (normalize "highlight" to "general")
       // If it doesn't exist, default to "general"
-      let rawType = data.highlight_type || "general";
+      const rawType = data.highlight_type || "general";
 
       // Normalize 'highlight' to 'general'
-      const highlightType: HighlightType = rawType === "highlight" ? "general" : rawType;
+      const highlightType: HighlightType =
+        rawType === "highlight" ? "general" : rawType;
 
       // If filterType specified, skip this entire artifact if type doesn't match
       if (filterType) {
-        const normalizedFilterType = filterType === "highlight" ? "general" : filterType;
+        const normalizedFilterType =
+          filterType === "highlight" ? "general" : filterType;
         if (highlightType !== normalizedFilterType) continue;
       }
 
@@ -347,14 +349,22 @@ export function convertClipsToMoments(clips: any[]): HighlightMoment[] {
       end_time: clip.end_time || clip.metadata?.end_time || 0,
       duration: durationMs,
       text: clip.text_content || clip.text || clip.metadata?.transcript || "",
-      theme: clip.theme || clip.title || clip.metadata?.theme || clip.metadata?.title || `Clip ${clip.id}`,
-      importance_score: clip.importance_score || clip.metadata?.importance_score,
-      engagement_score: clip.engagement_score || clip.metadata?.engagement_score || 0.8,
+      theme:
+        clip.theme ||
+        clip.title ||
+        clip.metadata?.theme ||
+        clip.metadata?.title ||
+        `Clip ${clip.id}`,
+      importance_score:
+        clip.importance_score || clip.metadata?.importance_score,
+      engagement_score:
+        clip.engagement_score || clip.metadata?.engagement_score || 0.8,
       keywords: clip.keywords || clip.metadata?.keywords || [],
       thumbnail_url: clip.thumbnail_url || clip.metadata?.thumbnail_url,
       // CRITICAL: Preserve clip artifact metadata for backend
       clip_artifact_id: clip.id || clip.artifact_id,
-      storage_path: clip.storage_url || clip.url || clip.storage_path || clip.media_url,
+      storage_path:
+        clip.storage_url || clip.url || clip.storage_path || clip.media_url,
       preview_url: clip.preview_url,
     };
   });
@@ -409,12 +419,17 @@ export function getAvailableHighlightTypes(
     const data = artifact.data;
 
     // Check for highlights array
-    if (data.highlights && Array.isArray(data.highlights) && data.highlights.length > 0) {
+    if (
+      data.highlights &&
+      Array.isArray(data.highlights) &&
+      data.highlights.length > 0
+    ) {
       // Check parent-level highlight_type only
       // If it exists, use it (normalize "highlight" to "general")
       // If it doesn't exist, default to "general"
       if (data.highlight_type) {
-        const type = data.highlight_type === "highlight" ? "general" : data.highlight_type;
+        const type =
+          data.highlight_type === "highlight" ? "general" : data.highlight_type;
         types.add(type);
       } else {
         // No highlight_type means it's general/highlight

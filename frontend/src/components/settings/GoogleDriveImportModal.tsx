@@ -19,6 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { workspaceHub } from "@/repo/workspace_hub";
+import { observer } from "mobx-react-lite";
 
 interface GoogleDriveFile {
   id: string;
@@ -565,4 +566,4 @@ const GoogleDriveImportModal: React.FC<GoogleDriveImportModalProps> = ({
   );
 };
 
-export default GoogleDriveImportModal;
+export default observer(GoogleDriveImportModal);

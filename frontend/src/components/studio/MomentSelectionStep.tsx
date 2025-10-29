@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import VideoSegmentPreview from "./VideoSegmentPreview";
 import { HighlightMoment, TestimonialWithMoments } from "@/types/ai-service";
+import { observer } from "mobx-react-lite";
 
 interface MomentSelectionStepProps {
   testimonials: TestimonialWithMoments[];
@@ -336,4 +337,4 @@ const MomentSelectionStep: React.FC<MomentSelectionStepProps> = ({
   );
 };
 
-export default MomentSelectionStep;
+export default observer(MomentSelectionStep);

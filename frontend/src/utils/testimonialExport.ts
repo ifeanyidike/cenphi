@@ -73,15 +73,12 @@ export const exportToCSV = (
     if (options.includeMetrics) {
       row.push(
         t.conversion_count?.toString() || "0",
-        t.view_count?.toString() || "0"
+        t.views_count?.toString() || "0"
       );
     }
 
     if (options.includeTranscript) {
-      row.push(
-        `"${(t.transcript || "").replace(/"/g, '""')}"`,
-        t.duration?.toString() || ""
-      );
+      row.push(`"${(t.content || "").replace(/"/g, '""')}"`);
     }
 
     row.push(t.media_url || "");
@@ -136,15 +133,14 @@ export const exportToJSON = (
       Object.assign(base, {
         metrics: {
           conversions: t.conversion_count || 0,
-          views: t.view_count || 0,
+          views: t.views_count || 0,
         },
       });
     }
 
-    if (options.includeTranscript && t.transcript) {
+    if (options.includeTranscript && t.content) {
       Object.assign(base, {
-        transcript: t.transcript,
-        duration: t.duration,
+        transcript: t.content,
       });
     }
 
@@ -205,7 +201,11 @@ export const exportToMarkdown = (
     // Sentiment
     if (options.includeSentiment && t.sentiment_score) {
       const emoji =
-        t.sentiment_score >= 0.7 ? "😊" : t.sentiment_score >= 0.4 ? "😐" : "😞";
+        t.sentiment_score >= 0.7
+          ? "😊"
+          : t.sentiment_score >= 0.4
+            ? "😐"
+            : "😞";
       lines.push(
         `**Sentiment:** ${emoji} ${(t.sentiment_score * 100).toFixed(0)}%`
       );
@@ -219,10 +219,10 @@ export const exportToMarkdown = (
     lines.push("");
 
     // Transcript for videos
-    if (options.includeTranscript && t.transcript && t.type === "video") {
+    if (options.includeTranscript && t.content && t.type === "video") {
       lines.push("### Transcript");
       lines.push("");
-      lines.push(t.transcript);
+      lines.push(t.content);
       lines.push("");
     }
 
@@ -231,7 +231,7 @@ export const exportToMarkdown = (
       lines.push("### Performance");
       lines.push("");
       lines.push(`- **Conversions:** ${t.conversion_count || 0}`);
-      lines.push(`- **Views:** ${t.view_count || 0}`);
+      lines.push(`- **Views:** ${t.views_count || 0}`);
       lines.push("");
     }
 
@@ -389,7 +389,7 @@ export const exportToHTML = (
 
         ${testimonials
           .map(
-            (t, index) => `
+            (t) => `
         <div class="testimonial-card">
             <div class="author-info">
                 <div class="author-details">
@@ -422,11 +422,11 @@ export const exportToHTML = (
             </div>
 
             ${
-              options.includeTranscript && t.transcript && t.type === "video"
+              options.includeTranscript && t.content && t.type === "video"
                 ? `
             <div class="transcript">
                 <div class="transcript-label">Transcript</div>
-                ${t.transcript}
+                ${t.content}
             </div>
             `
                 : ""
@@ -437,7 +437,7 @@ export const exportToHTML = (
                 ? `
             <div class="metrics">
                 <div class="metric"><strong>${t.conversion_count || 0}</strong> Conversions</div>
-                <div class="metric"><strong>${t.view_count || 0}</strong> Views</div>
+                <div class="metric"><strong>${t.views_count || 0}</strong> Views</div>
                 <div class="metric"><strong>${new Date(t.created_at).toLocaleDateString()}</strong> Created</div>
             </div>
             `

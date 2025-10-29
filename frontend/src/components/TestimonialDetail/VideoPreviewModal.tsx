@@ -5,14 +5,12 @@ import {
   Pause,
   Volume2,
   VolumeX,
-  Maximize,
   Minimize,
   Download,
   Share2,
   X,
   SkipBack,
   SkipForward,
-  Settings,
   Sparkles,
   Maximize2,
 } from "lucide-react";
@@ -97,7 +95,9 @@ const VideoPreviewModal: React.FC<VideoPreviewModalProps> = ({
 
       // Update buffered
       if (videoRef.current.buffered.length > 0) {
-        const bufferedEnd = videoRef.current.buffered.end(videoRef.current.buffered.length - 1);
+        const bufferedEnd = videoRef.current.buffered.end(
+          videoRef.current.buffered.length - 1
+        );
         setBuffered((bufferedEnd / videoRef.current.duration) * 100);
       }
     }
@@ -120,7 +120,10 @@ const VideoPreviewModal: React.FC<VideoPreviewModalProps> = ({
 
   const skip = (seconds: number) => {
     if (videoRef.current) {
-      videoRef.current.currentTime = Math.max(0, Math.min(duration, currentTime + seconds));
+      videoRef.current.currentTime = Math.max(
+        0,
+        Math.min(duration, currentTime + seconds)
+      );
     }
   };
 
@@ -174,7 +177,7 @@ const VideoPreviewModal: React.FC<VideoPreviewModalProps> = ({
   const handleDownload = () => {
     const link = document.createElement("a");
     link.href = videoUrl;
-    link.download = `${title.replace(/\s+/g, '-')}.mp4`;
+    link.download = `${title.replace(/\s+/g, "-")}.mp4`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -225,7 +228,9 @@ const VideoPreviewModal: React.FC<VideoPreviewModalProps> = ({
                   <div className="backdrop-blur-2xl bg-gradient-to-b from-black/80 to-transparent rounded-2xl border border-white/10 p-4 shadow-2xl">
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-lg font-bold text-white mb-1 truncate">{title}</h3>
+                        <h3 className="text-lg font-bold text-white mb-1 truncate">
+                          {title}
+                        </h3>
                         <div className="flex items-center gap-3 flex-wrap">
                           {metadata?.category && (
                             <Badge className="bg-white/10 backdrop-blur-xl border-white/20 text-white text-[9px] px-2 py-0.5">
@@ -238,10 +243,14 @@ const VideoPreviewModal: React.FC<VideoPreviewModalProps> = ({
                             </Badge>
                           )}
                           {metadata?.format && (
-                            <span className="text-[10px] text-white/60">{metadata.format.toUpperCase()}</span>
+                            <span className="text-[10px] text-white/60">
+                              {metadata.format.toUpperCase()}
+                            </span>
                           )}
                           {metadata?.size && (
-                            <span className="text-[10px] text-white/60">{metadata.size}</span>
+                            <span className="text-[10px] text-white/60">
+                              {metadata.size}
+                            </span>
                           )}
                         </div>
                       </div>
@@ -260,7 +269,9 @@ const VideoPreviewModal: React.FC<VideoPreviewModalProps> = ({
             </AnimatePresence>
 
             {/* Video Container */}
-            <div className={`relative ${isFullscreen ? "w-full h-full" : "w-full"} flex items-center justify-center bg-black rounded-2xl overflow-hidden`}>
+            <div
+              className={`relative ${isFullscreen ? "w-full h-full" : "w-full"} flex items-center justify-center bg-black rounded-2xl overflow-hidden`}
+            >
               <video
                 ref={videoRef}
                 src={videoUrl}
@@ -288,7 +299,10 @@ const VideoPreviewModal: React.FC<VideoPreviewModalProps> = ({
                     <div className="relative">
                       <div className="absolute inset-0 bg-white rounded-full blur-2xl opacity-50 group-hover:opacity-75 transition-opacity" />
                       <div className="relative w-24 h-24 rounded-full bg-white/95 backdrop-blur-xl flex items-center justify-center shadow-2xl border border-white/20 group-hover:scale-110 transition-transform">
-                        <Play className="h-10 w-10 text-slate-900 ml-1.5" fill="currentColor" />
+                        <Play
+                          className="h-10 w-10 text-slate-900 ml-1.5"
+                          fill="currentColor"
+                        />
                       </div>
                     </div>
                   </motion.button>
@@ -333,7 +347,10 @@ const VideoPreviewModal: React.FC<VideoPreviewModalProps> = ({
                         {/* Thumb */}
                         <div
                           className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                          style={{ left: `${progress}%`, transform: 'translate(-50%, -50%)' }}
+                          style={{
+                            left: `${progress}%`,
+                            transform: "translate(-50%, -50%)",
+                          }}
                         />
                       </div>
                     </div>
@@ -353,7 +370,10 @@ const VideoPreviewModal: React.FC<VideoPreviewModalProps> = ({
                             {isPlaying ? (
                               <Pause className="h-4 w-4" fill="currentColor" />
                             ) : (
-                              <Play className="h-4 w-4 ml-0.5" fill="currentColor" />
+                              <Play
+                                className="h-4 w-4 ml-0.5"
+                                fill="currentColor"
+                              />
                             )}
                           </Button>
 
@@ -379,7 +399,9 @@ const VideoPreviewModal: React.FC<VideoPreviewModalProps> = ({
                           <div className="flex items-center gap-1.5 text-[11px] font-medium text-white/90 ml-2">
                             <span>{formatTime(currentTime)}</span>
                             <span className="text-white/40">/</span>
-                            <span className="text-white/60">{formatTime(duration)}</span>
+                            <span className="text-white/60">
+                              {formatTime(duration)}
+                            </span>
                           </div>
 
                           {/* Volume */}
@@ -402,7 +424,9 @@ const VideoPreviewModal: React.FC<VideoPreviewModalProps> = ({
                               max="1"
                               step="0.01"
                               value={isMuted ? 0 : volume}
-                              onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
+                              onChange={(e) =>
+                                handleVolumeChange(parseFloat(e.target.value))
+                              }
                               className="w-20 h-1 bg-white/20 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-lg"
                             />
                           </div>

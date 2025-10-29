@@ -4,6 +4,7 @@ import { FileText, Edit, Save, Plus, Loader2, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { workspaceHub } from "@/repo/workspace_hub";
+import { observer } from "mobx-react-lite";
 
 interface EmailTemplate {
   id: string;
@@ -382,4 +383,4 @@ const EmailTemplatesCard: React.FC = () => {
   );
 };
 
-export default EmailTemplatesCard;
+export default observer(EmailTemplatesCard);

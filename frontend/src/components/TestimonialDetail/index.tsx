@@ -36,12 +36,17 @@ import { cn } from "@/lib/utils";
 import EditableTextTestimonial from "./EditableTextTestimonial";
 import FeatureHint from "./FeatureHint";
 import VideoPreviewModal from "./VideoPreviewModal";
-import ProcessingLineageModal from "./ServiceLineageModal";
 import { ServiceType } from "@/types/ai-service";
 import { HighlightType } from "@/utils/highlights";
 import { shouldShowInContext } from "@/utils/ContentRouter";
 import { authStore } from "@/stores/authStore";
 import { studioAPI } from "@/services/studioAPI";
+import ShareDrawer from "@/components/ai-generated-content/share-drawer/ShareDrawer";
+import {
+  EnhancedArtifact,
+  CONTENT_CATEGORIES,
+} from "@/components/ai-generated-content/ContentCategorization";
+
 interface SentimentData {
   label: string;
   emotions: string[];
@@ -103,9 +108,6 @@ const TestimonialDetail = observer(() => {
   // const [selectedHighlight, setSelectedHighlight] = useState<any>(null);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [showTranscript, setShowTranscript] = useState(false);
-  const [editingContent, setEditingContent] = useState<{
-    [key: string]: string;
-  }>({});
   const [, setIsFullscreen] = useState(false);
   const [selectedClips, setSelectedClips] = useState<string[]>([]);
   const [clipSelectionMode, setClipSelectionMode] = useState(false);
@@ -115,11 +117,14 @@ const TestimonialDetail = observer(() => {
     title: string;
     metadata?: any;
   }>({ open: false, videoUrl: "", title: "" });
-  const [lineageModal, setLineageModal] = useState<{
-    open: boolean;
-    sourceContent: any;
-  }>({ open: false, sourceContent: null });
   const [generatingSentiment, setGeneratingSentiment] = useState(false);
+  const [sharingTestimonial, setSharingTestimonial] = useState(false);
+  const [testimonialAsArtifact, setTestimonialAsArtifact] =
+    useState<EnhancedArtifact | null>(null);
+
+  // Clip sharing state
+  const [sharingClips, setSharingClips] = useState(false);
+  const [clipsToShare, setClipsToShare] = useState<EnhancedArtifact[]>([]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const fullscreenRef = useRef<HTMLDivElement>(null);
@@ -146,27 +151,6 @@ const TestimonialDetail = observer(() => {
   const isLoading = workspaceHub.testimonialManager.isLoading;
 
   const isVideo = testimonial?.type === "video";
-
-  const handleVideoPreview = (
-    videoUrl: string,
-    title: string,
-    metadata?: any
-  ) => {
-    setVideoPreviewModal({ open: true, videoUrl, title, metadata });
-  };
-
-  const handleViewLineage = (content: any) => {
-    setLineageModal({
-      open: true,
-      sourceContent: {
-        id: content.id,
-        type: "clip",
-        title: content.theme || content.title,
-        url: content.url,
-        metadata: content.metadata,
-      },
-    });
-  };
 
   // Video control handlers
   const handlePlayPause = () => {
@@ -257,19 +241,6 @@ const TestimonialDetail = observer(() => {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const startEditing = (contentId: string, currentContent: string) => {
-    setEditingContent((prev) => ({ ...prev, [contentId]: currentContent }));
-  };
-
-  const saveContent = async (contentId: string) => {
-    // Update local state - artifact changes are persisted through artifact manager
-    setEditingContent((prev) => {
-      const newState = { ...prev };
-      delete newState[contentId];
-      return newState;
-    });
-  };
-
   const saveTestimonialContent = async (newContent: string) => {
     try {
       if (!testimonialId) return;
@@ -327,14 +298,6 @@ const TestimonialDetail = observer(() => {
       console.error("Failed to save author data:", error);
       throw error;
     }
-  };
-
-  const cancelEditing = (contentId: string) => {
-    setEditingContent((prev) => {
-      const newState = { ...prev };
-      delete newState[contentId];
-      return newState;
-    });
   };
 
   const openStudio = (
@@ -399,7 +362,7 @@ const TestimonialDetail = observer(() => {
       (a) => a.processing_type === "highlight_extraction"
     );
 
-    let artifact =
+    const artifact =
       highlights.find((h) => {
         const highlightType = h.data?.highlight_type;
         const subHighlights = h.data?.highlights;
@@ -783,47 +746,112 @@ const TestimonialDetail = observer(() => {
     );
   };
 
-  // NEW HANDLERS FOR ARTIFACT PROCESSING
-  const handleProcessClip = async (clip: any, serviceType: ServiceType) => {
-    // Navigate to appropriate Studio based on service type
-    if (!testimonialId) return;
+  // Handle sharing testimonial
+  const handleShareTestimonial = () => {
+    if (!testimonial) return;
 
-    if (serviceType === "platform_optimizer") {
-      navigate(
-        `/studio/optimize?testimonialId=${testimonialId}&clipId=${clip.artifactId}&sourceType=clip`
-      );
-    } else if (serviceType === "story_mode") {
-      navigate(
-        `/studio/story?testimonialId=${testimonialId}&clipIds=${clip.artifactId}&context=selected-clips`
-      );
-    } else {
-      console.warn(
-        `Unhandled service type for clip processing: ${serviceType}`
-      );
-    }
+    // Create a virtual EnhancedArtifact from the testimonial for ShareDrawer
+    const virtualArtifact: EnhancedArtifact = {
+      ...testimonial,
+      id: `testimonial-${testimonial.id}`, // Prefix to distinguish from real artifacts
+      testimonial_id: testimonial.id,
+      asset_url: testimonial.media_url || "",
+      content_type: testimonial.type === "video" ? "video/mp4" : "text/plain",
+      category:
+        CONTENT_CATEGORIES.find((c) => c.id === "raw_testimonial") ||
+        CONTENT_CATEGORIES[0],
+      lineage: {
+        level: 0,
+        parent_id: null,
+        root_testimonial_id: testimonial.id,
+        transformation_path: [],
+      },
+      sourceTestimonials: [testimonial],
+      derivativeCount: 0,
+      childArtifacts: [],
+      processing_type: "raw_testimonial",
+      result_category: "raw_testimonial",
+      data: testimonial,
+      created_at: testimonial.created_at,
+      updated_at: testimonial.updated_at || testimonial.created_at,
+    } as unknown as EnhancedArtifact;
+
+    setTestimonialAsArtifact(virtualArtifact);
+    setSharingTestimonial(true);
   };
 
-  const handleProcessArtifact = async (
-    artifact: any,
-    serviceType: ServiceType,
-    from?: string
-  ) => {
-    // Navigate to appropriate Studio based on service type and artifact
-    if (!testimonialId) return;
+  // Handle sharing single clip
+  const handleShareClip = (clip: any, parentArtifact: any) => {
+    if (!testimonial) return;
 
-    if (serviceType === "platform_optimizer") {
-      navigate(
-        `/studio/optimize?testimonialId=${testimonialId}&artifactId=${artifact.id}&sourceType=artifact&from=${from || "artifacts"}`
-      );
-    } else if (serviceType === "story_mode") {
-      navigate(
-        `/studio/story?testimonialId=${testimonialId}&artifactId=${artifact.id}&context=artifact`
-      );
-    } else {
-      console.warn(
-        `Unhandled service type for artifact processing: ${serviceType}`
-      );
-    }
+    // Create EnhancedArtifact from clip
+    const clipArtifact: EnhancedArtifact = {
+      id: parentArtifact.id,
+      testimonial_id: testimonial.id,
+      asset_url: clip.url,
+      content_type: "video/mp4",
+      category:
+        CONTENT_CATEGORIES.find((c) => c.id === "video_clips") ||
+        CONTENT_CATEGORIES[1],
+      lineage: {
+        level: 1,
+        parent_id: testimonial.id,
+        root_testimonial_id: testimonial.id,
+        transformation_path: ["clipping"],
+      },
+      sourceTestimonials: [testimonial],
+      derivativeCount: 0,
+      childArtifacts: [],
+      processing_type: "clipping",
+      result_category: "video_clip",
+      data: clip,
+      created_at: parentArtifact.created_at,
+      updated_at: parentArtifact.updated_at || parentArtifact.created_at,
+      workspace_id: parentArtifact.workspace_id,
+    } as unknown as EnhancedArtifact;
+
+    setClipsToShare([clipArtifact]);
+    setSharingClips(true);
+  };
+
+  // Handle sharing multiple clips (carousel mode)
+  const handleShareMultipleClips = (clips: any[], parentArtifacts: any[]) => {
+    if (!testimonial) return;
+
+    // Create EnhancedArtifact for each clip
+    const clipArtifacts = clips.map((clip) => {
+      const parentArtifact =
+        parentArtifacts.find((a) => a.id === clip.artifactId) ||
+        parentArtifacts[0];
+
+      return {
+        id: parentArtifact.id,
+        testimonial_id: testimonial.id,
+        asset_url: clip.url,
+        content_type: "video/mp4",
+        category:
+          CONTENT_CATEGORIES.find((c) => c.id === "video_clips") ||
+          CONTENT_CATEGORIES[1],
+        lineage: {
+          level: 1,
+          parent_id: testimonial.id,
+          root_testimonial_id: testimonial.id,
+          transformation_path: ["clipping"],
+        },
+        sourceTestimonials: [testimonial],
+        derivativeCount: 0,
+        childArtifacts: [],
+        processing_type: "clipping",
+        result_category: "video_clip",
+        data: clip,
+        created_at: parentArtifact.created_at,
+        updated_at: parentArtifact.updated_at || parentArtifact.created_at,
+        workspace_id: parentArtifact.workspace_id,
+      } as unknown as EnhancedArtifact;
+    });
+
+    setClipsToShare(clipArtifacts);
+    setSharingClips(true);
   };
 
   return (
@@ -893,14 +921,18 @@ const TestimonialDetail = observer(() => {
                 onClick={() =>
                   navigate(`/studio?testimonialId=${testimonial.id}`)
                 }
-                className="bg-blue-600 hover:bg-blue-700 h-9 px-4"
+                className="bg-blue-500 hover:bg-blue-600 h-8 px-3"
               >
-                <Sparkles className="h-4 w-4 mr-2" />
-                <span className="text-sm font-medium">Studio</span>
+                <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                <span className="text-xs font-medium">Studio</span>
               </Button>
-              <Button variant="outline" className="h-9 px-4 border-slate-300">
-                <Share2 className="h-4 w-4 mr-2" />
-                <span className="text-sm">Share</span>
+              <Button
+                onClick={handleShareTestimonial}
+                variant="outline"
+                className="h-8 px-3 border-slate-300 text-xs"
+              >
+                <Share2 className="h-3.5 w-3.5 mr-1.5" />
+                <span>Share</span>
               </Button>
             </div>
           </div>
@@ -1284,26 +1316,13 @@ const TestimonialDetail = observer(() => {
                             onDownload: downloadVideo,
                             onCopyToClipboard: copyToClipboard,
                             copiedItems,
-                            editingContent,
-                            onStartEditing: startEditing,
-                            onSaveContent: (id) => saveContent(id),
-                            onCancelEditing: cancelEditing,
-                            onUpdateEditingContent: (id, content) =>
-                              setEditingContent((prev) => ({
-                                ...prev,
-                                [id]: content,
-                              })),
-                            // onProceedToAIStudio: () => {},
-                            // testimonialId: testimonialId || "",
-                            onProcessClip: handleProcessClip,
-                            onProcessArtifact: handleProcessArtifact,
                             onProcessMultipleClips: handleProcessMultipleClips,
                             selectedClips: selectedClips,
                             onClipSelectionChange: handleClipSelectionChange,
                             selectionMode: clipSelectionMode,
                             onSelectionModeChange: handleSelectionModeChange,
-                            onVideoPreview: handleVideoPreview,
-                            onViewLineage: handleViewLineage,
+                            onShareClip: handleShareClip,
+                            onShareMultipleClips: handleShareMultipleClips,
                           })}
                         </TabsContent>
                       </>
@@ -1328,13 +1347,34 @@ const TestimonialDetail = observer(() => {
         metadata={videoPreviewModal.metadata}
       />
 
-      <ProcessingLineageModal
-        isOpen={lineageModal.open}
-        onClose={() => setLineageModal({ open: false, sourceContent: null })}
-        sourceContent={lineageModal.sourceContent}
-        onVideoPreview={handleVideoPreview}
-        onDownload={downloadVideo}
-      />
+      {/* Share Drawer for Testimonial */}
+      {testimonialAsArtifact && (
+        <ShareDrawer
+          artifact={testimonialAsArtifact}
+          isOpen={sharingTestimonial}
+          onOpenChange={(open) => {
+            setSharingTestimonial(open);
+            if (!open) {
+              setTestimonialAsArtifact(null);
+            }
+          }}
+        />
+      )}
+
+      {/* Share Drawer for Clips */}
+      {clipsToShare.length > 0 && (
+        <ShareDrawer
+          artifact={clipsToShare[0]}
+          artifacts={clipsToShare.length > 1 ? clipsToShare : undefined}
+          isOpen={sharingClips}
+          onOpenChange={(open) => {
+            setSharingClips(open);
+            if (!open) {
+              setClipsToShare([]);
+            }
+          }}
+        />
+      )}
     </div>
   );
 });

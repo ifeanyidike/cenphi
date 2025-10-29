@@ -218,7 +218,7 @@ const PublicShareView = observer(() => {
     let title = "Customer Testimonial | Cenphi";
     let description =
       "See what our customers are saying about their experience";
-    let imageUrl = `${appUrl}/og-default.jpg`; // Default OG image
+    const imageUrl = `${appUrl}/og-default.jpg`; // Default OG image
     let videoUrl = "";
 
     // Customize based on content type

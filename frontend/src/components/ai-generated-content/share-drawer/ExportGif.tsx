@@ -23,6 +23,7 @@ import { authStore } from "@/stores/authStore";
 import { workspaceHub } from "@/repo/workspace_hub";
 import { EnhancedArtifact } from "../ContentCategorization";
 import { cn } from "@/lib/utils";
+import { observer } from "mobx-react-lite";
 
 type Props = {
   setError: React.Dispatch<React.SetStateAction<string | null>>;
@@ -334,4 +335,4 @@ const ExportGif = ({ setError, artifact }: Props) => {
   );
 };
 
-export default ExportGif;
+export default observer(ExportGif);

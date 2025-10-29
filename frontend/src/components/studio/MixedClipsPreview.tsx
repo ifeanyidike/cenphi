@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { studioAPI } from "@/services/studioAPI";
 import { workspaceHub } from "@/repo/workspace_hub";
+import { observer } from "mobx-react-lite";
 
 interface Clip {
   id: string;
@@ -37,7 +38,7 @@ interface MixedClipsPreviewProps {
   onSuccess?: (message: string) => void;
 }
 
-export const MixedClipsPreview: React.FC<MixedClipsPreviewProps> = ({
+export const MixedClipsPreview: React.FC<MixedClipsPreviewProps> = observer(({
   clips,
   existingCount,
   newCount,
@@ -441,4 +442,4 @@ export const MixedClipsPreview: React.FC<MixedClipsPreviewProps> = ({
       )}
     </div>
   );
-};
+});

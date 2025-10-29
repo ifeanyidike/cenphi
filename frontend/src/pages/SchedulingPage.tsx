@@ -68,6 +68,7 @@ const SchedulingPage = observer(() => {
     if (workspaceHub.workspace?.id) {
       loadPosts();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceHub.workspace?.id]);
 
   const loadPosts = async () => {
@@ -99,7 +100,7 @@ const SchedulingPage = observer(() => {
         title: "Success",
         description: "Posts refreshed successfully",
       });
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to refresh posts",
@@ -120,7 +121,7 @@ const SchedulingPage = observer(() => {
         description: "Post deleted successfully",
       });
       loadPosts();
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to delete post",
@@ -239,7 +240,10 @@ const SchedulingPage = observer(() => {
               {refreshing ? "Updating..." : "Refresh"}
             </span>
           </Button>
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <Dialog
+            open={isCreateDialogOpen}
+            onOpenChange={setIsCreateDialogOpen}
+          >
             <DialogTrigger asChild>
               <Button size="sm" className="h-8 bg-blue-600 hover:bg-blue-700">
                 <Plus className="h-3.5 w-3.5 mr-1.5" />
@@ -247,7 +251,10 @@ const SchedulingPage = observer(() => {
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
-              <CreatePostDialog onClose={() => setIsCreateDialogOpen(false)} onSuccess={loadPosts} />
+              <CreatePostDialog
+                onClose={() => setIsCreateDialogOpen(false)}
+                onSuccess={loadPosts}
+              />
             </DialogContent>
           </Dialog>
         </div>
@@ -508,7 +515,9 @@ const PostsTable = observer(
           <div className="p-3 bg-gray-50 rounded-full mb-3">
             <Send className="h-6 w-6 text-gray-400" />
           </div>
-          <p className="text-sm font-medium text-gray-900 mb-1">No posts found</p>
+          <p className="text-sm font-medium text-gray-900 mb-1">
+            No posts found
+          </p>
           <p className="text-xs text-gray-500">
             Create your first post to get started
           </p>
@@ -683,7 +692,9 @@ const CreatePostDialog = observer(
             setSaving(false);
             return;
           }
-          const scheduledAt = new Date(`${scheduledDate}T${scheduledTime}`).toISOString();
+          const scheduledAt = new Date(
+            `${scheduledDate}T${scheduledTime}`
+          ).toISOString();
           postData.scheduled_at = scheduledAt;
           await socialManager.createPost(
             workspaceHub.workspace.id,
@@ -705,7 +716,7 @@ const CreatePostDialog = observer(
         });
         onSuccess();
         onClose();
-      } catch (error) {
+      } catch {
         toast({
           title: "Error",
           description: "Failed to create post",
@@ -878,9 +889,7 @@ const CreatePostDialog = observer(
                 {scheduleType === "now" ? "Publishing..." : "Scheduling..."}
               </>
             ) : (
-              <>
-                {scheduleType === "now" ? "Publish Now" : "Schedule Post"}
-              </>
+              <>{scheduleType === "now" ? "Publish Now" : "Schedule Post"}</>
             )}
           </Button>
         </div>
@@ -928,7 +937,9 @@ const EditPostDialog = observer(
 
         // If post is scheduled, allow updating the scheduled time
         if (post.status === "scheduled" && scheduledDate && scheduledTime) {
-          const scheduledAt = new Date(`${scheduledDate}T${scheduledTime}`).toISOString();
+          const scheduledAt = new Date(
+            `${scheduledDate}T${scheduledTime}`
+          ).toISOString();
           updateData.scheduled_at = scheduledAt;
         }
 
@@ -940,7 +951,7 @@ const EditPostDialog = observer(
         });
         onSuccess();
         onClose();
-      } catch (error) {
+      } catch {
         toast({
           title: "Error",
           description: "Failed to update post",

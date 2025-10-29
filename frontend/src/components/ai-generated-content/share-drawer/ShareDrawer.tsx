@@ -29,7 +29,6 @@ import {
   CheckCircle,
   Eye,
   Image,
-  Images,
   FileText,
 } from "lucide-react";
 
@@ -59,6 +58,7 @@ import { EnhancedArtifact } from "../ContentCategorization";
 import { workspaceHub } from "@/repo/workspace_hub";
 import { aiArtifactsManager } from "@/repo/managers/ai_artifacts_manager";
 import { authStore } from "@/stores/authStore";
+import { observer } from "mobx-react-lite";
 import { cn } from "@/lib/utils";
 import ExportGif from "./ExportGif";
 
@@ -218,23 +218,38 @@ const ShareDrawer: React.FC<ShareDrawerProps> = ({
 
       try {
         const token = await authStore.getToken().then((r: any) => r.token);
+
+        // Detect if sharing a testimonial (virtual artifacts have "testimonial-" prefix)
+        const isTestimonial = artifactId.startsWith("testimonial-");
+        const actualId = isTestimonial
+          ? artifactId.replace("testimonial-", "")
+          : artifactId;
+
+        const requestBody: any = {
+          workspace_id: currentWorkspace.id,
+          share_type: isTestimonial ? "testimonial" : "artifact",
+          expires_at: null,
+          description: customDescription || shareDescription || undefined,
+          custom_branding: {
+            primary_color: "#3b82f6",
+            secondary_color: "#1e40af",
+          },
+        };
+
+        // Add the appropriate ID field based on share type
+        if (isTestimonial) {
+          requestBody.testimonial_id = actualId;
+        } else {
+          requestBody.artifact_id = actualId;
+        }
+
         const response = await fetch(`${serverAddr}/shares`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({
-            workspace_id: currentWorkspace.id,
-            share_type: "artifact",
-            artifact_id: artifactId,
-            expires_at: null,
-            description: customDescription || shareDescription || undefined,
-            custom_branding: {
-              primary_color: "#3b82f6",
-              secondary_color: "#1e40af",
-            },
-          }),
+          body: JSON.stringify(requestBody),
         });
 
         if (!response.ok) throw new Error("Failed to create share");
@@ -942,10 +957,10 @@ const ShareDrawer: React.FC<ShareDrawerProps> = ({
         serverAddr
       );
 
-      // @ts-ignore
+      // @ts-expect-error error will be ignored
       if (window.CenphiShareWidget) {
         console.log("CenphiShareWidget loaded, initializing...");
-        // @ts-ignore
+        // @ts-expect-error error will be ignored
         window.CenphiShareWidget.init({
           container: `#${containerId}`,
           shareId: shareId,
@@ -988,7 +1003,7 @@ const ShareDrawer: React.FC<ShareDrawerProps> = ({
             "Widget script already loaded, waiting for initialization..."
           );
           const checkWidget = setInterval(() => {
-            // @ts-ignore
+            // @ts-expect-error error will be ignored
             if (window.CenphiShareWidget) {
               clearInterval(checkWidget);
               loadAndInitWidget();
@@ -1036,10 +1051,10 @@ const ShareDrawer: React.FC<ShareDrawerProps> = ({
         serverAddr
       );
 
-      // @ts-ignore
+      // @ts-expect-error error will be ignored
       if (window.CenphiShareWidget) {
         console.log("CenphiShareWidget loaded, initializing carousel...");
-        // @ts-ignore
+        // @ts-expect-error error will be ignored
         window.CenphiShareWidget.init({
           container: `#${containerId}`,
           mode: "carousel",
@@ -1085,7 +1100,7 @@ const ShareDrawer: React.FC<ShareDrawerProps> = ({
             "Widget script already loaded for carousel, waiting for initialization..."
           );
           const checkWidget = setInterval(() => {
-            // @ts-ignore
+            // @ts-expect-error error will be ignored
             if (window.CenphiShareWidget) {
               clearInterval(checkWidget);
               loadAndInitCarousel();
@@ -2382,4 +2397,4 @@ const ShareDrawer: React.FC<ShareDrawerProps> = ({
   );
 };
 
-export default ShareDrawer;
+export default observer(ShareDrawer);

@@ -9,11 +9,11 @@ import {
   Target,
   Clock,
   Play,
+  Share2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import ClipSelectionBar from "./ClipSelectionBar";
-import ShareButton from "./ShareButton";
 import { TestimonialArtifact } from "@/types/testimonial";
 import { ServiceType } from "@/types/ai-service";
 import AIStoryUtilities from "@/utils/aistory-utilities";
@@ -52,18 +52,6 @@ export interface TabRenderProps {
   onDownload: (url: string, filename: string) => void;
   onCopyToClipboard: (text: string, id: string) => void;
   copiedItems: Set<string>;
-  editingContent: { [key: string]: string };
-  onStartEditing: (id: string, content: string) => void;
-  onSaveContent: (id: string) => void;
-  onCancelEditing: (id: string) => void;
-  onUpdateEditingContent: (id: string, content: string) => void;
-
-  onProcessClip?: (clip: any, serviceType: ServiceType) => void;
-  onProcessArtifact?: (
-    artifact: TestimonialArtifact,
-    serviceType: ServiceType,
-    from?: string
-  ) => void;
 
   selectedClips?: string[];
   onClipSelectionChange?: (selected: string[]) => void;
@@ -71,8 +59,9 @@ export interface TabRenderProps {
   selectionMode?: boolean; // ADD THIS
   onSelectionModeChange?: (mode: boolean) => void;
 
-  onVideoPreview?: (videoUrl: string, title: string, metadata?: any) => void;
-  onViewLineage?: (content: any) => void;
+  // Share handlers for clips
+  onShareClip?: (clip: any, parentArtifact: any) => void;
+  onShareMultipleClips?: (clips: any[], parentArtifacts: any[]) => void;
 }
 
 // Utility functions
@@ -119,6 +108,8 @@ export const renderClippingArtifacts = ({
   onProcessMultipleClips,
   selectionMode = false,
   onSelectionModeChange,
+  onShareClip,
+  onShareMultipleClips,
 }: TabRenderProps) => {
   if (artifacts.length === 0) {
     return (
@@ -292,25 +283,78 @@ export const renderClippingArtifacts = ({
                     Clear · {selectedClips.length}
                   </Button>
                   {selectedClips.length === 1 ? (
-                    <Button
-                      size="sm"
-                      onClick={() =>
-                        handleProcessMultiple("platform_optimizer")
-                      }
-                      className="h-8 px-3.5 bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-medium shadow-sm transition-all"
-                    >
-                      <Target className="h-3 w-3 mr-1.5" strokeWidth={2} />
-                      Optimize
-                    </Button>
+                    <>
+                      <Button
+                        size="sm"
+                        onClick={() =>
+                          handleProcessMultiple("platform_optimizer")
+                        }
+                        className="h-8 px-3.5 bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-medium shadow-sm transition-all"
+                      >
+                        <Target className="h-3 w-3 mr-1.5" strokeWidth={2} />
+                        Optimize
+                      </Button>
+                      {onShareClip && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            const selectedClipData = allClips.find(
+                              (c) => c.id === selectedClips[0]
+                            );
+                            const artifact = artifacts.find(
+                              (a) => a.id === selectedClipData?.artifactId
+                            );
+                            if (selectedClipData && artifact) {
+                              onShareClip(selectedClipData, artifact);
+                            }
+                          }}
+                          className="h-8 px-3.5 text-[10px] font-medium border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all"
+                        >
+                          <Share2 className="h-3 w-3 mr-1.5" strokeWidth={2} />
+                          Share
+                        </Button>
+                      )}
+                    </>
                   ) : (
-                    <Button
-                      size="sm"
-                      onClick={() => handleProcessMultiple("story_mode")}
-                      className="h-8 px-3.5 bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-medium shadow-sm transition-all"
-                    >
-                      <Video className="h-3 w-3 mr-1.5" strokeWidth={2} />
-                      Story · {getTotalDuration().toFixed(0)}s
-                    </Button>
+                    <>
+                      <Button
+                        size="sm"
+                        onClick={() => handleProcessMultiple("story_mode")}
+                        className="h-8 px-3.5 bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-medium shadow-sm transition-all"
+                      >
+                        <Video className="h-3 w-3 mr-1.5" strokeWidth={2} />
+                        Story · {getTotalDuration().toFixed(0)}s
+                      </Button>
+                      {onShareMultipleClips && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            const selectedClipData = selectedClips
+                              .map((clipId) =>
+                                allClips.find((c) => c.id === clipId)
+                              )
+                              .filter(Boolean);
+                            const parentArtifacts = artifacts.filter((a) =>
+                              selectedClipData.some(
+                                (c) => c?.artifactId === a.id
+                              )
+                            );
+                            if (selectedClipData.length > 0) {
+                              onShareMultipleClips(
+                                selectedClipData,
+                                parentArtifacts
+                              );
+                            }
+                          }}
+                          className="h-8 px-3.5 text-[10px] font-medium border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all"
+                        >
+                          <Share2 className="h-3 w-3 mr-1.5" strokeWidth={2} />
+                          Share Carousel
+                        </Button>
+                      )}
+                    </>
                   )}
                 </>
               )}
@@ -503,14 +547,18 @@ export const renderClippingArtifacts = ({
                                   />
                                   Download
                                 </Button>
-                                <ShareButton
-                                  testimonialId={artifact.testimonial_id}
-                                  content={`Check out this amazing testimonial clip: "${clip.title}"`}
-                                  artifactType="video"
-                                  videoUrl={clip.url}
+                                <Button
                                   size="sm"
-                                  className="flex-1 h-7 text-[10px] font-medium"
-                                />
+                                  variant="outline"
+                                  onClick={() => onShareClip?.(clip, artifact)}
+                                  className="flex-1 h-7 text-[10px] font-medium border-slate-200 hover:border-slate-300 hover:bg-slate-50/80 transition-all"
+                                >
+                                  <Share2
+                                    className="h-3 w-3 mr-1.5"
+                                    strokeWidth={2}
+                                  />
+                                  Share
+                                </Button>
                                 <Button
                                   size="sm"
                                   variant="ghost"

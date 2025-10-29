@@ -12,6 +12,7 @@ import {
   ArrowRight,
   CheckCircle2,
 } from "lucide-react";
+import { observer } from "mobx-react-lite";
 
 interface AIFeaturesDiscoveryProps {
   testimonialType: "video" | "text";
@@ -62,7 +63,7 @@ const AIFeaturesDiscovery: React.FC<AIFeaturesDiscoveryProps> = ({
   );
 
   const availableServices = Object.entries(SERVICES).filter(
-    ([_, config]) => !config.videoOnly || isVideo
+    ([, config]) => !config.videoOnly || isVideo
   );
 
   if (availableServices.length === 0) return null;
@@ -139,4 +140,4 @@ const AIFeaturesDiscovery: React.FC<AIFeaturesDiscoveryProps> = ({
   );
 };
 
-export default AIFeaturesDiscovery;
+export default observer(AIFeaturesDiscovery);

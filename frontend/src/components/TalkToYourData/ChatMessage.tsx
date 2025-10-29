@@ -288,7 +288,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                   p: ({ children }) => {
                     const content = String(children);
                     // Skip rendering lines that are just table separators
-                    if (/^[\s\-\|\+\=\_\*]+$/.test(content.trim())) {
+                    if (/^[\s\-|+=_*]+$/.test(content.trim())) {
                       return null;
                     }
                     return (

@@ -1,0 +1,55 @@
+# robots.txt for Cenphi
+
+# Allow all crawlers
+User-agent: *
+Allow: /
+
+# Disallow private/admin areas
+Disallow: /dashboard
+Disallow: /dashboard/*
+Disallow: /studio
+Disallow: /studio/*
+Disallow: /settings
+Disallow: /settings/*
+Disallow: /analytics
+Disallow: /analytics/*
+Disallow: /content-hub
+Disallow: /content-hub/*
+Disallow: /scheduling
+Disallow: /scheduling/*
+Disallow: /onboarding
+Disallow: /onboarding/*
+Disallow: /authflow
+Disallow: /authflow/*
+Disallow: /checkout
+Disallow: /checkout/*
+Disallow: /brand-guide
+Disallow: /brand-guide/*
+Disallow: /capture-page
+Disallow: /capture-page/*
+Disallow: /talk-to-your-data
+Disallow: /talk-to-your-data/*
+Disallow: /vector-store-test
+Disallow: /vector-store-test/*
+Disallow: /detail/*
+Disallow: /login
+Disallow: /signup
+Disallow: /reset-password
+Disallow: /emailpage
+
+# Allow public pages
+Allow: /
+Allow: /pricing
+Allow: /why-Cenphi
+Allow: /collect
+Allow: /share/*/view
+
+# Sitemap location
+Sitemap: https://cenphi.com/sitemap.xml
+
+# Crawl-delay for specific bots (optional)
+User-agent: Googlebot
+Crawl-delay: 0
+
+User-agent: Bingbot
+Crawl-delay: 0

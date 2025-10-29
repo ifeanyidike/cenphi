@@ -174,7 +174,7 @@ export const TalkToYourData: React.FC = observer(() => {
                   isComplete: false,
                 });
               }
-            } catch (e) {
+            } catch {
               console.warn("Failed to parse SSE data:", data);
             }
           }

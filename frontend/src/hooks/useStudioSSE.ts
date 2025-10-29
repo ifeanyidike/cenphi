@@ -159,7 +159,7 @@ export const useStudioSSE = (): UseStudioSSEReturn => {
 
           switch (studioEvent.type) {
             case 'session_created':
-            case 'job_created':
+            case 'job_created': {
               // Extract stages from the event data
               const stages = studioEvent.data?.stages || [];
               console.log('[SSE] Session created with stages:', stages);
@@ -184,6 +184,7 @@ export const useStudioSSE = (): UseStudioSSEReturn => {
                 isPaused: false,
               });
               break;
+            }
 
             case 'step_started': {
               // Backend sends stage data in the 'stage' field
@@ -350,7 +351,7 @@ export const useStudioSSE = (): UseStudioSSEReturn => {
               setSession(prev => prev ? { ...prev, isPaused: false } : null);
               break;
 
-            case 'error':
+            case 'error': {
               const errorMessage = studioEvent.data?.message || studioEvent.data?.error || 'An error occurred';
               setError(errorMessage);
               setSession(prev => prev ? { ...prev, error: errorMessage } : null);
@@ -371,6 +372,7 @@ export const useStudioSSE = (): UseStudioSSEReturn => {
                 });
               }
               break;
+            }
 
             case 'connection_established':
               console.log('[SSE] Connection established');

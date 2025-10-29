@@ -92,7 +92,7 @@ const VideoUpload: React.FC<VideoUploadProps> = ({
       return;
     }
 
-    let finalFile = file;
+    const finalFile = file;
 
     setUploadState({
       status: "uploading",

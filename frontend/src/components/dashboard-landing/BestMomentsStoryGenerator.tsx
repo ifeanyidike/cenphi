@@ -1,15 +1,7 @@
 // components/dashboard-landing/BestMomentsStoryGenerator.tsx
 import React, { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import {
-  Video,
-  Sparkles,
-  Star,
-  ArrowRight,
-  Loader2,
-  Users,
-  Play,
-} from "lucide-react";
+import { Video, Star, ArrowRight, Loader2, Users, Play } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -253,7 +245,8 @@ const BestMomentsStoryGenerator: React.FC<BestMomentsStoryGeneratorProps> =
           </Button>
 
           <p className="text-[10px] text-slate-500 text-center">
-            Processing time: 3-5 minutes • {Math.round(stats.avgEngagement * 100)}% avg engagement
+            Processing time: 3-5 minutes •{" "}
+            {Math.round(stats.avgEngagement * 100)}% avg engagement
           </p>
         </CardContent>
       </Card>

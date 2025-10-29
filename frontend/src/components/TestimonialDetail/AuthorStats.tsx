@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Testimonial } from "@/types/testimonial";
 import { collection_method_map } from "@/utils/platform-utils";
 import ModalPortal from "@/utils/ModalPortal";
+import { observer } from "mobx-react-lite";
 
 interface AuthorData {
   author_name?: string;
@@ -39,231 +40,235 @@ interface AuthorStatsProps {
 }
 
 // Edit Author Modal Component
-const EditAuthorModal = ({
-  isOpen,
-  onClose,
-  testimonial,
-  onSave,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  testimonial: Testimonial;
-  onSave: (data: AuthorData) => Promise<void>;
-}) => {
-  const [authorData, setAuthorData] = useState<AuthorData>({
-    author_name: testimonial.author_name || "",
-    author_title: testimonial.author_title || "",
-    author_company: testimonial.author_company || "",
-    author_email: testimonial.author_email || "",
-  });
-  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "error">(
-    "idle"
-  );
-  const [errors, setErrors] = useState<Partial<AuthorData>>({});
+const EditAuthorModal = observer(
+  ({
+    isOpen,
+    onClose,
+    testimonial,
+    onSave,
+  }: {
+    isOpen: boolean;
+    onClose: () => void;
+    testimonial: Testimonial;
+    onSave: (data: AuthorData) => Promise<void>;
+  }) => {
+    const [authorData, setAuthorData] = useState<AuthorData>({
+      author_name: testimonial.author_name || "",
+      author_title: testimonial.author_title || "",
+      author_company: testimonial.author_company || "",
+      author_email: testimonial.author_email || "",
+    });
+    const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "error">(
+      "idle"
+    );
+    const [errors, setErrors] = useState<Partial<AuthorData>>({});
 
-  const validateForm = () => {
-    const newErrors: Partial<AuthorData> = {};
+    const validateForm = () => {
+      const newErrors: Partial<AuthorData> = {};
 
-    if (!authorData.author_name?.trim()) {
-      newErrors.author_name = "Name is required";
-    }
+      if (!authorData.author_name?.trim()) {
+        newErrors.author_name = "Name is required";
+      }
 
-    if (
-      authorData.author_email &&
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(authorData.author_email)
-    ) {
-      newErrors.author_email = "Please enter a valid email address";
-    }
+      if (
+        authorData.author_email &&
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(authorData.author_email)
+      ) {
+        newErrors.author_email = "Please enter a valid email address";
+      }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+      setErrors(newErrors);
+      return Object.keys(newErrors).length === 0;
+    };
 
-  const handleSave = async () => {
-    if (!validateForm()) return;
+    const handleSave = async () => {
+      if (!validateForm()) return;
 
-    setSaveStatus("saving");
+      setSaveStatus("saving");
 
-    try {
-      await onSave(authorData);
-      onClose();
-    } catch (error) {
-      console.error("Failed to save author data:", error);
-      setSaveStatus("error");
-    }
-  };
+      try {
+        await onSave(authorData);
+        onClose();
+      } catch (error) {
+        console.error("Failed to save author data:", error);
+        setSaveStatus("error");
+      }
+    };
 
-  const updateField = (field: keyof AuthorData, value: string) => {
-    setAuthorData((prev) => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: undefined }));
-    }
-  };
+    const updateField = (field: keyof AuthorData, value: string) => {
+      setAuthorData((prev) => ({ ...prev, [field]: value }));
+      if (errors[field]) {
+        setErrors((prev) => ({ ...prev, [field]: undefined }));
+      }
+    };
 
-  if (!isOpen) return null;
+    if (!isOpen) return null;
 
-  return (
-    <ModalPortal isOpen={isOpen}>
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl max-w-xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
-          {/* Header */}
-          <div className="px-5 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
-                <User className="h-4 w-4 text-slate-600" />
-              </div>
-              <div>
-                <h2 className="text-sm font-semibold text-slate-900">
-                  Edit Author Details
-                </h2>
-                <p className="text-[10px] text-slate-500">
-                  Update testimonial author information
-                </p>
-              </div>
-            </div>
-            <Button
-              onClick={onClose}
-              variant="ghost"
-              size="sm"
-              className="h-7 w-7 p-0"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-
-          {/* Form Content */}
-          <div className="p-5 space-y-4">
-            {/* Name Field */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
-                <User className="h-3 w-3" />
-                Full Name *
-              </label>
-              <input
-                type="text"
-                value={authorData.author_name || ""}
-                onChange={(e) => updateField("author_name", e.target.value)}
-                placeholder="Enter the author's full name"
-                className={`w-full px-3 py-2 text-xs border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-slate-300 transition-all ${
-                  errors.author_name
-                    ? "border-red-300 focus:ring-red-300"
-                    : "border-slate-200"
-                }`}
-              />
-              {errors.author_name && (
-                <p className="text-[10px] text-red-600 flex items-center gap-1">
-                  <AlertCircle className="h-2.5 w-2.5" />
-                  {errors.author_name}
-                </p>
-              )}
-            </div>
-
-            {/* Title Field */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
-                <Award className="h-3 w-3" />
-                Job Title
-              </label>
-              <input
-                type="text"
-                value={authorData.author_title || ""}
-                onChange={(e) => updateField("author_title", e.target.value)}
-                placeholder="e.g., Senior Software Engineer, CEO"
-                className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-slate-300 transition-all"
-              />
-            </div>
-
-            {/* Company Field */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
-                <Building2 className="h-3 w-3" />
-                Company
-              </label>
-              <input
-                type="text"
-                value={authorData.author_company || ""}
-                onChange={(e) => updateField("author_company", e.target.value)}
-                placeholder="Company or organization name"
-                className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-slate-300 transition-all"
-              />
-            </div>
-
-            {/* Email Field */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
-                <Mail className="h-3 w-3" />
-                Email Address
-              </label>
-              <input
-                type="email"
-                value={authorData.author_email || ""}
-                onChange={(e) => updateField("author_email", e.target.value)}
-                placeholder="author@company.com"
-                className={`w-full px-3 py-2 text-xs border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-slate-300 transition-all ${
-                  errors.author_email
-                    ? "border-red-300 focus:ring-red-300"
-                    : "border-slate-200"
-                }`}
-              />
-              {errors.author_email && (
-                <p className="text-[10px] text-red-600 flex items-center gap-1">
-                  <AlertCircle className="h-2.5 w-2.5" />
-                  {errors.author_email}
-                </p>
-              )}
-            </div>
-
-            {/* Error Message */}
-            {saveStatus === "error" && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                <div className="flex items-center gap-2 text-red-700">
-                  <AlertCircle className="h-3 w-3" />
-                  <span className="text-xs font-medium">
-                    Failed to save changes. Please try again.
-                  </span>
+    return (
+      <ModalPortal isOpen={isOpen}>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
+            {/* Header */}
+            <div className="px-5 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
+                  <User className="h-4 w-4 text-slate-600" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-semibold text-slate-900">
+                    Edit Author Details
+                  </h2>
+                  <p className="text-[10px] text-slate-500">
+                    Update testimonial author information
+                  </p>
                 </div>
               </div>
-            )}
-          </div>
-
-          {/* Footer */}
-          <div className="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-            <p className="text-[10px] text-slate-500">* Required fields</p>
-            <div className="flex items-center gap-2">
               <Button
                 onClick={onClose}
-                variant="outline"
+                variant="ghost"
                 size="sm"
-                className="h-8 px-3 text-xs border-slate-200"
-                disabled={saveStatus === "saving"}
+                className="h-7 w-7 p-0"
               >
-                Cancel
+                <X className="h-4 w-4" />
               </Button>
-              <Button
-                onClick={handleSave}
-                size="sm"
-                className="h-8 px-3 text-xs bg-slate-900 hover:bg-slate-800"
-                disabled={saveStatus === "saving"}
-              >
-                {saveStatus === "saving" ? (
-                  <>
-                    <Clock className="h-3 w-3 mr-1.5 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-3 w-3 mr-1.5" />
-                    Save
-                  </>
+            </div>
+
+            {/* Form Content */}
+            <div className="p-5 space-y-4">
+              {/* Name Field */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                  <User className="h-3 w-3" />
+                  Full Name *
+                </label>
+                <input
+                  type="text"
+                  value={authorData.author_name || ""}
+                  onChange={(e) => updateField("author_name", e.target.value)}
+                  placeholder="Enter the author's full name"
+                  className={`w-full px-3 py-2 text-xs border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-slate-300 transition-all ${
+                    errors.author_name
+                      ? "border-red-300 focus:ring-red-300"
+                      : "border-slate-200"
+                  }`}
+                />
+                {errors.author_name && (
+                  <p className="text-[10px] text-red-600 flex items-center gap-1">
+                    <AlertCircle className="h-2.5 w-2.5" />
+                    {errors.author_name}
+                  </p>
                 )}
-              </Button>
+              </div>
+
+              {/* Title Field */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                  <Award className="h-3 w-3" />
+                  Job Title
+                </label>
+                <input
+                  type="text"
+                  value={authorData.author_title || ""}
+                  onChange={(e) => updateField("author_title", e.target.value)}
+                  placeholder="e.g., Senior Software Engineer, CEO"
+                  className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-slate-300 transition-all"
+                />
+              </div>
+
+              {/* Company Field */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                  <Building2 className="h-3 w-3" />
+                  Company
+                </label>
+                <input
+                  type="text"
+                  value={authorData.author_company || ""}
+                  onChange={(e) =>
+                    updateField("author_company", e.target.value)
+                  }
+                  placeholder="Company or organization name"
+                  className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-slate-300 transition-all"
+                />
+              </div>
+
+              {/* Email Field */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                  <Mail className="h-3 w-3" />
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  value={authorData.author_email || ""}
+                  onChange={(e) => updateField("author_email", e.target.value)}
+                  placeholder="author@company.com"
+                  className={`w-full px-3 py-2 text-xs border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-slate-300 transition-all ${
+                    errors.author_email
+                      ? "border-red-300 focus:ring-red-300"
+                      : "border-slate-200"
+                  }`}
+                />
+                {errors.author_email && (
+                  <p className="text-[10px] text-red-600 flex items-center gap-1">
+                    <AlertCircle className="h-2.5 w-2.5" />
+                    {errors.author_email}
+                  </p>
+                )}
+              </div>
+
+              {/* Error Message */}
+              {saveStatus === "error" && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="flex items-center gap-2 text-red-700">
+                    <AlertCircle className="h-3 w-3" />
+                    <span className="text-xs font-medium">
+                      Failed to save changes. Please try again.
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+              <p className="text-[10px] text-slate-500">* Required fields</p>
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={onClose}
+                  variant="outline"
+                  size="sm"
+                  className="h-8 px-3 text-xs border-slate-200"
+                  disabled={saveStatus === "saving"}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSave}
+                  size="sm"
+                  className="h-8 px-3 text-xs bg-slate-900 hover:bg-slate-800"
+                  disabled={saveStatus === "saving"}
+                >
+                  {saveStatus === "saving" ? (
+                    <>
+                      <Clock className="h-3 w-3 mr-1.5 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-3 w-3 mr-1.5" />
+                      Save
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </ModalPortal>
-  );
-};
+      </ModalPortal>
+    );
+  }
+);
 
 // Main Component
 const AuthorStats = ({
@@ -273,11 +278,6 @@ const AuthorStats = ({
 }: AuthorStatsProps) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const isVideoTestimonial = testimonial.type === "video";
-
-  const daysSinceCreation = Math.floor(
-    (Date.now() - new Date(testimonial.created_at).getTime()) /
-      (1000 * 60 * 60 * 24)
-  );
 
   const getStatusConfig = (status: string) => {
     switch (status.toLowerCase()) {
@@ -533,4 +533,4 @@ const AuthorStats = ({
   );
 };
 
-export default AuthorStats;
+export default observer(AuthorStats);
