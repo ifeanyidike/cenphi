@@ -65,10 +65,12 @@ const DataImportCard: React.FC = observer(() => {
 
       if (socialResponse.ok) {
         const socialData = await socialResponse.json();
-        const socialAccounts = (socialData.accounts || []).map((account: any) => ({
-          ...account,
-          platform: 'linkedin'
-        }));
+        const socialAccounts = (socialData.accounts || []).map(
+          (account: any) => ({
+            ...account,
+            platform: "linkedin",
+          })
+        );
         allAccounts.push(...socialAccounts);
       }
 
@@ -84,10 +86,12 @@ const DataImportCard: React.FC = observer(() => {
 
       if (googleResponse.ok) {
         const googleData = await googleResponse.json();
-        const googleAccounts = (googleData.accounts || []).map((account: any) => ({
-          ...account,
-          platform: 'google'
-        }));
+        const googleAccounts = (googleData.accounts || []).map(
+          (account: any) => ({
+            ...account,
+            platform: "google",
+          })
+        );
         allAccounts.push(...googleAccounts);
       }
 
@@ -99,14 +103,20 @@ const DataImportCard: React.FC = observer(() => {
 
   const isConnected = (provider?: string) => {
     if (provider === "google") {
-      return connectedAccounts.some(account => account.platform === 'google' || account.platform === 'google-drive');
+      return connectedAccounts.some(
+        (account) =>
+          account.platform === "google" || account.platform === "google-drive"
+      );
     }
     return false;
   };
 
   const handleImportClick = (source: ImportSource) => {
     if (source.requiresConnection && !isConnected(source.connectionProvider)) {
-      const providerName = source.connectionProvider === 'google' ? 'Google Drive' : source.connectionProvider;
+      const providerName =
+        source.connectionProvider === "google"
+          ? "Google Drive"
+          : source.connectionProvider || "";
       setConnectionWarning({ show: true, providerName });
       return;
     }
@@ -128,7 +138,9 @@ const DataImportCard: React.FC = observer(() => {
         <div className="divide-y divide-gray-200">
           {importSources.map((source) => {
             const Icon = source.icon;
-            const connected = !source.requiresConnection || isConnected(source.connectionProvider);
+            const connected =
+              !source.requiresConnection ||
+              isConnected(source.connectionProvider);
 
             return (
               <div key={source.id} className="p-6">
@@ -146,14 +158,16 @@ const DataImportCard: React.FC = observer(() => {
                       </div>
                       <div className="flex items-center space-x-1 mt-2">
                         <span className="text-xs text-gray-400">Supports:</span>
-                        {source.supportedFormats.slice(0, 3).map((format, index) => (
-                          <span
-                            key={index}
-                            className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded"
-                          >
-                            {format}
-                          </span>
-                        ))}
+                        {source.supportedFormats
+                          .slice(0, 3)
+                          .map((format, index) => (
+                            <span
+                              key={index}
+                              className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded"
+                            >
+                              {format}
+                            </span>
+                          ))}
                         {source.supportedFormats.length > 3 && (
                           <span className="text-xs text-gray-400">
                             +{source.supportedFormats.length - 3} more
@@ -166,9 +180,11 @@ const DataImportCard: React.FC = observer(() => {
                   <div className="flex items-center space-x-3">
                     {source.requiresConnection && (
                       <div className="flex items-center space-x-2">
-                        <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                        <div
+                          className={`w-2 h-2 rounded-full ${connected ? "bg-green-500" : "bg-gray-400"}`}
+                        ></div>
                         <span className="text-xs text-gray-500">
-                          {connected ? 'Connected' : 'Not connected'}
+                          {connected ? "Connected" : "Not connected"}
                         </span>
                       </div>
                     )}
@@ -192,12 +208,16 @@ const DataImportCard: React.FC = observer(() => {
       {/* Import Guidelines */}
       <div className="bg-white border border-gray-200 rounded-sm">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-sm font-medium text-gray-900">Import Guidelines</h3>
+          <h3 className="text-sm font-medium text-gray-900">
+            Import Guidelines
+          </h3>
         </div>
         <div className="p-6">
           <div className="grid md:grid-cols-2 gap-6 text-xs text-gray-600">
             <div>
-              <div className="font-medium text-gray-900 mb-2">Document Processing</div>
+              <div className="font-medium text-gray-900 mb-2">
+                Document Processing
+              </div>
               <ul className="space-y-1">
                 <li>• Automatic text extraction from PDFs and docs</li>
                 <li>• Smart testimonial content detection</li>
@@ -205,7 +225,9 @@ const DataImportCard: React.FC = observer(() => {
               </ul>
             </div>
             <div>
-              <div className="font-medium text-gray-900 mb-2">Video Processing</div>
+              <div className="font-medium text-gray-900 mb-2">
+                Video Processing
+              </div>
               <ul className="space-y-1">
                 <li>• AI-powered speech-to-text conversion</li>
                 <li>• Automatic sentiment analysis</li>
@@ -219,9 +241,12 @@ const DataImportCard: React.FC = observer(() => {
       {/* Getting Started */}
       <div className="bg-white border border-gray-200 rounded-sm">
         <div className="p-6 text-center">
-          <div className="text-sm font-medium text-gray-900 mb-2">Ready to Import?</div>
+          <div className="text-sm font-medium text-gray-900 mb-2">
+            Ready to Import?
+          </div>
           <p className="text-xs text-gray-500 mb-4">
-            Connect your Google Drive in the Integrations section to start importing testimonials.
+            Connect your Google Drive in the Integrations section to start
+            importing testimonials.
           </p>
           <div className="flex items-center justify-center space-x-4 text-xs text-gray-400">
             <span>Secure</span>
