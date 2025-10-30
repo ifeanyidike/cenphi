@@ -602,16 +602,48 @@ func (s AudioTranscriptionService) performLocalValidation(ctx context.Context, a
 
 // Optimized validation with tiny samples
 func (s AudioTranscriptionService) performSmallAssemblyValidation(ctx context.Context, audioFilePath string, totalDuration float64) (*AudioQualityResult, error) {
-	// Extract 3 small samples from different parts of the audio
+	// Extract more samples to handle videos with intro/animation content
+	// This ensures we catch testimonial speech even if it starts later in the video
 	sampleDuration := 3.0 // 3 seconds each
-	samples := []float64{
-		totalDuration * 0.1, // 10% into the file
-		totalDuration * 0.5, // 50% into the file
-		totalDuration * 0.8, // 80% into the file
+
+	// Use more sample points to better cover the entire video duration
+	// This handles cases where speech doesn't start immediately (intro, animation, etc.)
+	var samples []float64
+	if totalDuration <= 30 {
+		// Short videos: sample at 15%, 40%, 65%, 85%
+		samples = []float64{
+			totalDuration * 0.15,
+			totalDuration * 0.40,
+			totalDuration * 0.65,
+			totalDuration * 0.85,
+		}
+	} else if totalDuration <= 60 {
+		// Medium videos: sample at 10%, 25%, 40%, 55%, 75%, 90%
+		samples = []float64{
+			totalDuration * 0.10,
+			totalDuration * 0.25,
+			totalDuration * 0.40,
+			totalDuration * 0.55,
+			totalDuration * 0.75,
+			totalDuration * 0.90,
+		}
+	} else {
+		// Longer videos: sample at 5%, 15%, 25%, 35%, 50%, 65%, 80%, 92%
+		samples = []float64{
+			totalDuration * 0.05,
+			totalDuration * 0.15,
+			totalDuration * 0.25,
+			totalDuration * 0.35,
+			totalDuration * 0.50,
+			totalDuration * 0.65,
+			totalDuration * 0.80,
+			totalDuration * 0.92,
+		}
 	}
 
 	var bestResult *models.TranscriptionResult
 	var bestConfidence float64
+	var successfulSamples int
 
 	for i, startTime := range samples {
 		if startTime+sampleDuration > totalDuration {
@@ -647,27 +679,48 @@ func (s AudioTranscriptionService) performSmallAssemblyValidation(ctx context.Co
 			continue
 		}
 
+		// Count successful transcriptions (even if low confidence)
+		if result != nil && len(result.Transcript) > 0 {
+			successfulSamples++
+		}
+
 		// Keep the best result
 		if result.Confidence > bestConfidence {
 			bestConfidence = result.Confidence
 			bestResult = result
 		}
 
-		// Early success - if we get good confidence, stop testing
-		if result.Confidence > 0.7 && len(strings.Fields(result.Transcript)) > 2 {
+		// Early success - if we get good confidence with actual words, accept immediately
+		// Lowered threshold from 0.7 to 0.6 to be more lenient with intro videos
+		if result.Confidence > 0.6 && len(strings.Fields(result.Transcript)) > 3 {
+			s.logger.Info("Found clear speech in sample, accepting video",
+				zap.Int("sample_number", i+1),
+				zap.Float64("confidence", result.Confidence),
+				zap.Int("word_count", len(strings.Fields(result.Transcript))))
 			bestResult = result
 			break
 		}
 	}
 
-	if bestResult == nil {
+	// Be more lenient: accept if we got any reasonable transcription from any sample
+	// This handles videos with intro/animation where only some samples contain speech
+	if bestResult == nil || (bestConfidence < 0.4 && successfulSamples == 0) {
 		return &AudioQualityResult{
 			Score:          0,
 			HasSpeech:      false,
 			ShouldReject:   true,
-			Recommendation: "Unable to detect any speech in the audio samples.",
-			Issues:         []string{"No transcribable content found"},
+			Recommendation: "Unable to detect clear speech in the audio samples. Please ensure the video contains spoken content.",
+			Issues:         []string{"No transcribable speech content found in multiple samples"},
 		}, nil
+	}
+
+	// If we found at least some transcription, be lenient and accept it
+	// This is important for videos with intro sections before the main content
+	if bestConfidence >= 0.4 || successfulSamples > 0 {
+		s.logger.Info("Accepting video with detected speech",
+			zap.Float64("best_confidence", bestConfidence),
+			zap.Int("successful_samples", successfulSamples),
+			zap.Int("total_samples", len(samples)))
 	}
 
 	return s.analyzeFastQualityFromTranscription(bestResult), nil
