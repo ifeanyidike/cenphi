@@ -291,9 +291,9 @@ export class TestimonialManager {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.message || `Upload failed with status ${response.status}`
-        );
+        // Backend returns either "error" or "message" field
+        const errorMessage = errorData.error || errorData.message || `Upload failed with status ${response.status}`;
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
