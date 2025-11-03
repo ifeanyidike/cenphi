@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"sync"
 	"time"
 
@@ -418,12 +419,31 @@ func (o *StepOrchestrator) executeStage(
 	})
 
 	// Get input from previous stage (if any)
+	// CRITICAL FIX: If previous stage has no output, walk back to find last stage with output
 	var inputArtifactPath *string
 	if stage.InputFromStageID != nil {
 		inputStage, err := o.stageRepo.GetByID(ctx, *stage.InputFromStageID, o.db)
 		if err == nil && inputStage.Message != nil {
-			// Assume message contains artifact path
 			inputArtifactPath = inputStage.Message
+		} else if err == nil && inputStage.Message == nil {
+			// Previous stage completed but has no output - find earlier output
+			allStages, err := o.stageRepo.GetBySessionID(ctx, session.ID, o.db)
+			if err == nil {
+				sort.Slice(allStages, func(i, j int) bool {
+					return allStages[i].StageOrder < allStages[j].StageOrder
+				})
+				for i := len(allStages) - 1; i >= 0; i-- {
+					if allStages[i].ID == stage.ID {
+						for j := i - 1; j >= 0; j-- {
+							if allStages[j].Message != nil && *allStages[j].Message != "" {
+								inputArtifactPath = allStages[j].Message
+								break
+							}
+						}
+						break
+					}
+				}
+			}
 		}
 	}
 
@@ -451,6 +471,9 @@ func (o *StepOrchestrator) executeStage(
 		}
 	}
 
+	// 3. Add session_type to config so handlers can check what type of session they're in
+	stepConfig["session_type"] = session.SessionType
+
 	// Prepare step input
 	stepInput := &StepInput{
 		SessionID:             session.ID,
@@ -472,8 +495,11 @@ func (o *StepOrchestrator) executeStage(
 	sessionIDStr := session.ID.String()
 	sessionCtx := o.getOrCreateSessionContext(ctx, sessionIDStr)
 
-	// Execute the handler with timeout (10 minutes per stage max)
-	timeoutCtx, timeoutCancel := context.WithTimeout(sessionCtx, 10*time.Minute)
+	// Execute the handler with timeout (45 minutes per stage max)
+	// CRITICAL: Long video processing operations (story video assembly, enhancement, etc.)
+	// can legitimately take 20-30 minutes for longer videos. The timeout should only catch
+	// truly hung processes. As long as the stage emits progress, it won't be marked as stale.
+	timeoutCtx, timeoutCancel := context.WithTimeout(sessionCtx, 45*time.Minute)
 	defer timeoutCancel()
 
 	// Execute in goroutine to handle timeout and cancellation
@@ -507,10 +533,11 @@ func (o *StepOrchestrator) executeStage(
 			stage.Status = models.StageStatusCancelled
 			o.stageRepo.Update(context.Background(), stage, o.db)
 		} else {
-			err = fmt.Errorf("stage execution timeout after 10 minutes")
+			err = fmt.Errorf("stage execution timeout after 45 minutes - process may be hung")
 			o.logger.Error("Stage execution timeout",
 				zap.String("session_id", sessionIDStr),
 				zap.String("stage_id", stage.StageID),
+				zap.String("error", "Stage exceeded 45 minute timeout without completing"),
 			)
 		}
 	}
@@ -1063,10 +1090,28 @@ func (o *StepOrchestrator) getPlatformOptimizationStages() []StepDefinition {
 			IsOptional:   true,
 		},
 		{
+			StageID:      "text_overlay",
+			StageName:    "text_overlay",
+			DisplayName:  "Text Overlay",
+			StageOrder:   3,
+			Dependencies: []string{},
+			CanSkip:      true,
+			IsOptional:   true,
+		},
+		{
+			StageID:      "apply_broll",
+			StageName:    "apply_broll",
+			DisplayName:  "Apply B-roll",
+			StageOrder:   4,
+			Dependencies: []string{},
+			CanSkip:      true,
+			IsOptional:   true,
+		},
+		{
 			StageID:      "noise_removal",
 			StageName:    "noise_removal",
 			DisplayName:  "Remove Noise",
-			StageOrder:   3,
+			StageOrder:   5,
 			Dependencies: []string{},
 			CanSkip:      true,
 			IsOptional:   true,
@@ -1075,7 +1120,7 @@ func (o *StepOrchestrator) getPlatformOptimizationStages() []StepDefinition {
 			StageID:      "mix_music",
 			StageName:    "mix_music",
 			DisplayName:  "Mix Music",
-			StageOrder:   4,
+			StageOrder:   6,
 			Dependencies: []string{},
 			CanSkip:      true,
 			IsOptional:   true,
@@ -1084,7 +1129,7 @@ func (o *StepOrchestrator) getPlatformOptimizationStages() []StepDefinition {
 			StageID:      "apply_branding",
 			StageName:    "apply_branding",
 			DisplayName:  "Apply Branding",
-			StageOrder:   5,
+			StageOrder:   7,
 			Dependencies: []string{},
 			CanSkip:      true,
 			IsOptional:   true,
@@ -1093,7 +1138,7 @@ func (o *StepOrchestrator) getPlatformOptimizationStages() []StepDefinition {
 			StageID:      "enhance",
 			StageName:    "enhance",
 			DisplayName:  "Enhance Video",
-			StageOrder:   6,
+			StageOrder:   8,
 			Dependencies: []string{},
 			CanSkip:      true,
 			IsOptional:   true,
@@ -1102,7 +1147,7 @@ func (o *StepOrchestrator) getPlatformOptimizationStages() []StepDefinition {
 			StageID:      "text_optimization",
 			StageName:    "text_optimization",
 			DisplayName:  "Optimize Text",
-			StageOrder:   7,
+			StageOrder:   9,
 			Dependencies: []string{}, // No dependency on video steps
 			CanSkip:      true,
 			IsOptional:   true,
@@ -1180,10 +1225,28 @@ func (o *StepOrchestrator) getStoryVideoStages() []StepDefinition {
 			IsOptional:   true,
 		},
 		{
+			StageID:      "text_overlay",
+			StageName:    "text_overlay",
+			DisplayName:  "Text Overlay",
+			StageOrder:   3,
+			Dependencies: []string{},
+			CanSkip:      true,
+			IsOptional:   true,
+		},
+		{
+			StageID:      "apply_broll",
+			StageName:    "apply_broll",
+			DisplayName:  "Apply B-roll",
+			StageOrder:   4,
+			Dependencies: []string{},
+			CanSkip:      true,
+			IsOptional:   true,
+		},
+		{
 			StageID:      "apply_branding",
 			StageName:    "apply_branding",
 			DisplayName:  "Apply Branding",
-			StageOrder:   3,
+			StageOrder:   5,
 			Dependencies: []string{},
 			CanSkip:      true,
 			IsOptional:   true,
@@ -1192,7 +1255,7 @@ func (o *StepOrchestrator) getStoryVideoStages() []StepDefinition {
 			StageID:      "noise_removal",
 			StageName:    "noise_removal",
 			DisplayName:  "Remove Noise",
-			StageOrder:   4,
+			StageOrder:   6,
 			Dependencies: []string{},
 			CanSkip:      true,
 			IsOptional:   true,
@@ -1201,7 +1264,7 @@ func (o *StepOrchestrator) getStoryVideoStages() []StepDefinition {
 			StageID:      "mix_music",
 			StageName:    "mix_music",
 			DisplayName:  "Mix Music",
-			StageOrder:   5,
+			StageOrder:   7,
 			Dependencies: []string{},
 			CanSkip:      true,
 			IsOptional:   true,
@@ -1210,7 +1273,7 @@ func (o *StepOrchestrator) getStoryVideoStages() []StepDefinition {
 			StageID:      "enhance",
 			StageName:    "enhance",
 			DisplayName:  "Enhance Video",
-			StageOrder:   6,
+			StageOrder:   8,
 			Dependencies: []string{},
 			CanSkip:      true,
 			IsOptional:   true,
@@ -1225,15 +1288,18 @@ func (o *StepOrchestrator) getCustomPipelineStages(selectedStages []string) []St
 	stageDisplayNames := map[string]string{
 		"crop_resize":          "Crop & Resize",
 		"burn_captions":        "Burn Captions",
+		"text_overlay":         "Text Overlay",
 		"noise_removal":        "Remove Noise",
 		"mix_music":            "Mix Music",
 		"apply_branding":       "Apply Branding",
+		"apply_broll":          "Apply B-roll",
 		"enhance":              "Enhance Video",
 		"audio_normalization":  "Normalize Audio",
 		"captions":             "Burn Captions", // Alias for burn_captions
 		"branding":             "Apply Branding", // Alias for apply_branding
 		"music_mix":            "Mix Music",      // Alias for mix_music
 		"enhancement":          "Enhance Video",  // Alias for enhance
+		"broll":                "Apply B-roll",   // Alias for apply_broll
 	}
 
 	// Normalize step names (frontend uses some aliases)
@@ -1247,6 +1313,8 @@ func (o *StepOrchestrator) getCustomPipelineStages(selectedStages []string) []St
 			return "mix_music"
 		case "enhancement":
 			return "enhance"
+		case "broll":
+			return "apply_broll"
 		default:
 			return stepName
 		}

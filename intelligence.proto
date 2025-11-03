@@ -345,6 +345,7 @@ service PlatformOptimizerService {
   rpc NormalizeAudio(NormalizeAudioRequest) returns (NormalizeAudioResponse);
   rpc EnhanceVideo(EnhanceVideoRequest) returns (EnhanceVideoResponse);
   rpc TextOptimization(TextOptimizationRequest) returns (TextOptimizationResponse);
+  rpc ApplyTextOverlay(TextOverlayRequest) returns (TextOverlayResponse);
 }
 
 message OptimizeRequest {
@@ -529,6 +530,50 @@ message TextOptimizationResponse {
   string error = 4;
 }
 
+message TextOverlayRequest {
+  string job_id = 1;
+  string testimonial_id = 2;
+  string media_url = 3;
+  bool upload_intermediate = 4; // true = upload for preview, false = batch mode
+  TextOverlayConfig config = 5;
+}
+
+message TextOverlayConfig {
+  // Intro animation settings (brand and speaker introduction)
+  bool enable_intro = 1;
+  string workspace_name = 2;         // Brand/workspace name to display
+  string speaker_name = 3;           // Speaker's full name
+  string role = 4;                   // Speaker's role/title
+  string location = 5;               // Speaker's location
+  double intro_duration = 6;         // Duration in seconds (default: 4.0, max: 30% of video)
+
+  // Outro animation settings (brand tagline and sign-off)
+  bool enable_outro = 7;
+  string tagline = 8;                // Brand tagline or call-to-action
+  double outro_duration = 9;         // Duration in seconds (default: 6.0, max: 30% of video)
+
+  // Styling settings
+  string brand_color = 10;           // Hex color code (e.g., "#FF5733")
+  string animation_style = 11;       // "elegant", "slide", "fade", "pop" (default: "elegant")
+  string font_family = 12;           // Font to use (default: "DejaVu-Sans-Bold")
+
+  // Advanced settings
+  double fade_duration = 13;         // Fade transition duration (default: 0.5s)
+  string background_overlay = 14;    // Optional background overlay color with opacity
+}
+
+message TextOverlayResponse {
+  string overlaid_url = 1;           // Cloud URL (empty in batch mode)
+  string local_path = 2;             // Container path for batch mode continuation
+  bool intro_applied = 3;            // Whether intro animation was applied
+  bool outro_applied = 4;            // Whether outro animation was applied
+  double duration = 5;
+  double size = 6;
+  int32 width = 7;                   // Video width in pixels
+  int32 height = 8;                  // Video height in pixels
+  string error = 9;
+}
+
 message NormalizeAudioRequest {
   string testimonial_id = 1;
   string media_url = 2;
@@ -637,6 +682,10 @@ service StoryModeService {
   rpc AIOrdering(AIOrderingRequest) returns (AIOrderingResponse);
   rpc AssembleDraft(AssembleDraftRequest) returns (AssembleDraftResponse);
   rpc CollectAndAssembleClips(CollectAndAssembleClipsRequest) returns (AssembleDraftResponse);
+
+  // B-roll and stock footage integration
+  rpc ApplyBrollOverlays(BrollOverlayRequest) returns (BrollOverlayResponse);
+  rpc SearchStockFootage(StockFootageSearchRequest) returns (StockFootageSearchResponse);
 
   // IMPROVEMENT #3: Intelligent Hook Detection
   rpc DetectHooks(HookDetectionRequest) returns (HookDetectionResponse);
@@ -797,6 +846,101 @@ message AssembleDraftResponse {
   string aspect_ratio = 9; // Aspect ratio as string (e.g. "16:9", "9:16", "1:1")
 }
 
+// B-roll Overlay Messages
+
+message BrollOverlayRequest {
+  string job_id = 1;
+  string testimonial_id = 2;
+  string media_url = 3;                 // Main testimonial video
+  repeated BrollClip broll_clips = 4;   // B-roll clips to overlay
+  BrollConfig config = 5;               // Configuration for overlays
+  bool upload_intermediate = 6;         // true = upload for preview, false = batch mode
+  repeated TranscriptSegment transcript_segments = 7; // Transcript segments for AI placement
+}
+
+message BrollClip {
+  string clip_id = 1;                   // Unique ID for this B-roll clip
+  string source_url = 2;                // URL or local path to B-roll media
+  double start_time = 3;                // When to start overlay in main video (seconds)
+  double duration = 4;                  // How long to show B-roll (seconds)
+  string position_mode = 5;             // "fill", "pip", "split" (default: "fill")
+  string transition_type = 6;           // "fade", "dissolve", "wipe", "none" (default: "fade")
+  double transition_duration = 7;       // Transition duration in seconds (default: 0.5)
+
+  // Position settings for "pip" mode
+  string pip_position = 8;              // "top_left", "top_right", "bottom_left", "bottom_right"
+  double pip_scale = 9;                 // Scale factor for PIP (0.2-0.5, default: 0.3)
+
+  // Split mode settings
+  string split_orientation = 10;        // "horizontal", "vertical" (default: "vertical")
+
+  // Metadata
+  string source_type = 11;              // "stock", "uploaded", "generated"
+  string search_query = 12;             // Original search query if from stock footage
+  repeated string keywords = 13;        // Keywords associated with this clip
+}
+
+message BrollConfig {
+  string placement_strategy = 1;        // "auto" = AI placement, "custom" = manual placement
+  bool preserve_audio = 2;              // true = keep original audio, false = mute during B-roll
+  double audio_ducking = 3;             // Reduce main audio by this amount (0.0-1.0, default: 0.3)
+  string default_transition = 4;        // Default transition if not specified per clip
+  double default_transition_duration = 5; // Default transition duration
+  string quality_preset = 6;            // "high", "medium", "low" (default: "high")
+  bool auto_adjust_timing = 7;          // Auto-adjust B-roll timing to avoid covering speaker's face
+  double max_broll_duration = 8;        // Maximum duration for individual B-roll clips (default: 10.0)
+  double max_broll_percent = 9;         // Maximum percentage of video that can be B-roll (default: 0.3)
+  string position_mode = 10;            // Default position mode for clips (default: "fill")
+  string transition_type = 11;          // Default transition type (default: "fade")
+}
+
+message BrollOverlayResponse {
+  string overlaid_url = 1;              // Cloud URL (empty in batch mode)
+  string local_path = 2;                // Container path for batch mode continuation
+  int32 brolls_applied = 3;             // Number of B-roll clips successfully applied
+  repeated string failed_clips = 4;     // IDs of clips that failed to apply
+  double duration = 5;
+  double size = 6;
+  int32 width = 7;
+  int32 height = 8;
+  string error = 9;
+  string aspect_ratio = 10;             // Aspect ratio (e.g., "9:16", "16:9", "1:1")
+}
+
+// Stock Footage Search Messages
+
+message StockFootageSearchRequest {
+  string query = 1;                     // Search query (keywords)
+  string provider = 2;                  // "pexels", "pixabay", "both" (default: "both")
+  int32 max_results = 3;                // Maximum results per provider (default: 10)
+  string orientation = 4;               // "landscape", "portrait", "square", "all" (default: "all")
+  int32 min_duration = 5;               // Minimum video duration in seconds
+  int32 max_duration = 6;               // Maximum video duration in seconds
+  string job_id = 7;                    // Job ID for tracking
+}
+
+message StockFootageItem {
+  string id = 1;                        // Unique ID from provider
+  string provider = 2;                  // "pexels" or "pixabay"
+  string preview_url = 3;               // URL to preview/thumbnail
+  string video_url = 4;                 // URL to download video (HD quality)
+  string video_url_sd = 5;              // URL to download video (SD quality)
+  int32 width = 6;                      // Video width in pixels
+  int32 height = 7;                     // Video height in pixels
+  double duration = 8;                  // Duration in seconds
+  string photographer = 9;              // Creator/photographer name
+  string photographer_url = 10;         // Link to creator's profile
+  repeated string tags = 11;            // Tags/keywords for this footage
+  double relevance_score = 12;          // AI-computed relevance score (0.0-1.0)
+}
+
+message StockFootageSearchResponse {
+  repeated StockFootageItem results = 1; // Search results
+  int32 total_results = 2;              // Total results found
+  string query = 3;                     // Original query
+  double search_time = 4;               // Time taken for search in seconds
+  string error = 5;
+}
 
 // Legacy step-by-step messages
 

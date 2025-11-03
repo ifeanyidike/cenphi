@@ -58,7 +58,8 @@ class MediaEnhancementServicer(intelligence_pb2_grpc.MediaEnhancementServiceServ
                 brand_color=request.brand_color,
                 custom_enhancements=request.custom_enhancements or None,
                 testimonial_id=request.testimonial_id or None,
-                remove_noise=request.remove_noise or True
+                remove_noise=request.remove_noise or True,
+                job_id=job_id
             )
             
             if result.get("error"):
@@ -131,7 +132,7 @@ class MediaEnhancementServicer(intelligence_pb2_grpc.MediaEnhancementServiceServ
             # Upload enhanced video
             enhanced_url = storage_manager.upload_file(
                 output_path,
-                f"enhanced/{request.testimonial_id}/adaptive_{job_id}.mp4"
+                f"temp/{job_id}/enhanced/adaptive_{job_id}.mp4"
             )
 
             # Build response
@@ -218,7 +219,8 @@ class NarrationServicer(intelligence_pb2_grpc.NarrationServiceServicer):
                 music_volume=request.music_volume or 'low',
                 add_background_music=request.add_background_music or False,
                 voice_id=request.voice_id or None,
-                optimize_speech=request.optimize_speech or False
+                optimize_speech=request.optimize_speech or False,
+                job_id=job_id
             )
             
             if result.get("error"):
@@ -789,6 +791,149 @@ class PlatformOptimizerServicer(intelligence_pb2_grpc.PlatformOptimizerServiceSe
             job_checker.complete_job(job_id)
             return intelligence_pb2.EnhanceVideoResponse(error=error_msg)
 
+    def ApplyTextOverlay(self, request, context):
+        """Apply animated text overlays (intro/outro) to video"""
+        job_id = request.job_id or str(uuid.uuid4())
+        try:
+            if job_checker.handle_cancellation(job_id, context):
+                return intelligence_pb2.TextOverlayResponse(error="Job cancelled")
+
+            logger.info(f"[{job_id}] Apply Text Overlay: intro={request.config.enable_intro}, outro={request.config.enable_outro}")
+
+            # Convert protobuf config to dict
+            config = {
+                "enable_intro": request.config.enable_intro,
+                "workspace_name": request.config.workspace_name if request.config.workspace_name else "",
+                "speaker_name": request.config.speaker_name if request.config.speaker_name else "",
+                "role": request.config.role if request.config.role else "",
+                "location": request.config.location if request.config.location else "",
+                "intro_duration": request.config.intro_duration if request.config.intro_duration > 0 else 4.0,
+                "enable_outro": request.config.enable_outro,
+                "tagline": request.config.tagline if request.config.tagline else "",
+                "outro_duration": request.config.outro_duration if request.config.outro_duration > 0 else 6.0,
+                "brand_color": request.config.brand_color if request.config.brand_color else None,
+                "animation_style": request.config.animation_style if request.config.animation_style else "elegant",
+                "font_family": request.config.font_family if request.config.font_family else "DejaVu-Sans-Bold"
+            }
+
+            result = self.step_processor.apply_text_overlay(
+                job_id=job_id,
+                testimonial_id=request.testimonial_id,
+                media_url=request.media_url,
+                config=config,
+                upload_intermediate=request.upload_intermediate
+            )
+
+            response = intelligence_pb2.TextOverlayResponse(
+                overlaid_url=result.get("cloud_url", ""),
+                local_path=result.get("local_path", ""),
+                intro_applied=result.get("intro_applied", False),
+                outro_applied=result.get("outro_applied", False),
+                duration=result.get("duration", 0.0),
+                size=result.get("size", 0.0),
+                width=result.get("width", 1920),
+                height=result.get("height", 1080)
+            )
+
+            job_checker.complete_job(job_id)
+            logger.info(f"✅ Apply Text Overlay completed: {job_id}")
+            return response
+
+        except Exception as e:
+            error_msg = f"Apply Text Overlay error: {str(e)}"
+            logger.error(f"❌ {error_msg}")
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(error_msg)
+            job_checker.complete_job(job_id)
+            return intelligence_pb2.TextOverlayResponse(error=error_msg)
+
+    def ApplyBrollOverlays(self, request, context):
+        """Apply B-roll overlays to video (platform optimizer step)"""
+        job_id = request.job_id or str(uuid.uuid4())
+        try:
+            if job_checker.handle_cancellation(job_id, context):
+                return intelligence_pb2.BrollOverlayResponse(error="Job cancelled")
+
+            logger.info(f"[{job_id}] Apply B-roll Overlays: {len(request.broll_clips)} clips, strategy: {request.config.placement_strategy if request.config else 'default'}")
+
+            # Convert protobuf B-roll clips to dict
+            broll_clips = []
+            for clip in request.broll_clips:
+                broll_clips.append({
+                    "clip_id": clip.clip_id,
+                    "source_url": clip.source_url,
+                    "start_time": clip.start_time,
+                    "duration": clip.duration,
+                    "position_mode": clip.position_mode if clip.position_mode else "fill",
+                    "transition_type": clip.transition_type if clip.transition_type else "fade",
+                    "transition_duration": clip.transition_duration if clip.transition_duration > 0 else 0.5,
+                })
+
+            # Convert config to dict
+            config = {
+                "placement_strategy": request.config.placement_strategy if request.config.placement_strategy else "even",
+                "preserve_audio": request.config.preserve_audio if request.config else True,
+                "audio_ducking": request.config.audio_ducking if request.config and request.config.audio_ducking > 0 else 0.3,
+                "default_transition": request.config.default_transition if request.config and request.config.default_transition else "fade",
+                "default_transition_duration": request.config.default_transition_duration if request.config and request.config.default_transition_duration > 0 else 0.5,
+                "quality_preset": request.config.quality_preset if request.config and request.config.quality_preset else "high",
+                "auto_adjust_timing": request.config.auto_adjust_timing if request.config else True,
+                "max_broll_duration": request.config.max_broll_duration if request.config and request.config.max_broll_duration > 0 else 10.0,
+                "max_broll_percent": request.config.max_broll_percent if request.config and request.config.max_broll_percent > 0 else 0.3,
+                "position_mode": request.config.position_mode if request.config and request.config.position_mode else "fill",
+                "transition_type": request.config.transition_type if request.config and request.config.transition_type else "fade"
+            }
+
+            # Convert transcript segments from protobuf to list of dicts
+            transcript_segments = None
+            if request.transcript_segments:
+                transcript_segments = []
+                for seg in request.transcript_segments:
+                    transcript_segments.append({
+                        "text": seg.text,
+                        "start": seg.start_time,
+                        "end": seg.end_time,
+                        "confidence": getattr(seg, 'confidence', 1.0)
+                    })
+                logger.info(f"[{job_id}] Received {len(transcript_segments)} transcript segments for AI placement")
+
+            result = self.step_processor.apply_broll_overlays(
+                job_id=job_id,
+                testimonial_id=request.testimonial_id,
+                media_url=request.media_url,
+                broll_clips=broll_clips,
+                config=config,
+                upload_intermediate=request.upload_intermediate,
+                transcript_segments=transcript_segments
+            )
+
+            response = intelligence_pb2.BrollOverlayResponse(
+                overlaid_url=result.get("cloud_url", ""),
+                local_path=result.get("local_path", ""),
+                brolls_applied=result.get("brolls_applied", 0),
+                duration=result.get("duration", 0.0),
+                size=result.get("size", 0.0),
+                width=result.get("width", 1920),
+                height=result.get("height", 1080),
+                aspect_ratio=result.get("aspect_ratio", "16:9")
+            )
+
+            # Add failed clips
+            for clip_id in result.get("failed_clips", []):
+                response.failed_clips.append(clip_id)
+
+            job_checker.complete_job(job_id)
+            logger.info(f"✅ Apply B-roll Overlays completed: {job_id}")
+            return response
+
+        except Exception as e:
+            error_msg = f"Apply B-roll Overlays error: {str(e)}"
+            logger.error(f"❌ {error_msg}")
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(error_msg)
+            job_checker.complete_job(job_id)
+            return intelligence_pb2.BrollOverlayResponse(error=error_msg)
+
 
 class SessionManagementServicer(intelligence_pb2_grpc.SessionManagementServiceServicer):
     """Session Management Service Implementation"""
@@ -869,6 +1014,7 @@ class StoryModeServicer(intelligence_pb2_grpc.StoryModeServiceServicer):
 
     def __init__(self):
         self._step_processor = None
+        self._broll_overlay_service = None
 
     @property
     def step_processor(self):
@@ -877,6 +1023,14 @@ class StoryModeServicer(intelligence_pb2_grpc.StoryModeServiceServicer):
             from src.services.story_mode.story_video_step_processor import StoryVideoStepProcessor
             self._step_processor = StoryVideoStepProcessor()
         return self._step_processor
+
+    @property
+    def broll_overlay_service(self):
+        """Lazy load broll overlay service"""
+        if self._broll_overlay_service is None:
+            from src.services.story_mode.broll_overlay import BrollOverlayService
+            self._broll_overlay_service = BrollOverlayService()
+        return self._broll_overlay_service
 
     def GenerateStoryVideo(self, request, context):
         """Generate multi-modal story video from testimonial segments"""
@@ -1451,6 +1605,195 @@ class StoryModeServicer(intelligence_pb2_grpc.StoryModeServiceServicer):
             job_checker.complete_job(job_id)
             return intelligence_pb2.HookDetectionResponse(error=error_msg)
 
+    def ApplyBrollOverlays(self, request, context):
+        """Apply B-roll overlays to testimonial video"""
+        job_id = request.job_id or str(uuid.uuid4())
+        try:
+            if job_checker.handle_cancellation(job_id, context):
+                return intelligence_pb2.BrollOverlayResponse(error="Job cancelled")
+
+            logger.info(f"[{job_id}] Apply B-roll Overlays: {len(request.broll_clips)} clips")
+
+            # Convert protobuf B-roll clips to dict
+            broll_clips = []
+            for clip in request.broll_clips:
+                broll_clips.append({
+                    "clip_id": clip.clip_id,
+                    "source_url": clip.source_url,
+                    "start_time": clip.start_time,
+                    "duration": clip.duration,
+                    "position_mode": clip.position_mode if clip.position_mode else "fill",
+                    "transition_type": clip.transition_type if clip.transition_type else "fade",
+                    "transition_duration": clip.transition_duration if clip.transition_duration > 0 else 0.5,
+                    "pip_position": clip.pip_position if clip.pip_position else "bottom_right",
+                    "pip_scale": clip.pip_scale if clip.pip_scale > 0 else 0.3,
+                    "split_orientation": clip.split_orientation if clip.split_orientation else "vertical",
+                    "source_type": clip.source_type if clip.source_type else "uploaded",
+                    "search_query": clip.search_query if clip.search_query else "",
+                    "keywords": list(clip.keywords) if clip.keywords else []
+                })
+
+            # Convert config to dict
+            config = {
+                "placement_strategy": request.config.placement_strategy if request.config.placement_strategy else "even",
+                "preserve_audio": request.config.preserve_audio,
+                "audio_ducking": request.config.audio_ducking if request.config.audio_ducking > 0 else 0.3,
+                "default_transition": request.config.default_transition if request.config.default_transition else "fade",
+                "default_transition_duration": request.config.default_transition_duration if request.config.default_transition_duration > 0 else 0.5,
+                "quality_preset": request.config.quality_preset if request.config.quality_preset else "high",
+                "auto_adjust_timing": request.config.auto_adjust_timing,
+                "max_broll_duration": request.config.max_broll_duration if request.config.max_broll_duration > 0 else 10.0,
+                "max_broll_percent": request.config.max_broll_percent if request.config.max_broll_percent > 0 else 0.3,
+                "position_mode": request.config.position_mode if request.config.position_mode else "fill",
+                "transition_type": request.config.transition_type if request.config.transition_type else "fade"
+            }
+
+            # Convert transcript segments from protobuf to list of dicts
+            transcript_segments = None
+            if request.transcript_segments:
+                transcript_segments = []
+                for seg in request.transcript_segments:
+                    transcript_segments.append({
+                        "text": seg.text,
+                        "start": seg.start_time,
+                        "end": seg.end_time,
+                        "confidence": getattr(seg, 'confidence', 1.0)
+                    })
+                logger.info(f"[{job_id}] Received {len(transcript_segments)} transcript segments for AI placement")
+
+            # Download media file
+            from src.utils.storage import StorageManager
+            storage_manager = StorageManager()
+
+            logger.info(f"[{job_id}] Downloading media from: {request.media_url}")
+            video_path = storage_manager.download_media(request.media_url)
+
+            if not video_path or not os.path.exists(video_path):
+                raise Exception(f"Failed to download media from: {request.media_url}")
+
+            # Download B-roll clips
+            downloaded_broll_clips = []
+            for clip in broll_clips:
+                if clip.get("source_url"):
+                    logger.info(f"[{job_id}] Downloading B-roll: {clip['source_url']}")
+                    broll_path = storage_manager.download_media(clip["source_url"])
+                    if broll_path and os.path.exists(broll_path):
+                        clip_copy = clip.copy()
+                        clip_copy["local_path"] = broll_path
+                        downloaded_broll_clips.append(clip_copy)
+                    else:
+                        logger.warning(f"[{job_id}] Failed to download B-roll: {clip['source_url']}")
+
+            # Apply B-roll overlays using BrollOverlayService
+            result = self.broll_overlay_service.apply_broll_overlays(
+                video_path=video_path,
+                broll_clips=downloaded_broll_clips,
+                config=config,
+                job_id=job_id,
+                transcript_segments=transcript_segments
+            )
+
+            if not result.get("success"):
+                raise Exception(result.get("error", "B-roll overlay failed"))
+
+            # Upload result if requested
+            cloud_url = ""
+            if request.upload_intermediate:
+                logger.info(f"[{job_id}] Uploading overlaid video to cloud storage")
+                cloud_url = storage_manager.upload_file_with_retry(
+                    result["output_path"],
+                    f"temp/sessions/{request.testimonial_id}/broll_overlaid.mp4"
+                )
+
+            response = intelligence_pb2.BrollOverlayResponse(
+                overlaid_url=cloud_url,
+                local_path=result.get("output_path", ""),
+                brolls_applied=result.get("brolls_applied", 0),
+                duration=result.get("duration", 0.0),
+                size=result.get("size", 0.0),
+                width=result.get("width", 1920),
+                height=result.get("height", 1080),
+                aspect_ratio=result.get("aspect_ratio", "16:9")
+            )
+
+            # Add failed clips
+            for clip_id in result.get("failed_clips", []):
+                response.failed_clips.append(clip_id)
+
+            job_checker.complete_job(job_id)
+            logger.info(f"✅ Apply B-roll Overlays completed: {job_id}")
+            return response
+
+        except Exception as e:
+            error_msg = f"Apply B-roll Overlays error: {str(e)}"
+            logger.error(f"❌ {error_msg}")
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(error_msg)
+            job_checker.complete_job(job_id)
+            return intelligence_pb2.BrollOverlayResponse(error=error_msg)
+
+    def SearchStockFootage(self, request, context):
+        """Search stock footage from Pexels and Pixabay"""
+        job_id = request.job_id or str(uuid.uuid4())
+        try:
+            if job_checker.handle_cancellation(job_id, context):
+                return intelligence_pb2.StockFootageSearchResponse(error="Job cancelled")
+
+            logger.info(f"[{job_id}] Stock Footage Search: '{request.query}' - provider: {request.provider}")
+
+            from src.services.story_mode.stock_footage import StockFootageSearcher
+
+            searcher = StockFootageSearcher()
+
+            result = searcher.search(
+                query=request.query,
+                provider=request.provider if request.provider else "both",
+                max_results=request.max_results if request.max_results > 0 else 10,
+                orientation=request.orientation if request.orientation else "all",
+                min_duration=request.min_duration if request.min_duration > 0 else 0,
+                max_duration=request.max_duration if request.max_duration > 0 else 0
+            )
+
+            response = intelligence_pb2.StockFootageSearchResponse(
+                total_results=result.get("total_results", 0),
+                query=result.get("query", request.query),
+                search_time=result.get("search_time", 0.0)
+            )
+
+            # Add footage items
+            for item in result.get("results", []):
+                footage = intelligence_pb2.StockFootageItem(
+                    id=item.get("id", ""),
+                    provider=item.get("provider", ""),
+                    preview_url=item.get("preview_url", ""),
+                    video_url=item.get("video_url", ""),
+                    video_url_sd=item.get("video_url_sd", ""),
+                    width=item.get("width", 1920),
+                    height=item.get("height", 1080),
+                    duration=item.get("duration", 0.0),
+                    photographer=item.get("photographer", ""),
+                    photographer_url=item.get("photographer_url", ""),
+                    relevance_score=item.get("relevance_score", 0.5)
+                )
+
+                # Add tags
+                for tag in item.get("tags", []):
+                    footage.tags.append(tag)
+
+                response.results.append(footage)
+
+            job_checker.complete_job(job_id)
+            logger.info(f"✅ Stock Footage Search completed: {job_id}, {response.total_results} results")
+            return response
+
+        except Exception as e:
+            error_msg = f"Stock Footage Search error: {str(e)}"
+            logger.error(f"❌ {error_msg}")
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(error_msg)
+            job_checker.complete_job(job_id)
+            return intelligence_pb2.StockFootageSearchResponse(error=error_msg)
+
 
 class NoiseReducerServicer(intelligence_pb2_grpc.NoiseReducerServiceServicer):
     """gRPC Servicer for Noise reduction/removal"""
@@ -1469,7 +1812,8 @@ class NoiseReducerServicer(intelligence_pb2_grpc.NoiseReducerServiceServicer):
             result = noise_reducer.process(
                 testimonial_id = request.testimonial_id,
                 media_url=request.media_url,
-                level=request.level
+                level=request.level,
+                job_id=job_id
             )
 
 

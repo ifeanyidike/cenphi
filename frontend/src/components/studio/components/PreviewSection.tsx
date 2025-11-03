@@ -15,6 +15,8 @@ import { ExistingClipsReadOnly } from "../ExistingClipsReadOnly";
 import { MixedClipsPreview } from "../MixedClipsPreview";
 import { ProcessingStage, PreviewArtifact } from "@/hooks/useSessionSSE";
 import SaveFromStageModal from "../SaveFromStageModal";
+// import TextOverlayEditor from "../TextOverlayEditor"; // Disabled - config done in pre-processing step
+// import BrollEditor from "../BrollEditor"; // Disabled - buggy in-session editing
 
 interface PreviewSectionProps {
   stages: ProcessingStage[];
@@ -29,6 +31,7 @@ interface PreviewSectionProps {
   onClipsSaveComplete?: () => void; // Callback when clips are saved
   testimonialId?: string; // Optional testimonial ID for navigation
   onShowError?: (message: string, type?: "error" | "success" | "info") => void; // Show error/success modal
+  onUpdateStageConfig?: (stageId: string, config: Record<string, any>) => void; // Update stage configuration
 }
 
 export const PreviewSection: React.FC<PreviewSectionProps> = ({
@@ -44,6 +47,7 @@ export const PreviewSection: React.FC<PreviewSectionProps> = ({
   onClipsSaveComplete,
   testimonialId,
   onShowError,
+  // onUpdateStageConfig,
 }) => {
   const navigate = useNavigate();
   // CRITICAL: Determine which stage's preview to show
@@ -60,7 +64,12 @@ export const PreviewSection: React.FC<PreviewSectionProps> = ({
         stage_id: selectedStage.stage_id,
         storage_path: selectedStage.metadata.storage_path || "",
         preview_url: selectedStage.metadata.preview_url,
-        artifact_type: (selectedStage.metadata?.artifact_type as "video" | "audio" | "image" | "json") || "video",
+        artifact_type:
+          (selectedStage.metadata?.artifact_type as
+            | "video"
+            | "audio"
+            | "image"
+            | "json") || "video",
         file_size_bytes: selectedStage.metadata?.file_size_bytes,
         metadata: selectedStage.metadata || {},
         created_at: selectedStage.completed_at || new Date().toISOString(),
@@ -193,10 +202,13 @@ export const PreviewSection: React.FC<PreviewSectionProps> = ({
         const hasClips = clips && Array.isArray(clips) && clips.length > 0;
 
         // Extract metadata flags
-        const hasMixedClips = extractClipsStage?.metadata?.has_mixed_clips === true;
+        const hasMixedClips =
+          extractClipsStage?.metadata?.has_mixed_clips === true;
         const clipsSource = extractClipsStage?.metadata?.clips_source;
-        const clipsAreNew = extractClipsStage?.metadata?.clips_are_new !== false;
-        const existingClipsCount = extractClipsStage?.metadata?.existing_clips_count || 0;
+        const clipsAreNew =
+          extractClipsStage?.metadata?.clips_are_new !== false;
+        const existingClipsCount =
+          extractClipsStage?.metadata?.existing_clips_count || 0;
         const newClipsCount = extractClipsStage?.metadata?.new_clips_count || 0;
 
         if (isViewingClipsStage && hasClips) {
@@ -223,9 +235,13 @@ export const PreviewSection: React.FC<PreviewSectionProps> = ({
                 onViewAllClips={() => {
                   // Navigate to testimonial details clipping tab
                   if (testimonialId) {
-                    navigate(`/detail/${testimonialId}?tab=artifacts&artifactTab=clipping`);
+                    navigate(
+                      `/detail/${testimonialId}?tab=artifacts&artifactTab=clipping`
+                    );
                   } else {
-                    console.warn("[PreviewSection] No testimonialId available for navigation");
+                    console.warn(
+                      "[PreviewSection] No testimonialId available for navigation"
+                    );
                   }
                 }}
                 onError={(message) => {
@@ -277,14 +293,20 @@ export const PreviewSection: React.FC<PreviewSectionProps> = ({
               onViewAllClips={() => {
                 // Navigate to testimonial details clipping tab
                 if (testimonialId) {
-                  navigate(`/detail/${testimonialId}?tab=artifacts&artifactTab=clipping`);
+                  navigate(
+                    `/detail/${testimonialId}?tab=artifacts&artifactTab=clipping`
+                  );
                 } else {
-                  console.warn("[PreviewSection] No testimonialId available for navigation");
+                  console.warn(
+                    "[PreviewSection] No testimonialId available for navigation"
+                  );
                 }
               }}
               onGenerateNew={() => {
                 // Restart clipping session to generate new clips
-                console.log("[PreviewSection] Generate new clips - restart session");
+                console.log(
+                  "[PreviewSection] Generate new clips - restart session"
+                );
                 if (onClipsSaveComplete) {
                   onClipsSaveComplete(); // Close current session
                 }
@@ -344,6 +366,7 @@ export const PreviewSection: React.FC<PreviewSectionProps> = ({
                 key={previewToShow.preview_url} // Force re-render on preview change
                 src={previewToShow.preview_url}
                 controls
+                preload="metadata"
                 className="w-full h-full object-contain"
                 onError={(e) => {
                   console.error("[PreviewSection] Video load error:", e);
@@ -544,6 +567,12 @@ export const PreviewSection: React.FC<PreviewSectionProps> = ({
           </div>
         </motion.div>
       )}
+
+      {/* Text Overlay & B-roll Editors - DISABLED
+          Configuration is done in the pre-processing step (PlatformOptimizationConfig, etc.)
+          In-session editing was buggy and created UX redundancy.
+          All configs are sent to backend from pre-processing step.
+      */}
 
       {/* Save from This Stage Modal */}
       {showSaveFromStageModal && selectedStage && (

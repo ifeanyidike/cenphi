@@ -43,6 +43,34 @@ func (o *StepOrchestrator) RegisterPlatformOptimizationHandlers(worker *Platform
 		return o.convertToStepOutput(result), nil
 	})
 
+	o.registerHandler("platform_optimization", "text_overlay", func(ctx context.Context, input *StepInput) (*StepOutput, error) {
+		stepCtx, err := o.buildStepContext(ctx, input)
+		if err != nil {
+			return nil, err
+		}
+
+		result, err := worker.HandleTextOverlay(ctx, stepCtx)
+		if err != nil {
+			return nil, err
+		}
+
+		return o.convertToStepOutput(result), nil
+	})
+
+	o.registerHandler("platform_optimization", "apply_broll", func(ctx context.Context, input *StepInput) (*StepOutput, error) {
+		stepCtx, err := o.buildStepContext(ctx, input)
+		if err != nil {
+			return nil, err
+		}
+
+		result, err := worker.HandleApplyBroll(ctx, stepCtx)
+		if err != nil {
+			return nil, err
+		}
+
+		return o.convertToStepOutput(result), nil
+	})
+
 	o.registerHandler("platform_optimization", "noise_removal", func(ctx context.Context, input *StepInput) (*StepOutput, error) {
 		stepCtx, err := o.buildStepContext(ctx, input)
 		if err != nil {
@@ -138,6 +166,30 @@ func (o *StepOrchestrator) RegisterCustomPipelineHandlers(worker *PlatformOptimi
 			return nil, err
 		}
 		result, err := worker.HandleBurnCaptions(ctx, stepCtx)
+		if err != nil {
+			return nil, err
+		}
+		return o.convertToStepOutput(result), nil
+	})
+
+	o.registerHandler("custom_pipeline", "text_overlay", func(ctx context.Context, input *StepInput) (*StepOutput, error) {
+		stepCtx, err := o.buildStepContext(ctx, input)
+		if err != nil {
+			return nil, err
+		}
+		result, err := worker.HandleTextOverlay(ctx, stepCtx)
+		if err != nil {
+			return nil, err
+		}
+		return o.convertToStepOutput(result), nil
+	})
+
+	o.registerHandler("custom_pipeline", "apply_broll", func(ctx context.Context, input *StepInput) (*StepOutput, error) {
+		stepCtx, err := o.buildStepContext(ctx, input)
+		if err != nil {
+			return nil, err
+		}
+		result, err := worker.HandleApplyBroll(ctx, stepCtx)
 		if err != nil {
 			return nil, err
 		}
@@ -309,36 +361,75 @@ func (o *StepOrchestrator) buildStepContext(ctx context.Context, input *StepInpu
 	// Get target platform from config
 	targetPlatform, _ := input.Config["target_platform"].(string)
 	if targetPlatform == "" {
-		targetPlatform = "instagram_reels" // default
+		// Check if this is a story_video session - if so, don't set a default platform
+		sessionType, _ := input.Config["session_type"].(string)
+		if sessionType != "story_video" {
+			targetPlatform = "instagram_reels" // default for platform_optimization only
+		}
+		// For story_video, targetPlatform remains empty (no platform assigned)
 	}
 
-	// Determine current artifact URL
-	// CRITICAL FIX: Check for clip_id in config first before using testimonial URL
+	// Determine current artifact URL and duration
+	// CRITICAL FIX: Support clip_url and clip_duration directly from config
 	currentArtifactURL := ""
+	var clipDuration *float64 // Track clip duration for B-roll calculations
+
 	if input.InputArtifactPath != nil {
 		currentArtifactURL = *input.InputArtifactPath
 	} else {
-		// Check if processing a clip instead of full testimonial
-		clipID, hasClipID := input.Config["clip_id"].(string)
-		if hasClipID && clipID != "" {
-			// Fetch clip URL from artifacts
-			clipURL, err := o.getClipURL(ctx, input.TestimonialID, clipID)
-			if err != nil {
-				o.logger.Warn("Failed to fetch clip URL, falling back to testimonial",
-					zap.String("clip_id", clipID),
-					zap.Error(err))
-				if testimonialData != nil && testimonialData.MediaURL != nil {
-					currentArtifactURL = *testimonialData.MediaURL
-				}
-			} else {
-				currentArtifactURL = clipURL
-				o.logger.Info("Using clip URL for processing",
-					zap.String("clip_id", clipID),
-					zap.String("clip_url", clipURL))
+		// PRIORITY 1: Check for clip_url directly in config (fastest, most reliable)
+		if clipURL, ok := input.Config["clip_url"].(string); ok && clipURL != "" {
+			currentArtifactURL = clipURL
+			o.logger.Info("Using clip_url from config for processing",
+				zap.String("clip_url", clipURL))
+
+			// Also get clip_duration if provided
+			if dur, ok := input.Config["clip_duration"].(float64); ok && dur > 0 {
+				clipDuration = &dur
+				o.logger.Info("Using clip_duration from config",
+					zap.Float64("clip_duration", dur))
 			}
-		} else if testimonialData != nil && testimonialData.MediaURL != nil {
-			currentArtifactURL = *testimonialData.MediaURL
+		} else {
+			// PRIORITY 2: Try clip_id (fetch from database)
+			clipID, hasClipID := input.Config["clip_id"].(string)
+			if hasClipID && clipID != "" {
+				// Fetch clip URL and metadata from artifacts
+				clipURL, err := o.getClipURL(ctx, input.TestimonialID, clipID)
+				if err != nil {
+					o.logger.Warn("Failed to fetch clip URL, falling back to testimonial",
+						zap.String("clip_id", clipID),
+						zap.Error(err))
+					if testimonialData != nil && testimonialData.MediaURL != nil {
+						currentArtifactURL = *testimonialData.MediaURL
+					}
+				} else {
+					currentArtifactURL = clipURL
+
+					// Also fetch clip metadata for duration
+					clipMeta, err := o.getClipMetadata(ctx, input.TestimonialID, clipID)
+					if err == nil && clipMeta != nil {
+						clipDuration = &clipMeta.Duration
+						o.logger.Info("Using clip from database",
+							zap.String("clip_id", clipID),
+							zap.String("clip_url", clipURL),
+							zap.Float64("clip_duration", clipMeta.Duration))
+					} else {
+						o.logger.Info("Using clip URL (duration unknown)",
+							zap.String("clip_id", clipID),
+							zap.String("clip_url", clipURL))
+					}
+				}
+			} else if testimonialData != nil && testimonialData.MediaURL != nil {
+				// PRIORITY 3: Fallback to full testimonial
+				currentArtifactURL = *testimonialData.MediaURL
+				o.logger.Info("Using full testimonial video for processing")
+			}
 		}
+	}
+
+	// Store clip duration in config for use by stages (especially B-roll)
+	if clipDuration != nil {
+		input.Config["actual_video_duration"] = *clipDuration
 	}
 
 	// Get transcript data
@@ -529,22 +620,25 @@ func (o *StepOrchestrator) getClipURL(ctx context.Context, testimonialID *uuid.U
 
 		// Parse the artifact data
 		var artifactData struct {
-			GeneratedClips struct {
-				Clips []struct {
-					ID  string `json:"id"`
-					URL string `json:"url"`
-				} `json:"clips"`
+			GeneratedClips []struct {
+				ID  string `json:"id"`
+				URL string `json:"url"`
 			} `json:"generated_clips"`
 		}
 
 		if err := json.Unmarshal(dataJSON, &artifactData); err != nil {
+			o.logger.Warn("Failed to parse artifact data for clip URL",
+				zap.Error(err),
+				zap.String("clip_id", clipID))
 			continue
 		}
-		fmt.Println("artifactData.GeneratedClips.Clips", artifactData.GeneratedClips.Clips)
 
 		// Find the specific clip by ID
-		for _, clip := range artifactData.GeneratedClips.Clips {
+		for _, clip := range artifactData.GeneratedClips {
 			if clip.ID == clipID {
+				o.logger.Info("✅ Found clip URL in database",
+					zap.String("clip_id", clipID),
+					zap.String("clip_url", clip.URL))
 				return clip.URL, nil
 			}
 		}
@@ -583,14 +677,12 @@ func (o *StepOrchestrator) getClipMetadata(ctx context.Context, testimonialID *u
 
 		// Parse the artifact data with timing information
 		var artifactData struct {
-			GeneratedClips struct {
-				Clips []struct {
-					ID        string  `json:"id"`
-					URL       string  `json:"url"`
-					StartTime float64 `json:"start_time"`
-					EndTime   float64 `json:"end_time"`
-					Duration  float64 `json:"duration"`
-				} `json:"clips"`
+			GeneratedClips []struct {
+				ID        string  `json:"id"`
+				URL       string  `json:"url"`
+				StartTime float64 `json:"start_time"`
+				EndTime   float64 `json:"end_time"`
+				Duration  float64 `json:"duration"`
 			} `json:"generated_clips"`
 		}
 
@@ -599,7 +691,7 @@ func (o *StepOrchestrator) getClipMetadata(ctx context.Context, testimonialID *u
 		}
 
 		// Find the specific clip by ID
-		for _, clip := range artifactData.GeneratedClips.Clips {
+		for _, clip := range artifactData.GeneratedClips {
 			if clip.ID == clipID {
 				return &ClipMetadata{
 					StartTime: clip.StartTime,
@@ -616,7 +708,7 @@ func (o *StepOrchestrator) getClipMetadata(ctx context.Context, testimonialID *u
 // getTranscriptSegmentsByTime extracts transcript segments that fall within the specified time range
 // This is the same logic as video_platform_optimizer_worker.go's getTranscriptSegmentByTime
 // Segments must be FULLY WITHIN the time range (segment.start >= start AND segment.end <= end)
-// Timestamps are adjusted relative to the start time
+// Timestamps are adjusted relative to the start time and converted from milliseconds to seconds
 func (o *StepOrchestrator) getTranscriptSegmentsByTime(segments models.TranscriptSegments, start, end float64) models.TranscriptSegments {
 	if len(segments) == 0 {
 		return segments
@@ -633,11 +725,18 @@ func (o *StepOrchestrator) getTranscriptSegmentsByTime(segments models.Transcrip
 			adjustedSegment.StartTime -= start
 			adjustedSegment.EndTime -= start
 
+			// Convert from milliseconds to seconds for AI service compatibility
+			adjustedSegment.StartTime /= 1000.0
+			adjustedSegment.EndTime /= 1000.0
+
 			// Adjust word timestamps if present
 			if len(adjustedSegment.Words) > 0 {
 				for i := range adjustedSegment.Words {
 					adjustedSegment.Words[i].Start -= start
 					adjustedSegment.Words[i].End -= start
+					// Convert word timestamps to seconds as well
+					adjustedSegment.Words[i].Start /= 1000.0
+					adjustedSegment.Words[i].End /= 1000.0
 				}
 			}
 
@@ -664,4 +763,3 @@ func (o *StepOrchestrator) getTranscriptSegmentsFromArtifact(ctx context.Context
 
 	return segments, nil
 }
-

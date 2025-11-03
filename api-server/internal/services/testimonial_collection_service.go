@@ -23,6 +23,7 @@ import (
 	"github.com/ifeanyidike/cenphi/internal/repositories"
 	"github.com/ifeanyidike/cenphi/internal/sse"
 	"github.com/ifeanyidike/cenphi/internal/storage"
+	"github.com/ifeanyidike/cenphi/internal/utils"
 	"github.com/ifeanyidike/cenphi/internal/vector_store"
 	"github.com/jmoiron/sqlx"
 	"github.com/redis/go-redis/v9"
@@ -793,6 +794,27 @@ func (tcs TestimonialCollectionService) ProcessVideoUpload(ctx context.Context, 
 		return nil, fmt.Errorf("failed to process video: %w", err)
 	}
 
+	// Extract video metadata (duration + thumbnail uploaded to OCI)
+	var duration *float64
+	var thumbnailURL *string
+
+	// Use background context with custom timeout for thumbnail extraction
+	thumbnailCtx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	metadata, err := utils.ExtractVideoMetadataWithOCI(thumbnailCtx, result.StorageURL, workspaceID.String(), tcs.storageService)
+	if err != nil {
+		tcs.logger.Warn("Failed to extract video metadata, continuing without it",
+			zap.Error(err),
+			zap.String("video_url", result.StorageURL))
+	} else {
+		duration = &metadata.Duration
+		thumbnailURL = &metadata.ThumbnailURL
+		tcs.logger.Info("Extracted video metadata",
+			zap.Float64("duration", metadata.Duration),
+			zap.String("thumbnail_url", metadata.ThumbnailURL))
+	}
+
 	// Create testimonial record
 	format := strings.TrimPrefix(filepath.Ext(header.Filename), ".")
 	testimonial := &models.Testimonial{
@@ -806,6 +828,8 @@ func (tcs TestimonialCollectionService) ProcessVideoUpload(ctx context.Context, 
 		Status:           "processing",
 		Format:           format,
 		MediaURL:         &result.StorageURL,
+		Duration:         duration,
+		ThumbnailURL:     thumbnailURL,
 		CollectionMethod: authorData.CollectionMethod,
 		Rating:           authorData.Rating,
 		ProcessingStatus: "pending",

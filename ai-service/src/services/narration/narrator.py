@@ -150,17 +150,18 @@ class NarrationGenerator:
             "temp_files": temp_files
         }
     
-    def generate(self, text: str, 
-                 voice_id: str = "echo", 
-                 language: str = "en", 
-                 gender: str = "female", 
-                 style: str = "professional", 
-                 background_music: Optional[str] = None, 
-                 music_volume: str = "low", 
-                 preferred_provider: str = "openai", 
-                 upload_to_cloud = True, 
+    def generate(self, text: str,
+                 voice_id: str = "echo",
+                 language: str = "en",
+                 gender: str = "female",
+                 style: str = "professional",
+                 background_music: Optional[str] = None,
+                 music_volume: str = "low",
+                 preferred_provider: str = "openai",
+                 upload_to_cloud = True,
                  optimize_speech = False,
                  add_background_music: bool = False,
+                 job_id: Optional[str] = None,
             ) -> Dict[str, Any]:
         """
         Generate premium narration with multi-provider AI-optimized text processing
@@ -188,8 +189,8 @@ class NarrationGenerator:
             if len(text) > 15000:
                 return self._create_error_response("Text too long (max 15,000 characters)")
             
-            cache_path = self.generate_narration_cache_key(text, voice_id, gender, style, 
-                    preferred_provider, optimize_speech, add_background_music, background_music, music_volume)
+            cache_path = self.generate_narration_cache_key(text, voice_id, gender, style,
+                    preferred_provider, optimize_speech, add_background_music, background_music, music_volume, job_id)
 
             if upload_to_cloud:
                 cache_url = self.storage_manager.get_public_url_for_object(cache_path)
@@ -284,32 +285,37 @@ class NarrationGenerator:
             if upload_to_cloud:
                 self.cleanup_temp_files(temp_files)
 
-    def generate_narration_cache_key(self, 
-            text: str, 
-            voice_id: str, 
-            gender: str, 
+    def generate_narration_cache_key(self,
+            text: str,
+            voice_id: str,
+            gender: str,
             style: str,
             preferred_provider: str,
             optimize_speech: bool,
             add_background_music: bool,
             background_music: str | None = None,
             music_volume: str | None = "low",
+            job_id: str | None = None,
             ):
         """Generate deterministic cache key including brand colors"""
         import hashlib
+        import uuid
         NARRATOR_ALGORITHM_VERSION = "v1.0"
 
         optimize_speech = "1" if optimize_speech else "0"
         add_background_music = "1" if add_background_music else "0"
         background_music = background_music or ""
-        
+
         cache_data = (
             f"{NARRATOR_ALGORITHM_VERSION}|{text[:100]}|{voice_id}|{gender}|{style}|{preferred_provider}"
             f"|{optimize_speech}|{add_background_music}|{background_music}|{music_volume}"
         )
-        
+
         cache_hash = hashlib.md5(cache_data.encode()).hexdigest()
-        return f"temp/narration/{cache_hash}.wav"
+
+        # Use job_id for session-based cleanup, fallback to uuid for backward compatibility
+        session_id = job_id if job_id else str(uuid.uuid4())
+        return f"temp/{session_id}/narration/{cache_hash}.wav"
     
     def _synthesize_speech(self, text: str, voice_id: str, voice_settings: VoiceSettings, provider: str) -> str:
         """Synthesize speech using ElevenLabs with premium quality settings"""

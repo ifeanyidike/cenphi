@@ -355,8 +355,8 @@ class StoryModeGenerator:
             encoded_story_path = self._apply_studio_encoding(
                 final_story_path, output_format, story_id, temp_files_local
             )
-            
-            object_name = f"temp/stories/{cache_key}.{output_format}"
+
+            object_name = f"temp/{story_id}/stories/{cache_key}.{output_format}"
             story_video_url = self.storage_manager.upload_file_with_retry(encoded_story_path, object_name)
             
             temp_files_local.append(encoded_story_path)
@@ -498,8 +498,8 @@ class StoryModeGenerator:
             )
             file_size_bytes = os.path.getsize(encoded_story_path)
             file_size_mb = round(file_size_bytes / (1024 * 1024), 2)
-            
-            object_name = f"temp/stories/{cache_key}.{output_format}"
+
+            object_name = f"temp/{story_id}/stories/{cache_key}.{output_format}"
             story_video_url = self.storage_manager.upload_file_with_retry(encoded_story_path, object_name)
             
             temp_files_local.append(encoded_story_path)

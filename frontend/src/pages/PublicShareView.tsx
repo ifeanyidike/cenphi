@@ -54,6 +54,13 @@ interface PublicShareContent {
     content_type?: string;
     processing_type?: string;
     created_at: string;
+    clips?: Array<{
+      url: string;
+      duration?: number;
+      thumbnail_url?: string;
+      [key: string]: any;
+    }>;
+    clips_count?: number;
   };
 }
 
@@ -416,10 +423,11 @@ const PublicShareView = observer(() => {
             )}
           </motion.div>
 
-          {/* Video Testimonial or Artifact */}
+          {/* Video Testimonial or Single Clip Artifact */}
           {(testimonial?.video_url ||
             (artifact?.asset_url &&
-              artifact?.content_type?.startsWith("video"))) && (
+              artifact?.content_type?.startsWith("video") &&
+              !artifact?.clips)) && (
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
@@ -488,6 +496,58 @@ const PublicShareView = observer(() => {
                   </div>
                 </div>
               </Card>
+            </motion.div>
+          )}
+
+          {/* Clips Collection - Show all clips in a grid */}
+          {artifact?.clips && Array.isArray(artifact.clips) && (
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="mb-8"
+            >
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                  Video Clips Collection
+                </h2>
+                <p className="text-gray-600">
+                  {artifact.clips_count || artifact.clips.length} clips from this testimonial
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {artifact.clips.map((clip: any, index: number) => (
+                  <Card
+                    key={clip.id || index}
+                    className="overflow-hidden border-gray-200 shadow-lg hover:shadow-xl transition-shadow"
+                  >
+                    <div className="relative bg-black aspect-video group">
+                      <video
+                        src={clip.url}
+                        className="w-full h-full object-cover"
+                        controls
+                        playsInline
+                      />
+                    </div>
+                    <CardContent className="p-4">
+                      <h3 className="font-semibold text-gray-900 mb-1">
+                        {clip.title || `Clip ${index + 1}`}
+                      </h3>
+                      {clip.theme && (
+                        <p className="text-sm text-gray-600 mb-2">
+                          {clip.theme}
+                        </p>
+                      )}
+                      {clip.duration && (
+                        <p className="text-xs text-gray-500">
+                          Duration: {clip.duration.toFixed(1)}s
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </motion.div>
           )}
 

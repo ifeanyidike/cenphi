@@ -57,6 +57,12 @@ type Workspace struct {
 	BrandContext      json.RawMessage `json:"brand_context,omitempty" db:"brand_context"`
 	VectorStoreID     *string         `json:"vector_store_id,omitempty" db:"vector_store_id"`
 	TotalTestimonials int             `json:"total_testimonials" db:"total_testimonials"`
+
+	// Showcase fields
+	ShowcaseEnabled  bool    `json:"showcase_enabled" db:"showcase_enabled"`
+	ShowcaseSlug     *string `json:"showcase_slug,omitempty" db:"showcase_slug"`
+	ShowcaseSettings JSONMap `json:"showcase_settings,omitempty" db:"showcase_settings"`
+
 	CreatedAt         time.Time       `json:"created_at" db:"created_at"`
 	UpdatedAt         time.Time       `json:"updated_at" db:"updated_at"`
 }

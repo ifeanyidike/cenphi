@@ -776,26 +776,53 @@ class CaptionGenerator:
         
         platform_lower = platform.lower()
         
-        if platform_lower in ["tiktok", "instagram_reels"]:
+        if platform_lower == "tiktok":
             return """STYLE
 ::cue {
   background-color: rgba(0, 0, 0, 0.8);
   color: white;
   font-family: Arial, sans-serif;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: bold;
   text-align: center;
   line-height: 1.2;
   position: align;
   vertical-align: bottom;
 }"""
-        elif platform_lower in ["youtube_shorts", "youtube_standard"]:
+        elif platform_lower == "instagram_reels":
+            return """STYLE
+::cue {
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  font-family: Arial, sans-serif;
+  font-size: 15px;
+  font-weight: bold;
+  text-align: center;
+  line-height: 1.2;
+  position: align;
+  vertical-align: bottom;
+}"""
+        elif platform_lower == "youtube_shorts":
             return """STYLE
 ::cue {
   background-color: rgba(0, 0, 0, 0.75);
   color: white;
   font-family: Arial, sans-serif;
-  font-size: 16px;
+  font-size: 17px;
+  font-weight: bold;
+  text-align: center;
+  line-height: 1.3;
+  position: align;
+  vertical-align: bottom;
+}"""
+        elif platform_lower == "instagram_story":
+            return """STYLE
+::cue {
+  background-color: rgba(0, 0, 0, 0.75);
+  color: white;
+  font-family: Arial, sans-serif;
+  font-size: 13px;
+  font-weight: bold;
   text-align: center;
   line-height: 1.3;
   position: align;
@@ -807,9 +834,22 @@ class CaptionGenerator:
   background-color: rgba(0, 0, 0, 0.7);
   color: white;
   font-family: Arial, sans-serif;
-  font-size: 14px;
+  font-size: 15px;
+  font-weight: bold;
   text-align: center;
   line-height: 1.4;
+  position: align;
+  vertical-align: bottom;
+}"""
+        elif platform_lower == "youtube_standard":
+            return """STYLE
+::cue {
+  background-color: rgba(0, 0, 0, 0.75);
+  color: white;
+  font-family: Arial, sans-serif;
+  font-size: 16px;
+  text-align: center;
+  line-height: 1.3;
   position: align;
   vertical-align: bottom;
 }"""
@@ -910,34 +950,66 @@ class CaptionGenerator:
             escaped_srt_path = normalized_srt_path.replace(":", "\\:").replace("'", "\\'")
             
             # Platform-specific caption styling for FFmpeg (ASS format)
+            # Verified compatible with FFmpeg 7.1.1 (tested: test_platform_captions.py)
             platform_lower = platform.lower()
-            
-            if platform_lower in ["tiktok", "instagram_reels", "youtube_shorts"]:
-                # Mobile platforms - bold, larger text
+
+            if platform_lower == "tiktok":
+                # TikTok signature style: Bold text with YELLOW box background
+                # BorderStyle=4 creates the iconic TikTok opaque box behind text
+                # Industry standard: 16-18px for readability without overwhelming
                 subtitle_filter = (
                     f"subtitles='{escaped_srt_path}':force_style='"
-                    f"FontName=Arial,FontSize=18,Bold=1,BorderStyle=1,Outline=2,Shadow=0,"
-                    f"PrimaryColour=&Hffffff&,OutlineColour=&H000000&,"
-                    f"BackColour=&H80000000&,Alignment=2,MarginV=30'"
+                    f"FontName=Arial Black,FontSize=18,Bold=1,BorderStyle=4,Outline=0,Shadow=2,"
+                    f"PrimaryColour=&H000000&,BackColour=&H0000ffff&,"  # Black text on bright yellow (TikTok signature)
+                    f"Alignment=2,MarginV=45,Spacing=2'"
+                )
+            elif platform_lower == "instagram_reels":
+                # Instagram Reels style: Similar to TikTok but with PINK/purple accent
+                # Industry standard: 16-18px with bold weight for mobile readability
+                subtitle_filter = (
+                    f"subtitles='{escaped_srt_path}':force_style='"
+                    f"FontName=Arial Black,FontSize=17,Bold=1,BorderStyle=4,Outline=0,Shadow=2,"
+                    f"PrimaryColour=&Hffffff&,BackColour=&H00ff69b4&,"  # White on hot pink (Instagram vibe)
+                    f"Alignment=2,MarginV=40,Spacing=2'"
+                )
+            elif platform_lower == "youtube_shorts":
+                # YouTube Shorts: Clean, modern with semi-transparent black box
+                # Industry standard: 18-20px, less aggressive than TikTok
+                subtitle_filter = (
+                    f"subtitles='{escaped_srt_path}':force_style='"
+                    f"FontName=Arial,FontSize=19,Bold=1,BorderStyle=4,Outline=0,Shadow=2,"
+                    f"PrimaryColour=&Hffffff&,BackColour=&HCC000000&,"  # White on 80% black (clean, readable)
+                    f"Alignment=2,MarginV=38,Spacing=2'"
+                )
+            elif platform_lower == "instagram_story":
+                # Instagram Story: Compact, elegant style for mobile
+                # Industry standard: 14-16px for story format
+                subtitle_filter = (
+                    f"subtitles='{escaped_srt_path}':force_style='"
+                    f"FontName=Arial,FontSize=15,Bold=1,BorderStyle=4,Outline=0,Shadow=1,"
+                    f"PrimaryColour=&Hffffff&,BackColour=&HCC000000&,"  # White on 80% black
+                    f"Alignment=2,MarginV=32,Spacing=1'"
                 )
             elif platform_lower == "linkedin":
-                # Professional styling
+                # LinkedIn: Professional, sophisticated - subtle box for credibility
+                # Industry standard: 16-18px for professional appearance
                 subtitle_filter = (
                     f"subtitles='{escaped_srt_path}':force_style='"
-                    f"FontName=Arial,FontSize=16,Bold=0,BorderStyle=1,Outline=1,Shadow=0,"
-                    f"PrimaryColour=&Hffffff&,OutlineColour=&H000000&,"
-                    f"Alignment=2,MarginV=30'"
+                    f"FontName=Arial,FontSize=17,Bold=1,BorderStyle=4,Outline=0,Shadow=1,"
+                    f"PrimaryColour=&Hffffff&,BackColour=&HE6000000&,"  # White on very subtle black (10% transparency)
+                    f"Alignment=2,MarginV=32,Spacing=1'"
                 )
-            elif platform_lower in ["instagram_story"]:
-                # Stories - smaller text
+            elif platform_lower == "youtube_standard":
+                # YouTube Standard: Traditional, clean subtitle style
+                # Industry standard: 18-20px with outline for readability
                 subtitle_filter = (
                     f"subtitles='{escaped_srt_path}':force_style='"
-                    f"FontName=Arial,FontSize=14,Bold=1,BorderStyle=1,Outline=1,Shadow=0,"
-                    f"PrimaryColour=&Hffffff&,OutlineColour=&H000000&,"
-                    f"Alignment=2,MarginV=25'"
+                    f"FontName=Arial,FontSize=18,Bold=1,BorderStyle=1,Outline=2,Shadow=1,"
+                    f"PrimaryColour=&Hffffff&,OutlineColour=&H000000&,"  # White with black outline
+                    f"Alignment=2,MarginV=28'"
                 )
             else:
-                # Default styling
+                # Default styling for unknown platforms
                 subtitle_filter = f"subtitles='{escaped_srt_path}'"
             
             # HIGH QUALITY encoding to match crop/branding/enhancement quality

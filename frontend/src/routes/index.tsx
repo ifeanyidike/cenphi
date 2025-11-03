@@ -5,9 +5,6 @@ import { Login } from "@/pages/Login";
 import { Signup } from "@/pages/SignUp";
 import ResetPasswordPage from "@/pages/ResetPassword";
 import VerifyEmailPending from "@/pages/VerifyEmailPending";
-
-import EmailPage from "@/pages/EmailPage";
-
 // Testimonial Collection Process
 import CollectionPage from "@/pages/CollectionPage";
 import WhyCenphi from "@/pages/WhyCenphi";
@@ -29,13 +26,13 @@ import AuthPagesProtectedRoute from "@/components/auth/protected_routes/AuthPage
 import BrandGuidePage from "@/pages/BrandGuidePage";
 import Studio from "@/pages/Studio";
 import TestimonialDetailPage from "@/pages/TestimonialPage";
-import TempCapturePage from "@/pages/TempCapturePage";
 import AIGeneratedContentPage from "@/pages/AIGeneratedContentPage";
 import SettingsPage from "@/pages/SettingsPage";
 import EnhancedAnalytics from "@/pages/EnhancedAnalytics";
 import SchedulingPage from "@/pages/SchedulingPage";
 import TalkToYourDataPage from "@/pages/TalkToYourDataPage";
 import PublicShareView from "@/pages/PublicShareView";
+import PublicShowcase from "@/pages/PublicShowcase";
 import DashboardLayout from "@/components/dashboard-main/DashboardLayout";
 import TestimonialsDashboard from "@/pages/TestimonialsDashboard";
 
@@ -155,17 +152,7 @@ export const router = createBrowserRouter([
               </DashboardErrorBoundary>
             ),
           },
-          {
-            path: "/capture-page",
-            element: (
-              <DashboardErrorBoundary
-                ErrorComponent={DashboardErrorComponent}
-                componentName="CapturePage"
-              >
-                <TempCapturePage />
-              </DashboardErrorBoundary>
-            ),
-          },
+
           {
             path: "/studio/stories",
             element: <Navigate to="/content-hub" replace />,
@@ -287,10 +274,6 @@ export const router = createBrowserRouter([
     element: <Pricing />,
   },
   {
-    path: "/emailpage",
-    element: <EmailPage />,
-  },
-  {
     element: <AuthPagesProtectedRoute />,
     children: [
       {
@@ -323,6 +306,12 @@ export const router = createBrowserRouter([
   {
     path: "/share/:shareId/view",
     element: <PublicShareView />,
+  },
+
+  // Public showcase page (no auth required)
+  {
+    path: "/showcase/:slug",
+    element: <PublicShowcase />,
   },
 
   {

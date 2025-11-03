@@ -137,21 +137,30 @@ class SmartCropV2:
                     _, thresh = cv2.threshold(frame_diff, 25, 255, cv2.THRESH_BINARY)
                     motion_data.append(thresh)
 
-                # Strategy 2: Face detection (fast)
+                # Strategy 2: Face detection (optimized for off-center faces)
                 if self.face_cascade:
                     faces = self.face_cascade.detectMultiScale(
                         gray,
-                        scaleFactor=1.15,  # Faster
-                        minNeighbors=3,    # Faster
-                        minSize=(max(20, analysis_width // 20), max(20, analysis_height // 20))
+                        scaleFactor=1.1,   # More sensitive (smaller steps)
+                        minNeighbors=2,    # More permissive (catches more candidates)
+                        minSize=(max(15, analysis_width // 25), max(15, analysis_height // 25))  # Smaller min size
                     )
                     if len(faces) > 0:
                         face_data.append(faces)
 
                 prev_gray = gray_blur
 
-            # Try fast strategies first (motion, face)
-            # Strategy 1: Motion (fastest)
+            # PRIORITIZE FACE DETECTION FIRST - faces are most reliable for speaker-centered content
+            # Strategy 1: Face detection (highest priority for speakers)
+            if len(face_data) >= 1:  # Even single detection is valuable
+                face_center = self._analyze_face_data(face_data, analysis_width, analysis_height)
+                if face_center:
+                    final_x = int(face_center[0] / scale_factor)
+                    final_y = int(face_center[1] / scale_factor)
+                    logger.info(f"✓ Face detection found subject at ({final_x}, {final_y})")
+                    return (final_x, final_y)
+
+            # Strategy 2: Motion tracking (fallback for non-speaker content)
             if len(motion_data) >= 2:
                 motion_center = self._analyze_motion_data(motion_data, analysis_width, analysis_height)
                 if motion_center:
@@ -159,15 +168,6 @@ class SmartCropV2:
                     final_x = int(motion_center[0] / scale_factor)
                     final_y = int(motion_center[1] / scale_factor)
                     logger.info(f"✓ Motion tracking found subject at ({final_x}, {final_y})")
-                    return (final_x, final_y)
-
-            # Strategy 2: Face detection (fast)
-            if len(face_data) >= 2:
-                face_center = self._analyze_face_data(face_data, analysis_width, analysis_height)
-                if face_center:
-                    final_x = int(face_center[0] / scale_factor)
-                    final_y = int(face_center[1] / scale_factor)
-                    logger.info(f"✓ Face detection found subject at ({final_x}, {final_y})")
                     return (final_x, final_y)
 
             # If fast methods fail, try slower methods (only if needed)
@@ -260,7 +260,12 @@ class SmartCropV2:
         width: int,
         height: int
     ) -> Optional[Tuple[int, int]]:
-        """Analyze collected face detection data"""
+        """
+        Analyze collected face detection data with aggressive off-center detection.
+
+        KEY IMPROVEMENT: No clamping - return actual face position even if near edge.
+        The goal is to center the crop on the speaker, not to avoid edge positions.
+        """
         try:
             weighted_centers = []
 
@@ -270,40 +275,39 @@ class SmartCropV2:
                         face_area = w * h
                         face_ratio = face_area / (width * height)
 
-                        # REDUCED threshold from 0.01 to 0.005 (detect smaller faces)
-                        if face_ratio > 0.005:
-                            # Head-center calculation
+                        # VERY PERMISSIVE: Accept even tiny faces (0.3% of frame)
+                        if face_ratio > 0.003:
+                            # Head-center calculation (focus on upper face where eyes are)
                             face_center_x = x + w // 2
                             head_center_y = y + int(h * 0.3)
-                            weight = min(face_ratio * 50, 3.0)
+
+                            # Higher weight for larger faces
+                            weight = min(face_ratio * 100, 5.0)
                             weighted_centers.append((face_center_x, head_center_y, weight))
 
             if not weighted_centers:
                 return None
 
             total_weight = sum(w for _, _, w in weighted_centers)
-            # REDUCED from 0.3 to 0.15 (more permissive)
-            if total_weight < 0.15:
+            # VERY PERMISSIVE: Accept even weak detections
+            if total_weight < 0.05:
                 return None
 
+            # Calculate weighted average of all face positions
             avg_x = sum(x * w for x, y, w in weighted_centers) / total_weight
             avg_y = sum(y * w for x, y, w in weighted_centers) / total_weight
 
-            # IMPROVED: Adaptive margins based on face confidence
-            if total_weight > 1.5:  # Strong detection
-                margin_ratio = 0.05  # 5% margin
-            elif total_weight > 0.5:  # Medium detection
-                margin_ratio = 0.07  # 7% margin
-            else:  # Weak detection
-                margin_ratio = 0.10  # 10% margin
+            # CRITICAL: Minimal safety margin (only 2% to prevent crop from going out of bounds)
+            # This allows the face to be very close to the edge while still centering on it
+            min_margin_x = int(width * 0.02)
+            min_margin_y = int(height * 0.02)
 
-            margin_x = int(width * margin_ratio)
-            margin_y = int(height * margin_ratio)
+            # Only clamp if absolutely necessary to prevent out-of-bounds crop
+            # This ensures we center on the speaker even if they're way off to one side
+            final_x = int(np.clip(avg_x, min_margin_x, width - min_margin_x))
+            final_y = int(np.clip(avg_y, min_margin_y, height - min_margin_y))
 
-            # Clamp to safe bounds (always return a valid position)
-            final_x = int(np.clip(avg_x, margin_x, width - margin_x))
-            final_y = int(np.clip(avg_y, margin_y, height - margin_y))
-
+            logger.info(f"Face analysis: detected at ({final_x}, {final_y}), weight={total_weight:.2f}, faces={len(weighted_centers)}")
             return (final_x, final_y)
 
         except Exception as e:
@@ -603,9 +607,9 @@ class SmartCropV2:
 
                 faces = self.face_cascade.detectMultiScale(
                     gray,
-                    scaleFactor=1.1,
-                    minNeighbors=4,
-                    minSize=(max(20, width // 15), max(20, height // 15))
+                    scaleFactor=1.1,   # More sensitive
+                    minNeighbors=2,    # More permissive
+                    minSize=(max(15, width // 25), max(15, height // 25))  # Smaller minimum
                 )
 
                 for (x, y, w, h) in faces:
@@ -613,41 +617,35 @@ class SmartCropV2:
                         face_area = w * h
                         face_ratio = face_area / (width * height)
 
-                        # REDUCED threshold from 0.01 to 0.005
-                        if face_ratio > 0.005:
+                        # VERY PERMISSIVE: Accept even tiny faces (0.3% of frame)
+                        if face_ratio > 0.003:
                             # Calculate head center (upper portion of face)
                             face_center_x = x + w // 2
                             head_center_y = y + int(h * 0.3)
 
-                            weight = min(face_ratio * 50, 3.0)
+                            weight = min(face_ratio * 100, 5.0)
                             weighted_centers.append((face_center_x, head_center_y, weight))
 
             if not weighted_centers:
                 return None
 
             total_weight = sum(w for _, _, w in weighted_centers)
-            # REDUCED from 0.3 to 0.15
-            if total_weight < 0.15:
+            # VERY PERMISSIVE: Accept even weak detections
+            if total_weight < 0.05:
                 return None
 
             avg_x = sum(x * w for x, y, w in weighted_centers) / total_weight
             avg_y = sum(y * w for x, y, w in weighted_centers) / total_weight
 
-            # IMPROVED: Adaptive margins
-            if total_weight > 1.5:
-                margin_ratio = 0.05
-            elif total_weight > 0.5:
-                margin_ratio = 0.07
-            else:
-                margin_ratio = 0.10
+            # CRITICAL: Minimal safety margin (only 2% to prevent crop from going out of bounds)
+            min_margin_x = int(width * 0.02)
+            min_margin_y = int(height * 0.02)
 
-            margin_x = int(width * margin_ratio)
-            margin_y = int(height * margin_ratio)
+            # Only clamp if absolutely necessary to prevent out-of-bounds crop
+            final_x = int(np.clip(avg_x, min_margin_x, width - min_margin_x))
+            final_y = int(np.clip(avg_y, min_margin_y, height - min_margin_y))
 
-            final_x = int(np.clip(avg_x, margin_x, width - margin_x))
-            final_y = int(np.clip(avg_y, margin_y, height - margin_y))
-
-            logger.info(f"Face center: ({final_x}, {final_y})")
+            logger.info(f"Face center: ({final_x}, {final_y}), weight={total_weight:.2f}")
             return (final_x, final_y)
 
         except Exception as e:

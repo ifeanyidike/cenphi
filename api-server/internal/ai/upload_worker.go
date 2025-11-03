@@ -211,6 +211,27 @@ func (uw *UploadWorker) createTestimonialRecord(ctx context.Context, workspaceID
 	format := strings.TrimPrefix(ext, ".")
 	fmt.Println("rating is ", rating)
 
+	// Extract video metadata (duration + thumbnail uploaded to OCI)
+	var duration *float64
+	var thumbnailURL *string
+
+	// Use background context with custom timeout for thumbnail extraction
+	thumbnailCtx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	metadata, err := utils.ExtractVideoMetadataWithOCI(thumbnailCtx, fileURL, workspaceID.String(), uw.storageService)
+	if err != nil {
+		uw.logger.Warn("Failed to extract video metadata, continuing without it",
+			zap.Error(err),
+			zap.String("file_url", fileURL))
+	} else {
+		duration = &metadata.Duration
+		thumbnailURL = &metadata.ThumbnailURL
+		uw.logger.Info("Extracted video metadata",
+			zap.Float64("duration", metadata.Duration),
+			zap.String("thumbnail_url", metadata.ThumbnailURL))
+	}
+
 	// Create testimonial
 	testimonial := &models.Testimonial{
 		ID:               uuid.New(),
@@ -223,6 +244,8 @@ func (uw *UploadWorker) createTestimonialRecord(ctx context.Context, workspaceID
 		Format:           format,
 		Status:           "draft",
 		MediaURL:         &fileURL,
+		Duration:         duration,
+		ThumbnailURL:     thumbnailURL,
 		Content:          &content,
 		CollectionMethod: collectionMethod,
 		ProcessingStatus: "pending",

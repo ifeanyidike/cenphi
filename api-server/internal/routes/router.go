@@ -22,6 +22,7 @@ func RegisterRoutes(
 	teamMemberController controllers.TeamMemberController,
 	onboardingController controllers.OnboardingController,
 	testimonialController controllers.TestimonialController,
+	testimonialTranscriptController *controllers.TestimonialTranscriptController,
 	socialController controllers.SocialController,
 	aiTestController controllers.AITestController,
 
@@ -39,6 +40,9 @@ func RegisterRoutes(
 	publicShareController controllers.PublicShareController,
 	aiPostController controllers.AIPostController,
 	widgetController controllers.WidgetController,
+	contentFolderController *controllers.ContentFolderController,
+	approvalController *controllers.ApprovalController,
+	showcaseController *controllers.ShowcaseController,
 	rateLimiter middleware.RateLimiter,
 ) {
 
@@ -53,9 +57,10 @@ func RegisterRoutes(
 		RegisterUserRoutes(r, userController, authMiddleware)
 		RegisterSwaggerRoute(r, swaggerController)
 		RegisterWorkspaceRoutes(r, workspaceController, authMiddleware)
+		RegisterContentFolderRoutes(r, *contentFolderController, authMiddleware)
 		RegisterTeamMemberRoutes(r, teamMemberController, authMiddleware)
 		RegisterOnboardingRoutes(r, onboardingController, authMiddleware)
-		RegisterTestimonialRoutes(r, testimonialController, authMiddleware)
+		RegisterTestimonialRoutes(r, testimonialController, *testimonialTranscriptController, authMiddleware)
 		RegisterSocialRoutes(r, socialController, authMiddleware)
 		RegisterTestimonialRequestRoutes(r, testimonialRequestController, authMiddleware)
 		RegisterTestimonialCollectionRoutes(r, testimonialCollectionController, authMiddleware)
@@ -70,6 +75,8 @@ func RegisterRoutes(
 		RegisterTestRoutes(r, testController)
 		RegisterPublicShareRoutes(r, publicShareController, authMiddleware)
 		RegisterAIPostRoutes(r, aiPostController, authMiddleware)
+		RegisterApprovalRoutes(r, *approvalController, authMiddleware)
+		RegisterShowcaseRoutes(r, *showcaseController, authMiddleware)
 
 	})
 
@@ -143,6 +150,27 @@ func RegisterWorkspaceRoutes(r chi.Router, controller controllers.WorkspaceContr
 	})
 }
 
+func RegisterContentFolderRoutes(r chi.Router, controller controllers.ContentFolderController, authMiddleware middleware.AuthMiddleware) {
+	r.Route("/workspaces/{workspaceID}/folders", func(r chi.Router) {
+		r.Use(authMiddleware.VerifyToken)
+
+		// Folder CRUD operations
+		r.Post("/", controller.CreateFolder)
+		r.Get("/", controller.ListFolders)
+		r.Get("/{folderID}", controller.GetFolder)
+		r.Put("/{folderID}", controller.UpdateFolder)
+		r.Delete("/{folderID}", controller.DeleteFolder)
+
+		// Folder item operations
+		r.Post("/{folderID}/items", controller.AddItemsToFolder)
+		r.Get("/{folderID}/items", controller.GetFolderItems)
+		r.Delete("/{folderID}/items/{artifactID}", controller.RemoveItemFromFolder)
+
+		// Folder with items
+		r.Get("/{folderID}/details", controller.GetFolderWithItems)
+	})
+}
+
 func RegisterTeamMemberRoutes(r chi.Router, controller controllers.TeamMemberController, authMiddleware middleware.AuthMiddleware) {
 	r.Route("/team-member", func(r chi.Router) {
 		r.Group(func(r chi.Router) {
@@ -166,7 +194,7 @@ func RegisterOnboardingRoutes(r chi.Router, controller controllers.OnboardingCon
 	})
 }
 
-func RegisterTestimonialRoutes(r chi.Router, controller controllers.TestimonialController, authMiddleware middleware.AuthMiddleware) {
+func RegisterTestimonialRoutes(r chi.Router, controller controllers.TestimonialController, transcriptController controllers.TestimonialTranscriptController, authMiddleware middleware.AuthMiddleware) {
 	r.Route("/testimonials", func(r chi.Router) {
 		r.Group(func(r chi.Router) {
 			r.Use(authMiddleware.VerifyToken)
@@ -189,6 +217,10 @@ func RegisterTestimonialRoutes(r chi.Router, controller controllers.TestimonialC
 			// AI features - manual generation (POST to trigger computation)
 			r.Post("/{id}/generate-platform-recommendations", controller.GeneratePlatformRecommendation)
 
+			// Lazy-loaded transcript data (not fetched in list/detail queries to save bandwidth)
+			r.Get("/{id}/transcript-segments", transcriptController.GetTranscriptSegments) // Full segments array
+			r.Get("/{id}/duration", transcriptController.GetVideoDuration)                 // Calculated duration only
+
 			// Upload endpoint
 			//r.Post("/upload", controller.HandleTestimonialUpload)
 		})
@@ -200,7 +232,7 @@ func RegisterSocialRoutes(r chi.Router, controller controllers.SocialController,
 	r.Get("/social/oauth/callback", controller.HandleOAuthCallback)
 
 	// Protected social media routes
-	r.Route("/social/workspaces/{workspaceID}/social", func(r chi.Router) {
+	r.Route("/workspaces/{workspaceID}/social", func(r chi.Router) {
 		r.Use(authMiddleware.VerifyToken)
 
 		// OAuth authorization endpoints
@@ -217,7 +249,7 @@ func RegisterSocialRoutes(r chi.Router, controller controllers.SocialController,
 	})
 
 	// AI-powered social features
-	r.Route("/social/workspaces/{workspaceID}/ai", func(r chi.Router) {
+	r.Route("/workspaces/{workspaceID}/social/ai", func(r chi.Router) {
 		r.Use(authMiddleware.VerifyToken)
 
 		// AI best time suggestion
@@ -359,6 +391,8 @@ func RegisterAIProcessorRoutes(r chi.Router, controller controllers.AIProcessorC
 	r.Group(func(r chi.Router) {
 		r.Use(authMiddleware.VerifyToken)
 		r.Post("/ai/save-artifact", controller.SaveArtifact)
+		r.Delete("/ai/artifacts/{id}", controller.DeleteArtifact)
+		r.Delete("/ai/artifacts/{artifactId}/clips/{clipId}", controller.DeleteClip)
 	})
 
 	r.Group(func(r chi.Router) {
@@ -375,6 +409,7 @@ func RegisterAIProcessorRoutes(r chi.Router, controller controllers.AIProcessorC
 		r.Post("/ai/regenerate-content", controller.RegenerateContent)       // regenerate content (no save)
 		r.Post("/ai/generate-content", controller.GenerateContent)           // generation
 		r.Post("/ai/order-moments", controller.HandleOrderMoments)
+		r.Post("/ai/suggest-broll", controller.HandleSuggestBroll) // AI-powered B-roll suggestion
 	})
 
 	// GPU-intensive AI operations (10/hour per user)
@@ -647,3 +682,37 @@ func RegisterShareWidgetRoutes(r chi.Router, controller controllers.WidgetContro
 	r.Get("/widget/embed/{shareId}", controller.GetWidgetEmbed)
 }
 
+func RegisterApprovalRoutes(r chi.Router, controller controllers.ApprovalController, authMiddleware middleware.AuthMiddleware) {
+	// Approval routes - workspace scoped
+	r.Route("/workspaces/{workspaceID}/artifacts", func(r chi.Router) {
+		r.Use(authMiddleware.VerifyToken)
+
+		// Single artifact approval
+		r.Post("/{artifactID}/approve", controller.ApproveArtifact)
+
+		// Bulk approval
+		r.Post("/bulk-approve", controller.BulkApproveArtifacts)
+
+		// Get artifacts by status
+		r.Get("/by-status", controller.GetArtifactsByStatus)
+	})
+}
+
+func RegisterShowcaseRoutes(r chi.Router, controller controllers.ShowcaseController, authMiddleware middleware.AuthMiddleware) {
+	// Protected showcase management routes
+	r.Route("/workspaces/{workspaceID}/showcase-settings", func(r chi.Router) {
+		r.Use(authMiddleware.VerifyToken)
+
+		// Update showcase settings
+		r.Put("/", controller.UpdateShowcaseSettings)
+	})
+
+	// Slug availability check (authenticated)
+	r.Route("/showcase/check-slug", func(r chi.Router) {
+		r.Use(authMiddleware.VerifyToken)
+		r.Get("/", controller.CheckSlugAvailability)
+	})
+
+	// Public showcase page (no authentication required)
+	r.Get("/public/showcase/{slug}", controller.GetPublicShowcase)
+}

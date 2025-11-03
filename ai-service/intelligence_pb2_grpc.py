@@ -492,6 +492,11 @@ class PlatformOptimizerServiceStub(object):
                 request_serializer=intelligence__pb2.TextOptimizationRequest.SerializeToString,
                 response_deserializer=intelligence__pb2.TextOptimizationResponse.FromString,
                 )
+        self.ApplyTextOverlay = channel.unary_unary(
+                '/intelligence.PlatformOptimizerService/ApplyTextOverlay',
+                request_serializer=intelligence__pb2.TextOverlayRequest.SerializeToString,
+                response_deserializer=intelligence__pb2.TextOverlayResponse.FromString,
+                )
 
 
 class PlatformOptimizerServiceServicer(object):
@@ -563,6 +568,12 @@ class PlatformOptimizerServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def ApplyTextOverlay(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_PlatformOptimizerServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -615,6 +626,11 @@ def add_PlatformOptimizerServiceServicer_to_server(servicer, server):
                     servicer.TextOptimization,
                     request_deserializer=intelligence__pb2.TextOptimizationRequest.FromString,
                     response_serializer=intelligence__pb2.TextOptimizationResponse.SerializeToString,
+            ),
+            'ApplyTextOverlay': grpc.unary_unary_rpc_method_handler(
+                    servicer.ApplyTextOverlay,
+                    request_deserializer=intelligence__pb2.TextOverlayRequest.FromString,
+                    response_serializer=intelligence__pb2.TextOverlayResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -800,6 +816,23 @@ class PlatformOptimizerService(object):
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
+    @staticmethod
+    def ApplyTextOverlay(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/intelligence.PlatformOptimizerService/ApplyTextOverlay',
+            intelligence__pb2.TextOverlayRequest.SerializeToString,
+            intelligence__pb2.TextOverlayResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
 
 class ThumbnailServiceStub(object):
     """============================================================================
@@ -917,6 +950,16 @@ class StoryModeServiceStub(object):
                 request_serializer=intelligence__pb2.CollectAndAssembleClipsRequest.SerializeToString,
                 response_deserializer=intelligence__pb2.AssembleDraftResponse.FromString,
                 )
+        self.ApplyBrollOverlays = channel.unary_unary(
+                '/intelligence.StoryModeService/ApplyBrollOverlays',
+                request_serializer=intelligence__pb2.BrollOverlayRequest.SerializeToString,
+                response_deserializer=intelligence__pb2.BrollOverlayResponse.FromString,
+                )
+        self.SearchStockFootage = channel.unary_unary(
+                '/intelligence.StoryModeService/SearchStockFootage',
+                request_serializer=intelligence__pb2.StockFootageSearchRequest.SerializeToString,
+                response_deserializer=intelligence__pb2.StockFootageSearchResponse.FromString,
+                )
         self.DetectHooks = channel.unary_unary(
                 '/intelligence.StoryModeService/DetectHooks',
                 request_serializer=intelligence__pb2.HookDetectionRequest.SerializeToString,
@@ -983,6 +1026,19 @@ class StoryModeServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def ApplyBrollOverlays(self, request, context):
+        """B-roll and stock footage integration
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def SearchStockFootage(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def DetectHooks(self, request, context):
         """IMPROVEMENT #3: Intelligent Hook Detection
         """
@@ -1041,6 +1097,16 @@ def add_StoryModeServiceServicer_to_server(servicer, server):
                     servicer.CollectAndAssembleClips,
                     request_deserializer=intelligence__pb2.CollectAndAssembleClipsRequest.FromString,
                     response_serializer=intelligence__pb2.AssembleDraftResponse.SerializeToString,
+            ),
+            'ApplyBrollOverlays': grpc.unary_unary_rpc_method_handler(
+                    servicer.ApplyBrollOverlays,
+                    request_deserializer=intelligence__pb2.BrollOverlayRequest.FromString,
+                    response_serializer=intelligence__pb2.BrollOverlayResponse.SerializeToString,
+            ),
+            'SearchStockFootage': grpc.unary_unary_rpc_method_handler(
+                    servicer.SearchStockFootage,
+                    request_deserializer=intelligence__pb2.StockFootageSearchRequest.FromString,
+                    response_serializer=intelligence__pb2.StockFootageSearchResponse.SerializeToString,
             ),
             'DetectHooks': grpc.unary_unary_rpc_method_handler(
                     servicer.DetectHooks,
@@ -1175,6 +1241,40 @@ class StoryModeService(object):
         return grpc.experimental.unary_unary(request, target, '/intelligence.StoryModeService/CollectAndAssembleClips',
             intelligence__pb2.CollectAndAssembleClipsRequest.SerializeToString,
             intelligence__pb2.AssembleDraftResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def ApplyBrollOverlays(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/intelligence.StoryModeService/ApplyBrollOverlays',
+            intelligence__pb2.BrollOverlayRequest.SerializeToString,
+            intelligence__pb2.BrollOverlayResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def SearchStockFootage(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/intelligence.StoryModeService/SearchStockFootage',
+            intelligence__pb2.StockFootageSearchRequest.SerializeToString,
+            intelligence__pb2.StockFootageSearchResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 

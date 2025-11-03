@@ -146,7 +146,18 @@
     } else {
       const shareId = config.shareId || (config.shareIds && config.shareIds[0]);
       fetchWidgetConfig({ ...config, shareId })
-        .then((data) => renderWidget(container, data, config))
+        .then((data) => {
+          // Check if this is a clipping artifact with multiple clips
+          if (data.artifact && data.artifact.clips && Array.isArray(data.artifact.clips) && data.artifact.clips.length > 0) {
+            // Automatically convert to carousel mode to show all clips
+            config.mode = "carousel";
+            config.shareIds = [shareId];
+            renderCarousel(container, config);
+          } else {
+            // Normal single widget rendering
+            renderWidget(container, data, config);
+          }
+        })
         .catch((err) => renderError(container, err, config));
     }
   };
@@ -470,6 +481,46 @@
     });
   }
 
+  // Expand clipping artifacts into individual clips
+  function expandClipsInData(allData) {
+    const expanded = [];
+
+    allData.forEach(data => {
+      // Check if this is a clipping artifact with clips array
+      if (data.artifact && data.artifact.clips && Array.isArray(data.artifact.clips)) {
+        // Expand each clip into a separate item
+        data.artifact.clips.forEach((clip, index) => {
+          expanded.push({
+            ...data,
+            // Create a new artifact object for this clip
+            artifact: {
+              id: clip.id || `${data.artifact.id}-clip-${index}`,
+              processing_type: 'clip',
+              content_type: 'video/mp4',
+              asset_url: clip.url,
+              text_content: clip.title || clip.theme || null,
+              created_at: data.artifact.created_at,
+              // Preserve clip metadata
+              _clip_data: {
+                title: clip.title,
+                theme: clip.theme,
+                duration: clip.duration,
+                clip_index: index
+              }
+            },
+            share_id: data.share_id,
+            testimonial: data.testimonial // Preserve testimonial if exists
+          });
+        });
+      } else {
+        // Not a clipping artifact, keep as is
+        expanded.push(data);
+      }
+    });
+
+    return expanded;
+  }
+
   // Render carousel
   async function renderCarousel(container, config) {
     container.innerHTML = "";
@@ -518,7 +569,10 @@
       const promises = config.shareIds.map((id) =>
         fetchWidgetConfig({ ...config, shareId: id })
       );
-      const allData = await Promise.all(promises);
+      let allData = await Promise.all(promises);
+
+      // Expand clipping artifacts into individual clips for carousel display
+      allData = expandClipsInData(allData);
 
       // Add carousel style switcher ONLY in preview mode (when disableTracking is true)
       // For external embeds, directly render the selected carousel style

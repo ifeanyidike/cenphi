@@ -108,7 +108,9 @@ export class TestimonialManager {
 
     this.isLoading = true;
     try {
-      if (!id) return;
+      if (!id) {
+        throw new Error("Testimonial ID is required");
+      }
 
       const params = new URLSearchParams();
       if (excludeArtifacts) {
@@ -142,8 +144,10 @@ export class TestimonialManager {
     } catch (error: any) {
       runInAction(() => {
         this.isLoading = false;
-        console.log("error", error.message);
+        console.error("Error fetching testimonial:", error.message);
       });
+      // CRITICAL FIX: Re-throw the error instead of swallowing it
+      throw error;
     }
   }
 

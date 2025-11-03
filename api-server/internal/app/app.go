@@ -52,6 +52,7 @@ type App struct {
 	TeamMemberController            controllers.TeamMemberController
 	OnboardingController            controllers.OnboardingController
 	TestimonialController           controllers.TestimonialController
+	TestimonialTranscriptController *controllers.TestimonialTranscriptController
 	AITestController                controllers.AITestController
 	SocialController                controllers.SocialController
 	TestimonialRequestController    controllers.TestimonialRequestController
@@ -68,6 +69,9 @@ type App struct {
 	StudioController                controllers.StudioController
 	AIPostController                controllers.AIPostController
 	AnalyticsController             controllers.AnalyticsController
+	ContentFolderController         *controllers.ContentFolderController
+	ApprovalController              *controllers.ApprovalController
+	ShowcaseController              *controllers.ShowcaseController
 	// Services
 	StorageService storage.StorageFactory
 	RateLimiter    *midware.RateLimiter
@@ -129,6 +133,7 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 	tempArtifactsRepo := repositories.NewTempArtifactsRepository(redisClient)
 	storageRepo := repositories.NewStorageRepository(redisClient)
 	analyticsRepo := repositories.NewAnalyticsRepository(redisClient)
+	contentFolderRepo := repositories.NewContentFolderRepository(redisClient)
 
 	sseManager := sse.NewSSEManager(cacheService, logger)
 	aiServiceManager := ai.NewAIServiceManager(cfg, cacheService, aiClient, audioExtractor, artifactsRepo, workspaceRepo, testimonialRepo, jobRepo, db, logger)
@@ -180,6 +185,7 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 	analyticsService := services.NewAnalyticsService(logger, testimonialRepo, analyticsRepo, db)
 	exportService := services.NewExportService(logger, analyticsService, testimonialRepo, &artifactsRepo)
 	tempStorageService := storage.NewTempStorageService(db, storageRepo, storageService, logger)
+	contentFolderService := services.NewContentFolderService(contentFolderRepo, artifactsRepo, db, redisClient, logger)
 	sessionCleanupService := services.NewSessionCleanupService(db, sessionRepo, stageRepo, tempArtifactsRepo, artifactsRepo, tempStorageService, logger)
 	stepOrchestrator := ai.NewStepOrchestrator(sessionRepo, stageRepo, testimonialRepo, workspaceRepo, artifactsRepo, tempStorageService, sseManager, db, logger)
 
@@ -214,6 +220,7 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 	teamMemberController := controllers.NewTeamMemberController(teamMemberService, userService, logger)
 	onboardingController := controllers.NewOnboardingController(onboardingService, logger)
 	testimonialController := controllers.NewTestimonialController(testimonialService, logger)
+	testimonialTranscriptController := controllers.NewTestimonialTranscriptController(testimonialRepo, db, logger)
 	workspaceController := controllers.NewWorkspaceController(workspaceService, testimonialService, logger)
 
 	socialController := controllers.NewSocialController(cfg, sharingService, logger)
@@ -225,7 +232,7 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 	googleDriveController := controllers.NewGoogleDriveController(cfg, driveService, testimonialCollService, logger)
 	testimonialCollController := controllers.NewTestimonialCollectionController(testimonialCollService, *driveService, aiServiceManager.AudioTranscriptionService, queueService, logger)
 	sseTestimonialMonitor := controllers.NewSSETestimonialMonitor(cacheService, logger)
-	aiProcessorController := controllers.NewAIProcessorController(aiServiceManager, queueService, logger, cacheService, sseManager)
+	aiProcessorController := controllers.NewAIProcessorController(aiServiceManager, queueService, logger, cacheService, sseManager, storageService.Provider)
 	presetController := controllers.NewPresetController(presetService, logger)
 	publicShareController := controllers.NewPublicShareController(publicShareRepo, testimonialRepo, artifactsRepo, db, *storageService, logger)
 	widgetController := controllers.NewWidgetController(publicShareRepo, testimonialRepo, artifactsRepo, db, logger)
@@ -233,7 +240,10 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 	aiPostController := controllers.NewAIPostController(aiClient, testimonialRepo, logger, db)
 	chatWithDataController := controllers.NewChatWithDataController(chatWithDataService, logger)
 	analyticsController := controllers.NewAnalyticsController(logger, analyticsService, chatWithDataService, exportService)
-	studioController := controllers.NewStudioController(db, sessionRepo, stageRepo, testimonialRepo, workspaceRepo, artifactsRepo, tempStorageService, sessionCleanupService, stepOrchestrator, media_intelligence, sseManager, logger)
+	studioController := controllers.NewStudioController(db, sessionRepo, stageRepo, testimonialRepo, workspaceRepo, artifactsRepo, tempStorageService, sessionCleanupService, stepOrchestrator, media_intelligence, sseManager, storageService.Provider, logger)
+	contentFolderController := controllers.NewContentFolderController(contentFolderService, logger)
+	approvalController := controllers.NewApprovalController(artifactsRepo, db, logger)
+	showcaseController := controllers.NewShowcaseController(workspaceRepo, artifactsRepo, db, logger)
 
 	// testimonialCollController := controllers.NewTestimonialCollectionController(testimonialCollService, logger)
 	testController := controllers.NewTestController(driveService, sharingService, logger)
@@ -271,6 +281,7 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 		TeamMemberController:            teamMemberController,
 		OnboardingController:            onboardingController,
 		TestimonialController:           testimonialController,
+		TestimonialTranscriptController: testimonialTranscriptController,
 		TestimonialRequestController:    testimonialReqController,
 		TestimonialCollectionController: *testimonialCollController,
 		GoogleDriveController:           googleDriveController,
@@ -286,6 +297,9 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 		ChatWithDataController:          *chatWithDataController,
 		AnalyticsController:             *analyticsController,
 		StudioController:                studioController,
+		ContentFolderController:         contentFolderController,
+		ApprovalController:              approvalController,
+		ShowcaseController:              showcaseController,
 		StorageService:                  *storageService,
 		QueueWorkers:                    queueWorkers,
 		// WSHub:                  wsHub,
@@ -340,11 +354,11 @@ func (app *App) Mount() http.Handler {
 	r.Use(middleware.Recoverer)
 
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"https://*", "http://*", "http://localhost:8081", "*"},
+		AllowedOrigins:   []string{"http://localhost:3300", "http://localhost:8081"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		ExposedHeaders:   []string{"Link"},
-		AllowCredentials: false,
+		AllowCredentials: true,
 		MaxAge:           300,
 	}))
 
@@ -378,6 +392,7 @@ func (app *App) Mount() http.Handler {
 		app.TeamMemberController,
 		app.OnboardingController,
 		app.TestimonialController,
+		app.TestimonialTranscriptController,
 		app.SocialController,
 		app.AITestController,
 		app.TestimonialRequestController,
@@ -394,6 +409,9 @@ func (app *App) Mount() http.Handler {
 		app.PublicShareController,
 		app.AIPostController,
 		app.WidgetController,
+		app.ContentFolderController,
+		app.ApprovalController,
+		app.ShowcaseController,
 		*app.RateLimiter,
 	)
 

@@ -167,10 +167,16 @@ func (c PublicShareController) GetShareWithContent(w http.ResponseWriter, r *htt
 		testimonialResponse = mapTestimonialForPublic(shareWithContent.Testimonial)
 	}
 
+	// Map artifact fields to frontend expectations
+	var artifactResponse interface{}
+	if shareWithContent.Artifact != nil {
+		artifactResponse = mapArtifactForPublic(shareWithContent.Artifact)
+	}
+
 	utils.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
 		"share":       shareWithContent.PublicShare,
 		"testimonial": testimonialResponse,
-		"artifact":    shareWithContent.Artifact,
+		"artifact":    artifactResponse,
 		"message":     "Share content retrieved successfully",
 	})
 }
@@ -225,6 +231,46 @@ func mapTestimonialForPublic(t *models.Testimonial) map[string]interface{} {
 			transcriptText += segment.Text
 		}
 		result["transcript"] = transcriptText
+	}
+
+	return result
+}
+
+// mapArtifactForPublic maps backend Artifact model to frontend expected format
+func mapArtifactForPublic(a *models.TestimonialArtifact) map[string]interface{} {
+	result := map[string]interface{}{
+		"id":              a.ID,
+		"processing_type": a.ProcessingType,
+		"content_type":    a.ContentType,
+		"created_at":      a.CreatedAt,
+	}
+
+	// Add asset_url if present
+	if a.AssetURL != nil {
+		result["asset_url"] = *a.AssetURL
+	}
+
+	// Add text_content if present
+	if a.TextContent != nil {
+		result["content"] = *a.TextContent
+	}
+
+	// Special handling for clipping artifacts
+	if a.ProcessingType == "clipping" && a.Data != nil {
+		// Data is already a map, no need to unmarshal
+		// Add the generated_clips array
+		if generatedClips, ok := a.Data["generated_clips"].([]interface{}); ok && len(generatedClips) > 0 {
+			result["clips"] = generatedClips
+			result["clips_count"] = len(generatedClips)
+
+			// For backward compatibility, set asset_url to first clip's URL
+			if firstClip, ok := generatedClips[0].(map[string]interface{}); ok {
+				if url, ok := firstClip["url"].(string); ok {
+					result["asset_url"] = url
+					result["content_type"] = "video/mp4"
+				}
+			}
+		}
 	}
 
 	return result

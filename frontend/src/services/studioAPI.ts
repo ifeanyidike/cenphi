@@ -8,6 +8,36 @@ import {
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:8081/api";
 
+export interface SuggestedClip {
+  id: number;
+  url: string;
+  name: string;
+  thumbnail: string;
+  duration: number;
+  pexels_id: number;
+  search_keyword: string;
+  relevance_explanation: string;
+  relevance_score: number;
+  media_type: "video" | "image";
+}
+
+export interface AIBrollSuggestionRequest {
+  transcript_text: string;
+  video_duration: number;
+  max_clips?: number;
+  orientation?: string;
+}
+
+export interface AIBrollSuggestionResponse {
+  suggested_clips: SuggestedClip[];
+  search_keywords: string[];
+  themes: string[];
+  ai_analysis: string;
+  duration_budget: number; // Max total B-roll duration allowed (30% of video)
+  total_duration: number; // Total duration of suggested clips
+  budget_percentage: number; // Percentage of video that B-roll can occupy (0.30 = 30%)
+}
+
 export interface CreateSessionRequest {
   testimonial_id?: string;
   workspace_id: string;
@@ -31,6 +61,8 @@ export interface CreateSessionResponse {
   auto_proceed: boolean;
   created_at: string;
   stream_url: string;
+  stages_reordered?: boolean; // True if backend reordered stages
+  reorder_message?: string; // Human-readable message about what was reordered
 }
 
 /**
@@ -267,6 +299,31 @@ export class StudioAPI {
   }
 
   /**
+   * Get AI B-roll suggestions based on transcript
+   * Route: POST /ai/suggest-broll
+   */
+  async suggestBroll(
+    request: AIBrollSuggestionRequest
+  ): Promise<AIBrollSuggestionResponse> {
+    const response = await fetch(`${this.baseUrl}/ai/suggest-broll`, {
+      method: "POST",
+      headers: await this.getHeaders(),
+      body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({
+        message: "Failed to get AI suggestions",
+      }));
+      throw new Error(
+        error.message || "Failed to get AI suggestions. Please try again."
+      );
+    }
+
+    return response.json();
+  }
+
+  /**
    * Get session artifacts
    * Route: GET /studio/sessions/{sessionID}/artifacts
    */
@@ -363,7 +420,9 @@ export class StudioAPI {
    * Route: GET /studio/sessions/{sessionID}/status
    * Returns null if session doesn't exist or has been cancelled/expired
    */
-  async checkSessionStatus(sessionId: string): Promise<{ status: string; exists: boolean } | null> {
+  async checkSessionStatus(
+    sessionId: string
+  ): Promise<{ status: string; exists: boolean } | null> {
     try {
       const response = await fetch(
         `${this.baseUrl}/studio/sessions/${sessionId}/status`,
@@ -497,6 +556,54 @@ export class StudioAPI {
     if (!response.ok) {
       const error = await response.text();
       throw new Error(`Failed to generate highlights: ${error}`);
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Get transcript segments for a testimonial (lazy-loaded)
+   * Route: GET /api/testimonials/{id}/transcript-segments
+   */
+  async getTranscriptSegments(testimonialId: string): Promise<any[]> {
+    const response = await fetch(
+      `${this.baseUrl}/testimonials/${testimonialId}/transcript-segments`,
+      {
+        headers: await this.getHeaders(),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({
+        message: "Failed to get transcript segments",
+      }));
+      throw new Error(error.message || "Failed to get transcript segments");
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Get video duration from transcript segments (lazy-loaded)
+   * Route: GET /api/testimonials/{id}/duration
+   */
+  async getTestimonialDuration(testimonialId: string): Promise<{
+    duration: number;
+    segment_count: number;
+    has_segments: boolean;
+  }> {
+    const response = await fetch(
+      `${this.baseUrl}/testimonials/${testimonialId}/duration`,
+      {
+        headers: await this.getHeaders(),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({
+        message: "Failed to get duration",
+      }));
+      throw new Error(error.message || "Failed to get duration");
     }
 
     return response.json();

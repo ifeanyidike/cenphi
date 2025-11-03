@@ -77,7 +77,7 @@ class NoiseReducer:
         return results  
 
 
-    def process(self, testimonial_id: str, media_url: str, level: str = "medium"):
+    def process(self, testimonial_id: str, media_url: str, level: str = "medium", job_id: str = None):
         """
         Process noise reduction for a media_url.
 
@@ -94,17 +94,11 @@ class NoiseReducer:
             # Validate media_url
             if not media_url:
                 raise ValueError("Invalid media url")
-            
-            cache_path = self.generate_noise_cache_key(media_url, level)
-            
-            cache_url = self.storage_manager.get_public_url_for_object(f"temp/denoised/{cache_path}.mp4")
-            if self.storage_manager.check_url_exists(cache_url):
-                logger.info(f"✅ Using cached denoiser URL: temp/denoised/{cache_path}.mp4")
-                return intelligence_pb2.NoiseReductionResponse(
-                    testimonial_id=testimonial_id,
-                    denoised_media_url=cache_url,
-                )
-            
+
+            # NOTE: Caching disabled - each platform optimization needs independent denoising
+            # since the same video processed for different platforms (e.g., 16:9 vs 9:16)
+            # will have different dimensions after cropping, requiring separate denoising
+
             # Download media if it's a URL
             media_path = self.storage_manager.download_media(media_url) if not os.path.exists(media_url) else None
 
@@ -126,12 +120,9 @@ class NoiseReducer:
             
             temp_files.append(processed_media)
 
-            # ext = os.path.splitext(processed_media)[1]
-            # output_format = ext or '.mp4'
-
-            # Upload processed media to temp storage (will be cleaned up by TTL)
-            # object_name = f"temp/denoised/{uuid.uuid4()}.{output_format}"
-            processed_url = self.storage_manager.upload_file_with_retry(processed_media, f"temp/denoised/{cache_path}.mp4")
+            # Upload processed media to temp storage (will be cleaned up by session cleanup)
+            session_id = job_id if job_id else str(uuid.uuid4())
+            processed_url = self.storage_manager.upload_file_with_retry(processed_media, f"temp/{session_id}/denoised/{testimonial_id}.mp4")
 
             if not processed_url:
                 raise RuntimeError("Failed to upload processed media")

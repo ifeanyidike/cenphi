@@ -212,6 +212,7 @@ const TestimonialCard = observer(
                 src={testimonial.media_url}
                 className="w-full h-full object-cover"
                 muted
+                poster={testimonial.thumbnail_url}
               />
               <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
                 <div className="bg-white/90 rounded-full p-2 group-hover:scale-110 transition-transform">

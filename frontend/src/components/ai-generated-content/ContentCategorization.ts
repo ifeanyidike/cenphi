@@ -9,7 +9,8 @@ import {
   Youtube,
   Linkedin,
   Twitter,
-  Facebook
+  Facebook,
+  Scissors
 } from "lucide-react";
 
 export interface ContentCategory {
@@ -62,13 +63,22 @@ export const CONTENT_CATEGORIES: ContentCategory[] = [
     priority: 1
   },
   {
+    id: 'clips',
+    label: 'Clips',
+    description: 'AI-extracted video clips and highlights',
+    icon: Scissors,
+    color: 'bg-gradient-to-br from-orange-50 to-orange-100 text-orange-700 border-orange-200',
+    types: ['clipping'],
+    priority: 2
+  },
+  {
     id: 'story_videos',
     label: 'Story Videos',
     description: 'Curated story compilations from best moments',
     icon: Sparkles,
     color: 'bg-gradient-to-br from-blue-50 to-blue-100 text-blue-700 border-blue-200',
     types: ['story_mode_generation', 'best_story_moments'],
-    priority: 2
+    priority: 3
   },
   {
     id: 'generated_content',
@@ -77,7 +87,7 @@ export const CONTENT_CATEGORIES: ContentCategory[] = [
     icon: FileText,
     color: 'bg-gradient-to-br from-emerald-50 to-emerald-100 text-emerald-700 border-emerald-200',
     types: ['content_generation'],
-    priority: 3
+    priority: 4
   },
   {
     id: 'data_insights',
@@ -86,7 +96,7 @@ export const CONTENT_CATEGORIES: ContentCategory[] = [
     icon: Video,
     color: 'bg-gradient-to-br from-cyan-50 to-cyan-100 text-cyan-700 border-cyan-200',
     types: ['talk_to_data', 'data_analysis'],
-    priority: 4
+    priority: 5
   }
 ];
 

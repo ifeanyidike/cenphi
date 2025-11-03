@@ -20,6 +20,7 @@ import (
 	"github.com/ifeanyidike/cenphi/internal/queue"
 	"github.com/ifeanyidike/cenphi/internal/services"
 	"github.com/ifeanyidike/cenphi/internal/sse"
+	"github.com/ifeanyidike/cenphi/internal/utils"
 	"github.com/ifeanyidike/cenphi/pb"
 	"go.uber.org/zap"
 )
@@ -30,6 +31,7 @@ type AIProcessorController struct {
 	serviceLineageManager *services.ServiceLineageManager
 	queueService          queue.Service
 	sseManager            *sse.SSEManager
+	storageProvider       interface{}
 	logger                *zap.Logger
 }
 
@@ -47,12 +49,14 @@ func NewAIProcessorController(
 	logger *zap.Logger,
 	cacheService cache.RedisCache,
 	sseManager *sse.SSEManager,
+	storageProvider interface{},
 ) *AIProcessorController {
 	serviceLineageManager := services.NewServiceLineageManager(aiService.ArtifactsRepo, logger)
 	controller := &AIProcessorController{
 		AIServiceManager:      aiService,
 		queueService:          queueService,
 		sseManager:            sseManager,
+		storageProvider:       storageProvider,
 		logger:                logger,
 		serviceLineageManager: serviceLineageManager,
 	}
@@ -999,6 +1003,29 @@ func (c *AIProcessorController) SaveArtifact(w http.ResponseWriter, r *http.Requ
 	if req.ID == "" {
 		id := uuid.New()
 
+		// Extract metadata for video artifacts (duration + thumbnail uploaded to OCI)
+		var duration *float64
+		var thumbnailURL *string
+
+		if req.AssetUrl != "" && (req.ContentType == "video" || req.ContentType == "video/mp4") {
+			// Use background context with custom timeout for thumbnail extraction
+			thumbnailCtx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+			defer cancel()
+
+			metadata, err := utils.ExtractVideoMetadataWithOCI(thumbnailCtx, req.AssetUrl, req.WorkspaceID, c.storageProvider)
+			if err != nil {
+				c.logger.Warn("Failed to extract video metadata for artifact",
+					zap.Error(err),
+					zap.String("asset_url", req.AssetUrl))
+			} else {
+				duration = &metadata.Duration
+				thumbnailURL = &metadata.ThumbnailURL
+				c.logger.Info("Extracted video metadata for artifact",
+					zap.Float64("duration", metadata.Duration),
+					zap.String("thumbnail_url", metadata.ThumbnailURL))
+			}
+		}
+
 		newArtifact := models.TestimonialArtifact{
 			ID:             id,
 			WorkspaceID:    workspaceID,
@@ -1007,6 +1034,8 @@ func (c *AIProcessorController) SaveArtifact(w http.ResponseWriter, r *http.Requ
 			ContentType:    req.ContentType,
 			Data:           req.Data,
 			AssetURL:       &req.AssetUrl,
+			Duration:       duration,
+			ThumbnailURL:   thumbnailURL,
 			ResultCategory: req.ResultCategory,
 			Platform:       &req.Platform,
 			IsUserSaved:    req.IsUserSaved,
@@ -1068,6 +1097,105 @@ func (c *AIProcessorController) SaveArtifact(w http.ResponseWriter, r *http.Requ
 		w.WriteHeader(http.StatusOK)
 	}
 
+}
+
+// DeleteArtifact deletes a testimonial artifact by ID
+func (c *AIProcessorController) DeleteArtifact(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusBadRequest, "invalid artifact ID")
+		return
+	}
+
+	err = c.ArtifactsRepo.Delete(r.Context(), id, c.DB)
+	if err != nil {
+		c.logger.Error("Failed to delete artifact", zap.Error(err), zap.String("artifact_id", idStr))
+		utils.RespondWithError(w, http.StatusInternalServerError, "failed to delete artifact")
+		return
+	}
+
+	utils.RespondWithJSON(w, http.StatusOK, map[string]any{
+		"message": "Artifact deleted successfully",
+	})
+}
+
+// DeleteClip deletes an individual clip from a clipping artifact
+func (c *AIProcessorController) DeleteClip(w http.ResponseWriter, r *http.Request) {
+	artifactIDStr := chi.URLParam(r, "artifactId")
+	clipIDStr := chi.URLParam(r, "clipId")
+
+	artifactID, err := uuid.Parse(artifactIDStr)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusBadRequest, "invalid artifact ID")
+		return
+	}
+
+	// Get the artifact
+	artifact, err := c.ArtifactsRepo.GetByID(r.Context(), artifactID, c.DB)
+	if err != nil {
+		c.logger.Error("Failed to get artifact", zap.Error(err), zap.String("artifact_id", artifactIDStr))
+		utils.RespondWithError(w, http.StatusNotFound, "artifact not found")
+		return
+	}
+
+	// Ensure it's a clipping artifact
+	if artifact.ProcessingType != "clipping" {
+		utils.RespondWithError(w, http.StatusBadRequest, "artifact is not a clipping artifact")
+		return
+	}
+
+	// Get the clips array from data
+	clipsData, ok := artifact.Data["generated_clips"]
+	if !ok {
+		utils.RespondWithError(w, http.StatusNotFound, "no clips found in artifact")
+		return
+	}
+
+	clips, ok := clipsData.([]interface{})
+	if !ok {
+		utils.RespondWithError(w, http.StatusInternalServerError, "invalid clips data format")
+		return
+	}
+
+	// Find and remove the clip
+	var updatedClips []interface{}
+	found := false
+	for _, clipData := range clips {
+		clip, ok := clipData.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if clipID, ok := clip["id"].(string); ok && clipID == clipIDStr {
+			found = true
+			continue // Skip this clip (delete it)
+		}
+		updatedClips = append(updatedClips, clipData)
+	}
+
+	if !found {
+		utils.RespondWithError(w, http.StatusNotFound, "clip not found")
+		return
+	}
+
+	// Update the artifact with the new clips array
+	updates := models.JSONMap{
+		"data": map[string]interface{}{
+			"generated_clips": updatedClips,
+		},
+	}
+
+	err = c.ArtifactsRepo.UpdateAny(r.Context(), artifactID, updates, c.DB)
+	if err != nil {
+		c.logger.Error("Failed to update artifact after clip deletion", zap.Error(err))
+		utils.RespondWithError(w, http.StatusInternalServerError, "failed to delete clip")
+		return
+	}
+
+	utils.RespondWithJSON(w, http.StatusOK, map[string]any{
+		"message":       "Clip deleted successfully",
+		"remaining_clips": len(updatedClips),
+	})
 }
 
 // ============================================================================
@@ -2193,4 +2321,54 @@ func (c *AIProcessorController) RegenerateContent(w http.ResponseWriter, r *http
 	c.streamResponse(w, r, func(ctx context.Context) (<-chan ai.StreamChunk, error) {
 		return c.PolishService.PolishTextStream(ctx, req.Text, req.BrandContext, req.PreserveAuthenticity, req.TargetStyle, req.Prompt)
 	})
+}
+
+// ============================================================================
+// B-ROLL SUGGESTION
+// ============================================================================
+
+// HandleSuggestBroll suggests B-roll clips based on transcript analysis
+func (c *AIProcessorController) HandleSuggestBroll(w http.ResponseWriter, r *http.Request) {
+	var req ai.SuggestBrollRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.TranscriptText == "" {
+		http.Error(w, "transcript_text is required", http.StatusBadRequest)
+		return
+	}
+
+	// Set defaults
+	if req.MaxClips == 0 {
+		req.MaxClips = 5
+	}
+	if req.VideoDuration == 0 {
+		req.VideoDuration = 60 // Default 60 seconds
+	}
+
+	c.logger.Info("Processing B-roll suggestion request",
+		zap.Int("transcript_length", len(req.TranscriptText)),
+		zap.Int("max_clips", req.MaxClips))
+
+	// Call suggestion service
+	result, err := c.BrollSuggestionService.SuggestBroll(r.Context(), req)
+	if err != nil {
+		c.logger.Error("B-roll suggestion failed", zap.Error(err))
+		http.Error(w, fmt.Sprintf("Failed to suggest B-roll: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	c.logger.Info("B-roll suggestion complete",
+		zap.Int("clips_suggested", len(result.SuggestedClips)),
+		zap.Strings("themes", result.Themes))
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(result); err != nil {
+		c.logger.Error("Failed to encode response", zap.Error(err))
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }

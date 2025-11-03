@@ -1,5 +1,6 @@
 // frontend/src/services/apiClient.ts
 import { useCallback } from "react";
+import { authStore } from "@/stores/authStore";
 
 interface ApiOptions {
   headers?: Record<string, string>;
@@ -7,16 +8,12 @@ interface ApiOptions {
 }
 
 export const useApiClient = () => {
-  const getAuthToken = useCallback(() => {
-    return localStorage.getItem("authToken");
-  }, []);
-
   const getBaseUrl = useCallback(() => {
     return import.meta.env.VITE_API_URL || "";
   }, []);
 
   const createHeaders = useCallback(
-    (options?: ApiOptions) => {
+    async (options?: ApiOptions) => {
       const headers: Record<string, string> = {
         Accept: "application/json",
         ...(options?.headers || {}),
@@ -32,15 +29,19 @@ export const useApiClient = () => {
 
       // Add authorization header if not skipped
       if (!options?.noAuth) {
-        const token = getAuthToken();
-        if (token) {
-          headers["Authorization"] = `Bearer ${token}`;
+        try {
+          const { token } = await authStore.getToken();
+          if (token) {
+            headers["Authorization"] = `Bearer ${token}`;
+          }
+        } catch (error) {
+          console.error("Failed to get auth token:", error);
         }
       }
 
       return headers;
     },
-    [getAuthToken]
+    []
   );
 
   const handleResponse = useCallback(async (response: Response) => {
@@ -68,7 +69,7 @@ export const useApiClient = () => {
   const get = useCallback(
     async <T = any>(path: string, options?: ApiOptions): Promise<T> => {
       const url = `${getBaseUrl()}${path}`;
-      const headers = createHeaders(options);
+      const headers = await createHeaders(options);
 
       const response = await fetch(url, {
         method: "GET",
@@ -88,7 +89,7 @@ export const useApiClient = () => {
       options?: ApiOptions
     ): Promise<T> => {
       const url = `${getBaseUrl()}${path}`;
-      const headers = createHeaders(options);
+      const headers = await createHeaders(options);
 
       // Handle FormData
       let processedBody = body;
@@ -120,7 +121,7 @@ export const useApiClient = () => {
       options?: ApiOptions
     ): Promise<T> => {
       const url = `${getBaseUrl()}${path}`;
-      const headers = createHeaders(options);
+      const headers = await createHeaders(options);
 
       // Handle FormData
       let processedBody = body;
@@ -148,7 +149,7 @@ export const useApiClient = () => {
   const del = useCallback(
     async <T = any>(path: string, options?: ApiOptions): Promise<T> => {
       const url = `${getBaseUrl()}${path}`;
-      const headers = createHeaders(options);
+      const headers = await createHeaders(options);
 
       const response = await fetch(url, {
         method: "DELETE",

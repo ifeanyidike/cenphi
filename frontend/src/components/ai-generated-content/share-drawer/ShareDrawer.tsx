@@ -1133,7 +1133,7 @@ const ShareDrawer: React.FC<ShareDrawerProps> = ({
     (a) =>
       a.processing_type !== "sentiment_analysis" &&
       a.processing_type !== "highlight_extraction" &&
-      a.processing_type !== "clipping" &&
+      // Note: clipping artifacts are now included - they will show all their clips
       a.processing_type !== "enhancement" &&
       a.processing_type !== "viral_analysis" &&
       a.processing_type !== "translation" &&
@@ -2089,6 +2089,7 @@ const ShareDrawer: React.FC<ShareDrawerProps> = ({
                           src={artifact.asset_url}
                           className="w-full h-32 object-cover bg-slate-900"
                           muted
+                          poster={artifact.thumbnail_url}
                         />
                       </div>
                     )}

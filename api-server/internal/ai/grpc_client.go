@@ -45,6 +45,7 @@ type SingleMediaIntelligenceRequests interface {
 	// Step-by-step Platform Optimization RPCs
 	CropResize(ctx context.Context, req *pb.CropResizeRequest) (*pb.CropResizeResponse, error)
 	BurnCaptions(ctx context.Context, req *pb.BurnCaptionsRequest) (*pb.BurnCaptionsResponse, error)
+	ApplyTextOverlay(ctx context.Context, req *pb.TextOverlayRequest) (*pb.TextOverlayResponse, error)
 	ApplyBranding(ctx context.Context, req *pb.ApplyBrandingRequest) (*pb.ApplyBrandingResponse, error)
 	MixMusic(ctx context.Context, req *pb.MixMusicRequest) (*pb.MixMusicResponse, error)
 	NormalizeAudio(ctx context.Context, req *pb.NormalizeAudioRequest) (*pb.NormalizeAudioResponse, error)
@@ -55,6 +56,8 @@ type SingleMediaIntelligenceRequests interface {
 	AIOrdering(ctx context.Context, req *pb.AIOrderingRequest) (*pb.AIOrderingResponse, error)
 	AssembleDraft(ctx context.Context, req *pb.AssembleDraftRequest) (*pb.AssembleDraftResponse, error)
 	CollectAndAssembleClips(ctx context.Context, req *pb.CollectAndAssembleClipsRequest) (*pb.AssembleDraftResponse, error)
+	ApplyBrollOverlays(ctx context.Context, req *pb.BrollOverlayRequest) (*pb.BrollOverlayResponse, error)
+	SearchStockFootage(ctx context.Context, req *pb.StockFootageSearchRequest) (*pb.StockFootageSearchResponse, error)
 
 	// Legacy Story Video RPCs (still supported)
 	NormalizeVideoResolution(ctx context.Context, req *pb.NormalizeVideoRequest) (*pb.NormalizeVideoResponse, error)
@@ -264,6 +267,28 @@ func (g *GRPCClient) CollectAndAssembleClips(ctx context.Context, req *pb.Collec
 	return g.storyModeClient.CollectAndAssembleClips(ctx, req)
 }
 
+func (g *GRPCClient) ApplyBrollOverlays(ctx context.Context, req *pb.BrollOverlayRequest) (*pb.BrollOverlayResponse, error) {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
+	if g.closed {
+		return nil, fmt.Errorf("gRPC client is closed")
+	}
+
+	return g.storyModeClient.ApplyBrollOverlays(ctx, req)
+}
+
+func (g *GRPCClient) SearchStockFootage(ctx context.Context, req *pb.StockFootageSearchRequest) (*pb.StockFootageSearchResponse, error) {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
+	if g.closed {
+		return nil, fmt.Errorf("gRPC client is closed")
+	}
+
+	return g.storyModeClient.SearchStockFootage(ctx, req)
+}
+
 func (g *GRPCClient) OptimizeMediaForPlatform(ctx context.Context, req *pb.OptimizeRequest) (*pb.OptimizeResponse, error) {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
@@ -364,6 +389,17 @@ func (g *GRPCClient) EnhanceVideo(ctx context.Context, req *pb.EnhanceVideoReque
 	}
 
 	return g.optimizerClient.EnhanceVideo(ctx, req)
+}
+
+func (g *GRPCClient) ApplyTextOverlay(ctx context.Context, req *pb.TextOverlayRequest) (*pb.TextOverlayResponse, error) {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
+	if g.closed {
+		return nil, fmt.Errorf("gRPC client is closed")
+	}
+
+	return g.optimizerClient.ApplyTextOverlay(ctx, req)
 }
 
 // Step-by-step Story Video RPC Methods

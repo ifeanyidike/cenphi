@@ -185,7 +185,8 @@ class MediaEnhancer:
                 remove_noise: bool = True,
                 clean_up: bool = True,
                 enable_grayscale: bool = False,  # Option for grayscale output
-                testimonial_id: Optional[str] = None
+                testimonial_id: Optional[str] = None,
+                job_id: Optional[str] = None
                 ) -> Dict[str, Any]:
         """
         🌟 ENHANCED PROFESSIONAL media enhancement with:
@@ -206,7 +207,7 @@ class MediaEnhancer:
             quality = "high"  # Default to high for enhanced professional service
 
         cache_path = self.generate_enhance_cache_key(media_url, quality, custom_enhancements, logo_url, watermark_text, watermark_position,
-                                                     add_branding, brand_color, target_platform, remove_noise)
+                                                     add_branding, brand_color, target_platform, remove_noise, job_id)
         cache_url = self.storage_manager.get_public_url_for_object(cache_path)
         if self.storage_manager.check_url_exists(cache_url):
             logger.info(f"✅ Using cached enhancement URL: {cache_path}")
@@ -386,19 +387,21 @@ class MediaEnhancer:
             
 
     def generate_enhance_cache_key(self,
-        media_url: str, quality: str = "high", 
-        custom_enhancements: Optional[List[str]] = None, 
+        media_url: str, quality: str = "high",
+        custom_enhancements: Optional[List[str]] = None,
         logo_url: Optional[str] = None,
         watermark_text: Optional[str] = None,
         watermark_position: Optional[str] = None,
         add_branding: bool = False,
         brand_color: Optional[str] = None,
         target_platform: Optional[str] = None,
-        remove_noise: bool = True):
+        remove_noise: bool = True,
+        job_id: Optional[str] = None):
         """Generate deterministic cache key including brand colors"""
         import hashlib
         from urllib.parse import urlparse
-        
+        import uuid
+
         ENHANCER_ALGORITHM_VERSION = "v1.0"
 
         customs = "|".join(sorted(custom_enhancements)) if custom_enhancements else "default"
@@ -407,16 +410,19 @@ class MediaEnhancer:
 
         parsed_url = urlparse(media_url)
         media_id = f"{parsed_url.netloc}{parsed_url.path}"
-        
+
         cache_data = (
             f"{ENHANCER_ALGORITHM_VERSION}|{media_id}|{quality}|{customs}|{logo_url or ''}|"
             f"{watermark_text or ''}|{watermark_position or ''}"
             f"|{branding_opt}|{brand_color or ''}|"
             f"{target_platform or ''}|{noise}"
         )
-        
+
         cache_hash = hashlib.md5(cache_data.encode()).hexdigest()
-        return f"temp/enhanced/{cache_hash}.mp4"
+
+        # Use job_id for session-based cleanup, fallback to hash for backward compatibility
+        session_id = job_id if job_id else str(uuid.uuid4())
+        return f"temp/{session_id}/enhanced/{cache_hash}.mp4"
     
     def process_with_excellent_denoising(self, video_path: str, noise_reduction_level: str, temp_files: List[str], story_id: str) -> str:
         """

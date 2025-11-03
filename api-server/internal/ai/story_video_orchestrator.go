@@ -118,7 +118,27 @@ func (o *StepOrchestrator) RegisterStoryVideoHandlers(worker *StoryVideoStepsWor
 		return o.convertToStepOutput(result), nil
 	})
 
-	// Step 5: Apply branding (reuse from platform optimization)
+	// Step 5: Text overlay (reuse from platform optimization)
+	o.registerHandler("story_video", "text_overlay", func(ctx context.Context, input *StepInput) (*StepOutput, error) {
+		// Reuse the platform_optimization text_overlay handler
+		handler := o.getStepHandler("platform_optimization", "text_overlay")
+		if handler == nil {
+			return nil, fmt.Errorf("text_overlay handler not found")
+		}
+		return handler(ctx, input)
+	})
+
+	// Step 6: Apply B-roll (reuse from platform optimization)
+	o.registerHandler("story_video", "apply_broll", func(ctx context.Context, input *StepInput) (*StepOutput, error) {
+		// Reuse the platform_optimization apply_broll handler
+		handler := o.getStepHandler("platform_optimization", "apply_broll")
+		if handler == nil {
+			return nil, fmt.Errorf("apply_broll handler not found")
+		}
+		return handler(ctx, input)
+	})
+
+	// Step 7: Apply branding (reuse from platform optimization)
 	o.registerHandler("story_video", "apply_branding", func(ctx context.Context, input *StepInput) (*StepOutput, error) {
 		// Reuse the platform_optimization apply_branding handler
 		// buildStepContext now handles nil/empty testimonialID gracefully
@@ -129,7 +149,7 @@ func (o *StepOrchestrator) RegisterStoryVideoHandlers(worker *StoryVideoStepsWor
 		return handler(ctx, input)
 	})
 
-	// Step 6: Noise removal (reuse from platform optimization)
+	// Step 8: Noise removal (reuse from platform optimization)
 	o.registerHandler("story_video", "noise_removal", func(ctx context.Context, input *StepInput) (*StepOutput, error) {
 		// Reuse the platform_optimization noise_removal handler
 		// buildStepContext now handles nil/empty testimonialID gracefully
@@ -140,7 +160,7 @@ func (o *StepOrchestrator) RegisterStoryVideoHandlers(worker *StoryVideoStepsWor
 		return handler(ctx, input)
 	})
 
-	// Step 7: Mix music (reuse from platform optimization)
+	// Step 9: Mix music (reuse from platform optimization)
 	o.registerHandler("story_video", "mix_music", func(ctx context.Context, input *StepInput) (*StepOutput, error) {
 		// Reuse the platform_optimization mix_music handler
 		// buildStepContext now handles nil/empty testimonialID gracefully
@@ -151,7 +171,7 @@ func (o *StepOrchestrator) RegisterStoryVideoHandlers(worker *StoryVideoStepsWor
 		return handler(ctx, input)
 	})
 
-	// Step 8: Enhance video (reuse from platform optimization)
+	// Step 10: Enhance video (reuse from platform optimization)
 	o.registerHandler("story_video", "enhance", func(ctx context.Context, input *StepInput) (*StepOutput, error) {
 		// Reuse the platform_optimization enhance handler
 		// buildStepContext now handles nil/empty testimonialID gracefully

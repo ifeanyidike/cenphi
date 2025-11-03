@@ -3,12 +3,13 @@ import { motion } from "framer-motion";
 import IntegrationsCard from "./IntegrationsCard";
 import EmailTemplatesCard from "./EmailTemplatesCard";
 import CaptureWidgetCard from "./CaptureWidgetCard";
+import ShowcaseCard from "./ShowcaseCard";
 import TestimonialRequestModal from "../dashboard-landing/TestimonialRequestModal";
 import BrandGuide from "../brand-guide";
 import { Button } from "@/components/ui/button";
 import { Mail } from "lucide-react";
 
-type SettingsSection = "profile" | "integrations" | "brand" | "communications";
+type SettingsSection = "profile" | "integrations" | "brand" | "communications" | "showcase";
 
 const SettingsPanel: React.FC = () => {
   const [activeSection, setActiveSection] =
@@ -31,6 +32,10 @@ const SettingsPanel: React.FC = () => {
     {
       id: "communications" as const,
       label: "Communications",
+    },
+    {
+      id: "showcase" as const,
+      label: "Public Showcase",
     },
   ];
 
@@ -98,6 +103,8 @@ const SettingsPanel: React.FC = () => {
             <EmailTemplatesCard />
           </div>
         );
+      case "showcase":
+        return <ShowcaseCard />;
       default:
         return null;
     }

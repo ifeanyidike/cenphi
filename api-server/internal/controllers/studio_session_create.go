@@ -119,13 +119,20 @@ func (c StudioController) CreateSession(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
+	// Normalize stage order for optimal quality
+	// - crop_resize (if present) → always FIRST (establishes dimensions)
+	// - For video pipelines: enhance (if present) → always LAST (final quality polish)
+	// - For platform_optimization: text_optimization last, enhance second-to-last
+	// - all other stages maintain their relative user order
+	normalizedStages, wasReordered := NormalizeStageOrder(req.SelectedStages, req.PipelineType, c.logger)
+
 	// Create the session using the injected orchestrator (which has handlers registered)
 	session, err := c.stepOrchestrator.CreateSession(
 		r.Context(),
 		testimonialID,
 		workspaceID,
 		req.PipelineType,
-		req.SelectedStages,
+		normalizedStages, // Use normalized stages instead of raw req.SelectedStages
 		req.AutoProceed,
 		req.Config, // BUGFIX #12: Pass user config to orchestrator
 	)
@@ -239,12 +246,20 @@ func (c StudioController) CreateSession(w http.ResponseWriter, r *http.Request) 
 	}()
 
 	// Return session details
-	utils.RespondWithJSON(w, http.StatusCreated, map[string]interface{}{
+	response := map[string]interface{}{
 		"session_id":    session.ID,
 		"pipeline_type": session.SessionType,
 		"status":        session.Status,
 		"auto_proceed":  session.AutoProceed,
 		"created_at":    session.StartedAt,
 		"stream_url":    "/studio/sessions/" + session.ID.String() + "/stream",
-	})
+	}
+
+	// Add reorder notification if stages were automatically reordered
+	if wasReordered {
+		response["stages_reordered"] = true
+		response["reorder_message"] = "Steps reordered for optimal quality: Crop/Resize moved to start, Enhancement moved to end"
+	}
+
+	utils.RespondWithJSON(w, http.StatusCreated, response)
 }

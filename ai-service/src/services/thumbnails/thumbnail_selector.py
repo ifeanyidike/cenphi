@@ -116,24 +116,31 @@ class SmartThumbnailSelector:
             selected_candidates = self._select_top_candidates(scored_candidates, max_thumbnails)
             
             # Step 7: Upload thumbnails using existing storage pattern
+            # Generate session_id for cleanup (can use video hash as identifier)
+            import hashlib
+            video_hash = hashlib.md5(video_path.encode()).hexdigest()[:8]
+
             thumbnail_urls = []
             for i, candidate in enumerate(selected_candidates):
                 try:
                     if candidate.image_path and os.path.exists(candidate.image_path):
-                        thumbnail_url = self.storage_manager.upload_file_with_retry(candidate.image_path)
+                        # Use temp/{session_id}/thumbnails/ for proper cleanup
+                        object_name = f"temp/{video_hash}/thumbnails/thumb_{i}.jpg"
+                        thumbnail_url = self.storage_manager.upload_file_with_retry(candidate.image_path, object_name)
                         if thumbnail_url:
                             thumbnail_urls.append(thumbnail_url)
                             logger.debug(f"Uploaded thumbnail {i+1}: {thumbnail_url}")
                 except Exception as e:
                     logger.warning(f"Failed to upload thumbnail {i+1}: {e}")
-            
+
             # Ensure we have at least one thumbnail
             if not thumbnail_urls and selected_candidates:
                 logger.warning("No thumbnails uploaded successfully, retrying with first candidate")
                 try:
                     first_candidate = selected_candidates[0]
                     if first_candidate.image_path and os.path.exists(first_candidate.image_path):
-                        thumbnail_url = self.storage_manager.upload_file_with_retry(first_candidate.image_path)
+                        object_name = f"temp/{video_hash}/thumbnails/thumb_0.jpg"
+                        thumbnail_url = self.storage_manager.upload_file_with_retry(first_candidate.image_path, object_name)
                         if thumbnail_url:
                             thumbnail_urls.append(thumbnail_url)
                 except Exception as e:
@@ -315,13 +322,13 @@ class SmartThumbnailSelector:
             return []
     
     def _extract_frame(self, video_path: str, timestamp: float, index: int) -> Optional[str]:
-        """Extract frame with robust error handling"""
+        """Extract a single frame at specified timestamp"""
         try:
             output_path = os.path.join(
                 tempfile.gettempdir(),
                 f"thumbnail_{uuid.uuid4().hex}_{index}_{timestamp:.1f}s.jpg"
             )
-            
+
             cmd = [
                 "ffmpeg", "-y",
                 "-i", video_path,
@@ -332,19 +339,19 @@ class SmartThumbnailSelector:
                 "-f", "image2",
                 output_path
             ]
-            
+
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
             if result.returncode != 0:
                 logger.warning(f"Frame extraction failed at {timestamp:.1f}s: {result.stderr}")
                 return None
-            
-            # Validate extracted frame
+
+            # Validate extracted frame exists and has reasonable size
             if os.path.exists(output_path) and os.path.getsize(output_path) > 5000:  # At least 5KB
                 return output_path
             else:
                 logger.warning(f"Extracted frame too small at {timestamp:.1f}s")
                 return None
-                
+
         except Exception as e:
             logger.warning(f"Frame extraction error at {timestamp:.1f}s: {e}")
             return None

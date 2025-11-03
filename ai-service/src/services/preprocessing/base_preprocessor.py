@@ -170,7 +170,7 @@ class BasePreprocessor:
             logger.info(f"[{job_id}] Uploading base asset to cloud...")
             cloud_url = self.storage_manager.upload_to_storage(
                 local_path=output_path,
-                object_name=f"base_processed/{testimonial_id}/{output_filename}"
+                object_name=f"temp/{job_id}/base_processed/{output_filename}"
             )
             logger.info(f"[{job_id}] Base asset uploaded: {cloud_url}")
 

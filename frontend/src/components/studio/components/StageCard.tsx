@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ProcessingStage } from "@/hooks/useSessionSSE";
-import StageCustomization from "../StageCustomization";
+// import StageCustomization from "../StageCustomization";
 
 interface StageCardProps {
   stage: ProcessingStage;
@@ -44,14 +44,15 @@ export const StageCard: React.FC<StageCardProps> = ({
   onAcceptStage,
   onContinueToNextStage,
   onCancelSession,
-  onUpdateStageConfig,
+  // onUpdateStageConfig,
   getStageStatusIcon,
   getStageStatusColor,
   sanitizeErrorMessage,
 }) => {
   const isActive = currentStage?.id === stage.id;
   const isFailed = stage.status === "failed";
-  const isCompleted = stage.status === "completed" || stage.status === "accepted";
+  const isCompleted =
+    stage.status === "completed" || stage.status === "accepted";
   const isPendingAcceptance = stage.status === "completed";
   const isAccepted = stage.status === "accepted";
   const isStale = staleStages.has(stage.stage_id);
@@ -152,15 +153,15 @@ export const StageCard: React.FC<StageCardProps> = ({
               </p>
             )}
 
-            {/* Stale stage warning */}
+            {/* Stale stage warning - only shown when truly stuck (no heartbeat for 3+ min) */}
             {isStale && !isFailed && (
               <div className="mt-2 p-2 bg-amber-100/60 border border-amber-200/60 rounded-md text-[10px] text-amber-900 font-medium">
-                ⚠️ Processing is taking longer than expected. This might indicate an issue.
+                ⚠️ Stage appears stuck with no activity for 3+ minutes. You may retry if this persists.
               </div>
             )}
 
             {/* Customization Panel - Show for pending or processing stages */}
-            {(stage.status === "pending" || stage.status === "processing") &&
+            {/* {(stage.status === "pending" || stage.status === "processing") &&
               isActive &&
               onUpdateStageConfig && (
                 <div className="mt-3">
@@ -172,7 +173,7 @@ export const StageCard: React.FC<StageCardProps> = ({
                     }
                   />
                 </div>
-              )}
+              )} */}
 
             {/* Processing Indicator */}
             {stage.status === "processing" && (
@@ -297,24 +298,6 @@ export const StageCard: React.FC<StageCardProps> = ({
                     s.status === "accepted"
                 );
 
-              if (
-                isAccepted &&
-                stage.metadata?.preview_url &&
-                session?.auto_proceed === false
-              ) {
-                console.log(`[Continue Button] Stage ${stage.stage_id}:`, {
-                  index,
-                  status: stage.status,
-                  hasSubsequentStageTriggered,
-                  subsequentStages: stages
-                    .slice(index + 1)
-                    .map((s) => ({
-                      id: s.stage_id,
-                      status: s.status,
-                    })),
-                });
-              }
-
               return session?.auto_proceed === false &&
                 isAccepted &&
                 stage.metadata?.preview_url &&
@@ -357,9 +340,13 @@ export const StageCard: React.FC<StageCardProps> = ({
               ];
 
               // Only show warning if stage should have a preview but doesn't
-              const shouldHavePreview = !noPreviewStages.includes(stage.stage_id);
+              const shouldHavePreview = !noPreviewStages.includes(
+                stage.stage_id
+              );
 
-              return isAccepted && !stage.metadata?.preview_url && shouldHavePreview ? (
+              return isAccepted &&
+                !stage.metadata?.preview_url &&
+                shouldHavePreview ? (
                 <div className="mt-3 pt-3 border-t border-amber-200/40">
                   <div className="p-2.5 bg-amber-50/80 border border-amber-200/60 rounded-md">
                     <div className="flex items-start gap-2">

@@ -22,6 +22,7 @@ export interface ProcessingStage {
   skip_reason?: string;
   started_at?: string;
   completed_at?: string;
+  updated_at?: string;
   metadata?: Record<string, any>;
 }
 

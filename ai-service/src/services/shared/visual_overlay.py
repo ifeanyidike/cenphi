@@ -299,7 +299,52 @@ class VisualOverlay:
         except Exception as e:
             logger.error(f"Overlay application failed: {e}")
             return None
-        
+
+    def _calculate_watermark_position(
+        self,
+        position: str,
+        video_width: int,
+        video_height: int,
+        padding: int
+    ) -> tuple:
+        """
+        Calculate x and y positions for watermark based on position string.
+
+        Supported positions:
+        - center (default)
+        - top-left, top-center, top-right
+        - bottom-left, bottom-center, bottom-right
+        - middle-left, middle-right
+
+        Returns:
+            tuple: (x_pos, y_pos) as FFmpeg expression strings
+        """
+        # Normalize position string (handle both underscore and hyphen formats)
+        position = position.lower().replace("_", "-")
+
+        # Calculate positions based on position string
+        if position == "top-left":
+            return f"{padding}", f"{padding}"
+        elif position in ["top-center", "top-centre"]:
+            return "(w-text_w)/2", f"{padding}"
+        elif position == "top-right":
+            return f"w-text_w-{padding}", f"{padding}"
+        elif position == "middle-left":
+            return f"{padding}", "(h-text_h)/2"
+        elif position in ["center", "centre", "middle-center"]:
+            return "(w-text_w)/2", "(h-text_h)/2"
+        elif position == "middle-right":
+            return f"w-text_w-{padding}", "(h-text_h)/2"
+        elif position == "bottom-left":
+            return f"{padding}", f"h-text_h-{padding}"
+        elif position in ["bottom-center", "bottom-centre"]:
+            return "(w-text_w)/2", f"h-text_h-{padding}"
+        elif position == "bottom-right":
+            return f"w-text_w-{padding}", f"h-text_h-{padding}"
+        else:
+            # Default to center for unknown positions
+            logger.warning(f"Unknown watermark position '{position}', defaulting to center")
+            return "(w-text_w)/2", "(h-text_h)/2"
 
     def _build_watermark_filter(
         self,
@@ -309,10 +354,10 @@ class VisualOverlay:
         input_label: str
     ) -> tuple:
         """Build background watermark overlay filter"""
-        
+
         try:
             watermark_text = watermark_config.get("text", "")
-            # Force center position for background watermark
+            watermark_position = watermark_config.get("position", "center")  # Default to center
             watermark_opacity = watermark_config.get("opacity", 0.15)  # Much more transparent
             watermark_color = watermark_config.get("color", "#FFFFFF")
 
@@ -321,21 +366,23 @@ class VisualOverlay:
 
             if not watermark_color.startswith('#'):
                 watermark_color = "#FFFFFF"
-            
+
             if not watermark_text:
                 return None, None
-            
+
             # Clean watermark text
             clean_watermark_text = self._clean_subtitle_text(watermark_text)
             if not clean_watermark_text:
                 return None, None
-            
+
             # Calculate larger font size for background watermark
             font_size = max(int(video_width * 0.12), 64)  # Much larger for background effect
-            
-            # Always center for background watermark
-            x_pos = "(w-text_w)/2"
-            y_pos = "(h-text_h)/2"
+
+            # Calculate position based on config
+            padding = 20
+            x_pos, y_pos = self._calculate_watermark_position(
+                watermark_position, video_width, video_height, padding
+            )
             
             output_label = "[watermark_overlay]"
             

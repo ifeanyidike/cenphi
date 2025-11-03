@@ -591,6 +591,7 @@ const (
 	PlatformOptimizerService_NormalizeAudio_FullMethodName     = "/intelligence.PlatformOptimizerService/NormalizeAudio"
 	PlatformOptimizerService_EnhanceVideo_FullMethodName       = "/intelligence.PlatformOptimizerService/EnhanceVideo"
 	PlatformOptimizerService_TextOptimization_FullMethodName   = "/intelligence.PlatformOptimizerService/TextOptimization"
+	PlatformOptimizerService_ApplyTextOverlay_FullMethodName   = "/intelligence.PlatformOptimizerService/ApplyTextOverlay"
 )
 
 // PlatformOptimizerServiceClient is the client API for PlatformOptimizerService service.
@@ -609,6 +610,7 @@ type PlatformOptimizerServiceClient interface {
 	NormalizeAudio(ctx context.Context, in *NormalizeAudioRequest, opts ...grpc.CallOption) (*NormalizeAudioResponse, error)
 	EnhanceVideo(ctx context.Context, in *EnhanceVideoRequest, opts ...grpc.CallOption) (*EnhanceVideoResponse, error)
 	TextOptimization(ctx context.Context, in *TextOptimizationRequest, opts ...grpc.CallOption) (*TextOptimizationResponse, error)
+	ApplyTextOverlay(ctx context.Context, in *TextOverlayRequest, opts ...grpc.CallOption) (*TextOverlayResponse, error)
 }
 
 type platformOptimizerServiceClient struct {
@@ -719,6 +721,16 @@ func (c *platformOptimizerServiceClient) TextOptimization(ctx context.Context, i
 	return out, nil
 }
 
+func (c *platformOptimizerServiceClient) ApplyTextOverlay(ctx context.Context, in *TextOverlayRequest, opts ...grpc.CallOption) (*TextOverlayResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(TextOverlayResponse)
+	err := c.cc.Invoke(ctx, PlatformOptimizerService_ApplyTextOverlay_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // PlatformOptimizerServiceServer is the server API for PlatformOptimizerService service.
 // All implementations must embed UnimplementedPlatformOptimizerServiceServer
 // for forward compatibility.
@@ -735,6 +747,7 @@ type PlatformOptimizerServiceServer interface {
 	NormalizeAudio(context.Context, *NormalizeAudioRequest) (*NormalizeAudioResponse, error)
 	EnhanceVideo(context.Context, *EnhanceVideoRequest) (*EnhanceVideoResponse, error)
 	TextOptimization(context.Context, *TextOptimizationRequest) (*TextOptimizationResponse, error)
+	ApplyTextOverlay(context.Context, *TextOverlayRequest) (*TextOverlayResponse, error)
 	mustEmbedUnimplementedPlatformOptimizerServiceServer()
 }
 
@@ -774,6 +787,9 @@ func (UnimplementedPlatformOptimizerServiceServer) EnhanceVideo(context.Context,
 }
 func (UnimplementedPlatformOptimizerServiceServer) TextOptimization(context.Context, *TextOptimizationRequest) (*TextOptimizationResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method TextOptimization not implemented")
+}
+func (UnimplementedPlatformOptimizerServiceServer) ApplyTextOverlay(context.Context, *TextOverlayRequest) (*TextOverlayResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ApplyTextOverlay not implemented")
 }
 func (UnimplementedPlatformOptimizerServiceServer) mustEmbedUnimplementedPlatformOptimizerServiceServer() {
 }
@@ -977,6 +993,24 @@ func _PlatformOptimizerService_TextOptimization_Handler(srv interface{}, ctx con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _PlatformOptimizerService_ApplyTextOverlay_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TextOverlayRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PlatformOptimizerServiceServer).ApplyTextOverlay(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PlatformOptimizerService_ApplyTextOverlay_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PlatformOptimizerServiceServer).ApplyTextOverlay(ctx, req.(*TextOverlayRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // PlatformOptimizerService_ServiceDesc is the grpc.ServiceDesc for PlatformOptimizerService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1023,6 +1057,10 @@ var PlatformOptimizerService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "TextOptimization",
 			Handler:    _PlatformOptimizerService_TextOptimization_Handler,
+		},
+		{
+			MethodName: "ApplyTextOverlay",
+			Handler:    _PlatformOptimizerService_ApplyTextOverlay_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -1138,6 +1176,8 @@ const (
 	StoryModeService_AIOrdering_FullMethodName               = "/intelligence.StoryModeService/AIOrdering"
 	StoryModeService_AssembleDraft_FullMethodName            = "/intelligence.StoryModeService/AssembleDraft"
 	StoryModeService_CollectAndAssembleClips_FullMethodName  = "/intelligence.StoryModeService/CollectAndAssembleClips"
+	StoryModeService_ApplyBrollOverlays_FullMethodName       = "/intelligence.StoryModeService/ApplyBrollOverlays"
+	StoryModeService_SearchStockFootage_FullMethodName       = "/intelligence.StoryModeService/SearchStockFootage"
 	StoryModeService_DetectHooks_FullMethodName              = "/intelligence.StoryModeService/DetectHooks"
 	StoryModeService_NormalizeVideoResolution_FullMethodName = "/intelligence.StoryModeService/NormalizeVideoResolution"
 	StoryModeService_AssembleStoryVideo_FullMethodName       = "/intelligence.StoryModeService/AssembleStoryVideo"
@@ -1155,6 +1195,9 @@ type StoryModeServiceClient interface {
 	AIOrdering(ctx context.Context, in *AIOrderingRequest, opts ...grpc.CallOption) (*AIOrderingResponse, error)
 	AssembleDraft(ctx context.Context, in *AssembleDraftRequest, opts ...grpc.CallOption) (*AssembleDraftResponse, error)
 	CollectAndAssembleClips(ctx context.Context, in *CollectAndAssembleClipsRequest, opts ...grpc.CallOption) (*AssembleDraftResponse, error)
+	// B-roll and stock footage integration
+	ApplyBrollOverlays(ctx context.Context, in *BrollOverlayRequest, opts ...grpc.CallOption) (*BrollOverlayResponse, error)
+	SearchStockFootage(ctx context.Context, in *StockFootageSearchRequest, opts ...grpc.CallOption) (*StockFootageSearchResponse, error)
 	// IMPROVEMENT #3: Intelligent Hook Detection
 	DetectHooks(ctx context.Context, in *HookDetectionRequest, opts ...grpc.CallOption) (*HookDetectionResponse, error)
 	// Legacy/optional step-by-step methods
@@ -1231,6 +1274,26 @@ func (c *storyModeServiceClient) CollectAndAssembleClips(ctx context.Context, in
 	return out, nil
 }
 
+func (c *storyModeServiceClient) ApplyBrollOverlays(ctx context.Context, in *BrollOverlayRequest, opts ...grpc.CallOption) (*BrollOverlayResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BrollOverlayResponse)
+	err := c.cc.Invoke(ctx, StoryModeService_ApplyBrollOverlays_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *storyModeServiceClient) SearchStockFootage(ctx context.Context, in *StockFootageSearchRequest, opts ...grpc.CallOption) (*StockFootageSearchResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(StockFootageSearchResponse)
+	err := c.cc.Invoke(ctx, StoryModeService_SearchStockFootage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *storyModeServiceClient) DetectHooks(ctx context.Context, in *HookDetectionRequest, opts ...grpc.CallOption) (*HookDetectionResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(HookDetectionResponse)
@@ -1282,6 +1345,9 @@ type StoryModeServiceServer interface {
 	AIOrdering(context.Context, *AIOrderingRequest) (*AIOrderingResponse, error)
 	AssembleDraft(context.Context, *AssembleDraftRequest) (*AssembleDraftResponse, error)
 	CollectAndAssembleClips(context.Context, *CollectAndAssembleClipsRequest) (*AssembleDraftResponse, error)
+	// B-roll and stock footage integration
+	ApplyBrollOverlays(context.Context, *BrollOverlayRequest) (*BrollOverlayResponse, error)
+	SearchStockFootage(context.Context, *StockFootageSearchRequest) (*StockFootageSearchResponse, error)
 	// IMPROVEMENT #3: Intelligent Hook Detection
 	DetectHooks(context.Context, *HookDetectionRequest) (*HookDetectionResponse, error)
 	// Legacy/optional step-by-step methods
@@ -1315,6 +1381,12 @@ func (UnimplementedStoryModeServiceServer) AssembleDraft(context.Context, *Assem
 }
 func (UnimplementedStoryModeServiceServer) CollectAndAssembleClips(context.Context, *CollectAndAssembleClipsRequest) (*AssembleDraftResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CollectAndAssembleClips not implemented")
+}
+func (UnimplementedStoryModeServiceServer) ApplyBrollOverlays(context.Context, *BrollOverlayRequest) (*BrollOverlayResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ApplyBrollOverlays not implemented")
+}
+func (UnimplementedStoryModeServiceServer) SearchStockFootage(context.Context, *StockFootageSearchRequest) (*StockFootageSearchResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SearchStockFootage not implemented")
 }
 func (UnimplementedStoryModeServiceServer) DetectHooks(context.Context, *HookDetectionRequest) (*HookDetectionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DetectHooks not implemented")
@@ -1457,6 +1529,42 @@ func _StoryModeService_CollectAndAssembleClips_Handler(srv interface{}, ctx cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _StoryModeService_ApplyBrollOverlays_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BrollOverlayRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StoryModeServiceServer).ApplyBrollOverlays(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: StoryModeService_ApplyBrollOverlays_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StoryModeServiceServer).ApplyBrollOverlays(ctx, req.(*BrollOverlayRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _StoryModeService_SearchStockFootage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StockFootageSearchRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StoryModeServiceServer).SearchStockFootage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: StoryModeService_SearchStockFootage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StoryModeServiceServer).SearchStockFootage(ctx, req.(*StockFootageSearchRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _StoryModeService_DetectHooks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(HookDetectionRequest)
 	if err := dec(in); err != nil {
@@ -1559,6 +1667,14 @@ var StoryModeService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CollectAndAssembleClips",
 			Handler:    _StoryModeService_CollectAndAssembleClips_Handler,
+		},
+		{
+			MethodName: "ApplyBrollOverlays",
+			Handler:    _StoryModeService_ApplyBrollOverlays_Handler,
+		},
+		{
+			MethodName: "SearchStockFootage",
+			Handler:    _StoryModeService_SearchStockFootage_Handler,
 		},
 		{
 			MethodName: "DetectHooks",

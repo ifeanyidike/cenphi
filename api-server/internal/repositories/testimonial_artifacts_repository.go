@@ -43,10 +43,10 @@ func (r TestimonialArtifactRepository) Create(ctx context.Context, artifact *mod
 	query := `
 		INSERT INTO testimonial_artifacts (
 			id, testimonial_id, workspace_id, processing_type, result_category, text_content,
-			data, asset_url, content_type, platform, format, is_user_saved,
-			is_streamed, processing_metadata, created_at, updated_at
+			data, asset_url, duration, thumbnail_url, content_type, platform, format, is_user_saved,
+			is_streamed, approval_status, is_public, processing_metadata, created_at, updated_at
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
+			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
 		)
 	`
 
@@ -74,6 +74,12 @@ func (r TestimonialArtifactRepository) Create(ctx context.Context, artifact *mod
 	}
 	artifact.UpdatedAt = now
 
+	// Set default approval values if not set
+	// Artifacts should start as "draft" and require explicit approval
+	if artifact.ApprovalStatus == "" {
+		artifact.ApprovalStatus = "draft"
+	}
+
 	_, err = db.ExecContext(ctx, query,
 		artifact.ID,
 		artifact.TestimonialID,
@@ -83,11 +89,15 @@ func (r TestimonialArtifactRepository) Create(ctx context.Context, artifact *mod
 		artifact.TextContent,
 		data,
 		artifact.AssetURL,
+		artifact.Duration,
+		artifact.ThumbnailURL,
 		artifact.ContentType,
 		artifact.Platform,
 		artifact.Format,
 		artifact.IsUserSaved,
 		artifact.IsStreamed,
+		artifact.ApprovalStatus,
+		artifact.IsPublic,
 		pmArg,
 		artifact.CreatedAt,
 		artifact.UpdatedAt,
@@ -113,9 +123,10 @@ func (r TestimonialArtifactRepository) GetByID(ctx context.Context, id uuid.UUID
 	}
 
 	query := `
-		SELECT id, testimonial_id, processing_type, result_category, text_content,
+		SELECT id, testimonial_id, workspace_id, processing_type, result_category, text_content,
 			   data, asset_url, content_type, platform, format, is_user_saved,
-			   is_streamed, processing_metadata, created_at, updated_at
+			   is_streamed, approval_status, is_public, approved_at, approved_by,
+			   processing_metadata, created_at, updated_at
 		FROM testimonial_artifacts WHERE id = $1::uuid
 	`
 
@@ -123,6 +134,7 @@ func (r TestimonialArtifactRepository) GetByID(ctx context.Context, id uuid.UUID
 	err = db.QueryRowContext(ctx, query, id).Scan(
 		&artifact.ID,
 		&artifact.TestimonialID,
+		&artifact.WorkspaceID,
 		&artifact.ProcessingType,
 		&artifact.ResultCategory,
 		&artifact.TextContent,
@@ -133,6 +145,10 @@ func (r TestimonialArtifactRepository) GetByID(ctx context.Context, id uuid.UUID
 		&artifact.Format,
 		&artifact.IsUserSaved,
 		&artifact.IsStreamed,
+		&artifact.ApprovalStatus,
+		&artifact.IsPublic,
+		&artifact.ApprovedAt,
+		&artifact.ApprovedBy,
 		&artifact.ProcessingMetadata,
 		&artifact.CreatedAt,
 		&artifact.UpdatedAt,
@@ -160,9 +176,10 @@ func (r TestimonialArtifactRepository) GetByTestimonialID(ctx context.Context, t
 	}
 
 	query := `
-		SELECT id, testimonial_id, processing_type, result_category, text_content,
-			   data, asset_url, content_type, platform, format, is_user_saved,
-			   is_streamed, processing_metadata, created_at, updated_at
+		SELECT id, testimonial_id, workspace_id, processing_type, result_category, text_content,
+			   data, asset_url, duration, thumbnail_url, content_type, platform, format, is_user_saved,
+			   is_streamed, approval_status, is_public, approved_at, approved_by,
+			   processing_metadata, created_at, updated_at
 		FROM testimonial_artifacts WHERE testimonial_id = $1 ORDER BY created_at DESC
 	`
 
@@ -178,16 +195,23 @@ func (r TestimonialArtifactRepository) GetByTestimonialID(ctx context.Context, t
 		err := rows.Scan(
 			&artifact.ID,
 			&artifact.TestimonialID,
+			&artifact.WorkspaceID,
 			&artifact.ProcessingType,
 			&artifact.ResultCategory,
 			&artifact.TextContent,
 			&artifact.Data,
 			&artifact.AssetURL,
+			&artifact.Duration,
+			&artifact.ThumbnailURL,
 			&artifact.ContentType,
 			&artifact.Platform,
 			&artifact.Format,
 			&artifact.IsUserSaved,
 			&artifact.IsStreamed,
+			&artifact.ApprovalStatus,
+			&artifact.IsPublic,
+			&artifact.ApprovedAt,
+			&artifact.ApprovedBy,
 			&artifact.ProcessingMetadata,
 			&artifact.CreatedAt,
 			&artifact.UpdatedAt,
@@ -212,11 +236,12 @@ func (r TestimonialArtifactRepository) GetByTestimonialID(ctx context.Context, t
 
 func (r TestimonialArtifactRepository) GetByTestimonialAndType(ctx context.Context, testimonialID uuid.UUID, processingType string, db DB) (*models.TestimonialArtifact, error) {
 	query := `
-		SELECT id, testimonial_id, processing_type, result_category, text_content,
-			   data, asset_url, content_type, platform, format, is_user_saved,
-			   is_streamed, processing_metadata, created_at, updated_at
-		FROM testimonial_artifacts 
-		WHERE testimonial_id = $1 AND processing_type = $2 
+		SELECT id, testimonial_id, workspace_id, processing_type, result_category, text_content,
+			   data, asset_url, duration, thumbnail_url, content_type, platform, format, is_user_saved,
+			   is_streamed, approval_status, is_public, approved_at, approved_by,
+			   processing_metadata, created_at, updated_at
+		FROM testimonial_artifacts
+		WHERE testimonial_id = $1 AND processing_type = $2
 		ORDER BY created_at DESC LIMIT 1
 	`
 
@@ -224,16 +249,23 @@ func (r TestimonialArtifactRepository) GetByTestimonialAndType(ctx context.Conte
 	err := db.QueryRowContext(ctx, query, testimonialID, processingType).Scan(
 		&artifact.ID,
 		&artifact.TestimonialID,
+		&artifact.WorkspaceID,
 		&artifact.ProcessingType,
 		&artifact.ResultCategory,
 		&artifact.TextContent,
 		&artifact.Data,
 		&artifact.AssetURL,
+		&artifact.Duration,
+		&artifact.ThumbnailURL,
 		&artifact.ContentType,
 		&artifact.Platform,
 		&artifact.Format,
 		&artifact.IsUserSaved,
 		&artifact.IsStreamed,
+		&artifact.ApprovalStatus,
+		&artifact.IsPublic,
+		&artifact.ApprovedAt,
+		&artifact.ApprovedBy,
 		&artifact.ProcessingMetadata,
 		&artifact.CreatedAt,
 		&artifact.UpdatedAt,
@@ -252,7 +284,8 @@ func (r TestimonialArtifactRepository) Update(ctx context.Context, artifact *mod
 			processing_type = $2, result_category = $3, text_content = $4,
 			data = $5, asset_url = $6, content_type = $7, platform = $8,
 			format = $9, is_user_saved = $10, is_streamed = $11,
-			processing_metadata = $12, updated_at = $13
+			approval_status = $12, is_public = $13,
+			processing_metadata = $14, updated_at = $15
 		WHERE id = $1
 	`
 
@@ -292,6 +325,8 @@ func (r TestimonialArtifactRepository) Update(ctx context.Context, artifact *mod
 		artifact.Format,
 		artifact.IsUserSaved,
 		artifact.IsStreamed,
+		artifact.ApprovalStatus,
+		artifact.IsPublic,
 		string(processing_metadata),
 		artifact.UpdatedAt,
 	)
@@ -334,10 +369,11 @@ func (r TestimonialArtifactRepository) Delete(ctx context.Context, id uuid.UUID,
 
 func (r TestimonialArtifactRepository) GetHighlights(ctx context.Context, testimonialID uuid.UUID, db DB) ([]models.TestimonialArtifact, error) {
 	query := `
-		SELECT id, testimonial_id, processing_type, result_category, text_content,
+		SELECT id, testimonial_id, workspace_id, processing_type, result_category, text_content,
 			   data, asset_url, content_type, platform, format, is_user_saved,
-			   is_streamed, processing_metadata, created_at, updated_at
-		FROM testimonial_artifacts 
+			   is_streamed, approval_status, is_public, approved_at, approved_by,
+			   processing_metadata, created_at, updated_at
+		FROM testimonial_artifacts
 		WHERE testimonial_id = $1 AND processing_type = 'highlight_extraction'
 		ORDER BY created_at DESC
 	`
@@ -354,6 +390,7 @@ func (r TestimonialArtifactRepository) GetHighlights(ctx context.Context, testim
 		err := rows.Scan(
 			&artifact.ID,
 			&artifact.TestimonialID,
+			&artifact.WorkspaceID,
 			&artifact.ProcessingType,
 			&artifact.ResultCategory,
 			&artifact.TextContent,
@@ -364,6 +401,10 @@ func (r TestimonialArtifactRepository) GetHighlights(ctx context.Context, testim
 			&artifact.Format,
 			&artifact.IsUserSaved,
 			&artifact.IsStreamed,
+			&artifact.ApprovalStatus,
+			&artifact.IsPublic,
+			&artifact.ApprovedAt,
+			&artifact.ApprovedBy,
 			&artifact.ProcessingMetadata,
 			&artifact.CreatedAt,
 			&artifact.UpdatedAt,
@@ -854,10 +895,11 @@ func (r *TestimonialArtifactRepository) GetProcessingTreeForTestimonial(
 	// ✅ SIMPLIFIED: Replaced complex recursive CTE with flat query
 	// We'll build the hierarchy in the service layer instead of SQL
 	query := `
-		SELECT ta.id, ta.testimonial_id, ta.workspace_id, ta.processing_type, 
-			   ta.result_category, ta.text_content, ta.data, ta.asset_url, 
-			   ta.content_type, ta.platform, ta.format, ta.is_user_saved, 
-			   ta.is_streamed, ta.processing_metadata, ta.created_at, ta.updated_at,
+		SELECT ta.id, ta.testimonial_id, ta.workspace_id, ta.processing_type,
+			   ta.result_category, ta.text_content, ta.data, ta.asset_url, ta.duration, ta.thumbnail_url,
+			   ta.content_type, ta.platform, ta.format, ta.is_user_saved,
+			   ta.is_streamed, ta.approval_status, ta.is_public, ta.approved_at, ta.approved_by,
+			   ta.processing_metadata, ta.created_at, ta.updated_at,
 			   asrc.source_testimonial_id, asrc.source_artifact_id
 		FROM testimonial_artifacts ta
 		JOIN artifact_sources asrc ON asrc.artifact_id = ta.id
@@ -874,10 +916,11 @@ func (r *TestimonialArtifactRepository) GetProcessingTreeForTestimonial(
 	if err != nil {
 		// ✅ ADDED: Even simpler fallback query
 		fallbackQuery := `
-			SELECT ta.id, ta.testimonial_id, ta.workspace_id, ta.processing_type, 
-				   ta.result_category, ta.text_content, ta.data, ta.asset_url, 
-				   ta.content_type, ta.platform, ta.format, ta.is_user_saved, 
-				   ta.is_streamed, ta.processing_metadata, ta.created_at, ta.updated_at
+			SELECT ta.id, ta.testimonial_id, ta.workspace_id, ta.processing_type,
+				   ta.result_category, ta.text_content, ta.data, ta.asset_url, ta.duration, ta.thumbnail_url,
+				   ta.content_type, ta.platform, ta.format, ta.is_user_saved,
+				   ta.is_streamed, ta.approval_status, ta.is_public, ta.approved_at, ta.approved_by,
+				   ta.processing_metadata, ta.created_at, ta.updated_at
 			FROM testimonial_artifacts ta
 			JOIN artifact_sources asrc ON asrc.artifact_id = ta.id
 			WHERE asrc.source_testimonial_id = $1
@@ -897,9 +940,10 @@ func (r *TestimonialArtifactRepository) GetProcessingTreeForTestimonial(
 			err := rows.Scan(
 				&artifact.ID, &artifact.TestimonialID, &artifact.WorkspaceID,
 				&artifact.ProcessingType, &artifact.ResultCategory, &artifact.TextContent,
-				&artifact.Data, &artifact.AssetURL, &artifact.ContentType,
-				&artifact.Platform, &artifact.Format, &artifact.IsUserSaved,
-				&artifact.IsStreamed, &artifact.ProcessingMetadata,
+				&artifact.Data, &artifact.AssetURL, &artifact.Duration, &artifact.ThumbnailURL,
+				&artifact.ContentType, &artifact.Platform, &artifact.Format, &artifact.IsUserSaved,
+				&artifact.IsStreamed, &artifact.ApprovalStatus, &artifact.IsPublic,
+				&artifact.ApprovedAt, &artifact.ApprovedBy, &artifact.ProcessingMetadata,
 				&artifact.CreatedAt, &artifact.UpdatedAt,
 			)
 			if err != nil {
@@ -919,9 +963,10 @@ func (r *TestimonialArtifactRepository) GetProcessingTreeForTestimonial(
 		err := rows.Scan(
 			&artifact.ID, &artifact.TestimonialID, &artifact.WorkspaceID,
 			&artifact.ProcessingType, &artifact.ResultCategory, &artifact.TextContent,
-			&artifact.Data, &artifact.AssetURL, &artifact.ContentType,
-			&artifact.Platform, &artifact.Format, &artifact.IsUserSaved,
-			&artifact.IsStreamed, &artifact.ProcessingMetadata,
+			&artifact.Data, &artifact.AssetURL, &artifact.Duration, &artifact.ThumbnailURL,
+			&artifact.ContentType, &artifact.Platform, &artifact.Format, &artifact.IsUserSaved,
+			&artifact.IsStreamed, &artifact.ApprovalStatus, &artifact.IsPublic,
+			&artifact.ApprovedAt, &artifact.ApprovedBy, &artifact.ProcessingMetadata,
 			&artifact.CreatedAt, &artifact.UpdatedAt,
 			&sourceTestimonialID, &sourceArtifactID,
 		)
@@ -942,12 +987,13 @@ func (r *TestimonialArtifactRepository) GetArtifactWithSources(
 	db DB,
 ) (*models.TestimonialArtifact, error) {
 	query := `
-		SELECT 
+		SELECT
 			ta.id, ta.testimonial_id, ta.workspace_id, ta.processing_type, ta.result_category,
-			ta.text_content, ta.data, ta.asset_url, ta.content_type, ta.platform, ta.format,
-			ta.is_user_saved, ta.is_streamed, ta.processing_metadata, ta.created_at, ta.updated_at,
+			ta.text_content, ta.data, ta.asset_url, ta.duration, ta.thumbnail_url, ta.content_type, ta.platform, ta.format,
+			ta.is_user_saved, ta.is_streamed, ta.approval_status, ta.is_public, ta.approved_at,
+			ta.approved_by, ta.processing_metadata, ta.created_at, ta.updated_at,
 			-- Source information
-			asrc.id as source_id, asrc.source_testimonial_id, asrc.source_artifact_id, 
+			asrc.id as source_id, asrc.source_testimonial_id, asrc.source_artifact_id,
 			asrc.source_clip_id, asrc.source_type, asrc.created_at as source_created_at
 		FROM testimonial_artifacts ta
 		LEFT JOIN artifact_sources asrc ON asrc.artifact_id = ta.id
@@ -977,11 +1023,17 @@ func (r *TestimonialArtifactRepository) GetArtifactWithSources(
 			&tempArtifact.TextContent,
 			&tempArtifact.Data,
 			&tempArtifact.AssetURL,
+			&tempArtifact.Duration,
+			&tempArtifact.ThumbnailURL,
 			&tempArtifact.ContentType,
 			&tempArtifact.Platform,
 			&tempArtifact.Format,
 			&tempArtifact.IsUserSaved,
 			&tempArtifact.IsStreamed,
+			&tempArtifact.ApprovalStatus,
+			&tempArtifact.IsPublic,
+			&tempArtifact.ApprovedAt,
+			&tempArtifact.ApprovedBy,
 			&tempArtifact.ProcessingMetadata,
 			&tempArtifact.CreatedAt,
 			&tempArtifact.UpdatedAt,
@@ -1198,6 +1250,10 @@ func (r *TestimonialArtifactRepository) CreateArtifactWithLineage(
 			return "", fmt.Errorf("failed to commit transaction: %v", err)
 		}
 	}
+
+	// CRITICAL FIX: Invalidate caches when artifacts are created
+	// This ensures the frontend gets fresh data with the new artifacts
+	r.InvalidateArtifactCaches(ctx, workspaceID, testimonialID, &artifact.ID)
 
 	return artifact.ID.String(), nil
 }
@@ -1515,7 +1571,8 @@ func (r *TestimonialArtifactRepository) GetClipDerivatives(
 		)
 		SELECT id, testimonial_id, workspace_id, processing_type, result_category,
 			   text_content, data, asset_url, content_type, platform, format,
-			   is_user_saved, is_streamed, processing_metadata, created_at, updated_at
+			   is_user_saved, is_streamed, approval_status, is_public, approved_at, approved_by,
+			   processing_metadata, created_at, updated_at
 		FROM clip_derivatives
 		ORDER BY depth, created_at
 	`
@@ -1524,13 +1581,14 @@ func (r *TestimonialArtifactRepository) GetClipDerivatives(
 	if err != nil {
 		// Simplified fallback
 		fallbackQuery := `
-			SELECT ta.id, ta.testimonial_id, ta.workspace_id, ta.processing_type, 
-				   ta.result_category, ta.text_content, ta.data, ta.asset_url, 
-				   ta.content_type, ta.platform, ta.format, ta.is_user_saved, 
-				   ta.is_streamed, ta.processing_metadata, ta.created_at, ta.updated_at
+			SELECT ta.id, ta.testimonial_id, ta.workspace_id, ta.processing_type,
+				   ta.result_category, ta.text_content, ta.data, ta.asset_url,
+				   ta.content_type, ta.platform, ta.format, ta.is_user_saved,
+				   ta.is_streamed, ta.approval_status, ta.is_public, ta.approved_at, ta.approved_by,
+				   ta.processing_metadata, ta.created_at, ta.updated_at
 			FROM testimonial_artifacts ta
 			JOIN artifact_sources asrc ON asrc.artifact_id = ta.id
-			WHERE asrc.source_artifact_id = $1 
+			WHERE asrc.source_artifact_id = $1
 			  AND asrc.source_clip_id = $2
 			  AND asrc.source_type = 'clip'
 			ORDER BY ta.created_at
@@ -1551,7 +1609,8 @@ func (r *TestimonialArtifactRepository) GetClipDerivatives(
 			&artifact.ProcessingType, &artifact.ResultCategory, &artifact.TextContent,
 			&artifact.Data, &artifact.AssetURL, &artifact.ContentType,
 			&artifact.Platform, &artifact.Format, &artifact.IsUserSaved,
-			&artifact.IsStreamed, &artifact.ProcessingMetadata,
+			&artifact.IsStreamed, &artifact.ApprovalStatus, &artifact.IsPublic,
+			&artifact.ApprovedAt, &artifact.ApprovedBy, &artifact.ProcessingMetadata,
 			&artifact.CreatedAt, &artifact.UpdatedAt,
 		)
 		if err != nil {
@@ -1699,9 +1758,10 @@ func (r *TestimonialArtifactRepository) GetByWorkspaceID(
 ) ([]models.TestimonialArtifact, error) {
 	baseQuery := `
 		SELECT ta.id, ta.testimonial_id, ta.workspace_id, ta.processing_type,
-			   ta.result_category, ta.text_content, ta.data, ta.asset_url,
+			   ta.result_category, ta.text_content, ta.data, ta.asset_url, ta.duration, ta.thumbnail_url,
 			   ta.content_type, ta.platform, ta.format, ta.is_user_saved,
-			   ta.is_streamed, ta.processing_metadata, ta.created_at, ta.updated_at
+			   ta.is_streamed, ta.approval_status, ta.is_public, ta.approved_at, ta.approved_by,
+			   ta.processing_metadata, ta.created_at, ta.updated_at
 		FROM testimonial_artifacts ta
 		WHERE ta.workspace_id = $1
 	`
@@ -1750,11 +1810,17 @@ func (r *TestimonialArtifactRepository) GetByWorkspaceID(
 			&artifact.TextContent,
 			&artifact.Data,
 			&artifact.AssetURL,
+			&artifact.Duration,
+			&artifact.ThumbnailURL,
 			&artifact.ContentType,
 			&artifact.Platform,
 			&artifact.Format,
 			&artifact.IsUserSaved,
 			&artifact.IsStreamed,
+			&artifact.ApprovalStatus,
+			&artifact.IsPublic,
+			&artifact.ApprovedAt,
+			&artifact.ApprovedBy,
 			&artifact.ProcessingMetadata,
 			&artifact.CreatedAt,
 			&artifact.UpdatedAt,
@@ -1967,4 +2033,232 @@ func (r *TestimonialArtifactRepository) GetTranscriptSegments(
 	}
 
 	return segments, nil
+}
+
+// Approval-related methods
+
+// UpdateApprovalStatus updates the approval status of an artifact
+func (r *TestimonialArtifactRepository) UpdateApprovalStatus(
+	ctx context.Context,
+	workspaceID uuid.UUID,
+	artifactID uuid.UUID,
+	status string,
+	approvedBy uuid.UUID,
+	db DB,
+) error {
+	query := `
+		UPDATE testimonial_artifacts
+		SET approval_status = $1,
+			approved_by = $2,
+			approved_at = CASE WHEN $1 = 'approved' THEN NOW() ELSE NULL END,
+			updated_at = NOW()
+		WHERE id = $3 AND workspace_id = $4
+	`
+
+	result, err := db.ExecContext(ctx, query, status, approvedBy, artifactID, workspaceID)
+	if err != nil {
+		return fmt.Errorf("failed to update approval status: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("artifact not found or access denied")
+	}
+
+	// Invalidate caches
+	r.InvalidateArtifactCaches(ctx, workspaceID, nil, &artifactID)
+
+	return nil
+}
+
+// BulkUpdateApprovalStatus updates approval status for multiple artifacts
+func (r *TestimonialArtifactRepository) BulkUpdateApprovalStatus(
+	ctx context.Context,
+	workspaceID uuid.UUID,
+	artifactIDs []uuid.UUID,
+	status string,
+	approvedBy uuid.UUID,
+	db DB,
+) error {
+	if len(artifactIDs) == 0 {
+		return nil
+	}
+
+	// Convert UUIDs to interface slice for pq.Array
+	ids := make([]string, len(artifactIDs))
+	for i, id := range artifactIDs {
+		ids[i] = id.String()
+	}
+
+	query := `
+		UPDATE testimonial_artifacts
+		SET approval_status = $1,
+			approved_by = $2,
+			approved_at = CASE WHEN $1 = 'approved' THEN NOW() ELSE NULL END,
+			updated_at = NOW()
+		WHERE id = ANY($3::uuid[]) AND workspace_id = $4
+	`
+
+	_, err := db.ExecContext(ctx, query, status, approvedBy, ids, workspaceID)
+	if err != nil {
+		return fmt.Errorf("failed to bulk update approval status: %w", err)
+	}
+
+	// Invalidate caches for all affected artifacts
+	for _, id := range artifactIDs {
+		r.InvalidateArtifactCaches(ctx, workspaceID, nil, &id)
+	}
+
+	return nil
+}
+
+// GetArtifactsByApprovalStatus retrieves artifacts filtered by approval status
+func (r *TestimonialArtifactRepository) GetArtifactsByApprovalStatus(
+	ctx context.Context,
+	workspaceID uuid.UUID,
+	status string,
+	db DB,
+) ([]models.TestimonialArtifact, error) {
+	cacheKey := fmt.Sprintf("artifacts:workspace:%s:status:%s", workspaceID.String(), status)
+
+	// Try cache first
+	if cached, err := r.getSliceCache(ctx, cacheKey); err == nil {
+		return cached, nil
+	}
+
+	query := `
+		SELECT id, testimonial_id, workspace_id, processing_type, result_category, 
+			   text_content, data, asset_url, content_type, platform, format, 
+			   is_user_saved, is_streamed, approval_status, is_public, approved_at, 
+			   approved_by, processing_metadata, created_at, updated_at
+		FROM testimonial_artifacts 
+		WHERE workspace_id = $1 AND approval_status = $2
+		ORDER BY created_at DESC
+	`
+
+	rows, err := db.QueryContext(ctx, query, workspaceID, status)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query artifacts by approval status: %w", err)
+	}
+	defer rows.Close()
+
+	var artifacts []models.TestimonialArtifact
+	for rows.Next() {
+		var artifact models.TestimonialArtifact
+		err := rows.Scan(
+			&artifact.ID,
+			&artifact.TestimonialID,
+			&artifact.WorkspaceID,
+			&artifact.ProcessingType,
+			&artifact.ResultCategory,
+			&artifact.TextContent,
+			&artifact.Data,
+			&artifact.AssetURL,
+			&artifact.ContentType,
+			&artifact.Platform,
+			&artifact.Format,
+			&artifact.IsUserSaved,
+			&artifact.IsStreamed,
+			&artifact.ApprovalStatus,
+			&artifact.IsPublic,
+			&artifact.ApprovedAt,
+			&artifact.ApprovedBy,
+			&artifact.ProcessingMetadata,
+			&artifact.CreatedAt,
+			&artifact.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan artifact: %w", err)
+		}
+		artifacts = append(artifacts, artifact)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Cache for 5 minutes
+	if err := r.setSliceCache(ctx, cacheKey, artifacts, 5*time.Minute); err != nil {
+		r.logger.Warn("Failed to cache artifacts by approval status", zap.Error(err))
+	}
+
+	return artifacts, nil
+}
+
+// GetPublicArtifacts retrieves all public and approved artifacts for showcase
+func (r *TestimonialArtifactRepository) GetPublicArtifacts(
+	ctx context.Context,
+	workspaceID uuid.UUID,
+	db DB,
+) ([]models.TestimonialArtifact, error) {
+	cacheKey := fmt.Sprintf("artifacts:workspace:%s:public", workspaceID.String())
+
+	// Try cache first
+	if cached, err := r.getSliceCache(ctx, cacheKey); err == nil {
+		return cached, nil
+	}
+
+	query := `
+		SELECT id, testimonial_id, workspace_id, processing_type, result_category, 
+			   text_content, data, asset_url, content_type, platform, format, 
+			   is_user_saved, is_streamed, approval_status, is_public, approved_at, 
+			   approved_by, processing_metadata, created_at, updated_at
+		FROM testimonial_artifacts 
+		WHERE workspace_id = $1 
+		  AND is_public = true 
+		  AND approval_status = 'approved'
+		ORDER BY created_at DESC
+	`
+
+	rows, err := db.QueryContext(ctx, query, workspaceID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query public artifacts: %w", err)
+	}
+	defer rows.Close()
+
+	var artifacts []models.TestimonialArtifact
+	for rows.Next() {
+		var artifact models.TestimonialArtifact
+		err := rows.Scan(
+			&artifact.ID,
+			&artifact.TestimonialID,
+			&artifact.WorkspaceID,
+			&artifact.ProcessingType,
+			&artifact.ResultCategory,
+			&artifact.TextContent,
+			&artifact.Data,
+			&artifact.AssetURL,
+			&artifact.ContentType,
+			&artifact.Platform,
+			&artifact.Format,
+			&artifact.IsUserSaved,
+			&artifact.IsStreamed,
+			&artifact.ApprovalStatus,
+			&artifact.IsPublic,
+			&artifact.ApprovedAt,
+			&artifact.ApprovedBy,
+			&artifact.ProcessingMetadata,
+			&artifact.CreatedAt,
+			&artifact.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan artifact: %w", err)
+		}
+		artifacts = append(artifacts, artifact)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Cache for 10 minutes
+	if err := r.setSliceCache(ctx, cacheKey, artifacts, 10*time.Minute); err != nil {
+		r.logger.Warn("Failed to cache public artifacts", zap.Error(err))
+	}
+
+	return artifacts, nil
 }

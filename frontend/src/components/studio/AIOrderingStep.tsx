@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { HighlightMoment } from "@/types/ai-service";
 import { cn } from "@/lib/utils";
+import { observer } from "mobx-react-lite";
 
 interface AIOrderingStepProps {
   moments: HighlightMoment[];
@@ -378,4 +379,4 @@ const AIOrderingStep: React.FC<AIOrderingStepProps> = ({
   );
 };
 
-export default AIOrderingStep;
+export default observer(AIOrderingStep);

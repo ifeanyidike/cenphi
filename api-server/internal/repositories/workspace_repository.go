@@ -4,8 +4,10 @@ package repositories
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/ifeanyidike/cenphi/internal/models"
@@ -19,6 +21,9 @@ type WorkspaceRepository interface {
 	GetModelBrandContext(ctx context.Context, workspaceID uuid.UUID, db DB) (*models.BrandContext, error)
 	GetPbBrandContext(ctx context.Context, workspaceID uuid.UUID, db DB) (*pb.BrandContext, error)
 	GetBrandContextFromWorkspace(workspace *models.Workspace) (*pb.BrandContext, error)
+	UpdateShowcaseSettings(ctx context.Context, workspaceID uuid.UUID, enabled bool, slug *string, settings map[string]interface{}, db DB) error
+	GetWorkspaceByShowcaseSlug(ctx context.Context, slug string, db DB) (*models.Workspace, error)
+	CheckShowcaseSlugAvailability(ctx context.Context, slug string, excludeWorkspaceID *uuid.UUID, db DB) (bool, error)
 }
 
 type workspaceRepository struct {
@@ -34,8 +39,10 @@ func NewWorkspaceRepository(redis *redis.Client) WorkspaceRepository {
 func (r *workspaceRepository) GetByID(ctx context.Context, id uuid.UUID, db DB) (*models.Workspace, error) {
 	query :=
 		`
-        SELECT 
-            id, name, plan, industry, website_url, brand_context, created_at, updated_at
+        SELECT
+            id, name, plan, industry, website_url, settings, brand_context,
+            vector_store_id, total_testimonials, showcase_enabled, showcase_slug,
+            showcase_settings, created_at, updated_at
         FROM workspaces
         WHERE id = $1
         `
@@ -43,7 +50,22 @@ func (r *workspaceRepository) GetByID(ctx context.Context, id uuid.UUID, db DB) 
 
 	var workspace models.Workspace
 
-	err := row.Scan(&workspace.ID, &workspace.Name, &workspace.Plan, &workspace.Industry, &workspace.WebsiteURL, &workspace.BrandContext, &workspace.CreatedAt, &workspace.UpdatedAt)
+	err := row.Scan(
+		&workspace.ID,
+		&workspace.Name,
+		&workspace.Plan,
+		&workspace.Industry,
+		&workspace.WebsiteURL,
+		&workspace.Settings,
+		&workspace.BrandContext,
+		&workspace.VectorStoreID,
+		&workspace.TotalTestimonials,
+		&workspace.ShowcaseEnabled,
+		&workspace.ShowcaseSlug,
+		&workspace.ShowcaseSettings,
+		&workspace.CreatedAt,
+		&workspace.UpdatedAt,
+	)
 
 	if err != nil {
 		return nil, err
@@ -200,4 +222,142 @@ func (s *workspaceRepository) GetBrandContextFromWorkspace(workspace *models.Wor
 	}
 
 	return bc, nil
+}
+
+// Showcase-related methods
+
+// UpdateShowcaseSettings updates the showcase settings for a workspace
+func (r *workspaceRepository) UpdateShowcaseSettings(
+	ctx context.Context,
+	workspaceID uuid.UUID,
+	enabled bool,
+	slug *string,
+	settings map[string]interface{},
+	db DB,
+) error {
+	var settingsStr string
+	if settings != nil {
+		settingsJSON, err := json.Marshal(settings)
+		if err != nil {
+			return fmt.Errorf("failed to marshal showcase settings: %w", err)
+		}
+		settingsStr = string(settingsJSON)
+	} else {
+		settingsStr = "{}"
+	}
+
+	query := `
+		UPDATE workspaces
+		SET showcase_enabled = $1,
+			showcase_slug = $2,
+			showcase_settings = $3::jsonb,
+			updated_at = NOW()
+		WHERE id = $4
+	`
+
+	result, err := db.ExecContext(ctx, query, enabled, slug, settingsStr, workspaceID)
+	if err != nil {
+		return fmt.Errorf("failed to update showcase settings: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("workspace not found: %s", workspaceID)
+	}
+
+	// Invalidate workspace cache
+	cacheKey := fmt.Sprintf("workspace:%s", workspaceID.String())
+	_ = r.redis.Del(ctx, cacheKey).Err() // Best effort cache invalidation
+
+	return nil
+}
+
+// GetWorkspaceByShowcaseSlug retrieves a workspace by its showcase slug
+func (r *workspaceRepository) GetWorkspaceByShowcaseSlug(
+	ctx context.Context,
+	slug string,
+	db DB,
+) (*models.Workspace, error) {
+	cacheKey := fmt.Sprintf("workspace:slug:%s", slug)
+
+	// Try cache first
+	var cached models.Workspace
+	cachedData, err := r.redis.Get(ctx, cacheKey).Bytes()
+	if err == nil {
+		if err := json.Unmarshal(cachedData, &cached); err == nil {
+			return &cached, nil
+		}
+	}
+
+	query := `
+		SELECT id, name, website_url, industry, plan, settings, brand_context, 
+			   vector_store_id, total_testimonials, showcase_enabled, showcase_slug, 
+			   showcase_settings, created_at, updated_at
+		FROM workspaces 
+		WHERE showcase_slug = $1 AND showcase_enabled = true
+	`
+
+	var workspace models.Workspace
+	err = db.QueryRowContext(ctx, query, slug).Scan(
+		&workspace.ID,
+		&workspace.Name,
+		&workspace.WebsiteURL,
+		&workspace.Industry,
+		&workspace.Plan,
+		&workspace.Settings,
+		&workspace.BrandContext,
+		&workspace.VectorStoreID,
+		&workspace.TotalTestimonials,
+		&workspace.ShowcaseEnabled,
+		&workspace.ShowcaseSlug,
+		&workspace.ShowcaseSettings,
+		&workspace.CreatedAt,
+		&workspace.UpdatedAt,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("workspace not found with slug: %s", slug)
+		}
+		return nil, fmt.Errorf("failed to get workspace by slug: %w", err)
+	}
+
+	// Cache for 15 minutes
+	if workspaceJSON, err := json.Marshal(workspace); err == nil {
+		r.redis.Set(ctx, cacheKey, workspaceJSON, 15*time.Minute)
+	}
+
+	return &workspace, nil
+}
+
+// CheckShowcaseSlugAvailability checks if a showcase slug is available
+func (r *workspaceRepository) CheckShowcaseSlugAvailability(
+	ctx context.Context,
+	slug string,
+	excludeWorkspaceID *uuid.UUID,
+	db DB,
+) (bool, error) {
+	query := `
+		SELECT COUNT(*) 
+		FROM workspaces 
+		WHERE showcase_slug = $1
+	`
+	args := []interface{}{slug}
+
+	if excludeWorkspaceID != nil {
+		query += " AND id != $2"
+		args = append(args, excludeWorkspaceID)
+	}
+
+	var count int
+	err := db.QueryRowContext(ctx, query, args...).Scan(&count)
+	if err != nil {
+		return false, fmt.Errorf("failed to check slug availability: %w", err)
+	}
+
+	return count == 0, nil
 }

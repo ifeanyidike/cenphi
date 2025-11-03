@@ -753,6 +753,392 @@ func (w *PlatformOptimizationStepsWorker) HandleEnhance(ctx context.Context, ste
 	}, nil
 }
 
+// HandleTextOverlay handles animated text overlays (intro/outro) for brand and speaker information
+func (w *PlatformOptimizationStepsWorker) HandleTextOverlay(ctx context.Context, stepCtx *StepContext) (*StepResult, error) {
+	// Validate input media is available
+	if stepCtx.CurrentArtifactURL == "" {
+		return nil, fmt.Errorf("no input media available for text overlay step")
+	}
+
+	// Get text overlay config from step config
+	enableIntro := false
+	enableOutro := false
+	if config, ok := stepCtx.Config["text_overlay_config"].(map[string]interface{}); ok {
+		enableIntro, _ = config["enable_intro"].(bool)
+		enableOutro, _ = config["enable_outro"].(bool)
+	}
+
+	// Skip if both intro and outro are disabled
+	if !enableIntro && !enableOutro {
+		w.logger.Info("Text overlay skipped - both intro and outro disabled",
+			zap.String("session_id", stepCtx.SessionID.String()))
+		return &StepResult{
+			OutputArtifactURL:   stepCtx.CurrentArtifactURL,
+			AppliedEnhancements: []string{},
+			Metadata: map[string]interface{}{
+				"text_overlay_skipped": true,
+			},
+		}, nil
+	}
+
+	w.logger.Info("Applying text overlays",
+		zap.String("session_id", stepCtx.SessionID.String()),
+		zap.Bool("intro", enableIntro),
+		zap.Bool("outro", enableOutro))
+
+	// Build TextOverlayConfig from step config
+	overlayConfig, err := w.buildTextOverlayConfig(stepCtx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build text overlay config: %w", err)
+	}
+
+	// Build gRPC request
+	pbReq := &pb.TextOverlayRequest{
+		JobId:              stepCtx.SessionID.String(),
+		TestimonialId:      stepCtx.TestimonialID.String(),
+		MediaUrl:           stepCtx.CurrentArtifactURL,
+		UploadIntermediate: true, // Upload for interactive preview
+		Config:             overlayConfig,
+	}
+
+	w.emitProgress(stepCtx.SessionID, stepCtx.StageID, 50, "Applying animated text overlays...")
+
+	// Call ApplyTextOverlay with retry logic
+	var response *pb.TextOverlayResponse
+	err = w.retryGRPCCall(ctx, "ApplyTextOverlay", func() error {
+		resp, callErr := w.mediaIntelligence.ApplyTextOverlay(ctx, pbReq)
+		if callErr != nil {
+			return callErr
+		}
+		response = resp
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("text overlay failed after retries: %w", err)
+	}
+
+	previewURL := response.OverlaidUrl
+
+	// Build metadata with overlay info
+	metadata := map[string]interface{}{
+		"intro_applied": response.IntroApplied,
+		"outro_applied": response.OutroApplied,
+		"duration":      response.Duration,
+		"size":          response.Size,
+		"width":         response.Width,
+		"height":        response.Height,
+		"preview_url":   previewURL,
+	}
+
+	// Carry over aspect_ratio and platform from previous stage
+	if aspectRatio, ok := stepCtx.Config["aspect_ratio"].(string); ok {
+		metadata["aspect_ratio"] = aspectRatio
+	}
+	if platform, ok := stepCtx.Config["platform"].(string); ok && platform != "" {
+		metadata["platform"] = platform
+	} else {
+		metadata["platform"] = stepCtx.TargetPlatform
+	}
+
+	w.emitPreviewReady(stepCtx.SessionID, stepCtx.StageID, previewURL, "video", response.Duration, metadata)
+
+	return &StepResult{
+		OutputArtifactURL:   response.OverlaidUrl,
+		PreviewURL:          &previewURL,
+		TempArtifactID:      nil,
+		AppliedEnhancements: []string{"text_overlay"},
+		Metadata:            metadata,
+	}, nil
+}
+
+// buildTextOverlayConfig builds the TextOverlayConfig protobuf message from step config
+func (w *PlatformOptimizationStepsWorker) buildTextOverlayConfig(stepCtx *StepContext) (*pb.TextOverlayConfig, error) {
+	config := &pb.TextOverlayConfig{
+		EnableIntro:      false,
+		WorkspaceName:    "",
+		SpeakerName:      "",
+		Role:             "",
+		Location:         "",
+		IntroDuration:    4.0,
+		EnableOutro:      false,
+		Tagline:          "",
+		OutroDuration:    6.0,
+		BrandColor:       "",
+		AnimationStyle:   "elegant",
+		FontFamily:       "DejaVu-Sans-Bold",
+		FadeDuration:     0.5,
+		BackgroundOverlay: "",
+	}
+
+	// Get text overlay config from step config
+	if overlayConfig, ok := stepCtx.Config["text_overlay_config"].(map[string]interface{}); ok {
+		if val, ok := overlayConfig["enable_intro"].(bool); ok {
+			config.EnableIntro = val
+		}
+		if val, ok := overlayConfig["workspace_name"].(string); ok {
+			config.WorkspaceName = val
+		}
+		if val, ok := overlayConfig["speaker_name"].(string); ok {
+			config.SpeakerName = val
+		}
+		if val, ok := overlayConfig["role"].(string); ok {
+			config.Role = val
+		}
+		if val, ok := overlayConfig["location"].(string); ok {
+			config.Location = val
+		}
+		if val, ok := overlayConfig["intro_duration"].(float64); ok {
+			config.IntroDuration = val
+		}
+		if val, ok := overlayConfig["enable_outro"].(bool); ok {
+			config.EnableOutro = val
+		}
+		if val, ok := overlayConfig["tagline"].(string); ok {
+			config.Tagline = val
+		}
+		if val, ok := overlayConfig["outro_duration"].(float64); ok {
+			config.OutroDuration = val
+		}
+		if val, ok := overlayConfig["brand_color"].(string); ok {
+			config.BrandColor = val
+		}
+		if val, ok := overlayConfig["animation_style"].(string); ok {
+			config.AnimationStyle = val
+		}
+		if val, ok := overlayConfig["font_family"].(string); ok {
+			config.FontFamily = val
+		}
+	}
+
+	// If workspace name not provided, try to get it from workspace context
+	// Note: BrandContext doesn't have a name field, workspace name should come from config
+
+	// If brand color not provided, get from brand context
+	if config.BrandColor == "" && stepCtx.BrandContext != nil {
+		// ColorSlice is a repeated string field containing colors
+		if colors := stepCtx.BrandContext.GetColorSlice(); len(colors) > 0 {
+			config.BrandColor = colors[0]
+		} else if brandColors := stepCtx.BrandContext.GetBrandColors(); len(brandColors) > 0 {
+			// BrandColors is a map<string, string>, get the first value
+			for _, color := range brandColors {
+				config.BrandColor = color
+				break
+			}
+		}
+	}
+
+	return config, nil
+}
+
+// HandleApplyBroll handles B-roll overlays for video
+func (w *PlatformOptimizationStepsWorker) HandleApplyBroll(ctx context.Context, stepCtx *StepContext) (*StepResult, error) {
+	// Check if B-roll clips are provided
+	if stepCtx.Config["broll_config"] == nil {
+		w.logger.Info("No B-roll config provided, skipping",
+			zap.String("session_id", stepCtx.SessionID.String()))
+		return &StepResult{
+			OutputArtifactURL:   stepCtx.CurrentArtifactURL,
+			AppliedEnhancements: []string{},
+			Metadata: map[string]interface{}{
+				"broll_skipped": true,
+			},
+		}, nil
+	}
+
+	w.logger.Info("Applying B-roll overlays",
+		zap.String("session_id", stepCtx.SessionID.String()),
+		zap.String("stage_id", stepCtx.StageID))
+
+	w.emitProgress(stepCtx.SessionID, stepCtx.StageID, 10, "Preparing B-roll configuration...")
+
+	// Build B-roll config and clips
+	brollConfig, brollClips, err := w.buildBrollConfig(stepCtx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build B-roll config: %w", err)
+	}
+
+	// Skip if no clips
+	if len(brollClips) == 0 {
+		w.logger.Info("No B-roll clips provided, skipping",
+			zap.String("session_id", stepCtx.SessionID.String()))
+		return &StepResult{
+			OutputArtifactURL:   stepCtx.CurrentArtifactURL,
+			AppliedEnhancements: []string{},
+			Metadata: map[string]interface{}{
+				"broll_skipped": true,
+				"reason":        "no clips provided",
+			},
+		}, nil
+	}
+
+	w.emitProgress(stepCtx.SessionID, stepCtx.StageID, 30, fmt.Sprintf("Applying %d B-roll clips...", len(brollClips)))
+
+	// Convert transcript segments to protobuf format for AI placement
+	var transcriptSegments []*pb.TranscriptSegment
+	if len(stepCtx.TranscriptSegments) > 0 {
+		var err error
+		transcriptSegments, err = w.convertModelSegmenttoPb(stepCtx.TranscriptSegments)
+		if err != nil {
+			w.logger.Warn("Failed to convert transcript segments, B-roll AI placement will not be available",
+				zap.Error(err),
+				zap.String("session_id", stepCtx.SessionID.String()))
+		} else {
+			w.logger.Info("Transcript segments converted for B-roll AI placement",
+				zap.Int("segments_count", len(transcriptSegments)),
+				zap.String("placement_strategy", brollConfig.PlacementStrategy))
+		}
+	}
+
+	// Create B-roll overlay request
+	request := &pb.BrollOverlayRequest{
+		JobId:              stepCtx.SessionID.String(),
+		TestimonialId:      stepCtx.TestimonialID.String(),
+		MediaUrl:           stepCtx.CurrentArtifactURL,
+		BrollClips:         brollClips,
+		Config:             brollConfig,
+		UploadIntermediate: true,
+		TranscriptSegments: transcriptSegments,
+	}
+
+	w.emitProgress(stepCtx.SessionID, stepCtx.StageID, 50, "Processing B-roll overlays...")
+
+	// Call AI service
+	response, err := w.mediaIntelligence.ApplyBrollOverlays(ctx, request)
+	if err != nil {
+		w.logger.Error("B-roll overlay failed",
+			zap.Error(err),
+			zap.String("session_id", stepCtx.SessionID.String()))
+		return nil, fmt.Errorf("B-roll overlay failed: %w", err)
+	}
+
+	if response.Error != "" {
+		return nil, fmt.Errorf("B-roll overlay error: %s", response.Error)
+	}
+
+	w.emitProgress(stepCtx.SessionID, stepCtx.StageID, 90, "B-roll overlays applied successfully")
+
+	// Prepare metadata
+	metadata := map[string]interface{}{
+		"brolls_applied":     response.BrollsApplied,
+		"failed_clips":       response.FailedClips,
+		"duration":           response.Duration,
+		"size":               response.Size,
+		"width":              response.Width,
+		"height":             response.Height,
+		"aspect_ratio":       response.AspectRatio,
+		"placement_strategy": brollConfig.PlacementStrategy,
+	}
+
+	previewURL := response.OverlaidUrl
+	if previewURL == "" {
+		previewURL = response.LocalPath
+	}
+
+	// Emit preview_ready event so frontend can display the B-roll overlaid video
+	w.emitPreviewReady(stepCtx.SessionID, stepCtx.StageID, previewURL, "video", response.Duration, metadata)
+
+	return &StepResult{
+		OutputArtifactURL:   response.OverlaidUrl,
+		PreviewURL:          &previewURL,
+		TempArtifactID:      nil,
+		AppliedEnhancements: []string{"apply_broll"},
+		Metadata:            metadata,
+	}, nil
+}
+
+// buildBrollConfig builds the B-roll configuration and clips from step config
+func (w *PlatformOptimizationStepsWorker) buildBrollConfig(stepCtx *StepContext) (*pb.BrollConfig, []*pb.BrollClip, error) {
+	config := &pb.BrollConfig{
+		PlacementStrategy:         "auto",
+		PreserveAudio:             true,
+		AudioDucking:              0.3,
+		DefaultTransition:         "fade",
+		DefaultTransitionDuration: 0.5,
+		QualityPreset:             "high",
+		AutoAdjustTiming:          false,
+		MaxBrollDuration:          10.0,
+		MaxBrollPercent:           0.3,
+		PositionMode:              "fill",
+		TransitionType:            "fade",
+	}
+
+	var clips []*pb.BrollClip
+
+	// Get broll config from step config
+	if brollConfig, ok := stepCtx.Config["broll_config"].(map[string]interface{}); ok {
+		if val, ok := brollConfig["placement_strategy"].(string); ok {
+			config.PlacementStrategy = val
+		}
+		if val, ok := brollConfig["max_broll_duration"].(float64); ok {
+			config.MaxBrollDuration = val
+		}
+		if val, ok := brollConfig["max_broll_percent"].(float64); ok {
+			config.MaxBrollPercent = val
+		}
+		if val, ok := brollConfig["transition_type"].(string); ok {
+			config.TransitionType = val
+			config.DefaultTransition = val
+		}
+
+		// Extract B-roll clips
+		if clipsList, ok := brollConfig["broll_clips"].([]interface{}); ok {
+			for _, clipInterface := range clipsList {
+				if clipMap, ok := clipInterface.(map[string]interface{}); ok {
+					// Get clip ID - try "id" first, then "pexels_id", then "name" as fallback
+					clipID := getString(clipMap, "id")
+					if clipID == "" {
+						if pexelsID, ok := clipMap["pexels_id"].(float64); ok {
+							clipID = fmt.Sprintf("pexels_%d", int(pexelsID))
+						} else {
+							clipID = getString(clipMap, "name")
+						}
+					}
+
+					clip := &pb.BrollClip{
+						ClipId:             clipID,
+						SourceUrl:          getString(clipMap, "url"),
+						StartTime:          getFloat64(clipMap, "start_time"),
+						Duration:           getFloat64(clipMap, "duration"),
+						PositionMode:       getString(clipMap, "position_mode"),
+						TransitionType:     getString(clipMap, "transition_type"),
+						TransitionDuration: getFloat64(clipMap, "transition_duration"),
+					}
+
+					// Set defaults
+					if clip.PositionMode == "" {
+						clip.PositionMode = "fill"
+					}
+					if clip.TransitionType == "" {
+						clip.TransitionType = config.DefaultTransition
+					}
+					if clip.TransitionDuration == 0 {
+						clip.TransitionDuration = config.DefaultTransitionDuration
+					}
+
+					clips = append(clips, clip)
+				}
+			}
+		}
+	}
+
+	return config, clips, nil
+}
+
+// Helper functions for safe type conversion
+func getString(m map[string]interface{}, key string) string {
+	if val, ok := m[key].(string); ok {
+		return val
+	}
+	return ""
+}
+
+func getFloat64(m map[string]interface{}, key string) float64 {
+	if val, ok := m[key].(float64); ok {
+		return val
+	}
+	return 0
+}
+
 // HandleTextOptimization handles text content optimization (no video processing)
 func (w *PlatformOptimizationStepsWorker) HandleTextOptimization(ctx context.Context, stepCtx *StepContext) (*StepResult, error) {
 	if stepCtx.Transcript == "" {
@@ -1067,4 +1453,18 @@ func (w *PlatformOptimizationStepsWorker) saveTranscriptSegmentsToArtifact(ctx c
 		zap.Int("segments_count", len(segments)))
 
 	return nil
+}
+
+// convertModelSegmenttoPb converts models.TranscriptionSegment to protobuf TranscriptSegment
+func (w *PlatformOptimizationStepsWorker) convertModelSegmenttoPb(segment []models.TranscriptionSegment) ([]*pb.TranscriptSegment, error) {
+	res := []*pb.TranscriptSegment{}
+	if data, err := json.Marshal(segment); err == nil {
+		if err := json.Unmarshal(data, &res); err == nil {
+			return res, err
+		} else {
+			return nil, err
+		}
+	} else {
+		return nil, err
+	}
 }

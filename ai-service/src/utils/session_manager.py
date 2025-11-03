@@ -115,6 +115,22 @@ class SessionManager:
                 logger.warning(f"Session file missing: {file_path}")
                 return None
 
+    def get_step_dir(self, job_id: str, step_name: str) -> str:
+        """
+        Get or create a directory for a specific processing step.
+
+        Args:
+            job_id: Unique job identifier
+            step_name: Name of the processing step (e.g., "text_overlay", "broll_overlay")
+
+        Returns:
+            Path to the step directory
+        """
+        session_dir = os.path.join(self.base_path, job_id)
+        step_dir = os.path.join(session_dir, step_name)
+        os.makedirs(step_dir, exist_ok=True)
+        return step_dir
+
     def store_file(self, job_id: str, step_name: str, file_path: str):
         """
         Store a file path in the session for later retrieval.

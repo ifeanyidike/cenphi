@@ -1,8 +1,13 @@
 # src/ai_providers/together_client.py
 """
 Together AI client with OpenAI and Claude fallbacks
-90%+ cost reduction with 85-90% quality retention using Llama-3 models
+90%+ cost reduction with 85-90% quality retention using serverless Llama-3.1-Turbo models
 Uses Claude Sonnet for superior performance in fallback scenarios
+
+Model Strategy:
+- Primary: Together AI serverless Llama-3.1-Turbo (high quality, low cost, instant availability)
+- Secondary: OpenAI (reliable, high quality)
+- Tertiary: Claude Sonnet (superior quality for critical tasks)
 """
 
 from together import Together
@@ -57,17 +62,17 @@ class AIClient:
             logger.warning("Anthropic key not found")
             self.claude_available = False
         
-        # Model mapping: Updated with better Together AI models for higher quality
+        # Model mapping: SERVERLESS Together AI models (Turbo = serverless)
         self.model_mapping = {
-            # Chat models - Using newer, more capable models
-            "gpt-4": "meta-llama/Llama-3-70b-chat-hf",  # ~85% GPT-4 quality
-            "gpt-4-turbo": "meta-llama/Llama-3-70b-chat-hf",  # Best available option
-            "gpt-3.5-turbo": "meta-llama/Llama-3-8b-chat-hf",  # ~80% GPT-3.5 quality
-            
-            # Completion models
-            "text-davinci-003": "meta-llama/Llama-3-70b-hf",
-            "text-curie-001": "meta-llama/Llama-3-8b-hf",
-            
+            # Chat models - Using serverless Llama-3.1-Turbo models (higher quality than Llama-3)
+            "gpt-4": "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",  # Serverless, ~90% GPT-4 quality
+            "gpt-4-turbo": "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",  # Serverless, best available
+            "gpt-3.5-turbo": "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",  # Serverless, ~85% GPT-3.5 quality
+
+            # Completion models - Using serverless models
+            "text-davinci-003": "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
+            "text-curie-001": "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
+
             # Embedding models
             "text-embedding-ada-002": "sentence-transformers/all-MiniLM-L6-v2",
         }
@@ -81,15 +86,18 @@ class AIClient:
             "text-curie-001": "claude-3-5-sonnet-20241022",  # Upgraded to Sonnet
         }
         
-        # Cost estimates (per 1K tokens) - Updated for Llama-3 models
+        # Cost estimates (per 1K tokens) - Updated for Llama-3.1-Turbo serverless models
         self.together_costs = {
-            "meta-llama/Llama-3-70b-chat-hf": 0.0009,  # vs GPT-4: $0.03 (~97% savings)
-            "meta-llama/Llama-3-8b-chat-hf": 0.0002,   # vs GPT-3.5: $0.002 (~90% savings)
-            "meta-llama/Llama-3-70b-hf": 0.0009,
-            "meta-llama/Llama-3-8b-hf": 0.0002,
-            # Legacy models (if you want to fall back to them)
-            "meta-llama/Llama-2-70b-chat-hf": 0.0009,
+            # Llama 3.1 Turbo (serverless)
+            "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo": 0.00088,  # vs GPT-4: $0.03 (~97% savings)
+            "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo": 0.00018,   # vs GPT-3.5: $0.002 (~91% savings)
+            "meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo": 0.00270, # Premium serverless option
+
+            # Legacy models (non-serverless, kept for reference)
+            "meta-llama/Llama-3-70b-chat-hf": 0.0009,
+            "meta-llama/Llama-3-8b-chat-hf": 0.0002,
             "mistralai/Mixtral-8x7B-Instruct-v0.1": 0.0006,
+            "meta-llama/Llama-2-70b-chat-hf": 0.0009,
             "meta-llama/Llama-2-13b-chat-hf": 0.0003,
         }
         
@@ -125,7 +133,7 @@ class AIClient:
         # Try Together AI first
         if self.together_available and not use_primary_only:
             try:
-                together_model = self.model_mapping.get(model, "meta-llama/Llama-3-8b-chat-hf")
+                together_model = self.model_mapping.get(model, "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo")
                 
                 # Convert messages to Together AI format
                 # prompt = self._messages_to_prompt(messages)
@@ -240,7 +248,7 @@ class AIClient:
         # Try Together AI first
         if self.together_available:
             try:
-                together_model = self.model_mapping.get(model, "meta-llama/Llama-3-8b-hf")
+                together_model = self.model_mapping.get(model, "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo")
                 
                 response = self.togetherai.completions.create(
                     prompt=prompt,
@@ -384,7 +392,7 @@ class AIClient:
     
     def _calculate_together_cost(self, model: str, usage: Dict[str, Any]) -> float:
         """Calculate Together AI cost"""
-        rate = self.together_costs.get(model, 0.0002)  # Default to Llama-3-8b rate
+        rate = self.together_costs.get(model, 0.00018)  # Default to Llama-3.1-8B-Turbo rate
         total_tokens = getattr(usage, 'total_tokens', 0)
         return (total_tokens / 1000) * rate
     

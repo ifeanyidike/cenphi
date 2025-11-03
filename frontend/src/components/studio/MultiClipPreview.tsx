@@ -230,6 +230,7 @@ export const MultiClipPreview: React.FC<MultiClipPreviewProps> = ({
                     src={clip.preview_url}
                     className="w-full h-full object-cover"
                     controls={false}
+                    poster={clip.thumbnail_url}
                     onPlay={() => handleVideoPlay(clip.id)}
                     onPause={handleVideoPause}
                     onClick={(e) => {

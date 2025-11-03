@@ -134,6 +134,8 @@ type Testimonial struct {
 	Status             string              `json:"status" db:"status"`
 	Content            *string             `json:"content" db:"content"`
 	MediaURL           *string             `json:"media_url" db:"media_url"`
+	Duration           *float64            `json:"duration,omitempty" db:"duration"`
+	ThumbnailURL       *string             `json:"thumbnail_url,omitempty" db:"thumbnail_url"`
 	TranscriptSegments *TranscriptSegments `json:"transcript_segment" db:"transcript_segment"`
 
 	// Collection metadata
@@ -148,6 +150,12 @@ type Testimonial struct {
 	// AI processing
 	ProcessingStatus   string  `json:"processing_status" db:"processing_status"`
 	ProcessingMetadata JSONMap `json:"processing_metadata" db:"processing_metadata"`
+
+	// Approval fields
+	ApprovalStatus string     `db:"approval_status" json:"approval_status"` // draft, pending, approved, rejected
+	IsPublic       bool       `db:"is_public" json:"is_public"`
+	ApprovedAt     *time.Time `db:"approved_at" json:"approved_at,omitempty"`
+	ApprovedBy     *uuid.UUID `db:"approved_by" json:"approved_by,omitempty"`
 
 	// Timestamps
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
@@ -183,9 +191,11 @@ type TestimonialArtifact struct {
 	ProcessingType string `db:"processing_type" json:"processing_type"` // e.g. sentiment_analysis
 	ResultCategory string `db:"result_category" json:"result_category"` // e.g. analysis, content
 
-	TextContent *string `db:"text_content" json:"text_content,omitempty"` // nullable
-	Data        JSONMap `db:"data" json:"data"`                           // JSONB data
-	AssetURL    *string `db:"asset_url" json:"asset_url,omitempty"`       // nullable
+	TextContent  *string  `db:"text_content" json:"text_content,omitempty"` // nullable
+	Data         JSONMap  `db:"data" json:"data"`                           // JSONB data
+	AssetURL     *string  `db:"asset_url" json:"asset_url,omitempty"`       // nullable
+	Duration     *float64 `db:"duration" json:"duration,omitempty"`         // Video duration in seconds
+	ThumbnailURL *string  `db:"thumbnail_url" json:"thumbnail_url,omitempty"` // Auto-generated thumbnail
 
 	ContentType string  `db:"content_type" json:"content_type,omitempty"`
 	Platform    *string `db:"platform" json:"platform,omitempty"`
@@ -193,6 +203,12 @@ type TestimonialArtifact struct {
 
 	IsUserSaved bool `db:"is_user_saved" json:"is_user_saved"`
 	IsStreamed  bool `db:"is_streamed" json:"is_streamed"`
+
+	// Approval fields
+	ApprovalStatus string     `db:"approval_status" json:"approval_status"` // draft, pending, approved, rejected
+	IsPublic       bool       `db:"is_public" json:"is_public"`
+	ApprovedAt     *time.Time `db:"approved_at" json:"approved_at,omitempty"`
+	ApprovedBy     *uuid.UUID `db:"approved_by" json:"approved_by,omitempty"`
 
 	ProcessingMetadata JSONMap `db:"processing_metadata" json:"processing_metadata"` // JSONB
 

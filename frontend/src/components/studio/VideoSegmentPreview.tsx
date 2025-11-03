@@ -1,10 +1,19 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { Play, Pause, Check, X, TrendingUp, Clock, RefreshCw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { HighlightMoment } from '@/types/ai-service';
-import { cn } from '@/lib/utils';
+import React, { useRef, useEffect, useState } from "react";
+import {
+  Play,
+  Pause,
+  Check,
+  X,
+  TrendingUp,
+  Clock,
+  RefreshCw,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { HighlightMoment } from "@/types/ai-service";
+import { cn } from "@/lib/utils";
+import { observer } from "mobx-react-lite";
 
 interface VideoSegmentPreviewProps {
   moment: HighlightMoment;
@@ -58,8 +67,18 @@ const VideoSegmentPreview: React.FC<VideoSegmentPreviewProps> = ({
     const video = videoRef.current;
     if (!video) return;
 
-    console.log('[VideoSegmentPreview] Initializing segment (ms):', moment.start_time, '->', moment.end_time);
-    console.log('[VideoSegmentPreview] Initializing segment (s):', startTimeSeconds, '->', endTimeSeconds);
+    console.log(
+      "[VideoSegmentPreview] Initializing segment (ms):",
+      moment.start_time,
+      "->",
+      moment.end_time
+    );
+    console.log(
+      "[VideoSegmentPreview] Initializing segment (s):",
+      startTimeSeconds,
+      "->",
+      endTimeSeconds
+    );
 
     // Reset state
     video.pause();
@@ -71,7 +90,11 @@ const VideoSegmentPreview: React.FC<VideoSegmentPreviewProps> = ({
     // Wait for metadata to be loaded before setting time
     const initializeVideo = () => {
       if (video.readyState >= 1) {
-        console.log('[VideoSegmentPreview] Setting currentTime to:', startTimeSeconds, 'seconds');
+        console.log(
+          "[VideoSegmentPreview] Setting currentTime to:",
+          startTimeSeconds,
+          "seconds"
+        );
         video.currentTime = startTimeSeconds;
         setCurrentTime(startTimeSeconds);
         hasInitialized.current = true;
@@ -81,7 +104,7 @@ const VideoSegmentPreview: React.FC<VideoSegmentPreviewProps> = ({
     if (video.readyState >= 1) {
       initializeVideo();
     } else {
-      video.addEventListener('loadedmetadata', initializeVideo, { once: true });
+      video.addEventListener("loadedmetadata", initializeVideo, { once: true });
     }
 
     return () => {
@@ -103,7 +126,7 @@ const VideoSegmentPreview: React.FC<VideoSegmentPreviewProps> = ({
 
       // Check if we've reached the end of the segment
       if (currentVideoTime >= endTimeSeconds && !isSegmentCompleteRef.current) {
-        console.log('[VideoSegmentPreview] Segment complete, looping back');
+        console.log("[VideoSegmentPreview] Segment complete, looping back");
         isSegmentCompleteRef.current = true;
         video.pause();
         setIsPlaying(false);
@@ -113,7 +136,9 @@ const VideoSegmentPreview: React.FC<VideoSegmentPreviewProps> = ({
           video.currentTime = startTimeSeconds;
           isSegmentCompleteRef.current = false;
           if (autoPlay) {
-            video.play().catch((err) => console.error('Loop play failed:', err));
+            video
+              .play()
+              .catch((err) => console.error("Loop play failed:", err));
           }
         }, 100);
       }
@@ -125,7 +150,7 @@ const VideoSegmentPreview: React.FC<VideoSegmentPreviewProps> = ({
     };
 
     const handleLoadedMetadata = () => {
-      console.log('[VideoSegmentPreview] Metadata loaded');
+      console.log("[VideoSegmentPreview] Metadata loaded");
       if (!hasInitialized.current) {
         video.currentTime = startTimeSeconds;
         hasInitialized.current = true;
@@ -133,11 +158,11 @@ const VideoSegmentPreview: React.FC<VideoSegmentPreviewProps> = ({
     };
 
     const handleLoadedData = () => {
-      console.log('[VideoSegmentPreview] Data loaded');
+      console.log("[VideoSegmentPreview] Data loaded");
       setIsLoading(false);
       if (autoPlay && hasInitialized.current) {
         video.play().catch((err) => {
-          console.error('Auto-play failed:', err);
+          console.error("Auto-play failed:", err);
         });
       }
     };
@@ -151,39 +176,39 @@ const VideoSegmentPreview: React.FC<VideoSegmentPreviewProps> = ({
     };
 
     const handlePlay = () => {
-      console.log('[VideoSegmentPreview] Playing');
+      console.log("[VideoSegmentPreview] Playing");
       setIsPlaying(true);
     };
 
     const handlePause = () => {
-      console.log('[VideoSegmentPreview] Paused');
+      console.log("[VideoSegmentPreview] Paused");
       setIsPlaying(false);
     };
 
     const handleError = (e: Event) => {
-      console.error('[VideoSegmentPreview] Video error:', e);
+      console.error("[VideoSegmentPreview] Video error:", e);
       setHasError(true);
       setIsLoading(false);
     };
 
-    video.addEventListener('timeupdate', handleTimeUpdate);
-    video.addEventListener('loadedmetadata', handleLoadedMetadata);
-    video.addEventListener('loadeddata', handleLoadedData);
-    video.addEventListener('canplay', handleCanPlay);
-    video.addEventListener('waiting', handleWaiting);
-    video.addEventListener('play', handlePlay);
-    video.addEventListener('pause', handlePause);
-    video.addEventListener('error', handleError);
+    video.addEventListener("timeupdate", handleTimeUpdate);
+    video.addEventListener("loadedmetadata", handleLoadedMetadata);
+    video.addEventListener("loadeddata", handleLoadedData);
+    video.addEventListener("canplay", handleCanPlay);
+    video.addEventListener("waiting", handleWaiting);
+    video.addEventListener("play", handlePlay);
+    video.addEventListener("pause", handlePause);
+    video.addEventListener("error", handleError);
 
     return () => {
-      video.removeEventListener('timeupdate', handleTimeUpdate);
-      video.removeEventListener('loadedmetadata', handleLoadedMetadata);
-      video.removeEventListener('loadeddata', handleLoadedData);
-      video.removeEventListener('canplay', handleCanPlay);
-      video.removeEventListener('waiting', handleWaiting);
-      video.removeEventListener('play', handlePlay);
-      video.removeEventListener('pause', handlePause);
-      video.removeEventListener('error', handleError);
+      video.removeEventListener("timeupdate", handleTimeUpdate);
+      video.removeEventListener("loadedmetadata", handleLoadedMetadata);
+      video.removeEventListener("loadeddata", handleLoadedData);
+      video.removeEventListener("canplay", handleCanPlay);
+      video.removeEventListener("waiting", handleWaiting);
+      video.removeEventListener("play", handlePlay);
+      video.removeEventListener("pause", handlePause);
+      video.removeEventListener("error", handleError);
     };
   }, [startTimeSeconds, endTimeSeconds, autoPlay]);
 
@@ -191,66 +216,75 @@ const VideoSegmentPreview: React.FC<VideoSegmentPreviewProps> = ({
     const video = videoRef.current;
     if (!video) return;
 
-    console.log('[VideoSegmentPreview] Toggle play, current state:', isPlaying);
+    console.log("[VideoSegmentPreview] Toggle play, current state:", isPlaying);
 
     try {
       if (isPlaying) {
         video.pause();
       } else {
         // If at the end of segment or before start, restart from beginning
-        if (video.currentTime >= endTimeSeconds ||
-            video.currentTime < startTimeSeconds ||
-            isSegmentCompleteRef.current) {
-          console.log('[VideoSegmentPreview] Restarting from:', startTimeSeconds);
+        if (
+          video.currentTime >= endTimeSeconds ||
+          video.currentTime < startTimeSeconds ||
+          isSegmentCompleteRef.current
+        ) {
+          console.log(
+            "[VideoSegmentPreview] Restarting from:",
+            startTimeSeconds
+          );
           video.currentTime = startTimeSeconds;
           isSegmentCompleteRef.current = false;
         }
 
         // Ensure video is ready to play
         if (video.readyState >= 2) {
-          console.log('[VideoSegmentPreview] Playing immediately');
+          console.log("[VideoSegmentPreview] Playing immediately");
           await video.play();
         } else {
-          console.log('[VideoSegmentPreview] Waiting for canplay');
+          console.log("[VideoSegmentPreview] Waiting for canplay");
           // Wait for video to be ready
           const playWhenReady = async () => {
             try {
-              console.log('[VideoSegmentPreview] Now playing after canplay');
+              console.log("[VideoSegmentPreview] Now playing after canplay");
               await video.play();
             } catch (error) {
-              console.error('Delayed play failed:', error);
+              console.error("Delayed play failed:", error);
             }
           };
-          video.addEventListener('canplay', playWhenReady, { once: true });
+          video.addEventListener("canplay", playWhenReady, { once: true });
         }
       }
     } catch (err) {
-      console.error('Play failed:', err);
+      console.error("Play failed:", err);
     }
   };
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
   const getEngagementColor = (score: number) => {
-    if (score >= 0.8) return 'text-emerald-600 bg-emerald-50 border-emerald-200';
-    if (score >= 0.7) return 'text-blue-600 bg-blue-50 border-blue-200';
-    return 'text-amber-600 bg-amber-50 border-amber-200';
+    if (score >= 0.8)
+      return "text-emerald-600 bg-emerald-50 border-emerald-200";
+    if (score >= 0.7) return "text-blue-600 bg-blue-50 border-blue-200";
+    return "text-amber-600 bg-amber-50 border-amber-200";
   };
 
   // Calculate segment-relative time for display (in seconds)
-  const segmentCurrentTime = Math.max(0, Math.min(currentTime - startTimeSeconds, durationSeconds));
+  const segmentCurrentTime = Math.max(
+    0,
+    Math.min(currentTime - startTimeSeconds, durationSeconds)
+  );
 
   return (
     <Card
       className={cn(
-        'overflow-hidden border-2 transition-all',
-        isSelected && !isSkipped && 'border-blue-500 bg-blue-50/30',
-        isSkipped && 'border-slate-300 bg-slate-100 opacity-60',
-        !isSelected && !isSkipped && 'border-slate-200 hover:border-slate-300',
+        "overflow-hidden border-2 transition-all",
+        isSelected && !isSkipped && "border-blue-500 bg-blue-50/30",
+        isSkipped && "border-slate-300 bg-slate-100 opacity-60",
+        !isSelected && !isSkipped && "border-slate-200 hover:border-slate-300",
         className
       )}
       onMouseEnter={() => setIsHovering(true)}
@@ -316,7 +350,7 @@ const VideoSegmentPreview: React.FC<VideoSegmentPreviewProps> = ({
           <Badge
             variant="outline"
             className={cn(
-              'text-[10px] px-1.5 py-0.5 border font-medium',
+              "text-[10px] px-1.5 py-0.5 border font-medium",
               getEngagementColor(moment.engagement_score)
             )}
           >
@@ -385,10 +419,15 @@ const VideoSegmentPreview: React.FC<VideoSegmentPreviewProps> = ({
                 Unskip
               </Button>
             ) : isSelected ? (
-              <div className="flex items-center justify-center gap-1 text-blue-600 text-xs font-medium py-1.5">
-                <Check className="h-3 w-3" />
-                Selected
-              </div>
+              <Button
+                onClick={onAccept}
+                size="sm"
+                variant="outline"
+                className="w-full h-7 text-xs border-blue-600 bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700"
+              >
+                <Check className="h-3 w-3 mr-1" />
+                Deselect
+              </Button>
             ) : (
               <div className="flex gap-2">
                 {onSkip && (
@@ -421,4 +460,4 @@ const VideoSegmentPreview: React.FC<VideoSegmentPreviewProps> = ({
   );
 };
 
-export default VideoSegmentPreview;
+export default observer(VideoSegmentPreview);

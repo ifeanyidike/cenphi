@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { StepProgress, PreviewArtifact } from "@/hooks/useStudioSSE";
-import StageCustomization from "./StageCustomization";
+// import StageCustomization from "./StageCustomization";
 
 interface StudioStepCardProps {
   step: StepProgress;
@@ -53,7 +53,7 @@ const StudioStepCard: React.FC<StudioStepCardProps> = ({
   onRetry,
   onAccept,
   onPreviewClick,
-  onConfigUpdate,
+  // onConfigUpdate,
   className = "",
 }) => {
   const [isExpanded, setIsExpanded] = useState(isActive);
@@ -208,14 +208,14 @@ const StudioStepCard: React.FC<StudioStepCardProps> = ({
             >
               <div className="px-4 pb-4 space-y-4 border-t border-slate-200/50 pt-4">
                 {/* Customization Panel - Show for pending or in_progress steps */}
-                {(step.status === "pending" || step.status === "in_progress") &&
+                {/* {(step.status === "pending" || step.status === "in_progress") &&
                   onConfigUpdate && (
                     <StageCustomization
                       stageType={step.stepName}
                       currentConfig={step.metadata || {}}
                       onConfigUpdate={onConfigUpdate}
                     />
-                  )}
+                  )} */}
 
                 {/* Preview Section */}
                 {preview && (

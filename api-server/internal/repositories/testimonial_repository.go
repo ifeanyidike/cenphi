@@ -251,7 +251,7 @@ func (r *testimonialRepository) FetchForAIProcessing(ctx context.Context, id uui
 func (r *testimonialRepository) FetchByTestimonialAndWorkspaceID(ctx context.Context, testimonial_id, workspace_id uuid.UUID, db *sql.DB) (*models.Testimonial, error) {
 	fmt.Println("calling FetchByTestimonialAndWorkspaceID")
 	query := `
-		SELECT 
+		SELECT
 			t.id, t.workspace_id, t.author_name, t.author_email, t.author_company,
 			t.author_title, t.author_avatar_url, t.type, t.status, t.content, t.sentiment_score,
 			t.media_url, t.transcript_segments, t.collection_method, t.metadata,
@@ -260,7 +260,8 @@ func (r *testimonialRepository) FetchByTestimonialAndWorkspaceID(ctx context.Con
 			-- Artifact fields (nullable)
 			a.id, a.testimonial_id, a.workspace_id, a.processing_type, a.result_category,
 			a.text_content, a.data, a.asset_url, a.content_type, a.platform, a.format,
-			a.is_user_saved, a.is_streamed, a.processing_metadata, a.created_at, a.updated_at
+			a.is_user_saved, a.is_streamed, a.approval_status, a.is_public, a.approved_at, a.approved_by,
+			a.processing_metadata, a.created_at, a.updated_at
 		FROM testimonials t
 		LEFT JOIN testimonial_artifacts a ON t.id = a.testimonial_id
 		WHERE t.id = $1 AND t.workspace_id = $2
@@ -295,6 +296,10 @@ func (r *testimonialRepository) FetchByTestimonialAndWorkspaceID(ctx context.Con
 		var artifactFormat sql.NullString
 		var artifactIsUserSaved sql.NullBool
 		var artifactIsStreamed sql.NullBool
+		var artifactApprovalStatus sql.NullString
+		var artifactIsPublic sql.NullBool
+		var artifactApprovedAt sql.NullTime
+		var artifactApprovedBy sql.NullString
 		var artifactProcessingMetadata sql.NullString
 		var artifactCreatedAt sql.NullTime
 		var artifactUpdatedAt sql.NullTime
@@ -313,7 +318,8 @@ func (r *testimonialRepository) FetchByTestimonialAndWorkspaceID(ctx context.Con
 			&artifactID, &artifactTestimonialID, &artifactWorkspaceID, &artifactProcessingType,
 			&artifactResultCategory, &artifactTextContent, &artifactData, &artifactAssetURL,
 			&artifactContentType, &artifactPlatform, &artifactFormat, &artifactIsUserSaved,
-			&artifactIsStreamed, &artifactProcessingMetadata, &artifactCreatedAt, &artifactUpdatedAt,
+			&artifactIsStreamed, &artifactApprovalStatus, &artifactIsPublic, &artifactApprovedAt, &artifactApprovedBy,
+			&artifactProcessingMetadata, &artifactCreatedAt, &artifactUpdatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan row: %w", err)
@@ -345,6 +351,8 @@ func (r *testimonialRepository) FetchByTestimonialAndWorkspaceID(ctx context.Con
 				ContentType:    artifactContentType.String,
 				IsUserSaved:    artifactIsUserSaved.Bool,
 				IsStreamed:     artifactIsStreamed.Bool,
+				ApprovalStatus: artifactApprovalStatus.String,
+				IsPublic:       artifactIsPublic.Bool,
 				CreatedAt:      artifactCreatedAt.Time,
 				UpdatedAt:      artifactUpdatedAt.Time,
 			}
@@ -376,6 +384,20 @@ func (r *testimonialRepository) FetchByTestimonialAndWorkspaceID(ctx context.Con
 			// Handle nullable format
 			if artifactFormat.Valid {
 				artifact.Format = &artifactFormat.String
+			}
+
+			// Handle nullable approved_at
+			if artifactApprovedAt.Valid {
+				artifact.ApprovedAt = &artifactApprovedAt.Time
+			}
+
+			// Handle nullable approved_by
+			if artifactApprovedBy.Valid {
+				approvedByUUID, err := uuid.Parse(artifactApprovedBy.String)
+				if err != nil {
+					return nil, fmt.Errorf("failed to parse approved_by UUID: %w", err)
+				}
+				artifact.ApprovedBy = &approvedByUUID
 			}
 
 			// Handle JSONB data field
@@ -524,10 +546,10 @@ func (r *testimonialRepository) FetchByWorkspaceID(ctx context.Context, workspac
 				-- Artifact fields (nullable due to LEFT JOIN)
 				a.id, a.testimonial_id, a.workspace_id, a.processing_type, a.result_category,
 				a.text_content, a.data, a.asset_url, a.content_type, a.platform, a.format,
-				a.is_user_saved, a.is_streamed, a.processing_metadata, a.created_at, a.updated_at
+				a.is_user_saved, a.is_streamed, a.approval_status, a.is_public, a.approved_at, a.approved_by,
+				a.processing_metadata, a.created_at, a.updated_at
 			FROM testimonials t
 			LEFT JOIN testimonial_artifacts a ON t.id = a.testimonial_id
-				AND a.processing_type = 'highlight_extraction'
 				AND a.workspace_id = $1
 			WHERE t.workspace_id = $1
 		`
@@ -769,6 +791,10 @@ func (r *testimonialRepository) FetchByWorkspaceID(ctx context.Context, workspac
 		var artifactFormat sql.NullString
 		var artifactIsUserSaved sql.NullBool
 		var artifactIsStreamed sql.NullBool
+		var artifactApprovalStatus sql.NullString
+		var artifactIsPublic sql.NullBool
+		var artifactApprovedAt sql.NullTime
+		var artifactApprovedBy sql.NullString
 		var artifactProcessingMetadata sql.NullString
 		var artifactCreatedAt sql.NullTime
 		var artifactUpdatedAt sql.NullTime
@@ -784,7 +810,8 @@ func (r *testimonialRepository) FetchByWorkspaceID(ctx context.Context, workspac
 			&artifactID, &artifactTestimonialID, &artifactWorkspaceID, &artifactProcessingType,
 			&artifactResultCategory, &artifactTextContent, &artifactData, &artifactAssetURL,
 			&artifactContentType, &artifactPlatform, &artifactFormat, &artifactIsUserSaved,
-			&artifactIsStreamed, &artifactProcessingMetadata, &artifactCreatedAt, &artifactUpdatedAt,
+			&artifactIsStreamed, &artifactApprovalStatus, &artifactIsPublic, &artifactApprovedAt, &artifactApprovedBy,
+			&artifactProcessingMetadata, &artifactCreatedAt, &artifactUpdatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan testimonial row: %w", err)
@@ -819,6 +846,8 @@ func (r *testimonialRepository) FetchByWorkspaceID(ctx context.Context, workspac
 				ContentType:    artifactContentType.String,
 				IsUserSaved:    artifactIsUserSaved.Bool,
 				IsStreamed:     artifactIsStreamed.Bool,
+				ApprovalStatus: artifactApprovalStatus.String,
+				IsPublic:       artifactIsPublic.Bool,
 				CreatedAt:      artifactCreatedAt.Time,
 				UpdatedAt:      artifactUpdatedAt.Time,
 			}
@@ -850,6 +879,20 @@ func (r *testimonialRepository) FetchByWorkspaceID(ctx context.Context, workspac
 			// Handle nullable format
 			if artifactFormat.Valid {
 				artifact.Format = &artifactFormat.String
+			}
+
+			// Handle nullable approved_at
+			if artifactApprovedAt.Valid {
+				artifact.ApprovedAt = &artifactApprovedAt.Time
+			}
+
+			// Handle nullable approved_by
+			if artifactApprovedBy.Valid {
+				approvedByUUID, err := uuid.Parse(artifactApprovedBy.String)
+				if err != nil {
+					return nil, fmt.Errorf("failed to parse approved_by UUID: %w", err)
+				}
+				artifact.ApprovedBy = &approvedByUUID
 			}
 
 			// Handle JSONB data field

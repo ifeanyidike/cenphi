@@ -47,6 +47,11 @@ export interface Workspace extends BaseEntity {
   settings: Record<string, any>;
   brand_context: Record<string, any>;
   total_testimonials: number;
+
+  // Showcase fields
+  showcase_enabled: boolean;
+  showcase_slug?: string;
+  showcase_settings: Record<string, any>;
 }
 
 // Team Members table
@@ -74,6 +79,8 @@ export interface Testimonial extends BaseEntity {
   format?: string;
   content?: string;
   media_url?: string;
+  duration?: number; // Video/audio duration in seconds
+  thumbnail_url?: string; // Video thumbnail URL
   audio_url?: string; // For voice testimonials
   transcript_segments: Array<any>;
 
@@ -92,6 +99,12 @@ export interface Testimonial extends BaseEntity {
 
   tags: string[];
   artifacts: TestimonialArtifact[];
+
+  // Approval fields
+  approval_status: "draft" | "pending" | "approved" | "rejected";
+  is_public: boolean;
+  approved_at?: string;
+  approved_by?: string;
 }
 
 // Testimonial Artifacts table
@@ -125,6 +138,8 @@ export interface TestimonialArtifact extends BaseEntity {
   text_content?: string;
   data: Record<string, any>;
   asset_url?: string;
+  duration?: number; // Video/audio duration in seconds
+  thumbnail_url?: string; // Video thumbnail URL
 
   // Context and metadata
   content_type?: string;
@@ -138,6 +153,12 @@ export interface TestimonialArtifact extends BaseEntity {
 
   // Processing metadata
   processing_metadata: Record<string, any>;
+
+  // Approval fields
+  approval_status: "draft" | "pending" | "approved" | "rejected";
+  is_public: boolean;
+  approved_at?: string;
+  approved_by?: string;
 }
 
 // Social Accounts table

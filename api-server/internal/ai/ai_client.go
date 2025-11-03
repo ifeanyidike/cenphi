@@ -68,6 +68,7 @@ type AIServiceManager struct {
 	FillerDetectionService    FillerDetectionService
 	TranslationService        TranslationService
 	SentimentService          SentimentService
+	BrollSuggestionService    *BrollSuggestionService
 	AIClient                  AIClient
 	DB                        *sql.DB
 	TestimonialRepo           repositories.TestimonialRepository
@@ -89,6 +90,7 @@ func NewAIServiceManager(cfg config.Config, cacheService cache.RedisCache, aiCli
 	polishService := NewPolishService(aiClient, cacheService)
 	contentService := NewContentGenerationService(aiClient, cacheService)
 	platformService := NewPlatformOptimizerService(aiClient, cacheService, db, workspaceRepo)
+	brollSuggestionService := NewBrollSuggestionService(&aiClient, logger)
 
 	return AIServiceManager{
 		BrandContextService:       brandContextService,
@@ -98,6 +100,7 @@ func NewAIServiceManager(cfg config.Config, cacheService cache.RedisCache, aiCli
 		PolishService:             polishService,
 		PlatformOptimizerService:  platformService,
 		FillerDetectionService:    fillerService,
+		BrollSuggestionService:    brollSuggestionService,
 		TranslationService:        translationService,
 		SentimentService:          sentimentService,
 		AIClient:                  aiClient,

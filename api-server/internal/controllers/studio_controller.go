@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"strings"
 	"time"
@@ -34,6 +35,7 @@ type StudioController struct {
 	stepOrchestrator      *ai.StepOrchestrator
 	mediaIntelligence     ai.MediaIntelligence
 	sseManager            *sse.SSEManager
+	storageProvider       storage.Provider
 	logger                *zap.Logger
 }
 
@@ -56,6 +58,7 @@ func NewStudioController(
 	stepOrchestrator *ai.StepOrchestrator,
 	mediaIntelligence ai.MediaIntelligence,
 	sseManager *sse.SSEManager,
+	storageProvider storage.Provider,
 	logger *zap.Logger,
 ) StudioController {
 	return StudioController{
@@ -70,6 +73,7 @@ func NewStudioController(
 		stepOrchestrator:      stepOrchestrator,
 		mediaIntelligence:     mediaIntelligence,
 		sseManager:            sseManager,
+		storageProvider:       storageProvider,
 		logger:                logger,
 	}
 }
@@ -992,26 +996,26 @@ func (c StudioController) resolveAndCopyArtifactURL(ctx context.Context, session
 		artifactURL = *videoStage.Message
 	} else if finalStage.Message != nil && *finalStage.Message != "" {
 		artifactURL = *finalStage.Message
+	}
 
-		// Copy temp file to permanent storage
-		if strings.Contains(artifactURL, "/temp/") {
-			// Use testimonial_id or workspace_id as base path
-			var baseID uuid.UUID
-			if session.TestimonialID != nil {
-				baseID = *session.TestimonialID
-			} else {
-				baseID = session.WorkspaceID
-			}
-
-			permanentURL, err := c.tempStorageService.CopyToPermanentStorage(ctx, artifactURL, baseID)
-			if err != nil {
-				return "", fmt.Errorf("failed to copy final artifact to permanent storage: %w", err)
-			}
-			artifactURL = permanentURL
-			c.logger.Info("✅ [FINALIZE] Successfully copied to permanent storage",
-				zap.String("stage_id", finalStage.StageID),
-				zap.String("permanent_url", permanentURL))
+	// Copy temp file to permanent storage (regardless of which stage provided the URL)
+	if artifactURL != "" && strings.Contains(artifactURL, "/temp/") {
+		// Use testimonial_id or workspace_id as base path
+		var baseID uuid.UUID
+		if session.TestimonialID != nil {
+			baseID = *session.TestimonialID
+		} else {
+			baseID = session.WorkspaceID
 		}
+
+		permanentURL, err := c.tempStorageService.CopyToPermanentStorage(ctx, artifactURL, baseID)
+		if err != nil {
+			return "", fmt.Errorf("failed to copy final artifact to permanent storage: %w", err)
+		}
+		artifactURL = permanentURL
+		c.logger.Info("✅ [FINALIZE] Successfully copied to permanent storage",
+			zap.String("stage_id", finalStage.StageID),
+			zap.String("permanent_url", permanentURL))
 	}
 
 	return artifactURL, nil
@@ -1027,6 +1031,58 @@ func (c StudioController) createArtifactFromStage(ctx context.Context, req *mode
 			zap.Int("text_length", len(*textContent)))
 	}
 
+	// Extract platform and aspect_ratio from stage metadata
+	var platformStr *string
+	var aspectRatio string
+
+	// First, try to get platform and aspect_ratio from final stage
+	if finalStage.Metadata != nil {
+		if platform, ok := finalStage.Metadata["platform"].(string); ok && platform != "" {
+			platformStr = &platform
+			c.logger.Info("🔍 [FINALIZE] Found platform in final stage metadata",
+				zap.String("platform", platform))
+		}
+		if ar, ok := finalStage.Metadata["aspect_ratio"].(string); ok && ar != "" {
+			aspectRatio = ar
+			c.logger.Info("🔍 [FINALIZE] Found aspect_ratio in final stage metadata",
+				zap.String("aspect_ratio", ar))
+		}
+	}
+
+	// If not found, try to get from crop_resize stage (common for all video pipelines)
+	if platformStr == nil || aspectRatio == "" {
+		cropStage, err := c.stageRepo.GetBySessionAndStageID(ctx, session.ID, "crop_resize", c.db)
+		if err == nil && cropStage != nil && cropStage.Metadata != nil {
+			if platformStr == nil {
+				if platform, ok := cropStage.Metadata["platform"].(string); ok && platform != "" {
+					platformStr = &platform
+					c.logger.Info("🔍 [FINALIZE] Found platform in crop_resize stage",
+						zap.String("platform", platform))
+				}
+			}
+			if aspectRatio == "" {
+				if ar, ok := cropStage.Metadata["aspect_ratio"].(string); ok && ar != "" {
+					aspectRatio = ar
+					c.logger.Info("🔍 [FINALIZE] Found aspect_ratio in crop_resize stage",
+						zap.String("aspect_ratio", ar))
+				}
+			}
+		}
+	}
+
+	// Default platform for story_video if not found
+	if platformStr == nil && session.SessionType == "story_video" {
+		unknownPlatform := "unknown"
+		platformStr = &unknownPlatform
+		c.logger.Info("🔍 [FINALIZE] Defaulting platform to 'unknown' for story_video")
+	}
+
+	// Default aspect ratio to 16:9 if not found
+	if aspectRatio == "" {
+		aspectRatio = "16:9"
+		c.logger.Info("🔍 [FINALIZE] Defaulting aspect_ratio to 16:9")
+	}
+
 	// Prepare processing metadata
 	processingMetadata := models.JSONMap{
 		"session_type":     session.SessionType,
@@ -1035,6 +1091,7 @@ func (c StudioController) createArtifactFromStage(ctx context.Context, req *mode
 		"final_stage_name": finalStage.StageName,
 		"stages_count":     len([]*models.ProcessingStage{}), // Would need to pass this from caller
 		"finalized_at":     time.Now().Format(time.RFC3339),
+		"aspect_ratio":     aspectRatio, // Always include aspect_ratio
 	}
 
 	// Add user-provided metadata
@@ -1099,9 +1156,7 @@ func (c StudioController) createArtifactFromStage(ctx context.Context, req *mode
 	// Populate Data field with all relevant stage metadata
 	dataField := models.JSONMap{}
 	if finalStage.Metadata != nil {
-		for k, v := range finalStage.Metadata {
-			dataField[k] = v
-		}
+		maps.Copy(dataField, finalStage.Metadata)
 	}
 
 	// Extract text_content from dataField if not provided by frontend
@@ -1120,15 +1175,42 @@ func (c StudioController) createArtifactFromStage(ctx context.Context, req *mode
 	dataField["asset_url"] = assetURLPtr
 	dataField["text_content"] = textContent
 
+	// Extract metadata for video artifacts during finalization
+	var duration *float64
+	var thumbnailURL *string
+
+	if artifactURL != "" && contentType == "video/mp4" {
+		// Use background context with custom timeout for thumbnail extraction
+		// Don't use HTTP request context which may have tight deadline
+		thumbnailCtx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		defer cancel()
+
+		metadata, err := utils.ExtractVideoMetadataWithOCI(thumbnailCtx, artifactURL, session.WorkspaceID.String(), c.storageProvider)
+		if err != nil {
+			c.logger.Warn("Failed to extract video metadata during finalization",
+				zap.Error(err),
+				zap.String("artifact_url", artifactURL))
+		} else {
+			duration = &metadata.Duration
+			thumbnailURL = &metadata.ThumbnailURL
+			c.logger.Info("✅ [FINALIZE] Extracted video metadata",
+				zap.Float64("duration", metadata.Duration),
+				zap.String("thumbnail_url", metadata.ThumbnailURL))
+		}
+	}
+
 	artifact := &models.TestimonialArtifact{
 		TestimonialID:      session.TestimonialID,
 		WorkspaceID:        session.WorkspaceID,
 		ProcessingType:     processingType,
 		ResultCategory:     resultCategory,
 		AssetURL:           assetURLPtr,
+		Duration:           duration,
+		ThumbnailURL:       thumbnailURL,
 		TextContent:        textContent,
 		Data:               dataField,
 		ContentType:        contentType,
+		Platform:           platformStr, // Set platform from crop_resize or stage metadata
 		IsUserSaved:        true,
 		IsStreamed:         false,
 		ProcessingMetadata: processingMetadata,
@@ -1141,6 +1223,12 @@ func (c StudioController) createArtifactFromStage(ctx context.Context, req *mode
 		zap.String("result_category", resultCategory),
 		zap.String("content_type", contentType),
 		zap.Bool("has_asset_url", assetURLPtr != nil),
+		zap.String("aspect_ratio", aspectRatio),
+	}
+	if platformStr != nil {
+		logFields = append(logFields, zap.String("platform", *platformStr))
+	} else {
+		logFields = append(logFields, zap.String("platform", "nil"))
 	}
 	if session.TestimonialID != nil {
 		logFields = append(logFields, zap.String("testimonial_id", session.TestimonialID.String()))
@@ -1818,14 +1906,43 @@ func (sc *StudioController) saveClipsArtifact(ctx context.Context, stage *models
 		return fmt.Errorf("failed to unmarshal clips: %w", err)
 	}
 
-	// Add generation timestamp to each new clip
+	// Add generation timestamp and extract metadata for each new clip
 	now := time.Now()
+
+	// Use background context with custom timeout for thumbnail extraction
+	// Process all clips with generous timeout (3 minutes per clip batch)
+	thumbnailCtx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+
 	for i := range newClips {
 		if _, exists := newClips[i]["generated_at"]; !exists {
 			newClips[i]["generated_at"] = now.Format(time.RFC3339)
 		}
 		if _, exists := newClips[i]["session_id"]; !exists {
 			newClips[i]["session_id"] = stage.SessionID.String()
+		}
+
+		// Extract metadata for each clip if it has a URL (duration + thumbnail)
+		if clipURL, ok := newClips[i]["url"].(string); ok && clipURL != "" {
+			// Only extract if not already present
+			if _, hasThumbnail := newClips[i]["thumbnail_url"]; !hasThumbnail {
+				if _, hasDuration := newClips[i]["duration"]; !hasDuration {
+					metadata, err := utils.ExtractVideoMetadataWithOCI(thumbnailCtx, clipURL, session.WorkspaceID.String(), sc.storageProvider)
+					if err != nil {
+						sc.logger.Warn("Failed to extract clip metadata",
+							zap.Error(err),
+							zap.String("clip_url", clipURL),
+							zap.Int("clip_index", i))
+					} else {
+						newClips[i]["duration"] = metadata.Duration
+						newClips[i]["thumbnail_url"] = metadata.ThumbnailURL
+						sc.logger.Info("✅ Extracted clip metadata",
+							zap.Int("clip_index", i),
+							zap.Float64("duration", metadata.Duration),
+							zap.String("thumbnail_url", metadata.ThumbnailURL))
+					}
+				}
+			}
 		}
 	}
 
@@ -1860,7 +1977,7 @@ func (sc *StudioController) mergeClipsIntoArtifact(ctx context.Context, artifact
 	}
 
 	// Get existing clips
-	var existingClips []map[string]interface{}
+	var existingClips []map[string]any
 	if genClips, ok := artifact.Data["generated_clips"]; ok && genClips != nil {
 		// Handle both []interface{} and []map[string]interface{} types
 		switch v := genClips.(type) {
@@ -2387,7 +2504,28 @@ func (c StudioController) SaveSession(w http.ResponseWriter, r *http.Request) {
 			zap.String("temp_url", *tempArtifact.PreviewURL),
 			zap.String("permanent_url", permanentURL))
 
-		// 2. Create testimonial_artifacts record
+		// 2. Extract metadata for video artifacts (duration + thumbnail uploaded to OCI)
+		var duration *float64
+		var thumbnailURL *string
+
+		// Use background context with custom timeout for thumbnail extraction
+		thumbnailCtx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		defer cancel()
+
+		metadata, err := utils.ExtractVideoMetadataWithOCI(thumbnailCtx, permanentURL, session.WorkspaceID.String(), c.storageProvider)
+		if err != nil {
+			c.logger.Warn("Failed to extract video metadata during SaveSession",
+				zap.Error(err),
+				zap.String("artifact_url", permanentURL))
+		} else {
+			duration = &metadata.Duration
+			thumbnailURL = &metadata.ThumbnailURL
+			c.logger.Info("✅ [SAVE-SESSION] Extracted video metadata",
+				zap.Float64("duration", metadata.Duration),
+				zap.String("thumbnail_url", metadata.ThumbnailURL))
+		}
+
+		// 3. Create testimonial_artifacts record
 		processingType := session.SessionType
 		if processingType == "platform_optimization" {
 			processingType = "video_platform_optimization"
@@ -2399,6 +2537,8 @@ func (c StudioController) SaveSession(w http.ResponseWriter, r *http.Request) {
 			ProcessingType: processingType,
 			ResultCategory: "processed_video",
 			AssetURL:       &permanentURL,
+			Duration:       duration,
+			ThumbnailURL:   thumbnailURL,
 			ContentType:    "video/mp4",
 			IsUserSaved:    true,
 			IsStreamed:     false,

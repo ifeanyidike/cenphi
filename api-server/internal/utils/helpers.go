@@ -6,9 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/ifeanyidike/cenphi/internal/middleware"
 )
 
 // Helper function to extract job ID from optimization notes
@@ -254,4 +257,14 @@ func CleanAIJSONResponse(response string) string {
 	}
 
 	return response
+}
+
+// GetUserID extracts the user ID from the request context
+// Returns the user ID string set by the auth middleware
+func GetUserID(r *http.Request) string {
+	userID, ok := r.Context().Value(middleware.UserKey).(string)
+	if !ok {
+		return ""
+	}
+	return userID
 }

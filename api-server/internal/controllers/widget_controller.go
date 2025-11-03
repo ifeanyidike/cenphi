@@ -124,8 +124,12 @@ func (c WidgetController) GetWidgetConfig(w http.ResponseWriter, r *http.Request
 		artifactData := map[string]interface{}{
 			"id":              shareWithContent.Artifact.ID,
 			"processing_type": shareWithContent.Artifact.ProcessingType,
-			"asset_url":       shareWithContent.Artifact.AssetURL,
 			"content_type":    shareWithContent.Artifact.ContentType,
+		}
+
+		// Add asset_url if present
+		if shareWithContent.Artifact.AssetURL != nil {
+			artifactData["asset_url"] = *shareWithContent.Artifact.AssetURL
 		}
 
 		if shareWithContent.Artifact.Platform != nil {
@@ -134,6 +138,22 @@ func (c WidgetController) GetWidgetConfig(w http.ResponseWriter, r *http.Request
 
 		if shareWithContent.Artifact.TextContent != nil {
 			artifactData["text_content"] = *shareWithContent.Artifact.TextContent
+		}
+
+		// Special handling for clipping artifacts - extract clips from data.generated_clips
+		if shareWithContent.Artifact.ProcessingType == "clipping" && shareWithContent.Artifact.Data != nil {
+			if generatedClips, ok := shareWithContent.Artifact.Data["generated_clips"].([]interface{}); ok && len(generatedClips) > 0 {
+				artifactData["clips"] = generatedClips
+				artifactData["clips_count"] = len(generatedClips)
+
+				// For backward compatibility, set asset_url to first clip's URL
+				if firstClip, ok := generatedClips[0].(map[string]interface{}); ok {
+					if url, ok := firstClip["url"].(string); ok {
+						artifactData["asset_url"] = url
+						artifactData["content_type"] = "video/mp4"
+					}
+				}
+			}
 		}
 
 		widgetConfig["artifact"] = artifactData

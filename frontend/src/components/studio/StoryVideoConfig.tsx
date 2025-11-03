@@ -37,6 +37,11 @@ import AIOrderingStep from "./AIOrderingStep";
 import HighlightTypeSelectionStep from "./HighlightTypeSelectionStep";
 import * as momentHelpers from "@/utils/momentHelpers";
 import { observer } from "mobx-react-lite";
+import BrollConfigSection, {
+  BrollConfig,
+  BrollCache,
+} from "./BrollConfigSection";
+import { validateBrollConfig } from "./utils/brollValidation";
 
 interface StoryVideoConfigProps {
   context: StudioContext;
@@ -72,6 +77,13 @@ const StoryVideoConfig: React.FC<StoryVideoConfigProps> = ({
   const [selectedMoments, setSelectedMoments] = useState<HighlightMoment[]>([]);
   const [orderedMoments, setOrderedMoments] = useState<HighlightMoment[]>([]);
 
+  // Cache the full testimonial object to avoid redundant API calls
+  // Cache is cleared when component unmounts (new session)
+  const [cachedTestimonial, setCachedTestimonial] = useState<any | null>(null);
+  const [cachedTestimonialId, setCachedTestimonialId] = useState<string | null>(
+    null
+  );
+
   // Configuration state
   const [targetDuration, setTargetDuration] = useState<number>(60);
   const [addIntro, setAddIntro] = useState<boolean>(true);
@@ -93,6 +105,13 @@ const StoryVideoConfig: React.FC<StoryVideoConfigProps> = ({
       description: "Bookend video with branding",
       icon: <FileVideo className="h-4 w-4" />,
       enabled: true,
+    },
+    {
+      id: "apply_broll",
+      name: "B-roll Overlay",
+      description: "Insert B-roll footage",
+      icon: <ImageIcon className="h-4 w-4" />,
+      enabled: false,
     },
     {
       id: "apply_branding",
@@ -152,11 +171,28 @@ const StoryVideoConfig: React.FC<StoryVideoConfigProps> = ({
       | "center",
   });
 
+  // B-roll configuration
+  const [brollConfig, setBrollConfig] = useState<BrollConfig>({
+    placement_strategy: "auto",
+    max_broll_duration: 10.0,
+    transition_type: "fade",
+    broll_clips: [],
+  });
+
+  const [brollWarningAcknowledged, setBrollWarningAcknowledged] =
+    useState(false);
+  const [transcriptMissingAcknowledged, setTranscriptMissingAcknowledged] =
+    useState(false);
+
+  // Cache AI suggestions to avoid repeated requests
+  const [cachedAISuggestions, setCachedAISuggestions] =
+    useState<BrollCache | null>(null);
+
   // Load brand context defaults
   useEffect(() => {
     const brandContext = workspaceHub.workspace?.brand_context;
-    const companyName =
-      brandContext?.company_name || workspaceHub.workspace?.name || "us";
+    const workspace = workspaceHub.workspace;
+    const companyName = brandContext?.company_name || workspace?.name || "us";
 
     // Set default intro/outro text with company name
     setIntroText(
@@ -204,6 +240,18 @@ const StoryVideoConfig: React.FC<StoryVideoConfigProps> = ({
             false // Load artifacts to check available highlight types
           );
 
+        // Validate testimonial exists
+        if (!testimonial) {
+          console.error(
+            "[StoryVideoConfig] Testimonial not found:",
+            context.testimonialId
+          );
+          setLoadError(
+            "The selected testimonial could not be found. It may have been deleted or moved to another workspace."
+          );
+          return;
+        }
+
         // Validate testimonial is video type
         if (testimonial.type !== "video") {
           console.error(
@@ -215,6 +263,11 @@ const StoryVideoConfig: React.FC<StoryVideoConfigProps> = ({
           );
           return;
         }
+
+        // Cache the full testimonial object to avoid refetching
+        // Store both data and ID for validation
+        setCachedTestimonial(testimonial);
+        setCachedTestimonialId(testimonial.id);
 
         // Store testimonial for highlight type selection
         setTestimonialsWithMoments([
@@ -514,12 +567,56 @@ const StoryVideoConfig: React.FC<StoryVideoConfigProps> = ({
     try {
       setCurrentStep("loading");
 
-      // IMPORTANT: Pass false to include artifacts (needed for moments extraction)
-      const testimonial =
-        await workspaceHub.testimonialManager.fetchTestimonial(
-          context.type === "testimonial" ? context.testimonialId : "",
+      // Validate cache before using it
+      const currentTestimonialId =
+        context.type === "testimonial" ? context.testimonialId : "";
+      const isCacheValid =
+        cachedTestimonial &&
+        cachedTestimonialId === currentTestimonialId &&
+        cachedTestimonial.artifacts &&
+        cachedTestimonial.artifacts.length > 0;
+
+      let testimonial;
+
+      if (isCacheValid) {
+        // Use cached testimonial to avoid redundant API call
+        console.log(
+          "[StoryVideoConfig] ✅ Using cached testimonial for highlight type:",
+          highlightType
+        );
+        testimonial = cachedTestimonial;
+      } else {
+        // Cache invalid or empty - refetch
+        console.log(
+          "[StoryVideoConfig] ⚠️ Cache invalid, refetching testimonial for highlight type:",
+          highlightType,
+          {
+            hasCachedData: !!cachedTestimonial,
+            cachedId: cachedTestimonialId,
+            currentId: currentTestimonialId,
+            hasArtifacts: cachedTestimonial?.artifacts?.length > 0,
+          }
+        );
+        testimonial = await workspaceHub.testimonialManager.fetchTestimonial(
+          currentTestimonialId,
           false // Include artifacts
         );
+
+        // Update cache with fresh data
+        setCachedTestimonial(testimonial);
+        setCachedTestimonialId(testimonial.id);
+      }
+
+      console.log("[StoryVideoConfig] Using testimonial:", {
+        id: testimonial.id,
+        type: testimonial.type,
+        artifactsCount: testimonial.artifacts?.length || 0,
+        artifacts: testimonial.artifacts?.map((a: any) => ({
+          id: a.id,
+          processing_type: a.processing_type,
+          hasData: !!a.data,
+        })),
+      });
 
       const moments = momentHelpers.getMomentsForSingleTestimonial(
         testimonial,
@@ -548,14 +645,46 @@ const StoryVideoConfig: React.FC<StoryVideoConfigProps> = ({
       ]);
 
       if (moments.length === 0) {
-        setLoadError("No moments found for selected highlight type.");
+        console.log(
+          "[StoryVideoConfig] No moments found - checking artifacts..."
+        );
+        const highlightArtifacts =
+          testimonial.artifacts?.filter(
+            (a: any) => a.processing_type === "highlight_extraction"
+          ) || [];
+        console.log(
+          "[StoryVideoConfig] Highlight extraction artifacts:",
+          highlightArtifacts.length
+        );
+
+        // Go back to highlight type selection with error message
+        setCurrentStep("select-highlight-type");
+
+        if (highlightArtifacts.length === 0) {
+          setLoadError(
+            `No highlights found. Please generate ${highlightType} highlights for this testimonial first.`
+          );
+        } else {
+          setLoadError(
+            `No ${highlightType} highlights found. Try a different highlight type or generate new highlights.`
+          );
+        }
         return;
       }
 
       setCurrentStep("select-moments");
     } catch (error) {
       console.error("[StoryVideoConfig] Failed to load moments:", error);
-      setLoadError("Failed to load moments. Please try again.");
+      console.error("[StoryVideoConfig] Error details:", {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+
+      // Go back to highlight type selection with error message
+      setCurrentStep("select-highlight-type");
+      setLoadError(
+        `Failed to load moments: ${error instanceof Error ? error.message : "Please try again."}`
+      );
     }
   };
 
@@ -603,10 +732,13 @@ const StoryVideoConfig: React.FC<StoryVideoConfigProps> = ({
           ? context.testimonialId
           : undefined;
 
-      // Build config with music and branding settings
+      // Build config with music, branding, text overlay, and B-roll settings
       const hasMusicStep = steps.some((s) => s.enabled && s.id === "mix_music");
       const hasBrandingStep = steps.some(
         (s) => s.enabled && s.id === "apply_branding"
+      );
+      const hasBrollStep = steps.some(
+        (s) => s.enabled && s.id === "apply_broll"
       );
 
       const config: Record<string, any> = {
@@ -637,6 +769,41 @@ const StoryVideoConfig: React.FC<StoryVideoConfigProps> = ({
         config.watermark_text = brandingConfig.watermark_text;
         config.logo_position = brandingConfig.logo_position;
         config.watermark_position = brandingConfig.watermark_position;
+      }
+
+      // ====== B-ROLL VALIDATIONS ======
+      if (hasBrollStep) {
+        // For story videos, use calculated video duration from ordered moments
+        const validationResult = validateBrollConfig({
+          brollConfig,
+          testimonialId,
+          contextType: "testimonial", // Story videos are always based on testimonials
+          transcriptMissingAcknowledged,
+          brollWarningAcknowledged,
+          videoDuration: videoDuration, // Use calculated duration from ordered moments
+        });
+
+        if (!validationResult.isValid) {
+          alert(validationResult.errorMessage || "B-roll validation failed");
+
+          // Set acknowledgment flags for warnings that can be bypassed
+          if (validationResult.shouldAcknowledge) {
+            if (
+              validationResult.errorMessage?.includes("Transcript segments")
+            ) {
+              setTranscriptMissingAcknowledged(true);
+            } else if (
+              validationResult.errorMessage?.includes("B-roll Duration")
+            ) {
+              setBrollWarningAcknowledged(true);
+            }
+          }
+
+          setIsStarting(false);
+          return;
+        }
+
+        config.broll_config = brollConfig;
       }
 
       // Create session
@@ -674,6 +841,14 @@ const StoryVideoConfig: React.FC<StoryVideoConfigProps> = ({
   const enabledStepsCount = steps.filter((s) => s.enabled).length;
   const totalDuration = useMemo(
     () => momentHelpers.calculateTotalDuration(orderedMoments),
+    [orderedMoments]
+  );
+
+  // Calculate video duration in seconds for text overlay and B-roll validation
+  // NOTE: moment.duration is in milliseconds, so divide by 1000 to get seconds
+  const videoDuration = useMemo(
+    () =>
+      orderedMoments.reduce((sum, moment) => sum + moment.duration, 0) / 1000,
     [orderedMoments]
   );
 
@@ -1326,6 +1501,42 @@ const StoryVideoConfig: React.FC<StoryVideoConfigProps> = ({
                     </Select>
                   </div>
                 </div>
+              </Card>
+            )}
+
+            {/* B-roll Configuration */}
+            {steps.some((s) => s.enabled && s.id === "apply_broll") && (
+              <Card className="p-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-8 h-8 rounded-lg bg-teal-100 flex items-center justify-center">
+                    <ImageIcon className="h-4 w-4 text-teal-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-900">
+                      B-roll Configuration
+                    </h3>
+                    <p className="text-xs text-slate-600">
+                      Configure how B-roll footage is inserted into your video
+                    </p>
+                  </div>
+                </div>
+
+                <BrollConfigSection
+                  brollConfig={brollConfig}
+                  onBrollConfigChange={setBrollConfig}
+                  testimonialId={
+                    context.type === "testimonial"
+                      ? context.testimonialId
+                      : undefined
+                  }
+                  contextType="testimonial"
+                  aspectRatio="9:16"
+                  maxSelection={10}
+                  videoDuration={videoDuration} // Use selected moments duration, not full testimonial
+                  transcriptText={orderedMoments.map(m => m.text).join(" ")}
+                  cachedAISuggestions={cachedAISuggestions}
+                  onCacheSuggestions={setCachedAISuggestions}
+                />
               </Card>
             )}
           </div>

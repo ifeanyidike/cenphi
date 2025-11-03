@@ -9,6 +9,7 @@ import App from "./App";
 import { Toaster } from "./components/ui/toaster";
 import { HelmetProvider } from "react-helmet-async";
 import { ProcessingMonitorProvider } from "./contexts/ProcessingMonitorContext";
+import { TawkToWidget } from "./components/TawkToWidget";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -16,6 +17,7 @@ createRoot(document.getElementById("root")!).render(
       <ProcessingMonitorProvider>
         <RouterProvider router={router}></RouterProvider>
         <App />
+        <TawkToWidget />
         <Toaster />
       </ProcessingMonitorProvider>
     </HelmetProvider>

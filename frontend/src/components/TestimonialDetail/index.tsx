@@ -856,10 +856,92 @@ const TestimonialDetail = observer(() => {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Premium Header - Clean, centered design */}
+      {/* Premium Header - Clean, centered design - Mobile Responsive */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-20">
-        <div className="max-w-[1600px] mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
+        <div className="max-w-[1600px] mx-auto px-3 sm:px-6 py-3 sm:py-4">
+          {/* Mobile Layout - Stacked */}
+          <div className="lg:hidden space-y-3">
+            {/* Top Row - Back Button */}
+            <div className="flex items-center justify-between">
+              <Button
+                variant="ghost"
+                onClick={() => navigate("/dashboard")}
+                className="text-slate-600 hover:text-slate-900 hover:bg-slate-100 h-8 px-2"
+              >
+                <ArrowLeft className="h-4 w-4 mr-1.5" />
+                <span className="text-xs font-medium">Back</span>
+              </Button>
+              {sentiment && (
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "text-[10px] font-medium px-2 py-0.5",
+                    getSentimentColor(sentiment.label)
+                  )}
+                >
+                  {sentiment.label.replace("_", " ")}
+                </Badge>
+              )}
+            </div>
+
+            {/* Author Info - Centered */}
+            <div className="flex flex-col items-center gap-1.5 text-center">
+              <h1 className="text-sm font-semibold text-slate-900">
+                {testimonial.author_name || "Anonymous"}
+              </h1>
+              <div className="flex flex-col sm:flex-row items-center gap-1.5 sm:gap-3 text-xs text-slate-600">
+                {testimonial.author_company && (
+                  <span className="font-medium text-[11px]">
+                    {testimonial.author_company}
+                  </span>
+                )}
+                {testimonial.rating && (
+                  <>
+                    {testimonial.author_company && (
+                      <span className="hidden sm:inline text-slate-300">•</span>
+                    )}
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star
+                          key={i}
+                          className={cn(
+                            "h-3 w-3 transition-colors",
+                            i < testimonial.rating!
+                              ? "text-amber-400 fill-amber-400"
+                              : "text-slate-300 fill-slate-300"
+                          )}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Action Buttons - Full Width */}
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() =>
+                  navigate(`/studio?testimonialId=${testimonial.id}`)
+                }
+                className="bg-blue-500 hover:bg-blue-600 h-8 px-3 flex-1"
+              >
+                <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                <span className="text-xs font-medium">Studio</span>
+              </Button>
+              <Button
+                onClick={handleShareTestimonial}
+                variant="outline"
+                className="h-8 px-3 border-slate-300 text-xs flex-1"
+              >
+                <Share2 className="h-3.5 w-3.5 mr-1.5" />
+                <span className="text-xs">Share</span>
+              </Button>
+            </div>
+          </div>
+
+          {/* Desktop Layout - Horizontal */}
+          <div className="hidden lg:flex items-center justify-between">
             {/* Back Navigation */}
             <Button
               variant="ghost"
@@ -940,7 +1022,7 @@ const TestimonialDetail = observer(() => {
       </div>
 
       {/* Main Content - Exceptional professional layout */}
-      <div className="max-w-[1600px] mx-auto px-6 py-6">
+      <div className="max-w-[1600px] mx-auto px-3 sm:px-6 py-4 sm:py-6">
         <Tabs
           value={activeTab}
           onValueChange={setActiveTab}
@@ -977,6 +1059,7 @@ const TestimonialDetail = observer(() => {
                             ref={videoRef}
                             src={testimonial.media_url}
                             className="w-full h-full object-contain"
+                            poster={testimonial.thumbnail_url}
                             onTimeUpdate={(e) =>
                               setCurrentTime(e.currentTarget.currentTime)
                             }
@@ -988,11 +1071,11 @@ const TestimonialDetail = observer(() => {
                           />
                         </div>
 
-                        {/* Video Controls - Compact */}
-                        <div className="px-4 py-3 bg-white border-t border-slate-100">
-                          <div className="space-y-3">
+                        {/* Video Controls - Compact - Mobile Responsive */}
+                        <div className="px-3 sm:px-4 py-2 sm:py-3 bg-white border-t border-slate-100">
+                          <div className="space-y-2 sm:space-y-3">
                             {/* Progress Bar */}
-                            <div className="space-y-2">
+                            <div className="space-y-1.5 sm:space-y-2">
                               <input
                                 type="range"
                                 min={0}
@@ -1016,21 +1099,21 @@ const TestimonialDetail = observer(() => {
                             {/* Controls Row */}
                             <div className="flex items-center justify-between">
                               {/* Left - Playback controls */}
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1.5 sm:gap-2">
                                 <Button
                                   variant="ghost"
                                   size="sm"
                                   onClick={handlePlayPause}
-                                  className="h-8 w-8 p-0 hover:bg-slate-100 rounded-full"
+                                  className="h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-slate-100 rounded-full"
                                 >
                                   {isPlaying ? (
-                                    <Pause className="h-3.5 w-3.5 text-slate-700" />
+                                    <Pause className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-slate-700" />
                                   ) : (
-                                    <Play className="h-3.5 w-3.5 text-slate-700 ml-0.5" />
+                                    <Play className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-slate-700 ml-0.5" />
                                   )}
                                 </Button>
 
-                                <div className="flex items-center gap-2 ml-1">
+                                <div className="hidden sm:flex items-center gap-2 ml-1">
                                   <Button
                                     variant="ghost"
                                     size="sm"
@@ -1058,7 +1141,21 @@ const TestimonialDetail = observer(() => {
                                   />
                                 </div>
 
-                                <div className="h-4 w-px bg-slate-200 mx-1.5" />
+                                {/* Mobile: Just mute button */}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={toggleMute}
+                                  className="h-7 w-7 p-0 hover:bg-slate-100 rounded-full sm:hidden"
+                                >
+                                  {isMuted ? (
+                                    <VolumeX className="h-3 w-3 text-slate-700" />
+                                  ) : (
+                                    <Volume2 className="h-3 w-3 text-slate-700" />
+                                  )}
+                                </Button>
+
+                                <div className="hidden sm:block h-4 w-px bg-slate-200 mx-1.5" />
 
                                 <select
                                   value={playbackRate}
@@ -1069,7 +1166,7 @@ const TestimonialDetail = observer(() => {
                                       videoRef.current.playbackRate = rate;
                                     }
                                   }}
-                                  className="text-[10px] border border-slate-200 rounded px-2 py-1 bg-white hover:bg-slate-50 font-medium text-slate-700 cursor-pointer"
+                                  className="hidden sm:block text-[10px] border border-slate-200 rounded px-2 py-1 bg-white hover:bg-slate-50 font-medium text-slate-700 cursor-pointer"
                                 >
                                   <option value={0.5}>0.5×</option>
                                   <option value={1}>1×</option>
@@ -1080,7 +1177,7 @@ const TestimonialDetail = observer(() => {
                               </div>
 
                               {/* Right - Action controls */}
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-1 sm:gap-1.5">
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -1090,18 +1187,18 @@ const TestimonialDetail = observer(() => {
                                       "testimonial.mp4"
                                     )
                                   }
-                                  className="h-8 px-2.5 text-[10px] border-slate-200"
+                                  className="h-7 px-2 sm:h-8 sm:px-2.5 text-[10px] border-slate-200"
                                 >
-                                  <Download className="h-3 w-3 mr-1.5" />
-                                  Download
+                                  <Download className="h-3 w-3 sm:mr-1.5" />
+                                  <span className="hidden sm:inline">Download</span>
                                 </Button>
                                 <Button
                                   variant="ghost"
                                   size="sm"
                                   onClick={toggleFullscreen}
-                                  className="h-8 w-8 p-0 hover:bg-slate-100 rounded-full"
+                                  className="h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-slate-100 rounded-full"
                                 >
-                                  <Maximize className="h-3.5 w-3.5 text-slate-700" />
+                                  <Maximize className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-slate-700" />
                                 </Button>
                               </div>
                             </div>

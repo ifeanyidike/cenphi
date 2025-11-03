@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -134,6 +135,52 @@ func (c StudioController) SaveStageResult(w http.ResponseWriter, r *http.Request
 		"saved_at":      time.Now().Format(time.RFC3339),
 	}
 
+	// Extract platform and aspect_ratio from stage metadata
+	var platformStr *string
+	var aspectRatio string
+
+	if stage.Metadata != nil {
+		// Look for platform in metadata (from crop_resize or other stages)
+		if platform, ok := stage.Metadata["platform"].(string); ok && platform != "" {
+			platformStr = &platform
+			c.logger.Info("🔍 [SAVE-STAGE] Found platform in stage metadata",
+				zap.String("platform", platform))
+		}
+
+		// Look for aspect_ratio in metadata (from crop_resize)
+		if ar, ok := stage.Metadata["aspect_ratio"].(string); ok && ar != "" {
+			aspectRatio = ar
+			c.logger.Info("🔍 [SAVE-STAGE] Found aspect_ratio in stage metadata",
+				zap.String("aspect_ratio", ar))
+		}
+	}
+
+	// If no platform found yet, try to get it from crop_resize stage metadata
+	if platformStr == nil {
+		cropStage, err := c.stageRepo.GetBySessionAndStageID(r.Context(), sessionID, "crop_resize", c.db)
+		if err == nil && cropStage != nil && cropStage.Metadata != nil {
+			if platform, ok := cropStage.Metadata["platform"].(string); ok && platform != "" {
+				platformStr = &platform
+				c.logger.Info("🔍 [SAVE-STAGE] Found platform in crop_resize stage",
+					zap.String("platform", platform))
+			}
+			if ar, ok := cropStage.Metadata["aspect_ratio"].(string); ok && ar != "" && aspectRatio == "" {
+				aspectRatio = ar
+				c.logger.Info("🔍 [SAVE-STAGE] Found aspect_ratio in crop_resize stage",
+					zap.String("aspect_ratio", ar))
+			}
+		}
+	}
+
+	// Default aspect ratio to 16:9 if not found
+	if aspectRatio == "" {
+		aspectRatio = "16:9"
+		c.logger.Info("🔍 [SAVE-STAGE] Defaulting aspect_ratio to 16:9")
+	}
+
+	// Add aspect_ratio to processing metadata
+	processingMetadata["aspect_ratio"] = aspectRatio
+
 	// Add stage metadata if available
 	if stage.Metadata != nil {
 		for k, v := range stage.Metadata {
@@ -192,14 +239,40 @@ func (c StudioController) SaveStageResult(w http.ResponseWriter, r *http.Request
 		contentType = "text/plain"
 	}
 
+	// Extract metadata for video artifacts (duration + thumbnail uploaded to OCI)
+	var duration *float64
+	var thumbnailURL *string
+
+	if artifactURL != "" && contentType == "video/mp4" {
+		// Use background context with custom timeout for thumbnail extraction
+		thumbnailCtx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		defer cancel()
+
+		metadata, err := utils.ExtractVideoMetadataWithOCI(thumbnailCtx, artifactURL, session.WorkspaceID.String(), c.storageProvider)
+		if err != nil {
+			c.logger.Warn("Failed to extract video metadata for stage save",
+				zap.Error(err),
+				zap.String("artifact_url", artifactURL))
+		} else {
+			duration = &metadata.Duration
+			thumbnailURL = &metadata.ThumbnailURL
+			c.logger.Info("✅ [SAVE-STAGE] Extracted video metadata",
+				zap.Float64("duration", metadata.Duration),
+				zap.String("thumbnail_url", metadata.ThumbnailURL))
+		}
+	}
+
 	artifact := &models.TestimonialArtifact{
 		TestimonialID:      session.TestimonialID,
 		WorkspaceID:        session.WorkspaceID,
 		ProcessingType:     processingType,
 		ResultCategory:     resultCategory,
 		AssetURL:           assetURLPtr,
+		Duration:           duration,
+		ThumbnailURL:       thumbnailURL,
 		TextContent:        textContent,
 		ContentType:        contentType,
+		Platform:           platformStr, // Set platform from crop_resize or stage metadata
 		IsUserSaved:        true,
 		IsStreamed:         false,
 		ProcessingMetadata: processingMetadata,
@@ -213,6 +286,12 @@ func (c StudioController) SaveStageResult(w http.ResponseWriter, r *http.Request
 		zap.String("result_category", resultCategory),
 		zap.Bool("has_asset_url", assetURLPtr != nil),
 		zap.Bool("has_text_content", textContent != nil),
+		zap.String("aspect_ratio", aspectRatio),
+	}
+	if platformStr != nil {
+		logFields = append(logFields, zap.String("platform", *platformStr))
+	} else {
+		logFields = append(logFields, zap.String("platform", "nil"))
 	}
 	if session.TestimonialID != nil {
 		logFields = append(logFields, zap.String("testimonial_id", session.TestimonialID.String()))

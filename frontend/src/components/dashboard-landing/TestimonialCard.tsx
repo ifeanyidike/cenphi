@@ -19,6 +19,7 @@ import {
   ExternalLink,
   X,
   Brain,
+  Clock,
 } from "lucide-react";
 import { Testimonial } from "@/types/testimonial";
 import { Button } from "@/components/ui/button";
@@ -76,6 +77,12 @@ const TestimonialCard = ({
     if (!text) return "";
     if (text.length <= maxLength) return text;
     return text.slice(0, maxLength).trimEnd() + "...";
+  };
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
   const handleDeleteClick = (e: React.MouseEvent) => {
@@ -198,11 +205,20 @@ const TestimonialCard = ({
               className="relative mb-4 rounded-lg overflow-hidden bg-gray-100 aspect-video"
               onClick={handleVideoClick}
             >
-              <video
-                src={testimonial.media_url}
-                className="w-full h-full object-cover"
-                muted
-              />
+              {testimonial.thumbnail_url ? (
+                <img
+                  src={testimonial.thumbnail_url}
+                  alt="Video thumbnail"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <video
+                  src={testimonial.media_url}
+                  className="w-full h-full object-cover"
+                  muted
+                  preload="metadata"
+                />
+              )}
               <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
                 <div className="bg-white/90 rounded-full p-2 group-hover:scale-110 transition-transform">
                   <Play className="w-4 h-4 text-gray-900 fill-gray-900" />
@@ -211,9 +227,19 @@ const TestimonialCard = ({
               <div className="absolute top-2 left-2">
                 <div className="flex items-center space-x-1 bg-black/50 rounded px-2 py-1">
                   <Play className="w-3 h-3 text-white" />
-                  <span className="text-white text-xs font-medium">Video</span>
+                  <span className="text-white text-[10px] font-medium">Video</span>
                 </div>
               </div>
+              {testimonial.duration && (
+                <div className="absolute bottom-2 right-2">
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-black/60">
+                    <Clock className="h-2.5 w-2.5 text-slate-300" />
+                    <span className="text-[10px] font-medium text-white">
+                      {formatDuration(testimonial.duration)}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

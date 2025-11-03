@@ -223,11 +223,11 @@ class PlatformOptimizerStepProcessor:
         # Check session cache first
         cached_file = self.session_manager.get_latest_file(job_id)
         if cached_file:
-            logger.info(f"Using cached file for job {job_id}: {cached_file}")
+            logger.info(f"[{job_id}] Using cached file: {cached_file}")
             return cached_file
 
         # Download from cloud storage
-        logger.info(f"Downloading media for job {job_id} from {media_url}")
+        logger.info(f"[{job_id}] Downloading media from {media_url}")
         local_path = self.storage_manager.download_media(media_url)
 
         # Store in session for future steps
@@ -636,6 +636,212 @@ class PlatformOptimizerStepProcessor:
 
         return output_result
 
+    def apply_text_overlay(
+        self,
+        job_id: str,
+        testimonial_id: str,
+        media_url: str,
+        config: Dict[str, Any],
+        upload_intermediate: bool
+    ) -> Dict[str, Any]:
+        """
+        Apply animated text overlays (intro/outro) to video.
+
+        Args:
+            job_id: Job identifier
+            testimonial_id: Testimonial identifier
+            media_url: Source media URL (may be unused if session cache hit)
+            config: Text overlay configuration dict containing:
+                - enable_intro: bool
+                - workspace_name: str
+                - speaker_name: str
+                - role: str
+                - location: str
+                - intro_duration: float
+                - enable_outro: bool
+                - tagline: str
+                - outro_duration: float
+                - brand_color: str
+                - animation_style: str
+                - font_family: str
+            upload_intermediate: True = upload for preview, False = keep in container
+
+        Returns:
+            {
+                "cloud_url": str or None,
+                "local_path": str,
+                "duration": float,
+                "size": float,
+                "width": int,
+                "height": int,
+                "intro_applied": bool,
+                "outro_applied": bool
+            }
+        """
+        logger.info(f"[{job_id}] Apply Text Overlay - intro: {config.get('enable_intro')}, outro: {config.get('enable_outro')}")
+
+        # Get input file (from cache or download)
+        input_file = self._get_input_file(job_id, media_url)
+
+        # Import text overlay service
+        from .text_overlay import AnimatedTextOverlay
+        text_overlay_service = AnimatedTextOverlay()
+
+        # Prepare output dir
+        output_dir = os.path.join(self.session_manager.base_path, job_id)
+        os.makedirs(output_dir, exist_ok=True)
+
+        # Apply text overlays
+        result = text_overlay_service.apply_text_overlays(
+            video_path=input_file,
+            config=config,
+            job_id=job_id,
+            output_dir=output_dir
+        )
+
+        if not result.get("success"):
+            error_msg = result.get("error", "Unknown error applying text overlays")
+            logger.error(f"[{job_id}] ❌ {error_msg}")
+            raise Exception(error_msg)
+
+        result_path = result.get("output_path")
+
+        # Get video dimensions from result
+        width = result.get("width", 1920)
+        height = result.get("height", 1080)
+
+        # Handle output
+        output_result = self._handle_output(
+            job_id=job_id,
+            step_name="text_overlay",
+            output_path=result_path,
+            upload_intermediate=upload_intermediate,
+            testimonial_id=testimonial_id
+        )
+
+        # Add overlay-specific metadata
+        output_result["intro_applied"] = result.get("intro_applied", False)
+        output_result["outro_applied"] = result.get("outro_applied", False)
+        output_result["width"] = width
+        output_result["height"] = height
+
+        logger.info(f"[{job_id}] ✅ Text overlay applied successfully")
+        return output_result
+
+    def apply_broll_overlays(
+        self,
+        job_id: str,
+        testimonial_id: str,
+        media_url: str,
+        broll_clips: list,
+        config: Dict[str, Any],
+        upload_intermediate: bool,
+        transcript_segments: Optional[list] = None
+    ) -> Dict[str, Any]:
+        """
+        Apply B-roll overlays to testimonial video.
+
+        Args:
+            job_id: Job identifier
+            testimonial_id: Testimonial identifier
+            media_url: Source media URL (may be unused if session cache hit)
+            broll_clips: List of B-roll clip configurations
+            config: B-roll configuration dict containing:
+                - placement_strategy: "auto" or "even"
+                - preserve_audio: bool
+                - audio_ducking: float
+                - default_transition: str
+                - default_transition_duration: float
+                - quality_preset: str
+                - auto_adjust_timing: bool
+                - max_broll_duration: float (for auto placement)
+                - max_broll_percent: float (for auto placement)
+            upload_intermediate: True = upload for preview, False = keep in container
+            transcript_segments: Optional transcript segments for AI placement (passed from api-server via gRPC)
+
+        Returns:
+            {
+                "cloud_url": str or None,
+                "local_path": str,
+                "duration": float,
+                "size": float,
+                "width": int,
+                "height": int,
+                "brolls_applied": int,
+                "failed_clips": List[str],
+                "ai_placement_info": Dict (if using auto placement)
+            }
+        """
+        placement_strategy = config.get("placement_strategy", "even")
+        logger.info(f"[{job_id}] Apply B-roll Overlays - strategy: {placement_strategy}, clips: {len(broll_clips)}")
+
+        # Get input file (from cache or download)
+        input_file = self._get_input_file(job_id, media_url)
+
+        # Import B-roll overlay service
+        from src.services.story_mode.broll_overlay import BrollOverlayService
+        broll_service = BrollOverlayService()
+
+        # Prepare output dir
+        output_dir = os.path.join(self.session_manager.base_path, job_id)
+        os.makedirs(output_dir, exist_ok=True)
+
+        # Validate transcript segments for auto placement
+        if placement_strategy == "auto":
+            if not transcript_segments or len(transcript_segments) == 0:
+                logger.warning(f"[{job_id}] No transcript segments provided for auto placement, falling back to even distribution")
+                placement_strategy = "even"
+                config["placement_strategy"] = "even"
+
+        # Apply B-roll overlays
+        result = broll_service.apply_broll_overlays(
+            video_path=input_file,
+            broll_clips=broll_clips,
+            config=config,
+            job_id=job_id,
+            output_dir=output_dir,
+            transcript_segments=transcript_segments
+        )
+
+        if not result.get("success"):
+            error_msg = result.get("error", "Unknown error applying B-roll overlays")
+            logger.error(f"[{job_id}] ❌ {error_msg}")
+            raise Exception(error_msg)
+
+        result_path = result.get("output_path")
+
+        # Verify the output file exists
+        if not result_path or not os.path.exists(result_path):
+            raise Exception(f"B-roll output file not found: {result_path}")
+
+        logger.info(f"[{job_id}] ✅ B-roll overlay completed: {result.get('brolls_applied', 0)} clips applied")
+
+        # Get video dimensions from result
+        width = result.get("width", 1920)
+        height = result.get("height", 1080)
+
+        # Handle output
+        output_result = self._handle_output(
+            job_id=job_id,
+            step_name="broll_overlay",
+            output_path=result_path,
+            upload_intermediate=upload_intermediate,
+            testimonial_id=testimonial_id
+        )
+
+        # Add B-roll-specific metadata
+        output_result["brolls_applied"] = result.get("brolls_applied", 0)
+        output_result["failed_clips"] = result.get("failed_clips", [])
+        output_result["width"] = width
+        output_result["height"] = height
+
+        # Add AI placement info if available
+        if result.get("ai_placement_info"):
+            output_result["ai_placement_info"] = result["ai_placement_info"]
+
+        logger.info(f"[{job_id}] ✅ B-roll overlays applied successfully: {output_result['brolls_applied']} clips")
+        return output_result
+
     def apply_branding(
         self,
         job_id: str,
@@ -923,6 +1129,10 @@ class PlatformOptimizerStepProcessor:
         # Get input file (from cache or download)
         input_file = self._get_input_file(job_id, media_url)
 
+        # Verify input file exists
+        if not input_file or not os.path.exists(input_file):
+            raise Exception(f"Enhance input file not found: {input_file}")
+
         # Use media enhancer with platform-specific settings
         # NOTE: We pass add_branding=False and remove_noise=False because:
         # - Branding is a separate step in the new step-by-step workflow
@@ -1004,10 +1214,7 @@ class PlatformOptimizerStepProcessor:
             logger.warning(f"[{job_id}] Quality scoring failed: {e}")
             quality_metrics = None
 
-        # Store the enhanced file in session cache for next step
-        self.session_manager.store_file(job_id, "enhance_video", result_path)
-
-        # Handle output
+        # Handle output (which also stores in session cache)
         output_result = self._handle_output(
             job_id=job_id,
             step_name="enhance_video",
@@ -1057,6 +1264,18 @@ class PlatformOptimizerStepProcessor:
         cloud_path = f"temp/{testimonial_id}/{job_id}/progress_{timestamp}.mp4"
         saved_url = self.storage_manager.upload_file_with_retry(latest_file, cloud_path)
 
+        # Generate thumbnail for the video
+        thumbnail_url = None
+        try:
+            from src.services.thumbnails.thumbnail_selector import SmartThumbnailSelector
+            thumbnail_selector = SmartThumbnailSelector()
+            thumbnail_urls = thumbnail_selector.select_thumbnails(latest_file, max_thumbnails=1)
+            if thumbnail_urls and len(thumbnail_urls) > 0:
+                thumbnail_url = thumbnail_urls[0]
+                logger.info(f"[{job_id}] Generated thumbnail: {thumbnail_url}")
+        except Exception as e:
+            logger.warning(f"[{job_id}] Thumbnail generation failed: {e}")
+
         # Get metadata
         video_info = self.storage_manager.get_video_info(latest_file)
 
@@ -1068,12 +1287,18 @@ class PlatformOptimizerStepProcessor:
         # Cleanup session after save
         self.session_manager.cleanup_session(job_id)
 
-        return {
+        result = {
             "saved_url": saved_url,
             "steps_completed": steps_completed,
             "duration": video_info.get("duration", 0),
             "size": os.path.getsize(latest_file) / (1024 * 1024)
         }
+
+        # Add thumbnail URL if generated
+        if thumbnail_url:
+            result["thumbnail_url"] = thumbnail_url
+
+        return result
 
     def cleanup_session(self, job_id: str):
         """

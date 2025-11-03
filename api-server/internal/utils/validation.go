@@ -50,3 +50,14 @@ func ValidateTestimonialStatus(status string) error {
 	}
 	return fmt.Errorf("invalid status: must be one of %v", validStatuses)
 }
+
+// IsValidSlug checks if a string is a valid URL slug
+func IsValidSlug(slug string) bool {
+	if slug == "" {
+		return false
+	}
+	// Allow lowercase letters, numbers, and hyphens only
+	// Must start and end with alphanumeric
+	slugRegex := regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
+	return slugRegex.MatchString(slug) && len(slug) >= 3 && len(slug) <= 100
+}

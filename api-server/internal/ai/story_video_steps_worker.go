@@ -1403,13 +1403,12 @@ func (w *StoryVideoStepsWorker) findClipInArtifacts(ctx context.Context, testimo
 		}
 
 		// Look for the clip in the artifact data
-		if generatedClips, ok := artifact.Data["generated_clips"].(map[string]interface{}); ok {
-			if clips, ok := generatedClips["clips"].([]interface{}); ok {
-				for _, clipData := range clips {
-					if clipMap, ok := clipData.(map[string]interface{}); ok {
-						if clipMap["id"] == clipID {
-							return clipMap, nil
-						}
+		// NOTE: generated_clips is a direct array, not an object with a clips property
+		if clips, ok := artifact.Data["generated_clips"].([]interface{}); ok {
+			for _, clipData := range clips {
+				if clipMap, ok := clipData.(map[string]interface{}); ok {
+					if clipMap["id"] == clipID {
+						return clipMap, nil
 					}
 				}
 			}

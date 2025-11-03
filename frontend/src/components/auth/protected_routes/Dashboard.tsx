@@ -9,43 +9,59 @@ import { Navigate, Outlet, useLocation } from "react-router-dom";
 
 const DashboardProtectedRoute = observer(() => {
   const location = useLocation();
-  const [loadingWorkspace, setLoadingWorkspace] = useState(false);
-  const [workspaceLoaded, setWorkspaceLoaded] = useState(false);
+  // Start with false if workspace already exists, true otherwise
+  const [isCheckingWorkspace, setIsCheckingWorkspace] = useState(
+    !workspaceHub.workspace?.id
+  );
 
   useEffect(() => {
     let isMounted = true;
 
-    const fetchWorkspace = async () => {
-      if (!isMounted) return;
+    const checkWorkspace = async () => {
+      console.log("[DashboardProtectedRoute] Checking workspace...", {
+        authLoading: authStore.loading,
+        isAuthenticated: authStore.isAuthenticated,
+        workspaceId: workspaceHub.workspace?.id,
+        location: location.pathname,
+      });
 
-      // Don't fetch if auth is still loading
+      // Don't check if auth is still loading
       if (authStore.loading) {
+        console.log("[DashboardProtectedRoute] Auth still loading, skipping");
         return;
       }
 
-      // Don't fetch if not authenticated
+      // Don't check if not authenticated
       if (!authStore.isAuthenticated) {
+        console.log("[DashboardProtectedRoute] Not authenticated");
+        if (isMounted) setIsCheckingWorkspace(false);
         return;
       }
 
-      setLoadingWorkspace(true);
-      // Only fetch if we don't already have workspace data
-      if (!workspaceHub.workspace?.id) {
-        const loaded = await workspaceHub.getWorkspaceData();
-        if (isMounted) {
-          setWorkspaceLoaded(!!loaded);
-          setLoadingWorkspace(false);
-        }
-      } else {
-        // Workspace already loaded
-        if (isMounted) {
-          setWorkspaceLoaded(true);
-          setLoadingWorkspace(false);
-        }
+      // Workspace already loaded in hub - no need to fetch
+      if (workspaceHub.workspace?.id) {
+        console.log(
+          "[DashboardProtectedRoute] ✅ Workspace already loaded:",
+          workspaceHub.workspace.id
+        );
+        if (isMounted) setIsCheckingWorkspace(false);
+        return;
+      }
+
+      // Fetch workspace data (this call is cached in workspaceHub)
+      console.log("[DashboardProtectedRoute] 🔄 Fetching workspace data...");
+      try {
+        await workspaceHub.getWorkspaceData();
+        console.log(
+          "[DashboardProtectedRoute] ✅ Workspace fetched:",
+          workspaceHub.workspace?.id
+        );
+      } finally {
+        if (isMounted) setIsCheckingWorkspace(false);
       }
     };
 
-    fetchWorkspace();
+    checkWorkspace();
 
     return () => {
       isMounted = false;
@@ -68,13 +84,14 @@ const DashboardProtectedRoute = observer(() => {
     return <Navigate to="/verify-email-pending" replace />;
   }
 
-  // Show loading while checking workspace
-  if (loadingWorkspace) {
+  // Show loading while checking workspace (only on initial check)
+  if (isCheckingWorkspace) {
     return <LoadingIndicator />;
   }
 
-  // Redirect to onboarding if no workspace
-  if (!workspaceHub.workspace?.id && !workspaceLoaded) {
+  // Redirect to onboarding ONLY if no workspace exists after checking
+  // The workspace observable from MobX is the single source of truth
+  if (!workspaceHub.workspace?.id) {
     return <Navigate to="/onboarding" replace />;
   }
 

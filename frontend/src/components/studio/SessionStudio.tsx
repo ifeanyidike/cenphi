@@ -339,10 +339,10 @@ const SessionStudio: React.FC<SessionStudioProps> = ({
     return () => clearInterval(interval);
   }, [session?.auto_proceed, stages]);
 
-  // Detect stale processing stages immediately and continuously
+  // Detect stale processing stages with smart threshold calculation
   useEffect(() => {
-    // Stage-specific stale thresholds based on typical processing time
-    const getStaleThreshold = (stageId: string): number => {
+    // Stage-specific base thresholds based on typical processing time
+    const getBaseStaleThreshold = (stageId: string): number => {
       // Very long operations that can take 10+ minutes
       const veryLongRunningStages = [
         "assemble_clips", // Story video assembly with multiple clips
@@ -359,12 +359,12 @@ const SessionStudio: React.FC<SessionStudioProps> = ({
       ];
 
       if (veryLongRunningStages.includes(stageId)) {
-        return 12 * 60 * 1000; // 12 minutes for very long operations
+        return 15 * 60 * 1000; // 15 minutes for very long operations
       }
       if (longRunningStages.includes(stageId)) {
-        return 6 * 60 * 1000; // 6 minutes for long operations
+        return 8 * 60 * 1000; // 8 minutes for long operations
       }
-      return 3 * 60 * 1000; // 3 minutes for standard operations (increased from 2)
+      return 5 * 60 * 1000; // 5 minutes for standard operations
     };
 
     const checkStaleStages = () => {
@@ -375,21 +375,40 @@ const SessionStudio: React.FC<SessionStudioProps> = ({
         if (stage.status === "processing" && stage.started_at) {
           const startTime = new Date(stage.started_at).getTime();
           const elapsed = now - startTime;
-          const threshold = getStaleThreshold(stage.stage_id);
+          const baseThreshold = getBaseStaleThreshold(stage.stage_id);
 
-          // Mark as stale if processing beyond threshold with no progress
-          if (elapsed > threshold) {
+          // Check if we have recent message activity (heartbeat)
+          const lastMessageTime = stage.updated_at
+            ? new Date(stage.updated_at).getTime()
+            : startTime;
+          const timeSinceLastMessage = now - lastMessageTime;
+
+          // Consider stale only if BOTH conditions are met:
+          // 1. Total time exceeds base threshold
+          // 2. No message/heartbeat activity for >3 minutes (indicates truly stuck)
+          const HEARTBEAT_TIMEOUT = 3 * 60 * 1000; // 3 minutes without any update
+
+          const isStale = elapsed > baseThreshold && timeSinceLastMessage > HEARTBEAT_TIMEOUT;
+
+          if (isStale) {
             console.warn(
-              `[SessionStudio] Stage ${stage.stage_id} is stale - processing for ${Math.floor(elapsed / 1000)}s (threshold: ${threshold / 1000}s)`
+              `[SessionStudio] Stage ${stage.stage_id} is stale:`,
+              `Total: ${Math.floor(elapsed / 1000)}s (threshold: ${baseThreshold / 1000}s)`,
+              `Since last update: ${Math.floor(timeSinceLastMessage / 1000)}s`
             );
             newStaleStages.add(stage.stage_id);
+          } else if (elapsed > baseThreshold) {
+            // Log but don't mark as stale if we're getting heartbeats
+            console.log(
+              `[SessionStudio] Stage ${stage.stage_id} exceeds threshold but still active (last update: ${Math.floor(timeSinceLastMessage / 1000)}s ago)`
+            );
           }
         }
       });
 
       if (newStaleStages.size > 0) {
         console.log(
-          `[SessionStudio] Found ${newStaleStages.size} stale stages:`,
+          `[SessionStudio] Found ${newStaleStages.size} truly stale stages:`,
           Array.from(newStaleStages)
         );
       }
@@ -678,79 +697,6 @@ const SessionStudio: React.FC<SessionStudioProps> = ({
     }
   };
 
-  // Get aspect ratio for preview - use exact dimensions from metadata OR fallback to platform defaults
-  // const getPreviewAspectRatio = () => {
-  //   // Priority 1: Check preview metadata for aspect_ratio
-  //   if (
-  //     latestPreview?.metadata?.aspect_ratio &&
-  //     typeof latestPreview.metadata.aspect_ratio === "string"
-  //   ) {
-  //     console.log(
-  //       "[SessionStudio] Using aspect_ratio from preview metadata:",
-  //       latestPreview.metadata.aspect_ratio
-  //     );
-  //     return latestPreview.metadata.aspect_ratio.replace(":", "/");
-  //   }
-
-  //   // Priority 2: Calculate from width and height in metadata
-  //   const { width, height } = latestPreview?.metadata || {};
-  //   if (width && height) {
-  //     console.log(
-  //       "[SessionStudio] Calculating from width/height:",
-  //       width,
-  //       height
-  //     );
-  //     return `${width}/${height}`;
-  //   }
-
-  //   // Priority 3: Derive from platform in preview metadata OR any completed stage metadata
-  //   let platform = (latestPreview?.metadata as any)?.platform;
-
-  //   // If no platform in latest preview, check all completed stages for platform
-  //   if (!platform && stages.length > 0) {
-  //     for (const stage of stages) {
-  //       if (stage.metadata?.platform) {
-  //         platform = stage.metadata.platform;
-  //         console.log(
-  //           `[SessionStudio] Found platform in stage ${stage.stage_id}:`,
-  //           platform
-  //         );
-  //         break;
-  //       }
-  //     }
-  //   }
-
-  //   if (platform) {
-  //     const platformAspectRatios: Record<string, string> = {
-  //       instagram_reels: "9/16",
-  //       instagram_story: "9/16",
-  //       instagram_feed: "1/1",
-  //       tiktok: "9/16",
-  //       youtube_shorts: "9/16",
-  //       youtube_standard: "16/9",
-  //       facebook: "16/9",
-  //       linkedin: "16/9",
-  //       twitter: "16/9",
-  //     };
-
-  //     if (platformAspectRatios[platform]) {
-  //       console.log(
-  //         `[SessionStudio] Using aspect ratio from platform: ${platform} -> ${platformAspectRatios[platform]}`
-  //       );
-  //       return platformAspectRatios[platform];
-  //     }
-  //   }
-
-  //   // Priority 4: Default fallback
-  //   console.warn(
-  //     "[SessionStudio] No aspect ratio found, using default 16/9. Preview:",
-  //     latestPreview,
-  //     "Stages:",
-  //     stages
-  //   );
-  //   return "16/9";
-  // };
-
   // CRITICAL FIX: Count "reviewing" stages as done for finalization purposes
   // When all stages are done (completed/accepted/reviewing), show Finalize instead of Continue
   const completedStages = stages.filter(
@@ -993,6 +939,7 @@ const SessionStudio: React.FC<SessionStudioProps> = ({
                         type,
                       });
                     }}
+                    onUpdateStageConfig={handleUpdateStageConfig}
                   />
                 </div>
               </div>

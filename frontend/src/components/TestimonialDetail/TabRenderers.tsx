@@ -32,6 +32,7 @@ interface Clip {
   text?: string; // Clip text from backend (shown in UI)
   transcript?: string; // Alternative field name
   metadata?: any;
+  thumbnail_url?: string;
 }
 
 interface ClippingData {
@@ -472,12 +473,21 @@ export const renderClippingArtifacts = ({
 
                           {/* Video Player - Refined */}
                           <div className="relative aspect-video bg-gradient-to-br from-slate-900 to-slate-800 overflow-hidden">
-                            <video
-                              src={clip.url}
-                              controls={!selectionMode}
-                              className="w-full h-full object-cover"
-                              preload="metadata"
-                            />
+                            {clip.thumbnail_url && selectionMode ? (
+                              <img
+                                src={clip.thumbnail_url}
+                                alt="Clip thumbnail"
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <video
+                                src={clip.url}
+                                controls={!selectionMode}
+                                className="w-full h-full object-cover"
+                                preload="metadata"
+                                poster={clip.thumbnail_url}
+                              />
+                            )}
 
                             {/* Overlay Badges - Minimal */}
                             <div className="absolute inset-x-0 bottom-0 flex items-end justify-between p-2.5 bg-gradient-to-t from-black/40 via-black/20 to-transparent pointer-events-none">

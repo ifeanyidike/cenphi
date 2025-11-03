@@ -1357,6 +1357,18 @@ func (c *RESTClient) CleanupSession(ctx context.Context, req *pb.CleanupSessionR
 	return nil, fmt.Errorf("CleanupSession not yet implemented for REST client - use gRPC client")
 }
 
+func (c *RESTClient) ApplyTextOverlay(ctx context.Context, req *pb.TextOverlayRequest) (*pb.TextOverlayResponse, error) {
+	return nil, fmt.Errorf("ApplyTextOverlay not yet implemented for REST client - use gRPC client")
+}
+
+func (c *RESTClient) ApplyBrollOverlays(ctx context.Context, req *pb.BrollOverlayRequest) (*pb.BrollOverlayResponse, error) {
+	return nil, fmt.Errorf("ApplyBrollOverlays not yet implemented for REST client - use gRPC client")
+}
+
+func (c *RESTClient) SearchStockFootage(ctx context.Context, req *pb.StockFootageSearchRequest) (*pb.StockFootageSearchResponse, error) {
+	return nil, fmt.Errorf("SearchStockFootage not yet implemented for REST client - use gRPC client")
+}
+
 // CancelJob cancels a running job in the AI service
 func (c *RESTClient) CancelJob(ctx context.Context, jobID string) error {
 	c.mu.RLock()

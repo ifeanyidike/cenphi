@@ -13,7 +13,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -31,14 +30,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  Calendar,
   Clock,
-  Plus,
   Edit2,
   Trash2,
-  Send,
   RefreshCw,
-  Sparkles,
   CheckCircle2,
   XCircle,
   AlertCircle,
@@ -46,6 +41,7 @@ import {
   Eye,
   TrendingUp,
   Filter,
+  Send,
 } from "lucide-react";
 import { socialManager, SocialPost } from "@/repo/managers/social_manager";
 import { workspaceHub } from "@/repo/workspace_hub";
@@ -58,7 +54,6 @@ const SchedulingPage = observer(() => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedPost, setSelectedPost] = useState<SocialPost | null>(null);
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [platformFilter, setPlatformFilter] = useState<string>("all");
@@ -240,23 +235,6 @@ const SchedulingPage = observer(() => {
               {refreshing ? "Updating..." : "Refresh"}
             </span>
           </Button>
-          <Dialog
-            open={isCreateDialogOpen}
-            onOpenChange={setIsCreateDialogOpen}
-          >
-            <DialogTrigger asChild>
-              <Button size="sm" className="h-8 bg-blue-600 hover:bg-blue-700">
-                <Plus className="h-3.5 w-3.5 mr-1.5" />
-                <span className="text-xs">New Post</span>
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <CreatePostDialog
-                onClose={() => setIsCreateDialogOpen(false)}
-                onSuccess={loadPosts}
-              />
-            </DialogContent>
-          </Dialog>
         </div>
       </div>
 
@@ -605,24 +583,34 @@ const PostsTable = observer(
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => onEdit(post)}
-                        className="h-6 w-6 p-0"
-                        title="Edit"
-                      >
-                        <Edit2 className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => onDelete(post.id)}
-                        className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
-                        title="Delete"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
+                      {/* Only show edit/delete for draft, scheduled, and failed posts */}
+                      {post.status !== "published" && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => onEdit(post)}
+                            className="h-6 w-6 p-0"
+                            title={post.status === "scheduled" ? "Edit scheduled post" : "Edit"}
+                          >
+                            <Edit2 className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => onDelete(post.id)}
+                            className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                            title="Delete"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </>
+                      )}
+                      {post.status === "published" && (
+                        <span className="text-[10px] text-gray-400 italic">
+                          Published
+                        </span>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -631,269 +619,6 @@ const PostsTable = observer(
           </TableBody>
         </Table>
       </div>
-    );
-  }
-);
-
-// Create Post Dialog Component
-const CreatePostDialog = observer(
-  ({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) => {
-    const [content, setContent] = useState("");
-    const [platform, setPlatform] = useState("linkedin");
-    const [scheduleType, setScheduleType] = useState<"now" | "schedule" | "ai">(
-      "now"
-    );
-    const [scheduledDate, setScheduledDate] = useState("");
-    const [scheduledTime, setScheduledTime] = useState("");
-    const [saving, setSaving] = useState(false);
-    const { toast } = useToast();
-
-    const handleSubmit = async () => {
-      if (!content.trim()) {
-        toast({
-          title: "Error",
-          description: "Post content is required",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (!workspaceHub.workspace?.id) {
-        toast({
-          title: "Error",
-          description: "Workspace not found",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      setSaving(true);
-      try {
-        const postData: any = {
-          content: content.trim(),
-          post_type: "text",
-        };
-
-        // Handle scheduling based on selected option
-        if (scheduleType === "now") {
-          // For immediate publishing, create and publish
-          await socialManager.createPost(
-            workspaceHub.workspace.id,
-            platform,
-            postData
-          );
-        } else if (scheduleType === "schedule") {
-          if (!scheduledDate || !scheduledTime) {
-            toast({
-              title: "Error",
-              description: "Please select both date and time",
-              variant: "destructive",
-            });
-            setSaving(false);
-            return;
-          }
-          const scheduledAt = new Date(
-            `${scheduledDate}T${scheduledTime}`
-          ).toISOString();
-          postData.scheduled_at = scheduledAt;
-          await socialManager.createPost(
-            workspaceHub.workspace.id,
-            platform,
-            postData
-          );
-        } else if (scheduleType === "ai") {
-          postData.ai_pick_best_time = true;
-          await socialManager.createPost(
-            workspaceHub.workspace.id,
-            platform,
-            postData
-          );
-        }
-
-        toast({
-          title: "Success",
-          description: "Post created successfully",
-        });
-        onSuccess();
-        onClose();
-      } catch {
-        toast({
-          title: "Error",
-          description: "Failed to create post",
-          variant: "destructive",
-        });
-      } finally {
-        setSaving(false);
-      }
-    };
-
-    return (
-      <>
-        <DialogHeader>
-          <DialogTitle className="text-base font-semibold">
-            Create New Post
-          </DialogTitle>
-          <DialogDescription className="text-xs">
-            Schedule a new social media post
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4 py-4">
-          <div>
-            <Label className="text-[11px] font-medium text-gray-700 mb-1.5 block">
-              Platform
-            </Label>
-            <Select value={platform} onValueChange={setPlatform}>
-              <SelectTrigger className="h-9 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="linkedin" className="text-xs">
-                  <div className="flex items-center gap-2">
-                    <Linkedin className="h-3.5 w-3.5" />
-                    LinkedIn
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label className="text-[11px] font-medium text-gray-700 mb-1.5 block">
-              Content
-            </Label>
-            <Textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Write your post content..."
-              className="min-h-[120px] text-xs resize-none"
-            />
-            <div className="flex justify-between mt-1.5">
-              <span className="text-[10px] text-gray-500">
-                {content.length} / 3000 characters
-              </span>
-            </div>
-          </div>
-
-          <div>
-            <Label className="text-[11px] font-medium text-gray-700 mb-2 block">
-              Publishing Options
-            </Label>
-            <div className="space-y-2">
-              <button
-                onClick={() => setScheduleType("now")}
-                className={`w-full p-3 rounded-lg border-2 text-left transition-all ${
-                  scheduleType === "now"
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-200 hover:border-gray-300"
-                }`}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <Send className="h-3.5 w-3.5 text-blue-600" />
-                  <span className="text-xs font-medium text-gray-900">
-                    Publish Now
-                  </span>
-                </div>
-                <p className="text-[10px] text-gray-600">
-                  Post immediately to your social media
-                </p>
-              </button>
-
-              <button
-                onClick={() => setScheduleType("schedule")}
-                className={`w-full p-3 rounded-lg border-2 text-left transition-all ${
-                  scheduleType === "schedule"
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-200 hover:border-gray-300"
-                }`}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <Calendar className="h-3.5 w-3.5 text-blue-600" />
-                  <span className="text-xs font-medium text-gray-900">
-                    Schedule for Later
-                  </span>
-                </div>
-                <p className="text-[10px] text-gray-600">
-                  Choose a specific date and time
-                </p>
-              </button>
-
-              <button
-                onClick={() => setScheduleType("ai")}
-                className={`w-full p-3 rounded-lg border-2 text-left transition-all ${
-                  scheduleType === "ai"
-                    ? "border-purple-500 bg-purple-50"
-                    : "border-gray-200 hover:border-gray-300"
-                }`}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <Sparkles className="h-3.5 w-3.5 text-purple-600" />
-                  <span className="text-xs font-medium text-gray-900">
-                    AI Best Time
-                  </span>
-                </div>
-                <p className="text-[10px] text-gray-600">
-                  Let AI pick the optimal posting time
-                </p>
-              </button>
-            </div>
-          </div>
-
-          {scheduleType === "schedule" && (
-            <div className="grid grid-cols-2 gap-3 p-3 bg-gray-50 rounded-lg">
-              <div>
-                <Label className="text-[11px] font-medium text-gray-700 mb-1.5 block">
-                  Date
-                </Label>
-                <Input
-                  type="date"
-                  value={scheduledDate}
-                  onChange={(e) => setScheduledDate(e.target.value)}
-                  className="h-9 text-xs"
-                />
-              </div>
-              <div>
-                <Label className="text-[11px] font-medium text-gray-700 mb-1.5 block">
-                  Time
-                </Label>
-                <Input
-                  type="time"
-                  value={scheduledTime}
-                  onChange={(e) => setScheduledTime(e.target.value)}
-                  className="h-9 text-xs"
-                />
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="flex justify-end gap-2">
-          <Button
-            variant="outline"
-            onClick={onClose}
-            disabled={saving}
-            size="sm"
-            className="h-8 text-xs"
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={saving}
-            size="sm"
-            className="h-8 text-xs bg-blue-600 hover:bg-blue-700"
-          >
-            {saving ? (
-              <>
-                <RefreshCw className="h-3 w-3 mr-1.5 animate-spin" />
-                {scheduleType === "now" ? "Publishing..." : "Scheduling..."}
-              </>
-            ) : (
-              <>{scheduleType === "now" ? "Publish Now" : "Schedule Post"}</>
-            )}
-          </Button>
-        </div>
-      </>
     );
   }
 );
