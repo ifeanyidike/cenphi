@@ -308,8 +308,16 @@ export function enhanceArtifacts(
   });
 }
 
-export function getContentStats(enhancedArtifacts: EnhancedArtifact[]) {
-  const stats = {
+export interface ContentStats {
+  total: number;
+  byCategory: Record<string, number>;
+  byPlatform: Record<string, number>;
+  byLevel: Record<number, number>;
+  sourceTestimonials: Set<string>;
+}
+
+export function getContentStats(enhancedArtifacts: EnhancedArtifact[]): ContentStats {
+  const stats: ContentStats = {
     total: enhancedArtifacts.length,
     byCategory: {} as Record<string, number>,
     byPlatform: {} as Record<string, number>,

@@ -22,6 +22,7 @@ interface Clip {
   end_time: number;
   theme?: string;
   preview_url?: string;
+  thumbnail_url?: string;
 }
 
 interface MultiClipPreviewProps {
