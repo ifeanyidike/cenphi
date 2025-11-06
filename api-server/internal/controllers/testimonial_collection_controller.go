@@ -221,13 +221,13 @@ func (tcc *TestimonialCollectionController) processVideoUpload(w http.ResponseWr
 	}
 
 	// Process video
-	var testimonial *models.Testimonial
+	var result *services.VideoUploadResult
 	requireValidation := r.FormValue("require_voice_validation") == "true"
 
 	if videoMethod == "recorded" && requireValidation {
-		testimonial, err = tcc.service.ProcessRecordedVideo(r.Context(), authorData, file, header)
+		result, err = tcc.service.ProcessRecordedVideo(r.Context(), authorData, file, header)
 	} else {
-		testimonial, err = tcc.service.ProcessUploadedVideo(r.Context(), authorData, file, header)
+		result, err = tcc.service.ProcessUploadedVideo(r.Context(), authorData, file, header)
 	}
 
 	if err != nil {
@@ -235,6 +235,8 @@ func (tcc *TestimonialCollectionController) processVideoUpload(w http.ResponseWr
 		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	testimonial := result.Testimonial
 
 	// UNIFIED: Consistent response structure
 	response := map[string]interface{}{
@@ -717,29 +719,34 @@ func (tcc *TestimonialCollectionController) QueueVideoUpload(w http.ResponseWrit
 	}
 
 	// Process video synchronously
-	testimonial, err := tcc.service.ProcessUploadedVideo(r.Context(), authorData, processFile, header)
+	result, err := tcc.service.ProcessUploadedVideo(r.Context(), authorData, processFile, header)
 	if err != nil {
 		tcc.logger.Error("Failed to process queued video", zap.Error(err))
 		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
+	testimonial := result.Testimonial
+	sessionID := result.SessionID
+
 	tcc.logger.Info("Video testimonial processed successfully",
 		zap.String("testimonial_id", testimonial.ID.String()),
 		zap.String("workspace_id", workspaceID.String()),
+		zap.String("session_id", sessionID.String()),
 		zap.String("filename", header.Filename))
 
-	// Return testimonial ID immediately
+	// Return testimonial ID and compression session ID immediately
 	utils.RespondWithJSON(w, http.StatusCreated, map[string]interface{}{
-		"success":        true,
-		"message":        "Video testimonial submitted successfully!",
-		"testimonial_id": testimonial.ID.String(),
-		"status":         testimonial.Status,
-		"type":           testimonial.Type,
-		"media_url":      testimonial.MediaURL,
-		"processing":     testimonial.ProcessingStatus,
-		"collection":     authorData.CollectionMethod,
-		"voice_detected": true,
-		"can_transcribe": true,
+		"success":               true,
+		"message":               "Video testimonial submitted successfully!",
+		"testimonial_id":        testimonial.ID.String(),
+		"compression_session_id": sessionID.String(), // For SSE upload/compression tracking
+		"status":                testimonial.Status,
+		"type":                  testimonial.Type,
+		"media_url":             testimonial.MediaURL,
+		"processing":            testimonial.ProcessingStatus,
+		"collection":            authorData.CollectionMethod,
+		"voice_detected":        true,
+		"can_transcribe":        true,
 	})
 }

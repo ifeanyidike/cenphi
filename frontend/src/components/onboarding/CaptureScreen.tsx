@@ -13,7 +13,7 @@ import { isFeatureEnabled } from "@/config/features";
 import { authStore } from "@/stores/authStore";
 
 interface CaptureScreenProps {
-  onTestimonialCreated: (testimonialId: string) => void;
+  onTestimonialCreated: (testimonialId: string, compressionSessionId?: string) => void;
   onSkip: () => void;
   workspaceId: string;
   intent?: string;

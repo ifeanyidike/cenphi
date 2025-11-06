@@ -15,7 +15,7 @@ interface TestimonialFormData {
 interface VideoCaptureProps {
   formData: TestimonialFormData;
   setFormData: (data: TestimonialFormData) => void;
-  onSubmitSuccess: (testimonialId?: string) => void;
+  onSubmitSuccess: (testimonialId?: string, compressionSessionId?: string) => void;
   workspaceId: string;
   collectionId?: string;
 }

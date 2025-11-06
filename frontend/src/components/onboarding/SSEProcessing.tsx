@@ -20,6 +20,7 @@ import { authStore } from "@/stores/authStore";
 
 interface SSEProcessingProps {
   testimonialId: string;
+  compressionSessionId?: string; // For tracking upload/compression progress
   onComplete: () => void;
   onGoToDashboard: () => void;
   fileName?: string;
@@ -31,6 +32,7 @@ interface ProcessingStep {
   description: string;
   icon: React.ReactNode;
   status: "pending" | "processing" | "completed" | "error";
+  progress?: number; // For upload/compression progress
   estimatedTime?: string;
   actualTime?: number;
 }
@@ -63,17 +65,19 @@ type ConnectionStatus =
 
 export const SSEProcessing: React.FC<SSEProcessingProps> = ({
   testimonialId,
+  compressionSessionId,
   onComplete,
   onGoToDashboard,
 }) => {
   const [steps, setSteps] = useState<ProcessingStep[]>([
     {
-      id: "uploading",
-      title: "Upload Complete",
-      description: "Video successfully uploaded",
+      id: "compressing",
+      title: "Optimizing Video",
+      description: "Compressing video for best quality",
       icon: <Upload className="h-5 w-5" />,
-      status: "completed",
-      estimatedTime: "0s",
+      status: compressionSessionId ? "processing" : "completed", // If sessionId provided, show progress
+      progress: 0,
+      estimatedTime: "1-2 min",
     },
     {
       id: "transcribing",
@@ -101,7 +105,7 @@ export const SSEProcessing: React.FC<SSEProcessingProps> = ({
     },
   ]);
 
-  const [currentStepIndex, setCurrentStepIndex] = useState(1); // Start with transcribing
+  const [currentStepIndex, setCurrentStepIndex] = useState(compressionSessionId ? 0 : 1); // Start with compression if sessionId provided
   const [elapsedTime, setElapsedTime] = useState(0);
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatus>("connecting");
@@ -111,6 +115,7 @@ export const SSEProcessing: React.FC<SSEProcessingProps> = ({
   const [detailedProgress, setDetailedProgress] = useState<string>("");
 
   const eventSourceRef = useRef<EventSource | null>(null);
+  const studioEventSourceRef = useRef<EventSource | null>(null); // For studio upload/compression events
   const timerRef = useRef<number | null>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
   const reconnectAttempts = useRef(0);
@@ -119,12 +124,16 @@ export const SSEProcessing: React.FC<SSEProcessingProps> = ({
 
   useEffect(() => {
     connectToSSE();
+    if (compressionSessionId) {
+      connectToStudioSSE();
+    }
     startTimer();
 
     return () => {
       cleanup();
     };
-  }, [testimonialId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [testimonialId, compressionSessionId]);
 
   const connectToSSE = async () => {
     try {
@@ -220,6 +229,144 @@ export const SSEProcessing: React.FC<SSEProcessingProps> = ({
       console.error("Failed to connect to SSE:", error);
       setConnectionStatus("error");
       setError(error.message);
+    }
+  };
+
+  const connectToStudioSSE = async () => {
+    if (!compressionSessionId) {
+      console.log("No compression session ID provided, skipping studio SSE");
+      return;
+    }
+
+    try {
+      console.log("Connecting to studio SSE for compression tracking...");
+
+      // Close existing studio connection
+      if (studioEventSourceRef.current) {
+        studioEventSourceRef.current.close();
+      }
+
+      // Connect to studio SSE endpoint for upload/compression events
+      const sseUrl = `${import.meta.env.VITE_API_URL}/studio/sessions/${compressionSessionId}/stream`;
+      const eventSource = new EventSource(sseUrl);
+      studioEventSourceRef.current = eventSource;
+
+      eventSource.onopen = () => {
+        console.log("Studio SSE connection opened for compression tracking");
+      };
+
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          handleStudioEvent(data);
+        } catch (error) {
+          console.error("Failed to parse studio SSE message:", error);
+        }
+      };
+
+      eventSource.onerror = (error) => {
+        console.error("Studio SSE connection error:", error);
+        // Don't retry studio SSE connection - it's optional for progress tracking
+        if (studioEventSourceRef.current) {
+          studioEventSourceRef.current.close();
+          studioEventSourceRef.current = null;
+        }
+      };
+
+      // Handle specific studio event types
+      const handleStudioSpecificEvent =
+        (eventType: string) => (event: MessageEvent) => {
+          try {
+            const data = JSON.parse(event.data);
+            handleStudioEvent({ ...data, type: eventType });
+          } catch (error) {
+            console.error(`Failed to parse studio ${eventType} event:`, error);
+          }
+        };
+
+      eventSource.addEventListener(
+        "upload_complete",
+        handleStudioSpecificEvent("upload_complete")
+      );
+      eventSource.addEventListener(
+        "compression_progress",
+        handleStudioSpecificEvent("compression_progress")
+      );
+      eventSource.addEventListener(
+        "compression_complete",
+        handleStudioSpecificEvent("compression_complete")
+      );
+    } catch (error: any) {
+      console.error("Failed to connect to studio SSE:", error);
+      // Don't set error state - studio SSE is optional for progress tracking
+    }
+  };
+
+  const handleStudioEvent = (event: any) => {
+    const { type, data } = event;
+
+    console.log("Studio event received:", type, data);
+
+    switch (type) {
+      case "upload_complete":
+        setSteps((prev) =>
+          prev.map((step) =>
+            step.id === "compressing"
+              ? {
+                  ...step,
+                  status: "processing" as const,
+                  description: data?.message || "Optimizing video for best quality...",
+                  progress: 10,
+                }
+              : step
+          )
+        );
+        break;
+
+      case "compression_progress": {
+        const progress = data?.progress || 0;
+        setSteps((prev) =>
+          prev.map((step) =>
+            step.id === "compressing"
+              ? {
+                  ...step,
+                  status: "processing" as const,
+                  description: data?.message || `Optimizing video: ${progress}%`,
+                  progress: progress,
+                }
+              : step
+          )
+        );
+        break;
+      }
+
+      case "compression_complete":
+        setSteps((prev) =>
+          prev.map((step, index) =>
+            step.id === "compressing"
+              ? {
+                  ...step,
+                  status: "completed" as const,
+                  description: data?.message || "Video optimized successfully",
+                  progress: 100,
+                  actualTime: Math.floor((Date.now() - startTimeRef.current) / 1000),
+                }
+              : index === 1 // Move to transcribing step
+                ? { ...step, status: "processing" as const }
+                : step
+          )
+        );
+        setCurrentStepIndex(1); // Move to transcribing step
+
+        // Close studio SSE connection after compression is complete
+        if (studioEventSourceRef.current) {
+          studioEventSourceRef.current.close();
+          studioEventSourceRef.current = null;
+        }
+        break;
+
+      default:
+        console.log("Unknown studio event type:", type, data);
     }
   };
 
@@ -376,6 +523,11 @@ export const SSEProcessing: React.FC<SSEProcessingProps> = ({
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
       eventSourceRef.current = null;
+    }
+
+    if (studioEventSourceRef.current) {
+      studioEventSourceRef.current.close();
+      studioEventSourceRef.current = null;
     }
 
     if (timerRef.current) {
@@ -635,24 +787,46 @@ export const SSEProcessing: React.FC<SSEProcessingProps> = ({
                       {step.description}
                     </p>
 
-                    {/* Processing Animation */}
+                    {/* Processing Animation or Progress Bar */}
                     {step.status === "processing" && (
                       <motion.div
                         className="mt-2 h-1 bg-gray-200 rounded-full overflow-hidden"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                       >
-                        <motion.div
-                          className="h-full bg-blue-500 rounded-full"
-                          animate={{ x: [-100, 100] }}
-                          transition={{
-                            duration: 1.5,
-                            repeat: Infinity,
-                            ease: "easeInOut",
-                          }}
-                          style={{ width: "30%" }}
-                        />
+                        {step.id === "compressing" && typeof step.progress === "number" ? (
+                          // Show actual progress for compression
+                          <motion.div
+                            className="h-full bg-blue-500 rounded-full"
+                            initial={{ width: 0 }}
+                            animate={{ width: `${step.progress}%` }}
+                            transition={{ duration: 0.3, ease: "easeOut" }}
+                          />
+                        ) : (
+                          // Show indeterminate animation for other steps
+                          <motion.div
+                            className="h-full bg-blue-500 rounded-full"
+                            animate={{ x: [-100, 100] }}
+                            transition={{
+                              duration: 1.5,
+                              repeat: Infinity,
+                              ease: "easeInOut",
+                            }}
+                            style={{ width: "30%" }}
+                          />
+                        )}
                       </motion.div>
+                    )}
+
+                    {/* Show progress percentage for compression */}
+                    {step.id === "compressing" &&
+                     step.status === "processing" &&
+                     typeof step.progress === "number" && (
+                      <div className="mt-1.5 text-right">
+                        <span className="text-xs text-blue-600 font-semibold">
+                          {step.progress}%
+                        </span>
+                      </div>
                     )}
                   </div>
                 </motion.div>

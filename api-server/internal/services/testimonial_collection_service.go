@@ -175,6 +175,12 @@ type VideoCompressionResult struct {
 	Metadata         models.JSONMap
 }
 
+// VideoUploadResult holds the testimonial and compression session ID for SSE tracking
+type VideoUploadResult struct {
+	Testimonial *models.Testimonial
+	SessionID   uuid.UUID
+}
+
 // compressAndUploadVideo handles the complete video compression and upload pipeline
 // It accepts an io.Reader (from multipart upload, Google Drive download, etc.),
 // compresses the video, and uploads to storage
@@ -322,7 +328,7 @@ func (tcs TestimonialCollectionService) ProcessRecordedVideo(
 	data models.TestimonialUpload,
 	file multipart.File,
 	header *multipart.FileHeader,
-) (*models.Testimonial, error) {
+) (*VideoUploadResult, error) {
 	return tcs.processVideo(ctx, data, file, header, "recorded", tcs.isValidRecordedVideoType, "Recorded video testimonial processed")
 }
 
@@ -332,7 +338,7 @@ func (tcs TestimonialCollectionService) ProcessUploadedVideo(
 	data models.TestimonialUpload,
 	file multipart.File,
 	header *multipart.FileHeader,
-) (*models.Testimonial, error) {
+) (*VideoUploadResult, error) {
 	return tcs.processVideo(ctx, data, file, header, "uploaded", tcs.isValidUploadedVideoType, "Uploaded video testimonial processed")
 }
 
@@ -345,7 +351,7 @@ func (tcs TestimonialCollectionService) processVideo(
 	videoSource string,
 	validateFn func(string) bool,
 	logMessage string,
-) (*models.Testimonial, error) {
+) (*VideoUploadResult, error) {
 	contentType := header.Header.Get("Content-Type")
 	if !validateFn(contentType) {
 		return nil, fmt.Errorf("invalid video format: %s", contentType)
@@ -423,7 +429,10 @@ func (tcs TestimonialCollectionService) processVideo(
 		}
 	}()
 
-	return testimonial, nil
+	return &VideoUploadResult{
+		Testimonial: testimonial,
+		SessionID:   sessionID,
+	}, nil
 }
 
 func (tcs TestimonialCollectionService) queueTextProcessingJobs(ctx context.Context, testimonial *models.Testimonial) error {

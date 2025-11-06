@@ -10,7 +10,7 @@ import VideoCapture from "../testimonial-collection/VideoCapture";
 import { authStore } from "@/stores/authStore";
 
 interface OnboardingVideoCaptureProps {
-  onUploadComplete: (testimonialId: string) => void;
+  onUploadComplete: (testimonialId: string, compressionSessionId?: string) => void;
   onSkip: () => void;
   workspaceId: string;
   maxDuration?: number;
@@ -32,10 +32,10 @@ export const OnboardingVideoCapture: React.FC<OnboardingVideoCaptureProps> = ({
     rating: 5,
   });
 
-  const handleSubmitSuccess = (testimonialId?: string) => {
+  const handleSubmitSuccess = (testimonialId?: string, compressionSessionId?: string) => {
     setIsCompleted(true);
     if (testimonialId) {
-      onUploadComplete(testimonialId);
+      onUploadComplete(testimonialId, compressionSessionId);
     }
     setTimeout(() => {
       onSkip();

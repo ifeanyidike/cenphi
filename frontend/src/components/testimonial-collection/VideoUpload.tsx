@@ -32,7 +32,7 @@ interface TestimonialFormData {
 interface VideoUploadProps {
   formData: TestimonialFormData;
   setFormData: (data: TestimonialFormData) => void;
-  onSubmitSuccess: (testimonialId?: string) => void;
+  onSubmitSuccess: (testimonialId?: string, compressionSessionId?: string) => void;
   onBack?: () => void;
   workspaceId: string;
   collectionId?: string;
@@ -190,12 +190,13 @@ const VideoUpload: React.FC<VideoUploadProps> = ({
         });
 
       if (result.testimonial_id) {
+        const compressionSessionId = result.compression_session_id;
         if (result.job_id) {
           setStatus("processing");
           startTracking(result.job_id);
         } else {
           setStatus("completed");
-          setTimeout(() => onSubmitSuccess(result.testimonial_id), 1000);
+          setTimeout(() => onSubmitSuccess(result.testimonial_id, compressionSessionId), 1000);
         }
       }
     } catch (err: any) {
@@ -209,6 +210,8 @@ const VideoUpload: React.FC<VideoUploadProps> = ({
   React.useEffect(() => {
     if (jobStatus?.status === "completed" && status === "processing") {
       setStatus("completed");
+      // Note: compression_session_id won't be available in job completion path,
+      // only in immediate upload response
       setTimeout(() => onSubmitSuccess(jobStatus.testimonial_id), 1000);
     } else if (jobStatus?.status === "failed") {
       setError("Processing failed. Please try again.");

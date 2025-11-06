@@ -33,6 +33,7 @@ const Onboarding: React.FC<OnboardingProps> = observer(() => {
   const [selectedIntent, setSelectedIntent] = useState<string | undefined>();
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [testimonialId, setTestimonialId] = useState<string | null>(null);
+  const [compressionSessionId, setCompressionSessionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingOnboarding, setLoadingOnboarding] = useState(true);
@@ -94,8 +95,11 @@ const Onboarding: React.FC<OnboardingProps> = observer(() => {
     setCurrentStep("capture");
   };
 
-  const handleTestimonialCreated = (testimonialId: string) => {
+  const handleTestimonialCreated = (testimonialId: string, compressionSessionId?: string) => {
     setTestimonialId(testimonialId);
+    if (compressionSessionId) {
+      setCompressionSessionId(compressionSessionId);
+    }
     setCurrentStep("processing");
   };
 
@@ -196,6 +200,7 @@ const Onboarding: React.FC<OnboardingProps> = observer(() => {
         return (
           <SSEProcessing
             testimonialId={testimonialId}
+            compressionSessionId={compressionSessionId || undefined}
             onComplete={handleProcessingComplete}
             onGoToDashboard={handleGoToDashboard}
             fileName="testimonial.mp4"
