@@ -37,17 +37,23 @@ func NewStorageFactory(ctx context.Context, storageType StorageType, config conf
 	switch storageType {
 	case StorageTypeOCI:
 		ociProvider, err := NewOCIProvider(ctx, config.OCI, logger)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create OCI storage provider: %w", err)
+		}
 		return &StorageFactory{
 			logger:   logger,
 			Provider: ociProvider,
-		}, err
+		}, nil
 
 	case StorageTypeLocal:
 		localProvider, err := createLocalProvider()
+		if err != nil {
+			return nil, fmt.Errorf("failed to create local storage provider: %w", err)
+		}
 		return &StorageFactory{
 			logger:   logger,
 			Provider: localProvider,
-		}, err
+		}, nil
 	default:
 		return nil, fmt.Errorf("unsupported storage provider type: %s", storageType)
 
