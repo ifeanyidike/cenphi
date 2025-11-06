@@ -110,6 +110,7 @@ type OCIConfig struct {
 	UserOCID             string `json:"user_ocid"`
 	Fingerprint          string `json:"fingerprint"`
 	PrivateKeyPath       string `json:"private_key_path"`
+	PrivateKeyBase64     string `json:"private_key_base64"`      // Base64-encoded private key for Cloud Run
 	PrivateKeyPassphrase string `json:"private_key_passphrase"`
 
 	// NEW: Timeout configurations for OCI operations

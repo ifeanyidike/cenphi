@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/pem"
 	"fmt"
 	"io"
@@ -1373,9 +1374,21 @@ func createUserPrincipalProvider(cfg config.OCIConfig) (common.ConfigurationProv
 }
 
 func loadPrivateKey(keyPath, passphrase string) (*rsa.PrivateKey, error) {
-	keyData, err := os.ReadFile(keyPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read private key file: %w", err)
+	var keyData []byte
+	var err error
+
+	// Try reading from environment variable first (for Cloud Run)
+	if base64Key := os.Getenv("OCI_PRIVATE_KEY_BASE64"); base64Key != "" {
+		keyData, err = base64.StdEncoding.DecodeString(base64Key)
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode base64 private key: %w", err)
+		}
+	} else {
+		// Fall back to reading from file
+		keyData, err = os.ReadFile(keyPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read private key file: %w", err)
+		}
 	}
 
 	block, _ := pem.Decode(keyData)

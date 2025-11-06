@@ -114,6 +114,12 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 		logger.Warn("CRITICAL: Storage provider is nil - video uploads will fail. Check configuration.")
 	}
 
+	// Safely extract storage provider (will be nil if storageService failed to initialize)
+	var storageProvider storage.Provider
+	if storageService != nil {
+		storageProvider = storageService.Provider
+	}
+
 	audioExtractor := storage.NewAudioExtractor(logger, "/tmp/cenphi_audio")
 	rateLimiter := midware.NewRateLimiter(redisClient, logger)
 
@@ -199,13 +205,13 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 	// Initialize step workers
 	platformOptWorker := ai.NewPlatformOptimizationStepsWorker(
 		media_intelligence, &aiServiceManager, cacheService, testimonialRepo,
-		workspaceRepo, artifactsRepo, tempStorageService, storageService.Provider, sseManager, db, logger)
+		workspaceRepo, artifactsRepo, tempStorageService, storageProvider, sseManager, db, logger)
 	clippingWorker := ai.NewClippingStepsWorker(
 		media_intelligence, &aiServiceManager, cacheService, testimonialRepo,
-		workspaceRepo, artifactsRepo, tempStorageService, storageService.Provider, sseManager, db, logger)
+		workspaceRepo, artifactsRepo, tempStorageService, storageProvider, sseManager, db, logger)
 	storyVideoWorker := ai.NewStoryVideoStepsWorker(
 		media_intelligence, &aiServiceManager, cacheService, testimonialRepo,
-		workspaceRepo, artifactsRepo, tempStorageService, storageService.Provider, sseManager, db, logger)
+		workspaceRepo, artifactsRepo, tempStorageService, storageProvider, sseManager, db, logger)
 
 	// Register handlers with the orchestrator
 	stepOrchestrator.RegisterPlatformOptimizationHandlers(platformOptWorker)
@@ -239,7 +245,7 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 	googleDriveController := controllers.NewGoogleDriveController(cfg, driveService, testimonialCollService, logger)
 	testimonialCollController := controllers.NewTestimonialCollectionController(testimonialCollService, *driveService, aiServiceManager.AudioTranscriptionService, queueService, logger)
 	sseTestimonialMonitor := controllers.NewSSETestimonialMonitor(cacheService, logger)
-	aiProcessorController := controllers.NewAIProcessorController(aiServiceManager, queueService, logger, cacheService, sseManager, storageService.Provider)
+	aiProcessorController := controllers.NewAIProcessorController(aiServiceManager, queueService, logger, cacheService, sseManager, storageProvider)
 	presetController := controllers.NewPresetController(presetService, logger)
 	publicShareController := controllers.NewPublicShareController(publicShareRepo, testimonialRepo, artifactsRepo, db, *storageService, logger)
 	widgetController := controllers.NewWidgetController(publicShareRepo, testimonialRepo, artifactsRepo, db, logger)
@@ -247,7 +253,7 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 	aiPostController := controllers.NewAIPostController(aiClient, testimonialRepo, logger, db)
 	chatWithDataController := controllers.NewChatWithDataController(chatWithDataService, logger)
 	analyticsController := controllers.NewAnalyticsController(logger, analyticsService, chatWithDataService, exportService)
-	studioController := controllers.NewStudioController(db, sessionRepo, stageRepo, testimonialRepo, workspaceRepo, artifactsRepo, tempStorageService, sessionCleanupService, stepOrchestrator, media_intelligence, sseManager, storageService.Provider, logger)
+	studioController := controllers.NewStudioController(db, sessionRepo, stageRepo, testimonialRepo, workspaceRepo, artifactsRepo, tempStorageService, sessionCleanupService, stepOrchestrator, media_intelligence, sseManager, storageProvider, logger)
 	contentFolderController := controllers.NewContentFolderController(contentFolderService, logger)
 	approvalController := controllers.NewApprovalController(artifactsRepo, db, logger)
 	showcaseController := controllers.NewShowcaseController(workspaceRepo, artifactsRepo, db, logger)

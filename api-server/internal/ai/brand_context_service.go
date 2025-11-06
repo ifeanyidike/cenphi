@@ -1816,7 +1816,7 @@ func (s *BrandContextService) createDefaultBrandContext(workspaceID uuid.UUID) m
 	now := time.Now()
 	return models.BrandContext{
 		WorkspaceID:      workspaceID,
-		AboutInfo:        "Brand information could not be extracted automatically.",
+		AboutInfo:        "",
 		Keywords:         []string{},
 		Tone:             "professional",
 		BrandColors:      models.JSONMap{},
