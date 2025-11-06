@@ -244,19 +244,23 @@ class AuthStore {
         body: JSON.stringify({
           name,
           email,
-          email_verified: cred.user.emailVerified,
+          email_verified: isEmailPassword ? cred.user.emailVerified : true,
           firebase_uid: cred.user.uid,
         }),
       });
 
       if (!response.ok) {
-        if (isEmailPassword || response.status != 409) {
-          console.log("response.status", response.statusText);
-          this.setError({
-            message: response.statusText,
-          });
-        }
-        return false;
+        const errorText = response.status === 409
+          ? "This email is already registered. Please login instead."
+          : response.statusText;
+
+        console.log("Registration failed", response.status, errorText);
+        this.setError({
+          message: errorText,
+        });
+
+        // Throw error to stop the signup/social login flow
+        throw new Error(errorText);
       }
       const result = await response.json();
       console.log("result", result);

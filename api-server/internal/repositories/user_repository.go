@@ -142,18 +142,18 @@ func (r *userRepository) GetByID(ctx context.Context, id uuid.UUID, db DB) (*mod
 	return &user, nil
 }
 
-func (r *userRepository) FindByEmail(ctx context.Context, firebase_uid string, db DB) (*models.User, error) {
+func (r *userRepository) FindByEmail(ctx context.Context, email string, db DB) (*models.User, error) {
 	query :=
 		`
-		SELECT 
-			id, email, name, email_verified, last_active_at, created_at
+		SELECT
+			id, firebase_uid, email, name, email_verified, last_active_at, created_at
 		FROM users
-		WHERE firebase_uid = $1
+		WHERE email = $1
 		`
-	row := db.QueryRowContext(ctx, query, firebase_uid)
+	row := db.QueryRowContext(ctx, query, email)
 
 	var user models.User
-	err := row.Scan(&user.ID, &user.Email, &user.Name, &user.EmailVerified, &user.LastActiveAt, &user.CreatedAt)
+	err := row.Scan(&user.ID, &user.FirebaseUID, &user.Email, &user.Name, &user.EmailVerified, &user.LastActiveAt, &user.CreatedAt)
 	if err != nil {
 		return nil, err
 	}

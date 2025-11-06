@@ -66,18 +66,22 @@ func NewAudioTranscriptionService(assemblyAIKey string, cacheService cache.Redis
 }
 
 func (s AudioTranscriptionService) TranscribeAudio(mediaURL string) (*models.TranscriptionResult, error) {
-	transcribeCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	// Increase timeout to 15 minutes to account for slow downloads from OCI storage
+	transcribeCtx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
 	defer cancel()
 
 	// Check cache first
 	cacheKey := fmt.Sprintf("transcript:%s", mediaURL)
 	var cached models.TranscriptionResult
 	if err := s.cacheService.Get(transcribeCtx, cacheKey, &cached); err == nil {
+		s.logger.Info("Using cached transcription", zap.String("media_url", mediaURL))
 		return &cached, nil
 	}
 
+	s.logger.Info("Downloading and preparing media for transcription", zap.String("media_url", mediaURL))
 	mediaInfo, err := s.audioExtractor.DownloadAndPrepareForTranscription(transcribeCtx, mediaURL)
 	if err != nil {
+		s.logger.Error("Failed to download and prepare media", zap.Error(err), zap.String("media_url", mediaURL))
 		return nil, fmt.Errorf("failed to prepare media: %w", err)
 	}
 

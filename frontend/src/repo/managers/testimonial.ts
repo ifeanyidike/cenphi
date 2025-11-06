@@ -266,7 +266,7 @@ export class TestimonialManager {
     rating: number;
     content?: string;
     videoBlob: Blob;
-  }): Promise<{ testimonial_id?: string; job_id?: string }> {
+  }): Promise<{ testimonial_id?: string; job_id?: string; compression_session_id?: string }> {
     try {
       const formData = new FormData();
       formData.append(

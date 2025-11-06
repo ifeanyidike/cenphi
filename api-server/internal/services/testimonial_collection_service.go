@@ -284,6 +284,11 @@ func (tcs TestimonialCollectionService) compressAndUploadVideo(
 	}
 	finalHeader.Header.Set("Content-Type", contentType)
 
+	// SAFETY CHECK: Ensure storage provider is initialized
+	if tcs.storageService == nil || tcs.storageService.Provider == nil {
+		return nil, fmt.Errorf("storage service not initialized - check OCI configuration and credentials")
+	}
+
 	fileURL, err := tcs.storageService.UploadFile(ctx, finalFile, finalHeader, contentType)
 	if err != nil {
 		return nil, fmt.Errorf("failed to upload video: %w", err)

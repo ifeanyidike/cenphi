@@ -469,28 +469,30 @@ const HighlightsTab = ({
           )}
           <CardContent className="p-8 text-center">
             <Brain className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <h3 className="text font-semibold text-gray-900 mb-2">
               No Highlights Generated
             </h3>
-            <p className="text-gray-600 mb-4">
+            <p className="text-gray-600 mb-4 text-xs">
               Generate AI-powered highlights to identify key moments, emotional
               peaks, and important segments in this testimonial.
             </p>
-            <Button
-              onClick={() => {
-                setLoadingStates({ "generate-all": true });
-                handleGenerateHighlights("highlights");
-              }}
-              disabled={isGeneratingAll}
-              className="bg-gray-900 hover:bg-gray-800 text-white flex items-center justify-center gap-2"
-            >
-              {isGeneratingAll ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Sparkles className="h-4 w-4" />
-              )}
-              {isGeneratingAll ? "Generating..." : "Generate All Highlights"}
-            </Button>
+            <div className="flex items-center justify-center">
+              <Button
+                onClick={() => {
+                  setLoadingStates({ "generate-all": true });
+                  handleGenerateHighlights("highlights");
+                }}
+                disabled={isGeneratingAll}
+                className="bg-gray-900 hover:bg-gray-800 text-white flex items-center justify-center gap-2"
+              >
+                {isGeneratingAll ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4" />
+                )}
+                {isGeneratingAll ? "Generating..." : "Generate All Highlights"}
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </>

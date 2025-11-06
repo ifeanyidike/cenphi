@@ -567,48 +567,51 @@ func RegisterAnalyticsRoutes(r chi.Router, controller controllers.AnalyticsContr
 
 func RegisterStudioRoutes(r chi.Router, controller controllers.StudioController, authMiddleware middleware.AuthMiddleware) {
 	r.Route("/studio", func(r chi.Router) {
-		// Apply authentication middleware
-		r.Use(authMiddleware.VerifyToken)
-
-		// Session creation endpoint
-		r.Post("/sessions", controller.CreateSession)
-
-		// Get active sessions endpoint (for session recovery)
-		r.Get("/sessions", controller.GetActiveSessions)
-
-		// Get completed sessions endpoint (for history)
-		r.Get("/sessions/completed", controller.GetCompletedSessions)
-
-		// SSE streaming endpoint (no auth middleware to avoid connection issues)
+		// SSE streaming endpoint (no auth middleware to avoid connection issues with EventSource API)
+		// Must be OUTSIDE the authenticated group since EventSource can't send custom headers
 		r.Get("/sessions/{sessionID}/stream", controller.StreamStudioEvents)
 
-		// Session status check endpoint
-		r.Get("/sessions/{sessionID}/status", controller.GetSessionStatus)
+		// All other routes require authentication
+		r.Group(func(r chi.Router) {
+			r.Use(authMiddleware.VerifyToken)
 
-		// Session control endpoints
-		r.Post("/sessions/{sessionID}/pause", controller.PauseSession)
-		r.Post("/sessions/{sessionID}/resume", controller.ResumeSession)
+			// Session creation endpoint
+			r.Post("/sessions", controller.CreateSession)
 
-		// Stage control endpoints
-		r.Post("/sessions/{sessionID}/stages/{stageID}/skip", controller.SkipStage)
-		r.Post("/sessions/{sessionID}/stages/{stageID}/retry", controller.RetryStage)
-		r.Post("/sessions/{sessionID}/stages/{stageID}/accept", controller.AcceptStage)
-		r.Post("/sessions/{sessionID}/stages/{stageID}/save", controller.SaveStageResult)
-		r.Post("/sessions/{sessionID}/stages/{stageID}/select-clips", controller.SelectClips)
-		r.Post("/sessions/{sessionID}/stages/{stageID}/reorder-clips", controller.ReorderClips)
+			// Get active sessions endpoint (for session recovery)
+			r.Get("/sessions", controller.GetActiveSessions)
 
-		// Artifact endpoints
-		r.Get("/sessions/{sessionID}/artifacts", controller.GetSessionArtifacts)
-		r.Post("/artifacts/{artifactID}/refresh-url", controller.RefreshPreviewURL)
+			// Get completed sessions endpoint (for history)
+			r.Get("/sessions/completed", controller.GetCompletedSessions)
 
-		// Session lifecycle endpoints
-		r.Post("/sessions/{sessionID}/cancel", controller.CancelSession)
-		r.Post("/sessions/{sessionID}/finalize", controller.FinalizeSession)
-		r.Post("/sessions/{sessionID}/save", controller.SaveSession)
+			// Session status check endpoint
+			r.Get("/sessions/{sessionID}/status", controller.GetSessionStatus)
 
-		// Stage configuration endpoints
-		r.Post("/sessions/{sessionID}/stages/{stageID}/config", controller.UpdateStageConfig)
-		r.Post("/sessions/{sessionID}/stages/{stageID}/regenerate-text", controller.RegenerateTextOptimization)
+			// Session control endpoints
+			r.Post("/sessions/{sessionID}/pause", controller.PauseSession)
+			r.Post("/sessions/{sessionID}/resume", controller.ResumeSession)
+
+			// Stage control endpoints
+			r.Post("/sessions/{sessionID}/stages/{stageID}/skip", controller.SkipStage)
+			r.Post("/sessions/{sessionID}/stages/{stageID}/retry", controller.RetryStage)
+			r.Post("/sessions/{sessionID}/stages/{stageID}/accept", controller.AcceptStage)
+			r.Post("/sessions/{sessionID}/stages/{stageID}/save", controller.SaveStageResult)
+			r.Post("/sessions/{sessionID}/stages/{stageID}/select-clips", controller.SelectClips)
+			r.Post("/sessions/{sessionID}/stages/{stageID}/reorder-clips", controller.ReorderClips)
+
+			// Artifact endpoints
+			r.Get("/sessions/{sessionID}/artifacts", controller.GetSessionArtifacts)
+			r.Post("/artifacts/{artifactID}/refresh-url", controller.RefreshPreviewURL)
+
+			// Session lifecycle endpoints
+			r.Post("/sessions/{sessionID}/cancel", controller.CancelSession)
+			r.Post("/sessions/{sessionID}/finalize", controller.FinalizeSession)
+			r.Post("/sessions/{sessionID}/save", controller.SaveSession)
+
+			// Stage configuration endpoints
+			r.Post("/sessions/{sessionID}/stages/{stageID}/config", controller.UpdateStageConfig)
+			r.Post("/sessions/{sessionID}/stages/{stageID}/regenerate-text", controller.RegenerateTextOptimization)
+		})
 	})
 }
 

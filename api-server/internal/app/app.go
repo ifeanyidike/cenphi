@@ -104,8 +104,14 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 	// Initialize storage service
 	storageService, err := storage.NewStorageFactory(ctx, storage.StorageType(cfg.Storage.Provider), cfg, logger)
 	if err != nil {
-		logger.Error("Failed to initialize storage service", zap.Error(err))
-		// Continue anyway, storage operations will use local fallback
+		logger.Error("CRITICAL: Failed to initialize storage service - video uploads will fail",
+			zap.Error(err),
+			zap.String("provider", string(cfg.Storage.Provider)),
+			zap.String("fix", "Check OCI_* environment variables and credentials"))
+		// Continue anyway to allow other services to work, but storage operations will fail with clear errors
+	}
+	if storageService != nil && storageService.Provider == nil {
+		logger.Warn("CRITICAL: Storage provider is nil - video uploads will fail. Check configuration.")
 	}
 
 	audioExtractor := storage.NewAudioExtractor(logger, "/tmp/cenphi_audio")
