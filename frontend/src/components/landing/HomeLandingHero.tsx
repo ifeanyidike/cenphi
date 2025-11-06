@@ -13,143 +13,251 @@ import { useNavigate } from "react-router-dom";
 const HomeLandingHero = () => {
   const navigate = useNavigate();
 
-  const services = [
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.15,
+        delayChildren: 0.2,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 30, scale: 0.95 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: {
+        type: "spring",
+        stiffness: 100,
+        damping: 15,
+      },
+    },
+  };
+
+  const outcomes = [
     {
       icon: Sparkles,
-      name: "AI Content Generation",
-      desc: "Transform testimonials into blog posts, social media content, and marketing copy",
-      color: "bg-blue-50 text-blue-600 border-blue-100",
-      demo: "Blog • Social • Email • Ads",
+      name: "Create a Month of Content in 30 Seconds",
+      problem: "Marketing teams spend days repurposing testimonials",
+      outcome:
+        "Get 13+ content pieces instantly: blogs, social posts, emails, ads, PDFs",
+      result: "5x faster content creation",
+      color: "bg-gray-50 text-gray-700 border-gray-200",
     },
     {
       icon: Video,
-      name: "Video Processing",
-      desc: "Collect, transcribe, and enhance video testimonials with AI editing",
-      color: "bg-gray-50 text-gray-600 border-gray-100",
-      demo: "Record • Transcribe • Edit • Optimize",
+      name: "Studio-Quality Video Production",
+      problem: "Video editing takes hours and requires expensive tools",
+      outcome:
+        "Auto B-roll, text overlays, music, noise removal, intro/outro in minutes",
+      result: "10x faster production",
+      color: "bg-gray-50 text-gray-700 border-gray-200",
     },
     {
       icon: BarChart3,
-      name: "Performance Analytics",
-      desc: "Track conversion rates, ROI, and revenue impact across channels",
-      color: "bg-blue-50 text-blue-600 border-blue-100",
-      demo: "Track • Measure • Optimize • Report",
+      name: "Drive 47% More Conversions",
+      problem: "Can't prove which testimonials actually drive revenue",
+      outcome:
+        "Track every view, engagement, and conversion back to specific testimonials",
+      result: "+47% avg. lift",
+      color: "bg-gray-50 text-gray-700 border-gray-200",
     },
     {
       icon: Zap,
-      name: "Smart Automation",
-      desc: "Automate testimonial collection with intelligent timing and workflows",
-      color: "bg-gray-50 text-gray-600 border-gray-100",
-      demo: "Trigger • Collect • Follow-up • Organize",
+      name: "Extract 10+ Clips Per Video",
+      problem: "Long testimonials need manual editing for social media",
+      outcome:
+        "AI finds emotional peaks and creates engagement-optimized clips automatically",
+      result: "Weeks of social content",
+      color: "bg-gray-50 text-gray-700 border-gray-200",
     },
   ];
 
   return (
-    <section className="pt-16 sm:pt-24 pb-12 sm:pb-20 bg-white text-gray-900">
+    <section className="pt-20 sm:pt-28 pb-16 sm:pb-24 bg-white text-gray-900 overflow-hidden">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         {/* Main Content */}
-        <div className="text-center mb-8 sm:mb-16">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="text-center mb-12 sm:mb-20"
+        >
           {/* Headline */}
           <motion.h1
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-2xl sm:text-3xl md:text-4xl font-bold leading-tight mb-4 max-w-4xl mx-auto text-gray-900 px-2"
+            variants={itemVariants}
+            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6 max-w-4xl mx-auto text-gray-900 px-2"
           >
-            Transform customer testimonials into
-            <span className="block text-blue-600">
-              revenue-driving marketing content
-            </span>
+            Turn one testimonial into
+            <motion.span
+              className="block text-blue-600"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.5, type: "spring", stiffness: 80 }}
+            >
+              10+ revenue-driving assets
+            </motion.span>
           </motion.h1>
 
           {/* Subtitle */}
           <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-base sm:text-lg text-gray-600 leading-relaxed max-w-2xl mx-auto mb-6 sm:mb-8 px-4"
+            variants={itemVariants}
+            className="text-base sm:text-lg text-gray-600 leading-relaxed max-w-3xl mx-auto mb-8 px-4"
           >
-            AI-powered platform that collects, analyzes, and converts
-            testimonials into high-converting content across all marketing
-            channels.
+            Stop letting testimonials sit unused. Automatically create
+            platform-perfect videos, marketing content, and shareable clips—in
+            minutes, not days.
           </motion.p>
+
+          {/* Key Metrics */}
+          <motion.div
+            variants={itemVariants}
+            className="flex flex-wrap justify-center gap-4 sm:gap-6 mb-8 sm:mb-10 px-4"
+          >
+            <span className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-full text-sm font-semibold">
+              <Sparkles className="h-4 w-4" />
+              5x faster content
+            </span>
+            <span className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-full text-sm font-semibold">
+              <BarChart3 className="h-4 w-4" />
+              +47% conversions
+            </span>
+            <span className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-full text-sm font-semibold">
+              <Video className="h-4 w-4" />
+              10+ clips per video
+            </span>
+          </motion.div>
 
           {/* CTAs */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="flex flex-col sm:flex-row gap-3 justify-center mb-8 sm:mb-12 px-4"
+            variants={itemVariants}
+            className="flex flex-col sm:flex-row gap-4 justify-center mb-10 sm:mb-12 px-4"
           >
-            <Button
-              onClick={() => navigate("/signup")}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 sm:py-2.5 font-semibold rounded-lg shadow-sm transition-colors duration-200 w-full sm:w-auto"
-            >
-              Start free trial
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => navigate("/studio")}
-              className="px-6 py-3 sm:py-2.5 font-semibold border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors duration-200 w-full sm:w-auto"
-            >
-              Try services
-              <ChevronRight className="ml-2 h-4 w-4" />
-            </Button>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button
+                onClick={() => navigate("/signup")}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 sm:py-3 font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 w-full sm:w-auto text-sm"
+              >
+                Start Transforming Testimonials
+                <motion.div
+                  className="inline-block ml-2"
+                  animate={{ x: [0, 5, 0] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                >
+                  <ArrowRight className="h-4 w-4" />
+                </motion.div>
+              </Button>
+            </motion.div>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button
+                variant="outline"
+                onClick={() => navigate("/studio")}
+                className="px-8 py-3 sm:py-3 font-semibold border-2 border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 rounded-lg transition-all duration-200 w-full sm:w-auto text-sm"
+              >
+                See Live Demo
+                <ChevronRight className="ml-2 h-4 w-4" />
+              </Button>
+            </motion.div>
           </motion.div>
 
           {/* Trust indicators */}
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            className="flex flex-wrap justify-center gap-4 sm:gap-6 text-sm text-gray-500 px-4"
+            variants={itemVariants}
+            className="flex flex-wrap justify-center gap-5 sm:gap-7 text-xs text-gray-500 px-4"
           >
             <span className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
+              <div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
               Free 14-day trial
             </span>
             <span className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
-              No credit card required
+              <div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
+              No credit card
             </span>
             <span className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
-              Setup in 5 minutes
+              <div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>5 min
+              setup
+            </span>
+            <span className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
+              Cancel anytime
             </span>
           </motion.div>
-        </div>
+        </motion.div>
 
-        {/* Services Preview Grid */}
+        {/* Outcome Cards Grid */}
         <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8 sm:mb-16"
+          initial="hidden"
+          animate="visible"
+          variants={{
+            hidden: { opacity: 0 },
+            visible: {
+              opacity: 1,
+              transition: {
+                staggerChildren: 0.1,
+                delayChildren: 0.6,
+              },
+            },
+          }}
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 mb-16 sm:mb-20"
         >
-          {services.map((service, index) => (
+          {outcomes.map((outcome, index) => (
             <motion.div
               key={index}
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 + index * 0.1 }}
-              className="bg-white p-4 sm:p-5 rounded-lg border border-gray-200 hover:shadow-lg transition-all duration-200 cursor-pointer group"
+              variants={{
+                hidden: { opacity: 0, y: 40, scale: 0.9 },
+                visible: {
+                  opacity: 1,
+                  y: 0,
+                  scale: 1,
+                  transition: {
+                    type: "spring",
+                    stiffness: 100,
+                    damping: 12,
+                  },
+                },
+              }}
+              whileHover={{
+                scale: 1.03,
+                y: -4,
+                transition: { type: "spring", stiffness: 300, damping: 20 },
+              }}
+              whileTap={{ scale: 0.98 }}
+              className={`${outcome.color} p-6 rounded-xl border-2 hover:shadow-lg transition-all duration-200 cursor-pointer group`}
               onClick={() => navigate("/studio")}
             >
-              <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 rounded-lg bg-gray-100 group-hover:bg-blue-50 transition-colors duration-200">
-                  <service.icon className="h-4 w-4 text-gray-600 group-hover:text-blue-600 transition-colors duration-200" />
+              <div className="flex items-start justify-between mb-4">
+                <div className="p-2 rounded-lg bg-white/60 group-hover:bg-white transition-colors duration-200">
+                  <outcome.icon className="h-5 w-5" />
                 </div>
-                <h3 className="font-semibold text-sm text-gray-900">
-                  {service.name}
-                </h3>
+                <span className="text-xs font-bold bg-white/60 group-hover:bg-white px-2 py-1 rounded-full transition-colors duration-200">
+                  {outcome.result}
+                </span>
               </div>
-              <p className="text-xs text-gray-600 leading-relaxed mb-3">
-                {service.desc}
-              </p>
-              <div className="text-xs text-gray-500 border-t border-gray-100 pt-3">
-                {service.demo}
+              <h3 className="font-bold text-sm text-gray-900 mb-3 leading-tight">
+                {outcome.name}
+              </h3>
+
+              <div className="space-y-2 mb-4">
+                <div className="flex items-start gap-2">
+                  <span className="text-xs text-gray-400 mt-0.5">✗</span>
+                  <p className="text-xs text-gray-500 leading-relaxed">
+                    {outcome.problem}
+                  </p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-xs text-blue-600 mt-0.5">✓</span>
+                  <p className="text-xs text-gray-700 font-medium leading-relaxed">
+                    {outcome.outcome}
+                  </p>
+                </div>
               </div>
-              <div className="mt-3 flex items-center text-xs font-medium text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+
+              <div className="mt-4 flex items-center text-xs font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                 Try now <ChevronRight className="ml-1 h-3 w-3" />
               </div>
             </motion.div>
@@ -158,136 +266,58 @@ const HomeLandingHero = () => {
 
         {/* Live Demo Preview */}
         <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8 }}
+          initial={{ opacity: 0, y: 60, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{
+            delay: 1,
+            type: "spring",
+            stiffness: 60,
+            damping: 20,
+          }}
           className="relative"
         >
-          <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
+          <motion.div
+            whileHover={{ scale: 1.02, y: -5 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            className="bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden"
+          >
             {/* Browser Bar */}
             <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex items-center gap-2">
               <div className="flex gap-1.5">
-                <div className="w-2.5 h-2.5 bg-gray-400 rounded-full"></div>
-                <div className="w-2.5 h-2.5 bg-gray-400 rounded-full"></div>
-                <div className="w-2.5 h-2.5 bg-gray-400 rounded-full"></div>
+                <motion.div
+                  className="w-2.5 h-2.5 bg-red-500 rounded-full"
+                  whileHover={{ scale: 1.3 }}
+                ></motion.div>
+                <motion.div
+                  className="w-2.5 h-2.5 bg-yellow-500 rounded-full"
+                  whileHover={{ scale: 1.3 }}
+                ></motion.div>
+                <motion.div
+                  className="w-2.5 h-2.5 bg-green-500 rounded-full"
+                  whileHover={{ scale: 1.3 }}
+                ></motion.div>
               </div>
-              <div className="ml-4 text-xs text-gray-600">
-                app.cenphi.com/dashboard
-              </div>
-            </div>
-
-            {/* Dashboard Content */}
-            <div className="p-4 sm:p-6 bg-white">
-              {/* Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 gap-3">
-                <div>
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1">
-                    Testimonial Dashboard
-                  </h3>
-                  <p className="text-xs sm:text-sm text-gray-600">
-                    247 testimonials • 94% positive sentiment
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <button className="bg-blue-600 text-white px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs font-medium hover:bg-blue-700 transition-colors">
-                    Generate Content
-                  </button>
-                  <button className="border border-gray-300 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-                    Analytics
-                  </button>
-                </div>
-              </div>
-
-              {/* Stats */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
-                {[
-                  { label: "Conversion Rate", value: "+47%" },
-                  { label: "Revenue Impact", value: "$2.4M" },
-                  { label: "Collection Rate", value: "89%" },
-                  { label: "AI Score", value: "98/100" },
-                ].map((stat, i) => (
-                  <div
-                    key={i}
-                    className="bg-gray-50 p-3 sm:p-4 rounded-lg border border-gray-100"
-                  >
-                    <div className="text-lg sm:text-xl font-bold text-gray-900 mb-1">
-                      {stat.value}
-                    </div>
-                    <div className="text-xs text-gray-600">{stat.label}</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Recent Activity */}
-              <div className="bg-gray-50 rounded-lg border border-gray-100 p-4">
-                <h4 className="text-sm font-semibold text-gray-900 mb-3">
-                  Recent AI Processing
-                </h4>
-                <div className="space-y-3">
-                  {[
-                    {
-                      author: "Sarah Chen",
-                      company: "TechFlow",
-                      type: "Video → Blog",
-                      time: "2 min ago",
-                      status: "completed",
-                    },
-                    {
-                      author: "Marcus Rodriguez",
-                      company: "GrowthLab",
-                      type: "Text → Social",
-                      time: "5 min ago",
-                      status: "processing",
-                    },
-                    {
-                      author: "Emily Watson",
-                      company: "ScaleUp",
-                      type: "Audio → Email",
-                      time: "12 min ago",
-                      status: "completed",
-                    },
-                  ].map((item, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center gap-3 p-2 rounded hover:bg-white transition-colors"
-                    >
-                      <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                        <span className="text-xs font-semibold text-white">
-                          {item.author[0]}
-                        </span>
-                      </div>
-                      <div className="flex-1">
-                        <div className="text-sm font-medium text-gray-900">
-                          {item.author}
-                        </div>
-                        <div className="text-xs text-gray-600">
-                          {item.company} • {item.type}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div
-                          className={`w-1.5 h-1.5 rounded-full ${item.status === "completed" ? "bg-gray-400" : "bg-gray-400"}`}
-                        ></div>
-                        <div className="text-xs text-gray-500">{item.time}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+              <div className="ml-4 text-xs text-gray-600 font-medium">
+                app.cenphi.io/dashboard
               </div>
             </div>
-          </div>
 
-          {/* Floating AI Indicator */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 1.2 }}
-            className="absolute -top-3 -right-3 bg-blue-600 rounded-lg shadow-lg p-3"
-          >
-            <div className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></div>
-              <span className="text-xs font-medium text-white">AI Active</span>
-            </div>
+            {/* Real Dashboard Screenshot */}
+            <motion.div
+              className="relative"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 1.3, duration: 0.6 }}
+            >
+              <img
+                src="/landing-files/dashboard-home.webp"
+                alt="Cenphi Dashboard - AI-powered testimonial management platform"
+                className="w-full h-auto"
+                loading="eager"
+              />
+              {/* Subtle overlay for better text visibility if needed */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent pointer-events-none"></div>
+            </motion.div>
           </motion.div>
         </motion.div>
       </div>

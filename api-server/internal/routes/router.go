@@ -168,6 +168,15 @@ func RegisterContentFolderRoutes(r chi.Router, controller controllers.ContentFol
 
 		// Folder with items
 		r.Get("/{folderID}/details", controller.GetFolderWithItems)
+
+		// Download operations
+		r.Get("/{folderID}/download", controller.DownloadFolderAsZip)
+	})
+
+	// Clip collection download (separate route as it's artifact-based)
+	r.Route("/workspaces/{workspaceID}/artifacts/{artifactID}/clips", func(r chi.Router) {
+		r.Use(authMiddleware.VerifyToken)
+		r.Get("/download", controller.DownloadClipCollectionAsZip)
 	})
 }
 
@@ -566,6 +575,9 @@ func RegisterStudioRoutes(r chi.Router, controller controllers.StudioController,
 
 		// Get active sessions endpoint (for session recovery)
 		r.Get("/sessions", controller.GetActiveSessions)
+
+		// Get completed sessions endpoint (for history)
+		r.Get("/sessions/completed", controller.GetCompletedSessions)
 
 		// SSE streaming endpoint (no auth middleware to avoid connection issues)
 		r.Get("/sessions/{sessionID}/stream", controller.StreamStudioEvents)

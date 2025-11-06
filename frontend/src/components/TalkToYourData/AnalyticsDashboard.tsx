@@ -417,7 +417,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = observer(
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-base font-semibold text-slate-900">
-              Analytics Dashboard
+              Data Analytics
             </h2>
             <p className="text-xs text-slate-600 mt-0.5">
               Visual insights from your testimonial data

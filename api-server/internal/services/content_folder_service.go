@@ -329,3 +329,17 @@ func (s ContentFolderService) GetArtifactFolders(ctx context.Context, artifactID
 
 	return folderIDs, nil
 }
+
+// GetArtifactsByWorkspace retrieves all artifacts for a workspace
+func (s ContentFolderService) GetArtifactsByWorkspace(ctx context.Context, workspaceID uuid.UUID) ([]models.TestimonialArtifact, error) {
+	// Get all artifacts without filtering by processing type, with no limit
+	artifacts, err := s.artifactRepo.GetByWorkspaceID(ctx, workspaceID, nil, 10000, 0, s.db)
+	if err != nil {
+		s.logger.Error("Failed to get artifacts by workspace",
+			zap.Error(err),
+			zap.String("workspace_id", workspaceID.String()))
+		return nil, fmt.Errorf("failed to get artifacts by workspace: %w", err)
+	}
+
+	return artifacts, nil
+}

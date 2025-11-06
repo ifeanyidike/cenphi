@@ -17,12 +17,15 @@ import { AnimatePresence } from "framer-motion";
 import { useProcessingMonitor } from "@/contexts/ProcessingMonitorContext";
 import { CollapsedView } from "./CollapsedView";
 import { ExpandedView } from "./ExpandedView";
+import { HistoryView } from "./HistoryView";
+import { CollapsedHistoryBadge } from "./CollapsedHistoryBadge";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate, useLocation } from "react-router-dom";
 
 export const GlobalProcessingMonitor: React.FC = () => {
-  const { activeJobs, removeJob } = useProcessingMonitor();
+  const { activeJobs, completedJobs, removeJob, clearHistory } = useProcessingMonitor();
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -61,13 +64,16 @@ export const GlobalProcessingMonitor: React.FC = () => {
     }
   }, [displayJobs.length]);
 
-  // Don't render if no display jobs OR if in studio
-  if (displayJobs.length === 0 || isInStudio) {
-    if (isInStudio) {
-      console.log("[GlobalProcessingMonitor] In studio, hiding monitor");
-    } else {
-      console.log("[GlobalProcessingMonitor] No display jobs, not rendering");
+  // Auto-close history when opened history becomes empty
+  useEffect(() => {
+    if (showHistory && completedJobs.length === 0) {
+      setShowHistory(false);
     }
+  }, [showHistory, completedJobs.length]);
+
+  // Don't render if in studio (studio has its own monitor)
+  // OR if no display jobs AND no history
+  if (isInStudio || (displayJobs.length === 0 && completedJobs.length === 0 && !showHistory)) {
     return null;
   }
 
@@ -90,6 +96,20 @@ export const GlobalProcessingMonitor: React.FC = () => {
     }
   };
 
+  const handleShowHistory = () => {
+    setIsExpanded(false);
+    setShowHistory(true);
+  };
+
+  const handleCloseHistory = () => {
+    setShowHistory(false);
+  };
+
+  const handleClearHistory = () => {
+    clearHistory();
+    setShowHistory(false);
+  };
+
   return (
     <div
       className="fixed top-20 right-6 z-[9999]"
@@ -101,13 +121,27 @@ export const GlobalProcessingMonitor: React.FC = () => {
       }}
     >
       <AnimatePresence mode="wait">
-        {isExpanded ? (
+        {showHistory ? (
+          <HistoryView
+            key="history"
+            completedJobs={completedJobs}
+            onClose={handleCloseHistory}
+            onClearHistory={handleClearHistory}
+          />
+        ) : displayJobs.length === 0 && completedJobs.length > 0 ? (
+          <CollapsedHistoryBadge
+            key="history-badge"
+            count={completedJobs.length}
+            onClick={handleShowHistory}
+          />
+        ) : isExpanded ? (
           <ExpandedView
             key="expanded"
             jobs={displayJobs}
             onCollapse={handleToggle}
             onRemoveJob={handleRemoveJob}
             onJobClick={handleJobClick}
+            onShowHistory={completedJobs.length > 0 ? handleShowHistory : undefined}
           />
         ) : (
           <CollapsedView

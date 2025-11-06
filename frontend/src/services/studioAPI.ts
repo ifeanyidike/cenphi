@@ -65,6 +65,18 @@ export interface CreateSessionResponse {
   reorder_message?: string; // Human-readable message about what was reordered
 }
 
+export interface CompletedSessionResponse {
+  session_id: string;
+  testimonial_id?: string;
+  workspace_id: string;
+  session_type: string;
+  status: string;
+  auto_proceed: boolean;
+  started_at: string;
+  completed_at: string;
+  stream_url: string;
+}
+
 /**
  * StudioAPI - Centralized API client for Studio session control operations
  * Uses existing backend routes for pause/resume/skip/retry
@@ -479,6 +491,32 @@ export class StudioAPI {
         message: "Failed to get active sessions",
       }));
       throw new Error(error.message || "Failed to get active sessions");
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Get completed sessions for a workspace (for history)
+   * Returns up to 50 sessions completed within the last 24 hours
+   * Route: GET /studio/sessions/completed?workspace_id={id}
+   */
+  async getCompletedSessions(workspaceId: string): Promise<{
+    sessions: CompletedSessionResponse[];
+    count: number;
+  }> {
+    const response = await fetch(
+      `${this.baseUrl}/studio/sessions/completed?workspace_id=${workspaceId}`,
+      {
+        headers: await this.getHeaders(),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({
+        message: "Failed to get completed sessions",
+      }));
+      throw new Error(error.message || "Failed to get completed sessions");
     }
 
     return response.json();

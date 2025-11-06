@@ -695,55 +695,55 @@ const PublicShowcase: React.FC = () => {
                     remarkPlugins={[remarkGfm, remarkBreaks]}
                     components={{
                       // Custom styling for markdown elements
-                      h1: ({ node, ...props }) => (
+                      h1: (props) => (
                         <h1
                           className="text-xl font-bold text-slate-900 mb-4 mt-6 first:mt-0"
                           {...props}
                         />
                       ),
-                      h2: ({ node, ...props }) => (
+                      h2: (props) => (
                         <h2
                           className="text-lg font-bold text-slate-900 mb-3 mt-5 first:mt-0"
                           {...props}
                         />
                       ),
-                      h3: ({ node, ...props }) => (
+                      h3: (props) => (
                         <h3
                           className="text-base font-semibold text-slate-900 mb-2 mt-4 first:mt-0"
                           {...props}
                         />
                       ),
-                      p: ({ node, ...props }) => (
+                      p: (props) => (
                         <p
                           className="mb-5 text-sm text-slate-700 leading-[1.8]"
                           {...props}
                         />
                       ),
-                      ul: ({ node, ...props }) => (
+                      ul: (props) => (
                         <ul
                           className="list-disc list-inside mb-4 space-y-2 text-sm text-slate-700"
                           {...props}
                         />
                       ),
-                      ol: ({ node, ...props }) => (
+                      ol: (props) => (
                         <ol
                           className="list-decimal list-inside mb-4 space-y-2 text-sm text-slate-700"
                           {...props}
                         />
                       ),
-                      li: ({ node, ...props }) => (
+                      li: (props) => (
                         <li
                           className="text-sm text-slate-700 leading-[1.8]"
                           {...props}
                         />
                       ),
-                      blockquote: ({ node, ...props }) => (
+                      blockquote: (props) => (
                         <blockquote
                           className="border-l-4 border-blue-500 pl-4 py-2 mb-4 italic text-sm text-slate-600"
                           {...props}
                         />
                       ),
-                      code: ({ node, inline, ...props }: any) =>
+                      code: ({ inline, ...props }: any) =>
                         inline ? (
                           <code
                             className="bg-slate-100 px-1.5 py-0.5 rounded text-xs text-slate-900 font-mono"
@@ -755,22 +755,22 @@ const PublicShowcase: React.FC = () => {
                             {...props}
                           />
                         ),
-                      pre: ({ node, ...props }) => (
+                      pre: (props) => (
                         <pre
                           className="bg-slate-100 p-3 rounded-lg overflow-x-auto mb-4"
                           {...props}
                         />
                       ),
-                      strong: ({ node, ...props }) => (
+                      strong: (props) => (
                         <strong
                           className="font-semibold text-slate-900"
                           {...props}
                         />
                       ),
-                      em: ({ node, ...props }) => (
+                      em: (props) => (
                         <em className="italic text-slate-700" {...props} />
                       ),
-                      a: ({ node, ...props }) => (
+                      a: (props) => (
                         <a
                           className="text-blue-600 hover:text-blue-700 underline"
                           target="_blank"
@@ -778,11 +778,11 @@ const PublicShowcase: React.FC = () => {
                           {...props}
                         />
                       ),
-                      hr: ({ node, ...props }) => (
+                      hr: (props) => (
                         <hr className="my-6 border-slate-200" {...props} />
                       ),
                       // Handle line breaks in plain text
-                      br: ({ node, ...props }) => (
+                      br: (props) => (
                         <br className="block mb-2" {...props} />
                       ),
                     }}

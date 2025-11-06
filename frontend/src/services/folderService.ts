@@ -1,6 +1,7 @@
 // frontend/src/services/folderService.ts
 import { useApiClient } from "./apiClient";
 import { useCallback } from "react";
+import { authStore } from "@/stores/authStore";
 
 export interface ContentFolder {
   id: string;
@@ -136,6 +137,84 @@ export const useFolderService = () => {
     [api]
   );
 
+  const downloadFolderAsZip = useCallback(
+    async (workspaceId: string, folderId: string): Promise<void> => {
+      // Use api.downloadFile method (we'll need to add this method to apiClient)
+      // For now, use direct fetch with proper base URL
+      const baseUrl = import.meta.env.VITE_API_URL || "";
+      const url = `${baseUrl}/workspaces/${workspaceId}/folders/${folderId}/download`;
+
+      // Get token using authStore
+      const { token } = await authStore.getToken();
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to download folder');
+      }
+
+      // Get filename from Content-Disposition header
+      const contentDisposition = response.headers.get('Content-Disposition');
+      const filenameMatch = contentDisposition?.match(/filename="(.+)"/);
+      const filename = filenameMatch ? filenameMatch[1] : 'folder.zip';
+
+      // Create blob and download
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+    },
+    []
+  );
+
+  const downloadClipCollectionAsZip = useCallback(
+    async (workspaceId: string, artifactId: string): Promise<void> => {
+      const baseUrl = import.meta.env.VITE_API_URL || "";
+      const url = `${baseUrl}/workspaces/${workspaceId}/artifacts/${artifactId}/clips/download`;
+
+      // Get token using authStore
+      const { token } = await authStore.getToken();
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to download clip collection');
+      }
+
+      // Get filename from Content-Disposition header
+      const contentDisposition = response.headers.get('Content-Disposition');
+      const filenameMatch = contentDisposition?.match(/filename="(.+)"/);
+      const filename = filenameMatch ? filenameMatch[1] : 'clips.zip';
+
+      // Create blob and download
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+    },
+    []
+  );
+
   return {
     listFolders,
     getFolder,
@@ -146,5 +225,7 @@ export const useFolderService = () => {
     removeItemFromFolder,
     getFolderItems,
     getFolderWithItems,
+    downloadFolderAsZip,
+    downloadClipCollectionAsZip,
   };
 };

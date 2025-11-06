@@ -89,16 +89,17 @@ class CaptionGenerator:
             # Prioritize transcript_segments over legacy inputs
             if transcript_segments and len(transcript_segments) > 0:
                 logger.info(f"Processing {len(transcript_segments)} transcript segments")
-                
-                # Quick timing unit verification for debugging
-                self.quick_segment_timing_test(transcript_segments)
-                
+
+                # Transcript segments from API server/DB are ALWAYS in milliseconds (AssemblyAI standard)
+                # AssemblyAI returns timestamps in milliseconds, stored as-is in DB
+                logger.info(f"💡 Transcript segments timing unit: MILLISECONDS (from AssemblyAI/DB)")
+
                 # Validate segment consistency
                 self._validate_segment_consistency(transcript_segments, media_duration)
-                
+
                 # Process segments into caption format
                 timed_segments = self._process_transcript_segments(transcript_segments, target_platform)
-                
+
                 # Extract full transcript text
                 transcript_text = " ".join([segment.text for segment in transcript_segments])
                 
@@ -157,15 +158,15 @@ class CaptionGenerator:
             return CaptionResult(success=False, error=str(e))
     
     def _validate_segment_consistency(self, transcript_segments: List[intelligence_pb2.TranscriptSegment], media_duration: float):
-        """Validate transcript segment timing consistency (handles millisecond timing)"""
+        """Validate transcript segment timing consistency (expects milliseconds from API server)"""
         if not transcript_segments:
             raise ValueError("Empty transcript segments")
-        
+
         logger.info("Validating transcript segment consistency...")
-        
+
         issues = []
         total_segments = len(transcript_segments)
-        
+
         # Check each segment
         for i, segment in enumerate(transcript_segments):
             # Validate segment has required fields
@@ -173,25 +174,25 @@ class CaptionGenerator:
                 logger.warning(f"Segment {i}: Empty text")
                 issues.append(f"Segment {i}: Empty text")
                 continue
-            
+
             if not hasattr(segment, 'start_time') or not hasattr(segment, 'end_time'):
                 logger.warning(f"Segment {i}: Missing timing")
                 issues.append(f"Segment {i}: Missing timing")
                 continue
-            
-            # Convert milliseconds to seconds (CRITICAL FIX)
+
+            # Convert milliseconds to seconds (API server always sends milliseconds)
             start_time_ms = float(segment.start_time)
             end_time_ms = float(segment.end_time)
             start_time = start_time_ms / 1000.0
             end_time = end_time_ms / 1000.0
-            
+
             if start_time < 0:
-                logger.warning(f"Segment {i}: Negative start time {start_time_ms}ms ({start_time:.2f}s)")
-                issues.append(f"Segment {i}: Negative start time {start_time_ms}ms ({start_time:.2f}s)")
-            
+                logger.warning(f"Segment {i}: Negative start time {start_time_ms} ({start_time:.2f}s)")
+                issues.append(f"Segment {i}: Negative start time {start_time_ms} ({start_time:.2f}s)")
+
             if end_time <= start_time:
-                logger.warning(f"Segment {i}: Invalid duration {start_time_ms}ms-{end_time_ms}ms ({start_time:.2f}s-{end_time:.2f}s)")
-                issues.append(f"Segment {i}: Invalid duration {start_time_ms}ms-{end_time_ms}ms ({start_time:.2f}s-{end_time:.2f}s)")
+                logger.warning(f"Segment {i}: Invalid duration {start_time_ms}-{end_time_ms} ({start_time:.2f}s-{end_time:.2f}s)")
+                issues.append(f"Segment {i}: Invalid duration {start_time_ms}-{end_time_ms} ({start_time:.2f}s-{end_time:.2f}s)")
             
             tolerance = min(1.0, media_duration * 0.05) # 5% of duration or 1s max
             if end_time > media_duration + tolerance:
@@ -201,10 +202,10 @@ class CaptionGenerator:
             # Check gap to next segment
             if i < total_segments - 1:
                 next_segment = transcript_segments[i + 1]
-                next_start_ms = float(next_segment.start_time)
-                next_start = next_start_ms / 1000.0
+                next_start_raw = float(next_segment.start_time)
+                next_start = next_start_raw / 1000.0  # Convert milliseconds to seconds
                 gap = next_start - end_time
-                
+
                 if gap > 5.0:  # Large gap
                     logger.warning(f"Large gap between segments {i}-{i+1}: {gap:.1f}s")
                 elif gap < -0.1:  # Overlap
@@ -222,30 +223,32 @@ class CaptionGenerator:
 
         if media_duration < 10.0:  # Likely a clip
             logger.info(f"🎬 CLIP MODE: Validating {len(transcript_segments)} segments for {media_duration:.2f}s clip")
-            
+
             # Log segment coverage for clips
             if transcript_segments:
-                first_start = float(transcript_segments[0].start_time) / 1000.0
-                last_end = float(transcript_segments[-1].end_time) / 1000.0
-                
+                first_start_raw = float(transcript_segments[0].start_time)
+                last_end_raw = float(transcript_segments[-1].end_time)
+                first_start = first_start_raw / 1000.0  # Convert milliseconds to seconds
+                last_end = last_end_raw / 1000.0  # Convert milliseconds to seconds
+
                 logger.info(f"📊 Clip segment coverage: {first_start:.3f}s - {last_end:.3f}s of {media_duration:.3f}s")
-                
+
                 if first_start > 0.1:
                     logger.warning(f"⚠️ Segments start late: {first_start:.3f}s delay")
                 if last_end < media_duration - 0.1:
                     logger.warning(f"⚠️ Segments end early: {media_duration - last_end:.3f}s gap")
-                    
-        
-        # Overall timing analysis (convert to seconds)
-        first_start_ms = float(transcript_segments[0].start_time)
-        last_end_ms = float(transcript_segments[-1].end_time)
-        first_start = first_start_ms / 1000.0
-        last_end = last_end_ms / 1000.0
+
+
+        # Overall timing analysis (convert milliseconds to seconds)
+        first_start_raw = float(transcript_segments[0].start_time)
+        last_end_raw = float(transcript_segments[-1].end_time)
+        first_start = first_start_raw / 1000.0  # Convert milliseconds to seconds
+        last_end = last_end_raw / 1000.0  # Convert milliseconds to seconds
         coverage = (last_end / media_duration) * 100 if media_duration > 0 else 0
-        
+
         logger.info(f"✅ Segment validation passed:")
         logger.info(f"   Segments: {total_segments}")
-        logger.info(f"   Time span (ms): {first_start_ms:.0f}ms - {last_end_ms:.0f}ms")
+        logger.info(f"   Time span (raw): {first_start_raw:.1f} - {last_end_raw:.1f} (milliseconds)")
         logger.info(f"   Time span (sec): {first_start:.1f}s - {last_end:.1f}s")
         logger.info(f"   Coverage: {coverage:.1f}% of media")
 
@@ -258,49 +261,49 @@ class CaptionGenerator:
             logger.warning(f"High coverage: {coverage:.1f}% - segments might extend beyond media")
     
     def _process_transcript_segments(
-        self, 
-        transcript_segments: List[intelligence_pb2.TranscriptSegment], 
+        self,
+        transcript_segments: List[intelligence_pb2.TranscriptSegment],
         target_platform: str
     ) -> List[Dict[str, Any]]:
-        """Process transcript segments into caption format with platform optimization (handles millisecond timing)"""
-        
+        """Process transcript segments into caption format with platform optimization (expects milliseconds)"""
+
         logger.info(f"Processing {len(transcript_segments)} segments for {target_platform}")
-        
+
         # Platform-specific parameters
         platform_config = self._get_platform_config(target_platform)
-        
+
         caption_segments = []
-        
+
         for i, segment in enumerate(transcript_segments):
-            # Convert milliseconds to seconds (CRITICAL FIX)
-            start_time_ms = float(segment.start_time)
-            end_time_ms = float(segment.end_time)
-            start_time = start_time_ms / 1000.0
-            end_time = end_time_ms / 1000.0
-            
+            # Convert milliseconds to seconds
+            start_time_raw = float(segment.start_time)
+            end_time_raw = float(segment.end_time)
+            start_time = start_time_raw / 1000.0  # Convert milliseconds to seconds
+            end_time = end_time_raw / 1000.0  # Convert milliseconds to seconds
+
             text = segment.text.strip()
             duration = end_time - start_time
-            
+
             # Skip empty segments
             if not text:
                 logger.warning(f"Skipping empty segment {i}")
                 continue
-            
+
             # Validate converted timing
             if duration <= 0:
-                logger.error(f"Segment {i} has invalid duration after conversion: {start_time_ms}ms-{end_time_ms}ms -> {start_time:.3f}s-{end_time:.3f}s")
+                logger.error(f"Segment {i} has invalid duration after conversion: {start_time_raw}ms -> {start_time:.3f}s-{end_time:.3f}s")
                 continue
-            
-            logger.info(f"Segment {i}: {start_time_ms}ms-{end_time_ms}ms -> {start_time:.2f}s-{end_time:.2f}s ({duration:.2f}s)")
-            
+
+            logger.info(f"Segment {i}: {start_time_raw}-{end_time_raw}ms -> {start_time:.2f}s-{end_time:.2f}s ({duration:.2f}s)")
+
             # Check if segment needs splitting for platform
-            if (duration > platform_config['max_duration'] or 
+            if (duration > platform_config['max_duration'] or
                 len(text.split()) > platform_config['max_words']):
-                
+
                 logger.info(f"Splitting long segment {i}: {duration:.1f}s, {len(text.split())} words")
                 split_segments = self._split_long_segment(segment, platform_config)
                 caption_segments.extend(split_segments)
-                
+
             else:
                 # Use segment as-is (with converted timing)
                 caption_segments.append({
@@ -309,10 +312,10 @@ class CaptionGenerator:
                     "text": text,
                     "word_count": len(text.split()),
                     "duration": duration,
-                    "timing_source": "transcript_segment_ms_converted",
+                    "timing_source": "transcript_segment_milliseconds",
                     "original_index": i,
-                    "original_start_ms": start_time_ms,
-                    "original_end_ms": end_time_ms,
+                    "original_start_raw": start_time_raw,
+                    "original_end_raw": end_time_raw,
                     "confidence": getattr(segment, 'confidence', 1.0),
                     "speaker": getattr(segment, 'speaker', '')
                 })
@@ -367,23 +370,23 @@ class CaptionGenerator:
             }
     
     def _split_long_segment(
-        self, 
-        segment: intelligence_pb2.TranscriptSegment, 
+        self,
+        segment: intelligence_pb2.TranscriptSegment,
         platform_config: Dict[str, Any]
     ) -> List[Dict[str, Any]]:
-        """Split a long transcript segment into smaller caption segments (handles millisecond timing)"""
-        
-        # Convert milliseconds to seconds (CRITICAL FIX)
-        start_time_ms = float(segment.start_time)
-        end_time_ms = float(segment.end_time)
-        start_time = start_time_ms / 1000.0
-        end_time = end_time_ms / 1000.0
-        
+        """Split a long transcript segment into smaller caption segments (expects milliseconds)"""
+
+        # Convert milliseconds to seconds
+        start_time_raw = float(segment.start_time)
+        end_time_raw = float(segment.end_time)
+        start_time = start_time_raw / 1000.0  # Convert milliseconds to seconds
+        end_time = end_time_raw / 1000.0  # Convert milliseconds to seconds
+
         text = segment.text.strip()
         total_duration = end_time - start_time
-        
-        logger.info(f"Splitting segment: {start_time_ms}ms-{end_time_ms}ms -> {start_time:.2f}s-{end_time:.2f}s")
-        
+
+        logger.info(f"Splitting segment: {start_time_raw}-{end_time_raw}ms -> {start_time:.2f}s-{end_time:.2f}s")
+
         # Check if we have word-level timing for precise splits
         if hasattr(segment, 'words') and segment.words:
             return self._split_using_word_timing(segment, platform_config)
@@ -391,21 +394,22 @@ class CaptionGenerator:
             return self._split_using_estimation(segment, platform_config)
     
     def _split_using_word_timing(
-        self, 
-        segment: intelligence_pb2.TranscriptSegment, 
+        self,
+        segment: intelligence_pb2.TranscriptSegment,
         platform_config: Dict[str, Any]
     ) -> List[Dict[str, Any]]:
-        """Split segment using word-level timing for precision"""
-        
+        """Split segment using word-level timing for precision (expects milliseconds)"""
+
         words = segment.words
         max_words = platform_config['max_words']
         max_duration = platform_config['max_duration']
-        
+
         split_segments = []
         current_words = []
-        
+
         for i, word in enumerate(words):
-            # Convert word timing from milliseconds to seconds
+            # Word timing is typically in milliseconds, convert to seconds
+            # (Note: Word timing may differ from segment timing unit)
             word_start = float(word.start) / 1000.0 if hasattr(word, 'start') else 0
             word_end = float(word.end) / 1000.0 if hasattr(word, 'end') else 0
             word_text = word.text if hasattr(word, 'text') else ""
@@ -456,58 +460,58 @@ class CaptionGenerator:
         return split_segments
     
     def _split_using_estimation(
-        self, 
-        segment: intelligence_pb2.TranscriptSegment, 
+        self,
+        segment: intelligence_pb2.TranscriptSegment,
         platform_config: Dict[str, Any]
     ) -> List[Dict[str, Any]]:
-        """Split segment using time estimation when word timing unavailable (handles millisecond timing)"""
-        
-        # Convert milliseconds to seconds (CRITICAL FIX)
-        start_time_ms = float(segment.start_time)
-        end_time_ms = float(segment.end_time)
-        start_time = start_time_ms / 1000.0
-        end_time = end_time_ms / 1000.0
-        
+        """Split segment using time estimation when word timing unavailable (expects milliseconds)"""
+
+        # Convert milliseconds to seconds
+        start_time_raw = float(segment.start_time)
+        end_time_raw = float(segment.end_time)
+        start_time = start_time_raw / 1000.0  # Convert milliseconds to seconds
+        end_time = end_time_raw / 1000.0  # Convert milliseconds to seconds
+
         text = segment.text.strip()
         total_duration = end_time - start_time
-        
+
         words = text.split()
         max_words = platform_config['max_words']
-        
+
         split_segments = []
         words_per_second = len(words) / total_duration if total_duration > 0 else 2.0
-        
+
         current_time = start_time
         i = 0
-        
+
         while i < len(words):
             # Determine how many words for this segment
             words_in_segment = min(max_words, len(words) - i)
             segment_words = words[i:i + words_in_segment]
             segment_text = " ".join(segment_words)
-            
+
             # Calculate estimated duration
             estimated_duration = len(segment_words) / words_per_second
             estimated_duration = max(self.min_duration, estimated_duration)
-            
+
             segment_end_time = min(current_time + estimated_duration, end_time)
-            
+
             split_segments.append({
                 "start_time": current_time,
                 "end_time": segment_end_time,
                 "text": segment_text,
                 "word_count": len(segment_words),
                 "duration": segment_end_time - current_time,
-                "timing_source": "estimated_split_ms_converted",
-                "original_start_ms": start_time_ms,
-                "original_end_ms": end_time_ms,
+                "timing_source": "estimated_split_milliseconds",
+                "original_start_raw": start_time_raw,
+                "original_end_raw": end_time_raw,
                 "confidence": getattr(segment, 'confidence', 1.0),
                 "speaker": getattr(segment, 'speaker', '')
             })
-            
+
             current_time = segment_end_time
             i += words_in_segment
-        
+
         return split_segments
     
     def _validate_caption_timing(self, caption_segments: List[Dict[str, Any]]):
@@ -1154,43 +1158,33 @@ class CaptionGenerator:
         
         return debug_info
     
-    def quick_segment_timing_test(self, transcript_segments: List[intelligence_pb2.TranscriptSegment]):
-        """Quick test to verify TranscriptSegment timing units (milliseconds vs seconds)"""
-        
-        if not transcript_segments or len(transcript_segments) < 3:
-            logger.warning("Need at least 3 segments for timing test")
-            return
-        
-        logger.info("=== TRANSCRIPT SEGMENT TIMING TEST ===")
-        
-        # Check first 3 segments
-        for i in range(min(3, len(transcript_segments))):
-            segment = transcript_segments[i]
-            start_raw = getattr(segment, 'start_time', 0)
-            end_raw = getattr(segment, 'end_time', 0)
-            text = getattr(segment, 'text', 'NO_TEXT')[:30]
-            
-            # Show both interpretations
-            if_seconds = f"{start_raw:.2f}s - {end_raw:.2f}s"
-            if_milliseconds = f"{start_raw/1000.0:.2f}s - {end_raw/1000.0:.2f}s (converted from {start_raw:.0f}ms - {end_raw:.0f}ms)"
-            
-            logger.info(f"Segment {i}: '{text}'")
-            logger.info(f"  Raw values: {start_raw} - {end_raw}")
-            logger.info(f"  If seconds: {if_seconds}")
-            logger.info(f"  If milliseconds: {if_milliseconds}")
-        
-        # Auto-detect likely unit based on values
+    def _detect_timing_unit(self, transcript_segments: List[intelligence_pb2.TranscriptSegment]) -> str:
+        """
+        Detect whether transcript segment timing is in seconds or milliseconds.
+
+        Returns:
+            'seconds' if timing appears to be in seconds
+            'milliseconds' if timing appears to be in milliseconds
+        """
+        if not transcript_segments:
+            return 'milliseconds'  # Default assumption
+
         first_segment = transcript_segments[0]
         last_segment = transcript_segments[-1]
         span_raw = getattr(last_segment, 'end_time', 0) - getattr(first_segment, 'start_time', 0)
-        
-        if span_raw > 10000:  # Very likely milliseconds
-            logger.info(f"✅ DETECTED: Timing appears to be in MILLISECONDS (span: {span_raw:.0f})")
-            logger.info(f"   Converted span: {span_raw/1000.0:.1f} seconds")
-        elif span_raw > 10:  # Likely seconds
-            logger.info(f"🤔 DETECTED: Timing appears to be in SECONDS (span: {span_raw:.1f}s)")
-            logger.warning("   This conflicts with Word timing being in milliseconds!")
+
+        # Decision logic based on span
+        if span_raw > 10000:
+            # Very likely milliseconds (e.g., 14000ms = 14s)
+            return 'milliseconds'
+        elif span_raw > 10:
+            # Likely seconds for clips/content (e.g., 14.4s for a clip)
+            # Lowered threshold from 100 to 10 to catch short clips correctly
+            return 'seconds'
         else:
-            logger.warning(f"❓ UNCLEAR: Short span ({span_raw:.1f}) - check manually")
-        
-        logger.info("==========================================")
+            # For very short content (< 10 unit span), check end times
+            max_end = max(getattr(s, 'end_time', 0) for s in transcript_segments)
+            if max_end > 1000:
+                return 'milliseconds'
+            else:
+                return 'seconds'

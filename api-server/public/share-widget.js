@@ -42,7 +42,7 @@
   let widgetCounter = 0;
 
   const defaultConfig = {
-    apiUrl: "https://api.cenphi.com",
+    apiUrl: "https://api.cenphi.io",
     embedStyle: "cinematic", // cinematic | magazine | floating | minimal
     carouselStyle: "slide", // slide | stack | fade | multiItem
     theme: "light",
@@ -148,7 +148,12 @@
       fetchWidgetConfig({ ...config, shareId })
         .then((data) => {
           // Check if this is a clipping artifact with multiple clips
-          if (data.artifact && data.artifact.clips && Array.isArray(data.artifact.clips) && data.artifact.clips.length > 0) {
+          if (
+            data.artifact &&
+            data.artifact.clips &&
+            Array.isArray(data.artifact.clips) &&
+            data.artifact.clips.length > 0
+          ) {
             // Automatically convert to carousel mode to show all clips
             config.mode = "carousel";
             config.shareIds = [shareId];
@@ -485,9 +490,13 @@
   function expandClipsInData(allData) {
     const expanded = [];
 
-    allData.forEach(data => {
+    allData.forEach((data) => {
       // Check if this is a clipping artifact with clips array
-      if (data.artifact && data.artifact.clips && Array.isArray(data.artifact.clips)) {
+      if (
+        data.artifact &&
+        data.artifact.clips &&
+        Array.isArray(data.artifact.clips)
+      ) {
         // Expand each clip into a separate item
         data.artifact.clips.forEach((clip, index) => {
           expanded.push({
@@ -495,8 +504,8 @@
             // Create a new artifact object for this clip
             artifact: {
               id: clip.id || `${data.artifact.id}-clip-${index}`,
-              processing_type: 'clip',
-              content_type: 'video/mp4',
+              processing_type: "clip",
+              content_type: "video/mp4",
               asset_url: clip.url,
               text_content: clip.title || clip.theme || null,
               created_at: data.artifact.created_at,
@@ -505,11 +514,11 @@
                 title: clip.title,
                 theme: clip.theme,
                 duration: clip.duration,
-                clip_index: index
-              }
+                clip_index: index,
+              },
             },
             share_id: data.share_id,
-            testimonial: data.testimonial // Preserve testimonial if exists
+            testimonial: data.testimonial, // Preserve testimonial if exists
           });
         });
       } else {
@@ -1861,7 +1870,8 @@
       testimonial.type === "video" || artifact.content_type === "video/mp4";
     const videoUrl =
       testimonial.video_url || testimonial.media_url || artifact.asset_url;
-    const textContent = testimonial.text_content || testimonial.content || artifact.text_content;
+    const textContent =
+      testimonial.text_content || testimonial.content || artifact.text_content;
     const videoId = `cenphi-v-${
       config._instanceId
     }-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -2001,7 +2011,7 @@
           color: rgba(255,255,255,0.55);
           background: rgba(0,0,0,0.25);
         ">
-          Powered by <a href="https://cenphi.com" target="_blank" rel="noopener" style="color: white; text-decoration: none; font-weight: 600;">Cenphi</a>
+          Powered by <a href="https://cenphi.io" target="_blank" rel="noopener" style="color: white; text-decoration: none; font-weight: 600;">Cenphi</a>
         </div>
       `;
     }
@@ -2040,7 +2050,8 @@
       testimonial.type === "video" || artifact.content_type === "video/mp4";
     const videoUrl =
       testimonial.video_url || testimonial.media_url || artifact.asset_url;
-    const textContent = testimonial.text_content || testimonial.content || artifact.text_content;
+    const textContent =
+      testimonial.text_content || testimonial.content || artifact.text_content;
     const videoId = `cenphi-v-${
       config._instanceId
     }-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -2183,7 +2194,7 @@
           font-size: 10px;
           color: #94a3b8;
         ">
-          Powered by <a href="https://cenphi.com" target="_blank" rel="noopener" style="color: ${config.accentColor}; text-decoration: none; font-weight: 600;">Cenphi</a>
+          Powered by <a href="https://cenphi.io" target="_blank" rel="noopener" style="color: ${config.accentColor}; text-decoration: none; font-weight: 600;">Cenphi</a>
         </div>
       `;
     }
@@ -2225,7 +2236,8 @@
       testimonial.type === "video" || artifact.content_type === "video/mp4";
     const videoUrl =
       testimonial.video_url || testimonial.media_url || artifact.asset_url;
-    const textContent = testimonial.text_content || testimonial.content || artifact.text_content;
+    const textContent =
+      testimonial.text_content || testimonial.content || artifact.text_content;
     const videoId = `cenphi-v-${
       config._instanceId
     }-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -2354,7 +2366,7 @@
           color: #94a3b8;
           background: rgba(255,255,255,0.5);
         ">
-          Powered by <a href="https://cenphi.com" target="_blank" rel="noopener" style="color: #8b5cf6; text-decoration: none; font-weight: 600;">Cenphi</a>
+          Powered by <a href="https://cenphi.io" target="_blank" rel="noopener" style="color: #8b5cf6; text-decoration: none; font-weight: 600;">Cenphi</a>
         </div>
       `;
     }
@@ -2393,7 +2405,8 @@
       testimonial.type === "video" || artifact.content_type === "video/mp4";
     const videoUrl =
       testimonial.video_url || testimonial.media_url || artifact.asset_url;
-    const textContent = testimonial.text_content || testimonial.content || artifact.text_content;
+    const textContent =
+      testimonial.text_content || testimonial.content || artifact.text_content;
     const videoId = `cenphi-v-${
       config._instanceId
     }-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -2514,7 +2527,7 @@
           font-size: 9px;
           color: #94a3b8;
         ">
-          via <a href="https://cenphi.com" target="_blank" rel="noopener" style="color: ${config.accentColor}; text-decoration: none; font-weight: 600;">Cenphi</a>
+          via <a href="https://cenphi.io" target="_blank" rel="noopener" style="color: ${config.accentColor}; text-decoration: none; font-weight: 600;">Cenphi</a>
         </div>
       `;
     }

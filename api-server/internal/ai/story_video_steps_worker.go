@@ -63,10 +63,6 @@ func NewStoryVideoStepsWorker(
 
 // HandleCollectClips collects clips from testimonials using the new 3-step gRPC API
 func (w *StoryVideoStepsWorker) HandleCollectClips(ctx context.Context, stepCtx *StepContext) (*StepResult, error) {
-	w.logger.Info("Starting clip collection",
-		zap.String("session_id", stepCtx.SessionID.String()),
-		zap.String("workspace_id", stepCtx.WorkspaceID.String()))
-
 	// Build request for AI service
 	collectReq := &pb.CollectClipsRequest{
 		SessionId:          stepCtx.SessionID.String(),
@@ -82,10 +78,6 @@ func (w *StoryVideoStepsWorker) HandleCollectClips(ctx context.Context, stepCtx 
 	// Frontend sends full moment objects via MomentSelectionStep → AIOrderingStep → config
 	if momentsData, ok := stepCtx.Config["moments"]; ok {
 		if momentsSlice, ok := momentsData.([]interface{}); ok {
-			w.logger.Info("Converting frontend moments to testimonial segments",
-				zap.String("session_id", stepCtx.SessionID.String()),
-				zap.Int("moments_count", len(momentsSlice)))
-
 			// Group moments by testimonial_id
 			momentsByTestimonial := make(map[string][]*pb.HighlightMoment)
 
@@ -244,9 +236,6 @@ func (w *StoryVideoStepsWorker) HandleCollectClips(ctx context.Context, stepCtx 
 				}
 			}
 
-			w.logger.Info("Using pre-selected clip objects from frontend",
-				zap.String("session_id", stepCtx.SessionID.String()),
-				zap.Int("clips_count", len(collectReq.ExistingClips)))
 		}
 	}
 
@@ -299,9 +288,6 @@ func (w *StoryVideoStepsWorker) HandleCollectClips(ctx context.Context, stepCtx 
 			collectReq.TestimonialSegments = append(collectReq.TestimonialSegments, segment)
 		}
 
-		w.logger.Info("Prepared testimonial segments for clip extraction",
-			zap.String("session_id", stepCtx.SessionID.String()),
-			zap.Int("segment_count", len(collectReq.TestimonialSegments)))
 	}
 
 executeCollection:

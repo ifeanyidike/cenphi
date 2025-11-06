@@ -5,7 +5,7 @@
 
   <!-- Homepage -->
   <url>
-    <loc>https://cenphi.com/</loc>
+    <loc>https://cenphi.io/</loc>
     <lastmod>2025-10-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
@@ -13,7 +13,7 @@
 
   <!-- Pricing Page -->
   <url>
-    <loc>https://cenphi.com/pricing</loc>
+    <loc>https://cenphi.io/pricing</loc>
     <lastmod>2025-10-29</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
@@ -21,7 +21,7 @@
 
   <!-- Why Cenphi Page -->
   <url>
-    <loc>https://cenphi.com/why-Cenphi</loc>
+    <loc>https://cenphi.io/why-Cenphi</loc>
     <lastmod>2025-10-29</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
@@ -29,7 +29,7 @@
 
   <!-- Collection Page (Public testimonial submission) -->
   <url>
-    <loc>https://cenphi.com/collect</loc>
+    <loc>https://cenphi.io/collect</loc>
     <lastmod>2025-10-29</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>

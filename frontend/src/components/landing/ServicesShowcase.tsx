@@ -21,146 +21,154 @@ const ServicesShowcase = () => {
   const services = [
     {
       id: "content-hub",
-      title: "AI Content Generation",
-      subtitle: "Transform testimonials into marketing content",
+      title: "Create a Month of Content in 30 Seconds",
+      subtitle: "Stop spending days repurposing testimonials",
       description:
-        "Our AI analyzes your testimonials and automatically generates blog posts, social media content, email campaigns, and landing page copy that converts.",
+        "Upload one testimonial. Get 13+ ready-to-publish pieces: blog posts, social media content, email campaigns, ad copy, case studies, and professional PDFs. Download or publish directly.",
       icon: Sparkles,
-      color: "blue",
-      demo: <ContentGenerationDemo />,
+      color: "gray",
+      screenshot: "/landing-files/content-generation.webp",
+      outcome: "Save 15+ hours per week while creating higher-performing content",
       features: [
         "Blog posts and articles",
         "Social media content",
-        "Email marketing copy",
-        "Landing page content",
+        "Email campaigns & ad copy",
+        "PDF exports & documents",
       ],
-      cta: "Generate Content",
+      cta: "Start Creating Content",
       metric: "5x faster content creation",
     },
     {
       id: "talk-to-data",
-      title: "Talk to Your Data",
-      subtitle: "AI-powered conversational analytics",
+      title: "Get Instant Insights from Your Testimonials",
+      subtitle: "No more manually analyzing feedback",
       description:
-        "Ask questions about your testimonials in natural language and get instant insights. Chat with your data to discover trends, sentiments, and patterns you never knew existed.",
+        "Ask questions in plain English. Get instant answers about sentiment trends, top pain points, feature requests, and customer patterns. It's like having a data analyst on demand.",
       icon: MessageSquare,
-      color: "purple",
-      demo: <TalkToDataDemo />,
+      color: "gray",
+      screenshot: "/landing-files/data-intelligence.webp",
+      outcome: "Discover hidden patterns and make data-driven decisions instantly",
       features: [
         "Natural language queries",
         "Instant sentiment analysis",
         "Trend identification",
         "Smart recommendations",
       ],
-      cta: "Chat with Data",
+      cta: "Talk to Your Data",
       metric: "Get insights in seconds",
     },
     {
       id: "clipping",
-      title: "Smart Clipping",
-      subtitle: "Extract powerful highlight moments",
+      title: "Extract 10+ Shareable Clips Automatically",
+      subtitle: "Long testimonials need editing for social media",
       description:
-        "AI automatically identifies and extracts the most impactful moments from your video testimonials. Create short, engaging clips perfect for social media and ads.",
+        "Automatically finds the emotional peaks and powerful moments. Get 10+ engagement-optimized clips with auto-captions, perfect for Instagram, TikTok, LinkedIn, and ads. Zero editing required.",
       icon: Scissors,
-      color: "blue",
-      demo: <ClippingDemo />,
+      color: "gray",
+      screenshot: "/landing-files/clips-library.webp",
+      outcome: "Turn one long video into weeks of social media content",
       features: [
-        "AI highlight detection",
+        "Smart highlight detection",
         "Auto-clip generation",
         "Multiple aspect ratios",
         "Caption overlay",
       ],
-      cta: "Create Clips",
+      cta: "Start Clipping",
       metric: "10+ clips per testimonial",
     },
     {
       id: "story-video",
-      title: "Story Video Generation",
-      subtitle: "Create compelling narrative videos",
+      title: "Create Emotional Story Videos That Convert",
+      subtitle: "Combine testimonials into compelling narratives",
       description:
-        "Combine multiple testimonials into powerful story videos. AI selects the best moments, arranges them into a narrative flow, and adds professional transitions.",
+        "Automatically weaves multiple testimonials into powerful story videos. Selects the best moments, arranges them for emotional impact, and adds professional transitions. Perfect for campaigns.",
       icon: Film,
-      color: "purple",
-      demo: <StoryVideoDemo />,
+      color: "gray",
+      screenshot: "/landing-files/story-video-config.webp",
+      outcome: "Drive 3x higher engagement with narrative-driven content",
       features: [
         "Multi-testimonial stories",
-        "AI-powered sequencing",
+        "Smart sequencing",
         "Professional transitions",
         "Brand customization",
       ],
-      cta: "Generate Stories",
+      cta: "Create Story Videos",
       metric: "3x higher engagement",
     },
     {
       id: "platform-optimization",
-      title: "Platform Optimization",
-      subtitle: "Optimize for every social channel",
+      title: "One Upload → 5 Platform-Perfect Videos",
+      subtitle: "Need videos for Instagram, TikTok, LinkedIn, YouTube",
       description:
-        "Automatically adapt your testimonials for TikTok, Instagram, YouTube, LinkedIn and more. Perfect aspect ratios, captions, and formatting for each platform.",
+        "Upload once. Get 5 perfectly optimized videos with platform-specific aspect ratios, auto-captions, logo overlays, B-roll, music, and engagement hooks. Each one fine-tuned for where it'll be posted.",
       icon: Share2,
-      color: "blue",
-      demo: <PlatformOptimizationDemo />,
+      color: "gray",
+      screenshot: "/landing-files/optimization-config.webp",
+      outcome: "Save 6 hours per video while reaching 5x more audience",
       features: [
         "Multi-platform formats",
-        "Auto aspect ratio",
-        "Platform-specific captions",
-        "Optimized encoding",
+        "Auto captions & B-roll",
+        "Music & logo overlays",
+        "Platform-optimized encoding",
       ],
-      cta: "Optimize Content",
+      cta: "Optimize for Platforms",
       metric: "Reach 5+ platforms instantly",
     },
     {
       id: "analytics",
-      title: "Performance Analytics",
-      subtitle: "Track ROI and conversion impact",
+      title: "Prove Which Testimonials Drive Revenue",
+      subtitle: "Stop guessing which testimonials actually convert",
       description:
-        "Get deep insights into how your testimonials perform across channels, track conversion rates, sentiment trends, and measure the revenue impact of social proof.",
+        "Track every view, engagement, and conversion back to specific testimonials. See sentiment trends, measure revenue impact, and optimize placement for maximum ROI. Know exactly what's working.",
       icon: BarChart3,
-      color: "purple",
-      demo: <AnalyticsDemo />,
+      color: "gray",
+      screenshot: "/landing-files/sentiment-dashboard.webp",
+      outcome: "Drive 47% more conversions with data-backed optimization",
       features: [
         "Sentiment timeline",
         "Keyword analysis",
         "Period comparison",
         "Custom segments",
       ],
-      cta: "View Analytics",
+      cta: "See Analytics",
       metric: "+47% average conversion lift",
     },
     {
       id: "video-processing",
-      title: "Video Processing",
-      subtitle: "Collect and enhance video testimonials",
+      title: "Studio-Quality Video Pipeline",
+      subtitle: "Professional video editing without the editors",
       description:
-        "Capture powerful video testimonials with our smart collection tools, then enhance them with AI-powered editing, noise removal, and quality improvements.",
+        "Complete video production pipeline: automatically adds B-roll, text overlays, background music, removes noise, adds intro/outro, and enhances quality. Studio-grade output in minutes.",
       icon: Video,
-      color: "blue",
-      demo: <VideoProcessingDemo />,
+      color: "gray",
+      screenshot: "/landing-files/processing-studio.webp",
+      outcome: "Create professional marketing videos 10x faster than manual editing",
       features: [
-        "Smart video collection",
-        "Automated transcription",
-        "Noise removal",
-        "Video enhancement",
+        "B-roll insertion & overlays",
+        "Text & caption overlay",
+        "Music & noise removal",
+        "Intro/outro & enhancement",
       ],
-      cta: "Process Videos",
-      metric: "89% completion rate",
+      cta: "Start Creating Videos",
+      metric: "10x faster production",
     },
     {
       id: "automation",
-      title: "Smart Automation",
-      subtitle: "Automate testimonial collection and management",
+      title: "Collect 10x More Testimonials on Autopilot",
+      subtitle: "Manually requesting testimonials wastes time and gets ignored",
       description:
-        "Set up intelligent workflows that automatically request, collect, and organize testimonials from your customers at the perfect moments.",
+        "Set triggers for perfect timing (after purchase, milestone, support win). Automatically requests, follows up, and organizes responses. Never miss a testimonial opportunity again.",
       icon: Zap,
-      color: "purple",
-      demo: <AutomationDemo />,
+      color: "gray",
+      screenshot: "/landing-files/scheduling-posting.webp",
+      outcome: "Build a constant stream of fresh social proof automatically",
       features: [
         "Automated requests",
         "Smart timing triggers",
         "Follow-up sequences",
         "Multi-channel collection",
       ],
-      cta: "Setup Automation",
+      cta: "Automate Collection",
       metric: "10x more testimonials collected",
     },
   ];
@@ -196,11 +204,11 @@ const ServicesShowcase = () => {
         {/* Header */}
         <div className="text-center mb-8 sm:mb-12">
           <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-3 px-2">
-            Eight powerful AI services that drive results
+            Eight ways to turn testimonials into
+            <span className="block text-blue-600">revenue-driving assets</span>
           </h2>
           <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto px-4">
-            Each service works independently or together to maximize the impact
-            of your customer testimonials.
+            Each service delivers measurable results. Use them individually or combine them to maximize your testimonial ROI.
           </p>
         </div>
 
@@ -220,8 +228,15 @@ const ServicesShowcase = () => {
                     ? `${colors.bg} ${colors.border} shadow-lg border-2`
                     : "bg-white border-gray-200 hover:border-gray-300 hover:shadow-md"
                 }`}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                whileHover={{
+                  scale: 1.05,
+                  y: -4,
+                  transition: { type: "spring", stiffness: 400, damping: 20 },
+                }}
+                whileTap={{ scale: 0.95 }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05, type: "spring" }}
               >
                 <div
                   className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg ${isActive ? colors.bg : "bg-gray-100"} flex items-center justify-center mb-2 sm:mb-3`}
@@ -252,10 +267,15 @@ const ServicesShowcase = () => {
         <AnimatePresence mode="wait">
           <motion.div
             key={activeService}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3 }}
+            initial={{ opacity: 0, y: 40, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -40, scale: 0.95 }}
+            transition={{
+              type: "spring",
+              stiffness: 100,
+              damping: 20,
+              duration: 0.5,
+            }}
             className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden"
           >
             <div className="grid lg:grid-cols-2">
@@ -272,9 +292,19 @@ const ServicesShowcase = () => {
                   {currentService.subtitle}
                 </h3>
 
-                <p className="text-sm text-gray-600 leading-relaxed mb-4 sm:mb-6">
+                <p className="text-sm text-gray-600 leading-relaxed mb-4">
                   {currentService.description}
                 </p>
+
+                {/* Outcome */}
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4">
+                  <div className="flex items-start gap-2">
+                    <span className="text-xs text-blue-600 mt-0.5 font-bold">✓</span>
+                    <p className="text-sm text-gray-900 font-medium leading-relaxed">
+                      {currentService.outcome}
+                    </p>
+                  </div>
+                </div>
 
                 {/* Metric */}
                 <div
@@ -287,45 +317,121 @@ const ServicesShowcase = () => {
                 </div>
 
                 {/* Features */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4 sm:mb-6">
+                <motion.div
+                  className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4 sm:mb-6"
+                  initial="hidden"
+                  animate="visible"
+                  variants={{
+                    hidden: { opacity: 0 },
+                    visible: {
+                      opacity: 1,
+                      transition: {
+                        staggerChildren: 0.08,
+                        delayChildren: 0.2,
+                      },
+                    },
+                  }}
+                >
                   {currentService.features.map((feature, index) => (
                     <motion.div
                       key={index}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.1 }}
+                      variants={{
+                        hidden: { opacity: 0, x: -20, scale: 0.9 },
+                        visible: {
+                          opacity: 1,
+                          x: 0,
+                          scale: 1,
+                          transition: {
+                            type: "spring",
+                            stiffness: 200,
+                            damping: 20,
+                          },
+                        },
+                      }}
                       className="flex items-center gap-2"
                     >
-                      <div
+                      <motion.div
                         className={`w-1 h-1 rounded-full ${currentColors.text.replace("text-", "bg-")}`}
-                      ></div>
+                        animate={{
+                          scale: [1, 1.5, 1],
+                        }}
+                        transition={{
+                          duration: 2,
+                          repeat: Infinity,
+                          delay: index * 0.2,
+                        }}
+                      ></motion.div>
                       <span className="text-gray-700 text-xs">{feature}</span>
                     </motion.div>
                   ))}
-                </div>
+                </motion.div>
 
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <Button
-                    className={`${currentColors.button} text-white px-5 py-2 text-sm w-full sm:w-auto`}
-                    onClick={() => navigate("/studio")}
+                <motion.div
+                  className="flex flex-col sm:flex-row gap-3"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4, type: "spring" }}
+                >
+                  <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                   >
-                    {currentService.cta}
-                    <ArrowRight className="ml-2 h-3 w-3" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="px-5 py-2 text-sm border-gray-300 w-full sm:w-auto"
+                    <Button
+                      className={`${currentColors.button} text-white px-5 py-2 text-sm w-full sm:w-auto`}
+                      onClick={() => navigate("/studio")}
+                    >
+                      {currentService.cta}
+                      <motion.div
+                        className="inline-block ml-2"
+                        animate={{ x: [0, 3, 0] }}
+                        transition={{ duration: 1.5, repeat: Infinity }}
+                      >
+                        <ArrowRight className="h-3 w-3" />
+                      </motion.div>
+                    </Button>
+                  </motion.div>
+                  <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                   >
-                    Learn More
-                  </Button>
-                </div>
+                    <Button
+                      variant="outline"
+                      className="px-5 py-2 text-sm border-gray-300 w-full sm:w-auto"
+                    >
+                      Learn More
+                    </Button>
+                  </motion.div>
+                </motion.div>
               </div>
 
-              {/* Demo */}
-              <div
-                className={`${currentColors.bg} p-4 sm:p-6 lg:p-8 flex items-center justify-center`}
-              >
-                {currentService.demo}
+              {/* Demo - Real Screenshot */}
+              <div className={`${currentColors.bg} p-4 sm:p-6 lg:p-8`}>
+                <motion.div
+                  className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden"
+                  initial={{ opacity: 0, scale: 0.9, rotateY: -15 }}
+                  animate={{ opacity: 1, scale: 1, rotateY: 0 }}
+                  transition={{
+                    delay: 0.3,
+                    type: "spring",
+                    stiffness: 80,
+                    damping: 15,
+                  }}
+                  whileHover={{
+                    scale: 1.02,
+                    transition: { type: "spring", stiffness: 300 },
+                  }}
+                  style={{ transformStyle: "preserve-3d" }}
+                >
+                  <motion.img
+                    src={currentService.screenshot}
+                    alt={`${currentService.title} - Real product screenshot`}
+                    className="w-full h-auto"
+                    loading="lazy"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.5, duration: 0.6 }}
+                  />
+                </motion.div>
               </div>
             </div>
           </motion.div>
@@ -333,449 +439,31 @@ const ServicesShowcase = () => {
 
         {/* Bottom CTA */}
         <div className="text-center mt-8 sm:mt-12">
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 sm:p-6 bg-gray-50">
-            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3">
-              Choose your power tools
+          <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 sm:p-8">
+            <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-2">
+              Ready to transform your testimonials into revenue?
             </h3>
-            <p className="text-gray-600 text-sm mb-4 sm:mb-6 max-w-xl mx-auto px-2">
-              Start with any service and scale as you grow. All services work
-              together to maximize your testimonial ROI.
+            <p className="text-gray-600 text-sm mb-6 max-w-xl mx-auto px-2">
+              Start with one service or use them all. Every feature is designed to drive measurable business results.
             </p>
-            <Button
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 text-sm font-semibold border-0 rounded-lg w-full sm:w-auto"
-              onClick={() => navigate("/studio")}
-            >
-              Try All Services
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+              <Button
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 text-sm font-semibold shadow-sm hover:shadow-md transition-all duration-200 rounded-lg w-full sm:w-auto"
+                onClick={() => navigate("/studio")}
+              >
+                Start Transforming Testimonials
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
+                Free 14-day trial • No credit card required
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </section>
   );
 };
-
-// Service Demo Components
-const ContentGenerationDemo = () => (
-  <div className="w-full max-w-md">
-    <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-      <div className="bg-blue-600 text-white p-4">
-        <h4 className="font-semibold">AI Content Generator</h4>
-      </div>
-      <div className="p-6 space-y-4">
-        <div className="bg-gray-50 p-3 rounded-lg">
-          <div className="text-xs text-gray-600 mb-1">
-            Input: 3 testimonials selected
-          </div>
-          <div className="text-sm text-gray-800">
-            "Amazing results, great support, highly recommend..."
-          </div>
-        </div>
-
-        <div className="text-center py-2">
-          <div className="inline-flex items-center gap-2 text-blue-600">
-            <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
-            <span className="text-sm font-medium">Generating content...</span>
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          {[
-            { type: "Blog Post", status: "✓ Ready", bg: "bg-blue-50" },
-            { type: "Social Media", status: "✓ Generated", bg: "bg-blue-50" },
-            { type: "Email Copy", status: "✓ Ready", bg: "bg-blue-50" },
-            { type: "Ad Copy", status: "⏳ Processing", bg: "bg-gray-50" },
-          ].map((item, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.2 }}
-              className={`${item.bg} p-3 rounded border flex justify-between items-center`}
-            >
-              <span className="text-sm font-medium">{item.type}</span>
-              <span className="text-xs">{item.status}</span>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
-const VideoProcessingDemo = () => (
-  <div className="w-full max-w-md">
-    <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-      <div className="bg-gray-600 text-white p-4">
-        <h4 className="font-semibold">Video Processing</h4>
-      </div>
-      <div className="p-6">
-        <div className="aspect-video bg-gray-900 rounded-lg mb-4 relative overflow-hidden">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-              <Video className="h-8 w-8 text-white" />
-            </div>
-          </div>
-          <div className="absolute bottom-2 left-2 right-2">
-            <div className="bg-black bg-opacity-50 text-white text-xs p-2 rounded">
-              "This product completely transformed our business..."
-            </div>
-          </div>
-          <div className="absolute top-2 right-2 bg-blue-500 text-white px-2 py-1 rounded text-xs">
-            ● Processing
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span>Transcription</span>
-            <span className="text-blue-600">Complete</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span>Enhancement</span>
-            <span className="text-gray-600">Processing</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span>Optimization</span>
-            <span className="text-gray-400">Pending</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
-const AnalyticsDemo = () => (
-  <div className="w-full max-w-md">
-    <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-      <div className="bg-blue-600 text-white p-4">
-        <h4 className="font-semibold">Performance Analytics</h4>
-      </div>
-      <div className="p-6">
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-blue-600">+47%</div>
-            <div className="text-xs text-gray-600">Conversion Rate</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-blue-600">$2.4M</div>
-            <div className="text-xs text-gray-600">Revenue Impact</div>
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          {[
-            { metric: "Video Testimonials", value: 89, color: "bg-blue-500" },
-            { metric: "Text Reviews", value: 76, color: "bg-blue-500" },
-            { metric: "Star Ratings", value: 94, color: "bg-gray-500" },
-          ].map((item, i) => (
-            <div key={i}>
-              <div className="flex justify-between text-sm mb-1">
-                <span>{item.metric}</span>
-                <span className="font-semibold">{item.value}%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <motion.div
-                  className={`${item.color} h-2 rounded-full`}
-                  animate={{ width: `${item.value}%` }}
-                  transition={{ duration: 1, delay: i * 0.2 }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
-const AutomationDemo = () => (
-  <div className="w-full max-w-md">
-    <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-      <div className="bg-purple-600 text-white p-4">
-        <h4 className="font-semibold">Smart Automation</h4>
-      </div>
-      <div className="p-6 space-y-3">
-        {[
-          {
-            trigger: "Purchase Complete",
-            action: "Send testimonial request",
-            status: "Active",
-            icon: "🛍️",
-          },
-          {
-            trigger: "7 days post-delivery",
-            action: "Follow-up email",
-            status: "Scheduled",
-            icon: "📧",
-          },
-          {
-            trigger: "High satisfaction score",
-            action: "Video request",
-            status: "Active",
-            icon: "🎥",
-          },
-          {
-            trigger: "Support ticket resolved",
-            action: "Feedback collection",
-            status: "Active",
-            icon: "🎫",
-          },
-        ].map((item, i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: i * 0.1 }}
-            className="flex items-center gap-3 p-3 bg-purple-50 rounded-lg"
-          >
-            <span className="text-xl">{item.icon}</span>
-            <div className="flex-1">
-              <div className="text-sm font-medium">{item.trigger}</div>
-              <div className="text-xs text-gray-600">{item.action}</div>
-            </div>
-            <div
-              className={`px-2 py-1 rounded text-xs font-medium ${
-                item.status === "Active"
-                  ? "bg-purple-100 text-purple-700"
-                  : "bg-purple-100 text-purple-700"
-              }`}
-            >
-              {item.status}
-            </div>
-          </motion.div>
-        ))}
-      </div>
-    </div>
-  </div>
-);
-
-const TalkToDataDemo = () => (
-  <div className="w-full max-w-md">
-    <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-      <div className="bg-purple-600 text-white p-4">
-        <h4 className="font-semibold">Talk to Your Data</h4>
-      </div>
-      <div className="p-6 space-y-4">
-        <div className="bg-purple-50 p-3 rounded-lg border border-purple-200">
-          <div className="flex items-start gap-2">
-            <MessageSquare className="h-4 w-4 text-purple-600 mt-0.5" />
-            <div className="text-sm text-gray-800">
-              "Show me sentiment analysis for testimonials from the last month"
-            </div>
-          </div>
-        </div>
-
-        <div className="text-center py-2">
-          <div className="inline-flex items-center gap-2 text-purple-600">
-            <div className="w-2 h-2 bg-purple-600 rounded-full animate-pulse"></div>
-            <span className="text-sm font-medium">AI is analyzing...</span>
-          </div>
-        </div>
-
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Sparkles className="h-4 w-4 text-purple-600" />
-            <span className="text-sm font-semibold">AI Response</span>
-          </div>
-          <div className="text-xs text-gray-700 space-y-2">
-            <p>Based on 47 testimonials from last month:</p>
-            <ul className="space-y-1 pl-4">
-              <li>• 89% positive sentiment (+12% vs previous)</li>
-              <li>• Top keywords: "easy", "helpful", "fast"</li>
-              <li>• NPS Score: 72</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
-const ClippingDemo = () => (
-  <div className="w-full max-w-md">
-    <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-      <div className="bg-blue-600 text-white p-4">
-        <h4 className="font-semibold">Smart Clipping</h4>
-      </div>
-      <div className="p-6 space-y-3">
-        <div className="aspect-video bg-gray-900 rounded-lg relative overflow-hidden">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Scissors className="h-12 w-12 text-white opacity-50" />
-          </div>
-          <div className="absolute top-2 left-2 bg-blue-500 text-white px-2 py-1 rounded text-xs">
-            3:45 - Full Video
-          </div>
-          <div className="absolute bottom-2 left-2 right-2 space-y-1">
-            {[
-              { start: "0:12", label: "Highlight 1", color: "bg-blue-500" },
-              { start: "1:24", label: "Highlight 2", color: "bg-purple-500" },
-              { start: "2:45", label: "Highlight 3", color: "bg-green-500" },
-            ].map((clip, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.2 }}
-                className={`${clip.color} text-white px-2 py-1 rounded text-xs flex items-center gap-2`}
-              >
-                <div className="w-1 h-1 bg-white rounded-full"></div>
-                <span>{clip.start}</span>
-                <span>-</span>
-                <span>{clip.label}</span>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-3 gap-2">
-          {["9:16", "1:1", "16:9"].map((ratio, i) => (
-            <div key={i} className="text-center">
-              <div className="bg-blue-50 border border-blue-200 rounded p-2 text-xs font-medium text-blue-600">
-                {ratio}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
-const StoryVideoDemo = () => (
-  <div className="w-full max-w-md">
-    <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-      <div className="bg-purple-600 text-white p-4">
-        <h4 className="font-semibold">Story Video Generation</h4>
-      </div>
-      <div className="p-6 space-y-3">
-        <div className="text-xs text-gray-600 mb-2">
-          Combining 5 testimonials into a story...
-        </div>
-
-        <div className="space-y-2">
-          {[
-            {
-              name: "Sarah M.",
-              content: "Intro: Problem statement",
-              color: "bg-purple-50",
-            },
-            {
-              name: "John D.",
-              content: "Discovery moment",
-              color: "bg-blue-50",
-            },
-            {
-              name: "Lisa K.",
-              content: "Transformation story",
-              color: "bg-purple-50",
-            },
-            {
-              name: "Mike R.",
-              content: "Results & impact",
-              color: "bg-blue-50",
-            },
-            {
-              name: "Amy S.",
-              content: "Call to action",
-              color: "bg-purple-50",
-            },
-          ].map((clip, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.15 }}
-              className={`${clip.color} p-3 rounded-lg border flex items-center gap-3`}
-            >
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 to-blue-400 flex items-center justify-center text-white text-xs font-bold">
-                {i + 1}
-              </div>
-              <div className="flex-1">
-                <div className="text-sm font-medium">{clip.name}</div>
-                <div className="text-xs text-gray-600">{clip.content}</div>
-              </div>
-              <Film className="h-4 w-4 text-gray-400" />
-            </motion.div>
-          ))}
-        </div>
-
-        <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-3 rounded-lg border border-purple-200 text-center">
-          <div className="text-xs font-medium text-purple-700">
-            Final Story: 2:30 duration
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
-const PlatformOptimizationDemo = () => (
-  <div className="w-full max-w-md">
-    <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-      <div className="bg-blue-600 text-white p-4">
-        <h4 className="font-semibold">Platform Optimization</h4>
-      </div>
-      <div className="p-6 space-y-3">
-        <div className="text-center mb-2">
-          <div className="inline-flex items-center gap-2 bg-blue-50 px-3 py-1 rounded-full text-xs font-medium text-blue-600">
-            <Share2 className="h-3 w-3" />
-            <span>1 video → 5 platforms</span>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            {
-              platform: "TikTok",
-              ratio: "9:16",
-              color: "bg-pink-50",
-              icon: "📱",
-            },
-            {
-              platform: "Instagram",
-              ratio: "1:1",
-              color: "bg-purple-50",
-              icon: "📸",
-            },
-            {
-              platform: "YouTube",
-              ratio: "16:9",
-              color: "bg-red-50",
-              icon: "🎥",
-            },
-            {
-              platform: "LinkedIn",
-              ratio: "1:1",
-              color: "bg-blue-50",
-              icon: "💼",
-            },
-          ].map((item, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: i * 0.1 }}
-              className={`${item.color} p-3 rounded-lg border text-center`}
-            >
-              <div className="text-2xl mb-1">{item.icon}</div>
-              <div className="text-xs font-medium mb-1">{item.platform}</div>
-              <div className="text-xs text-gray-600">{item.ratio}</div>
-              <div className="mt-2 text-xs text-green-600 font-medium">
-                ✓ Ready
-              </div>
-            </motion.div>
-          ))}
-        </div>
-
-        <div className="bg-green-50 border border-green-200 rounded-lg p-2 text-center">
-          <div className="text-xs font-medium text-green-700">
-            All formats exported with optimized captions
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-);
 
 export default ServicesShowcase;

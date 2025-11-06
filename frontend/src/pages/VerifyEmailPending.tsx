@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Mail, CheckCircle, ArrowRight, RefreshCcw, AlertCircle, X } from "lucide-react";
+import {
+  Mail,
+  CheckCircle,
+  ArrowRight,
+  RefreshCcw,
+  AlertCircle,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { authStore } from "@/stores/authStore";
 import { sendEmailVerification } from "firebase/auth";
@@ -198,7 +205,7 @@ const VerifyEmailPending = observer(() => {
           <p className="text-xs text-gray-500">
             Need help?{" "}
             <a
-              href="mailto:support@cenphi.com"
+              href="mailto:support@cenphi.io"
               className="text-indigo-600 hover:text-indigo-700 font-medium"
             >
               Contact support

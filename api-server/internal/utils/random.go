@@ -9,7 +9,7 @@ import (
 
 func GenerateRandomEmail() string {
 	rand.Seed(uint64(time.Now().UnixNano()))
-	domains := []string{"example.com", "test.com", "dummy.org", "fakemail.net", "mail.com", "cenphi.com", "cenphi.io", "cenphi.ai"}
+	domains := []string{"example.com", "test.com", "dummy.org", "fakemail.net", "mail.com", "cenphi.io", "cenphi.io", "cenphi.ai"}
 	randomDomain := domains[rand.Intn(len(domains))]
 	randomUser := RandomString(8)
 	return fmt.Sprintf("%s@%s", randomUser, randomDomain)

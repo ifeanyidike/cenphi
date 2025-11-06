@@ -169,15 +169,22 @@ const CustomPipelineConfig: React.FC<CustomPipelineConfigProps> = observer(
         ? context.testimonialId
         : undefined;
 
-    // Fetch clips data for duration calculation and transcript text if context is clip-based
+    // Fetch clips data for duration calculation, transcript text, and URL if context is clip-based
     const [clipsData, setClipsData] = useState<
-      Array<{ start_time: number; end_time: number; text?: string }>
+      Array<{
+        start_time: number;
+        end_time: number;
+        text?: string;
+        url?: string;
+      }>
     >([]);
 
     useEffect(() => {
       const fetchClips = async () => {
-        if (context.type === "clip" && testimonialId) {
-          // Fetch single clip
+        if (
+          (context.type === "clip" || context.type === "selected-clips") &&
+          testimonialId
+        ) {
           const testimonial =
             await workspaceHub.testimonialManager.fetchTestimonial(
               testimonialId,
@@ -187,33 +194,34 @@ const CustomPipelineConfig: React.FC<CustomPipelineConfigProps> = observer(
             (a: any) => a.processing_type === "clipping"
           );
           const clips = artifact?.data?.generated_clips || [];
-          const clip = clips.find((c: any) => c.id === context.clipId);
-          if (clip) {
-            setClipsData([
-              { start_time: clip.start_time, end_time: clip.end_time, text: clip.text },
-            ]);
+
+          if (context.type === "clip") {
+            // Single clip from clipId param
+            const clip = clips.find((c: any) => c.id === context.clipId);
+            if (clip) {
+              setClipsData([
+                {
+                  start_time: clip.start_time, // Keep in milliseconds (consistent with platform optimization)
+                  end_time: clip.end_time, // Keep in milliseconds
+                  text: clip.text,
+                  url: clip.url,
+                },
+              ]);
+            }
+          } else {
+            // Clips from clipIds param (can be single or multiple)
+            const selectedClips = clips.filter((c: any) =>
+              context.clipIds.includes(c.id)
+            );
+            setClipsData(
+              selectedClips.map((c: any) => ({
+                start_time: c.start_time, // Keep in milliseconds (consistent with platform optimization)
+                end_time: c.end_time, // Keep in milliseconds
+                text: c.text,
+                url: c.url,
+              }))
+            );
           }
-        } else if (context.type === "selected-clips" && testimonialId) {
-          // Fetch multiple clips
-          const testimonial =
-            await workspaceHub.testimonialManager.fetchTestimonial(
-              testimonialId,
-              false
-            );
-          const artifact = testimonial?.artifacts?.find(
-            (a: any) => a.processing_type === "clipping"
-          );
-          const clips = artifact?.data?.generated_clips || [];
-          const selectedClips = clips.filter((c: any) =>
-            context.clipIds.includes(c.id)
-          );
-          setClipsData(
-            selectedClips.map((c: any) => ({
-              start_time: c.start_time,
-              end_time: c.end_time,
-              text: c.text
-            }))
-          );
         } else {
           setClipsData([]);
         }
@@ -346,6 +354,21 @@ const CustomPipelineConfig: React.FC<CustomPipelineConfigProps> = observer(
         ...selectedSteps,
         { ...step, enabled: true, configExpanded: step.requiresConfig },
       ]);
+    };
+
+    const addAllSteps = () => {
+      const newSteps = AVAILABLE_STEPS.filter(
+        (step) => !selectedSteps.find((s) => s.id === step.id)
+      ).map((step) => ({
+        ...step,
+        enabled: true,
+        configExpanded: step.requiresConfig || false,
+      }));
+      setSelectedSteps([...selectedSteps, ...newSteps]);
+    };
+
+    const removeAllSteps = () => {
+      setSelectedSteps([]);
     };
 
     const removeStep = (stepId: string) => {
@@ -495,6 +518,14 @@ const CustomPipelineConfig: React.FC<CustomPipelineConfigProps> = observer(
               config: {},
             })),
         };
+
+        // Add clip_id for single clip processing (consistent with platform optimization)
+        // Backend will fetch clip metadata from database (including URL and timing)
+        if (clipId) {
+          config.clip_id = clipId;
+        } else if (clipIds && clipIds.length === 1) {
+          config.clip_id = clipIds[0];
+        }
 
         // Add crop config if crop step is enabled
         if (hasCropStep) {
@@ -892,7 +923,14 @@ const CustomPipelineConfig: React.FC<CustomPipelineConfigProps> = observer(
                 aspectRatio={cropConfig.aspectRatio}
                 maxSelection={10}
                 videoDuration={videoDuration}
-                transcriptText={clipsData.length > 0 ? clipsData.map(c => c.text).filter(Boolean).join(" ") : undefined}
+                transcriptText={
+                  clipsData.length > 0
+                    ? clipsData
+                        .map((c) => c.text)
+                        .filter(Boolean)
+                        .join(" ")
+                    : undefined
+                }
                 cachedAISuggestions={cachedAISuggestions}
                 onCacheSuggestions={setCachedAISuggestions}
               />
@@ -950,9 +988,33 @@ const CustomPipelineConfig: React.FC<CustomPipelineConfigProps> = observer(
                   Available Steps
                 </h2>
               </div>
-              <p className="text-xs text-slate-600 mb-5">
+              <p className="text-xs text-slate-600 mb-3.5">
                 Click to add processing steps to your pipeline
               </p>
+
+              {/* Bulk Actions */}
+              <div className="flex items-center gap-2 mb-4">
+                <Button
+                  onClick={addAllSteps}
+                  disabled={selectedSteps.length === AVAILABLE_STEPS.length}
+                  size="sm"
+                  variant="outline"
+                  className="flex-1 h-8 text-[10px] font-semibold border-blue-200 bg-blue-50/50 text-blue-700 hover:bg-blue-100 hover:border-blue-300 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Add All
+                </Button>
+                <Button
+                  onClick={removeAllSteps}
+                  disabled={selectedSteps.length === 0}
+                  size="sm"
+                  variant="outline"
+                  className="flex-1 h-8 text-[10px] font-semibold border-red-200 bg-red-50/50 text-red-700 hover:bg-red-100 hover:border-red-300 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                >
+                  <X className="h-3 w-3 mr-1" />
+                  Clear All
+                </Button>
+              </div>
 
               <div className="space-y-2">
                 {AVAILABLE_STEPS.map((step) => {

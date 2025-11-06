@@ -10,6 +10,8 @@ import {
   Sparkles,
   Archive,
   FolderArchiveIcon,
+  Download,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +31,8 @@ interface FoldersSidebarProps {
   onCreateFolder: () => void;
   onEditFolder: (folder: ContentFolder) => void;
   onDeleteFolder: (folder: ContentFolder) => void;
+  onDownloadFolder: (folder: ContentFolder) => void;
+  downloadingFolders: Set<string>;
   totalContentCount: number;
   className?: string;
 }
@@ -42,6 +46,8 @@ const FoldersSidebar: React.FC<FoldersSidebarProps> = memo(
     onCreateFolder,
     onEditFolder,
     onDeleteFolder,
+    onDownloadFolder,
+    downloadingFolders,
     totalContentCount,
     className = "",
   }) => {
@@ -191,6 +197,32 @@ const FoldersSidebar: React.FC<FoldersSidebarProps> = memo(
                           {folder.item_count}
                         </Badge>
 
+                        {/* Download Button - visible on hover */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDownloadFolder(folder);
+                          }}
+                          disabled={downloadingFolders.has(folder.id)}
+                          className={`
+                            h-5 w-5 p-0 opacity-0 group-hover:opacity-100 flex items-center justify-center
+                            hover:bg-slate-200 rounded-sm transition-all
+                            ${isSelected ? "opacity-100 hover:bg-white/15" : ""}
+                            ${downloadingFolders.has(folder.id) ? "opacity-100" : ""}
+                          `}
+                          title={downloadingFolders.has(folder.id) ? "Downloading..." : "Download folder as ZIP"}
+                        >
+                          {downloadingFolders.has(folder.id) ? (
+                            <Loader2
+                              className={`h-3 w-3 animate-spin ${isSelected ? "text-white" : "text-slate-600"}`}
+                            />
+                          ) : (
+                            <Download
+                              className={`h-3 w-3 ${isSelected ? "text-white" : "text-slate-600"}`}
+                            />
+                          )}
+                        </button>
+
                         {/* Actions Menu - all folders now have actions since we filter out defaults */}
                         <DropdownMenu>
                           <DropdownMenuTrigger
@@ -219,6 +251,16 @@ const FoldersSidebar: React.FC<FoldersSidebarProps> = memo(
                             >
                               <Edit2 className="h-3 w-3 mr-2" />
                               Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDownloadFolder(folder);
+                              }}
+                              className="text-[10.5px] cursor-pointer"
+                            >
+                              <Download className="h-3 w-3 mr-2" />
+                              Download
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={(e) => {

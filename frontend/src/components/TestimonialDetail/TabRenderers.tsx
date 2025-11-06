@@ -10,6 +10,7 @@ import {
   Clock,
   Play,
   Share2,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -294,6 +295,17 @@ export const renderClippingArtifacts = ({
                       >
                         <Target className="h-3 w-3 mr-1.5" strokeWidth={2} />
                         Optimize
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          handleProcessMultiple("custom_pipeline")
+                        }
+                        className="h-8 px-3.5 text-[10px] font-medium border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all"
+                      >
+                        <Sparkles className="h-3 w-3 mr-1.5" strokeWidth={2} />
+                        Custom
                       </Button>
                       {onShareClip && (
                         <Button

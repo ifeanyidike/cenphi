@@ -266,9 +266,6 @@ export const TalkToYourData: React.FC = observer(() => {
       <div className="flex-shrink-0 border-b border-gray-100 px-6 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-gradient-to-br from-indigo-600 via-purple-600 to-blue-700 rounded-xl flex items-center justify-center shadow-lg">
-              <Sparkles className="w-4 h-4 text-white" />
-            </div>
             <div>
               <h1 className="text-lg font-bold text-gray-900 tracking-tight">
                 Data Intelligence

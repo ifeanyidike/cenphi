@@ -10,7 +10,7 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Minimize2 } from 'lucide-react';
+import { Minimize2, History } from 'lucide-react';
 import { ActiveJob } from '@/contexts/ProcessingMonitorContext';
 import { JobCard } from './JobCard';
 
@@ -19,6 +19,7 @@ interface ExpandedViewProps {
   onCollapse: () => void;
   onRemoveJob: (sessionId: string) => void;
   onJobClick: (sessionId: string) => void;
+  onShowHistory?: () => void; // Optional - only shown if history exists
 }
 
 export const ExpandedView: React.FC<ExpandedViewProps> = ({
@@ -26,6 +27,7 @@ export const ExpandedView: React.FC<ExpandedViewProps> = ({
   onCollapse,
   onRemoveJob,
   onJobClick,
+  onShowHistory,
 }) => {
   // Determine status indicator
   const hasFailedJob = jobs.some(j => j.status === 'failed' || j.hasFailedStage);
@@ -130,9 +132,35 @@ export const ExpandedView: React.FC<ExpandedViewProps> = ({
           border-t border-slate-200 dark:border-slate-700
           bg-slate-50/50 dark:bg-slate-800/50
         ">
-          <p className="text-[10px] text-center text-slate-500 dark:text-slate-400">
-            Click any job to view in studio
-          </p>
+          {onShowHistory ? (
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                Click any job to view
+              </p>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={onShowHistory}
+                className="
+                  inline-flex items-center gap-1
+                  px-2 py-1
+                  bg-slate-100 dark:bg-slate-800
+                  hover:bg-slate-200 dark:hover:bg-slate-700
+                  rounded
+                  text-[10px] font-medium
+                  text-slate-700 dark:text-slate-300
+                  transition-colors
+                "
+              >
+                <History className="w-2.5 h-2.5" />
+                View History
+              </motion.button>
+            </div>
+          ) : (
+            <p className="text-[10px] text-center text-slate-500 dark:text-slate-400">
+              Click any job to view in studio
+            </p>
+          )}
         </div>
       </div>
     </motion.div>

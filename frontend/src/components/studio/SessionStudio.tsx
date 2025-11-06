@@ -142,10 +142,6 @@ const SessionStudio: React.FC<SessionStudioProps> = ({
 
   // Register job with global monitor when session starts
   useEffect(() => {
-    console.log("[SessionStudio] Register job effect triggered");
-    console.log("[SessionStudio] Session:", session);
-    console.log("[SessionStudio] Session type:", session?.session_type);
-
     if (!session || !session.session_type) {
       console.log(
         "[SessionStudio] Skipping registerJob - session or session_type missing"
@@ -157,13 +153,6 @@ const SessionStudio: React.FC<SessionStudioProps> = ({
     const serviceName = getServiceDisplayName(serviceType);
     const currentStageDisplay = currentStage?.display_name || "Initializing...";
     const progress = currentStage?.progress || 0;
-
-    console.log("[SessionStudio] Calling registerJob with:", {
-      sessionId: session.id,
-      serviceType,
-      serviceName,
-      studioUrl: location.pathname + location.search,
-    });
 
     registerJob({
       sessionId: session.id,
@@ -239,7 +228,6 @@ const SessionStudio: React.FC<SessionStudioProps> = ({
       console.log("[SessionStudio] New preview:", latestPreview);
     }
   }, [latestPreview]);
-  console.log("latestPreview", latestPreview);
 
   // Auto-select latest stage with preview when new preview arrives
   // SPECIAL CASE: For clipping sessions, always auto-select extract_clips stage when it completes
@@ -287,11 +275,6 @@ const SessionStudio: React.FC<SessionStudioProps> = ({
     }
   }, [stages, latestPreview, session?.session_type, selectedStageId]);
   // Log connection status changes
-  useEffect(() => {
-    console.log(
-      `[SessionStudio] SSE connection status: ${isConnected ? "CONNECTED" : "DISCONNECTED"}`
-    );
-  }, [isConnected]);
 
   // Activity tracking
   const updateActivity = useCallback(() => {
@@ -388,7 +371,8 @@ const SessionStudio: React.FC<SessionStudioProps> = ({
           // 2. No message/heartbeat activity for >3 minutes (indicates truly stuck)
           const HEARTBEAT_TIMEOUT = 3 * 60 * 1000; // 3 minutes without any update
 
-          const isStale = elapsed > baseThreshold && timeSinceLastMessage > HEARTBEAT_TIMEOUT;
+          const isStale =
+            elapsed > baseThreshold && timeSinceLastMessage > HEARTBEAT_TIMEOUT;
 
           if (isStale) {
             console.warn(
@@ -405,13 +389,6 @@ const SessionStudio: React.FC<SessionStudioProps> = ({
           }
         }
       });
-
-      if (newStaleStages.size > 0) {
-        console.log(
-          `[SessionStudio] Found ${newStaleStages.size} truly stale stages:`,
-          Array.from(newStaleStages)
-        );
-      }
 
       setStaleStages(newStaleStages);
     };
@@ -709,12 +686,7 @@ const SessionStudio: React.FC<SessionStudioProps> = ({
     (s) => s.status === "skipped" || s.status === "skipped_auto"
   ).length;
   const totalStages = stages.length;
-  // const progressPercent =
-  //   totalStages > 0 ? (completedStages / totalStages) * 100 : 0;
 
-  // Check if session is ready for finalization
-  // All stages must be either completed/accepted/reviewing/skipped (no pending/processing left)
-  // SPECIAL CASE: For clipping sessions, DON'T show finalize until clips are explicitly saved
   const isClippingSession = session?.session_type === "clipping";
   const isReadyToFinalize =
     !isClippingSession && // Never auto-finalize clipping sessions
@@ -726,12 +698,6 @@ const SessionStudio: React.FC<SessionStudioProps> = ({
   const allStagesSkipped =
     totalStages > 0 &&
     skippedStages === totalStages &&
-    !stages.some((s) => s.status === "processing" || s.status === "pending");
-
-  // Check if session is effectively complete (all stages either completed or skipped)
-  const isSessionComplete =
-    totalStages > 0 &&
-    completedStages + skippedStages === totalStages &&
     !stages.some((s) => s.status === "processing" || s.status === "pending");
 
   // Auto-show finalization modal when session completes with successful stages
@@ -754,35 +720,6 @@ const SessionStudio: React.FC<SessionStudioProps> = ({
     completedStages,
   ]);
 
-  // Debug: Log session and stage state for Continue button troubleshooting
-  useEffect(() => {
-    console.log("[SessionStudio] Session State:", {
-      session_id: sessionId,
-      auto_proceed: session?.auto_proceed,
-      session_status: session?.status,
-      total_stages: totalStages,
-      completed_stages: completedStages,
-      skipped_stages: skippedStages,
-      all_stages_skipped: allStagesSkipped,
-      is_session_complete: isSessionComplete,
-      isReadyToFinalize,
-      currentStage: currentStage?.stage_id,
-      stages: stages.map((s) => ({
-        stage_id: s.stage_id,
-        status: s.status,
-        has_preview: !!s.metadata?.preview_url,
-      })),
-    });
-  }, [
-    session?.auto_proceed,
-    session?.status,
-    stages,
-    currentStage,
-    skippedStages,
-    allStagesSkipped,
-    isSessionComplete,
-  ]);
-
   // Calculate if Continue button should show
   const hasAcceptedOrCompletedStages = stages.some(
     (s) => s.status === "accepted" || s.status === "completed"
@@ -800,17 +737,6 @@ const SessionStudio: React.FC<SessionStudioProps> = ({
     hasAcceptedOrCompletedStages &&
     hasPendingStages &&
     !currentStage;
-
-  console.log("[SessionStudio] Continue/Resume Button Conditions:", {
-    auto_proceed: session?.auto_proceed,
-    isReadyToFinalize,
-    hasAcceptedOrCompletedStages,
-    hasPendingStages,
-    currentStage: currentStage?.stage_id,
-    shouldShowContinueButton,
-    shouldShowResumeInAutoMode,
-    willShowButton: shouldShowContinueButton || shouldShowResumeInAutoMode,
-  });
 
   return (
     <div className="min-h-screen ">

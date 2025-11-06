@@ -21,6 +21,7 @@ type ProcessingSessionRepository interface {
 	GetActiveSession(ctx context.Context, testimonialID uuid.UUID, db *sql.DB) (*models.ProcessingSession, error)
 	GetActiveByTestimonialID(ctx context.Context, testimonialID uuid.UUID, db *sql.DB) ([]*models.ProcessingSession, error)
 	GetActiveByWorkspaceID(ctx context.Context, workspaceID uuid.UUID, db *sql.DB) ([]*models.ProcessingSession, error)
+	GetCompletedByWorkspaceID(ctx context.Context, workspaceID uuid.UUID, db *sql.DB) ([]*models.ProcessingSession, error)
 	Update(ctx context.Context, session *models.ProcessingSession, db *sql.DB) error
 	UpdateStatus(ctx context.Context, id uuid.UUID, status string, db *sql.DB) error
 	UpdateStatusIfIn(ctx context.Context, db *sql.DB, id uuid.UUID, newStatus string, allowedStatuses []string) (*models.ProcessingSession, error)
@@ -517,6 +518,62 @@ func (r *processingSessionRepository) GetActiveByWorkspaceID(ctx context.Context
 		      AND pst.status IN ('pending', 'processing')
 		  )
 		ORDER BY ps.started_at DESC
+	`
+
+	rows, err := db.QueryContext(ctx, query, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var sessions []*models.ProcessingSession
+	for rows.Next() {
+		var session models.ProcessingSession
+		err := rows.Scan(
+			&session.ID,
+			&session.TestimonialID,
+			&session.WorkspaceID,
+			&session.SessionType,
+			&session.Status,
+			&session.CurrentStageID,
+			&session.AcceptedVersions,
+			&session.SelectedStages,
+			&session.AutoProceed,
+			&session.PausedAt,
+			&session.PausedByUser,
+			&session.ResumeFromStageID,
+			&session.TotalSteps,
+			&session.CompletedSteps,
+			&session.SkippedSteps,
+			&session.Metadata,
+			&session.StartedAt,
+			&session.UpdatedAt,
+			&session.CompletedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		sessions = append(sessions, &session)
+	}
+
+	return sessions, rows.Err()
+}
+
+// GetCompletedByWorkspaceID returns recently completed sessions for a workspace
+// Returns up to 50 most recent sessions completed within the last 24 hours
+func (r *processingSessionRepository) GetCompletedByWorkspaceID(ctx context.Context, workspaceID uuid.UUID, db *sql.DB) ([]*models.ProcessingSession, error) {
+	query := `
+		SELECT ps.id, ps.testimonial_id, ps.workspace_id, ps.session_type, ps.status, ps.current_stage_id,
+			   ps.accepted_versions, ps.selected_stages, ps.auto_proceed, ps.paused_at, ps.paused_by_user,
+			   ps.resume_from_stage_id, ps.total_steps, ps.completed_steps, ps.skipped_steps,
+			   ps.metadata, ps.started_at, ps.updated_at, ps.completed_at
+		FROM processing_sessions ps
+		WHERE ps.workspace_id = $1
+		  AND ps.status IN ('completed', 'failed')
+		  AND ps.completed_at IS NOT NULL
+		  AND ps.completed_at > NOW() - INTERVAL '24 hours'
+		ORDER BY ps.completed_at DESC
+		LIMIT 50
 	`
 
 	rows, err := db.QueryContext(ctx, query, workspaceID)

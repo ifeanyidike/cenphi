@@ -73,8 +73,9 @@ type App struct {
 	ApprovalController              *controllers.ApprovalController
 	ShowcaseController              *controllers.ShowcaseController
 	// Services
-	StorageService storage.StorageFactory
-	RateLimiter    *midware.RateLimiter
+	StorageService        storage.StorageFactory
+	SessionCleanupService *services.SessionCleanupService
+	RateLimiter           *midware.RateLimiter
 
 	// Workers
 	// AIJobWorker *workers.AIJobWorker
@@ -301,6 +302,7 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 		ApprovalController:              approvalController,
 		ShowcaseController:              showcaseController,
 		StorageService:                  *storageService,
+		SessionCleanupService:           sessionCleanupService,
 		QueueWorkers:                    queueWorkers,
 		// WSHub:                  wsHub,
 		SocialController: *socialController,
@@ -322,6 +324,9 @@ func (app *App) Run(mux http.Handler) error {
 
 	// Start AI job worker
 	// app.AIJobWorker.Start()
+
+	// Start session cleanup loop in background
+	go app.SessionCleanupService.RunCleanupLoop(app.ctx)
 
 	app.Logger.Info("Enhanced server started",
 		zap.String("address", app.Config.Server.Address),

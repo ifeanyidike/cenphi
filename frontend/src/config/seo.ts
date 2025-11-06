@@ -1,7 +1,8 @@
 // SEO Configuration for different pages
 
 export const defaultSEO = {
-  title: "Cenphi - AI-Powered Video Testimonial Platform | Turn Customer Stories into Growth",
+  title:
+    "Cenphi - AI-Powered Video Testimonial Platform | Turn Customer Stories into Growth",
   description:
     "Cenphi helps businesses collect, manage, and leverage video testimonials with AI. Automatically generate clips, social posts, and marketing content from customer stories. Boost trust and conversions with authentic video reviews.",
   keywords:
@@ -12,7 +13,8 @@ export const defaultSEO = {
 
 export const pageSEO = {
   home: {
-    title: "Cenphi - Turn Customer Video Testimonials into Marketing Gold with AI",
+    title:
+      "Cenphi - Turn Customer Video Testimonials into Marketing Gold with AI",
     description:
       "Collect authentic video testimonials from your customers and let AI transform them into viral clips, social media posts, and marketing content. Boost trust, increase conversions, and grow your business with the power of social proof.",
     keywords:
@@ -22,8 +24,8 @@ export const pageSEO = {
       "@context": "https://schema.org",
       "@type": "Organization",
       name: "Cenphi",
-      url: "https://cenphi.com",
-      logo: "https://cenphi.com/logo.png",
+      url: "https://cenphi.io",
+      logo: "https://cenphi.io/logo.png",
       description:
         "AI-powered video testimonial platform that helps businesses collect, manage, and leverage customer stories",
       sameAs: [
@@ -34,7 +36,7 @@ export const pageSEO = {
       contactPoint: {
         "@type": "ContactPoint",
         contactType: "Customer Support",
-        email: "support@cenphi.com",
+        email: "support@cenphi.io",
       },
     },
   },
@@ -51,7 +53,7 @@ export const pageSEO = {
       "@type": "WebPage",
       name: "Pricing",
       description: "Cenphi pricing plans for video testimonial management",
-      url: "https://cenphi.com/pricing",
+      url: "https://cenphi.io/pricing",
     },
   },
 
@@ -66,8 +68,9 @@ export const pageSEO = {
       "@context": "https://schema.org",
       "@type": "WebPage",
       name: "Why Cenphi",
-      description: "Learn why Cenphi is the best choice for video testimonial management",
-      url: "https://cenphi.com/why-Cenphi",
+      description:
+        "Learn why Cenphi is the best choice for video testimonial management",
+      url: "https://cenphi.io/why-Cenphi",
     },
   },
 
@@ -91,8 +94,10 @@ export const pageSEO = {
 
   dashboard: {
     title: "Dashboard - Manage Your Video Testimonials | Cenphi",
-    description: "Access your testimonial dashboard to view, manage, and analyze all your customer video testimonials.",
-    keywords: "testimonial dashboard, manage testimonials, video testimonial analytics",
+    description:
+      "Access your testimonial dashboard to view, manage, and analyze all your customer video testimonials.",
+    keywords:
+      "testimonial dashboard, manage testimonials, video testimonial analytics",
     url: "/dashboard",
     noindex: true,
   },
@@ -101,7 +106,8 @@ export const pageSEO = {
     title: "Content Hub - AI-Generated Marketing Content | Cenphi",
     description:
       "View and manage all your AI-generated marketing content from customer testimonials. Social posts, video clips, and more.",
-    keywords: "content hub, ai generated content, marketing content, video clips, social posts",
+    keywords:
+      "content hub, ai generated content, marketing content, video clips, social posts",
     url: "/content-hub",
     noindex: true,
   },
@@ -110,14 +116,16 @@ export const pageSEO = {
     title: "Analytics - Track Your Testimonial Performance | Cenphi",
     description:
       "Analyze the performance of your video testimonials and shared content. Track views, engagement, and conversions.",
-    keywords: "testimonial analytics, video analytics, engagement tracking, conversion tracking",
+    keywords:
+      "testimonial analytics, video analytics, engagement tracking, conversion tracking",
     url: "/analytics",
     noindex: true,
   },
 
   publicShare: {
     title: "Shared Video Testimonial",
-    description: "View this authentic customer video testimonial shared via Cenphi.",
+    description:
+      "View this authentic customer video testimonial shared via Cenphi.",
     keywords: "shared testimonial, customer review, video testimonial",
     // URL will be dynamic: /share/:shareId/view
   },
@@ -126,7 +134,8 @@ export const pageSEO = {
     title: "Share Your Story | Cenphi",
     description:
       "We'd love to hear about your experience! Record a quick video testimonial and help others discover what makes us special.",
-    keywords: "record testimonial, share feedback, customer story, video review",
+    keywords:
+      "record testimonial, share feedback, customer story, video review",
     url: "/collect",
   },
 };

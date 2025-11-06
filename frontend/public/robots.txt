@@ -45,7 +45,7 @@ Allow: /collect
 Allow: /share/*/view
 
 # Sitemap location
-Sitemap: https://cenphi.com/sitemap.xml
+Sitemap: https://cenphi.io/sitemap.xml
 
 # Crawl-delay for specific bots (optional)
 User-agent: Googlebot

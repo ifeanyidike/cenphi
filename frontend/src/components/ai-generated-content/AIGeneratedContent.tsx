@@ -157,6 +157,12 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
     const [deletingFolder, setDeletingFolder] = useState<ContentFolder | null>(
       null
     );
+    const [downloadingFolders, setDownloadingFolders] = useState<Set<string>>(
+      new Set()
+    );
+    const [downloadingClips, setDownloadingClips] = useState<Set<string>>(
+      new Set()
+    );
     const [folderArtifactIds, setFolderArtifactIds] = useState<Set<string>>(
       new Set()
     );
@@ -171,6 +177,8 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
       addItemsToFolder,
       removeItemFromFolder,
       getFolderItems,
+      downloadFolderAsZip,
+      downloadClipCollectionAsZip,
     } = useFolders();
 
     useEffect(() => {
@@ -245,7 +253,7 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
     }, [selectedFolderId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const filteredArtifacts = useMemo(() => {
-      let filtered = enhancedArtifacts.filter((artifact) => {
+      const filtered = enhancedArtifacts.filter((artifact) => {
         // Folder filter
         if (selectedFolderId) {
           // Only show artifacts that are in this folder
@@ -452,6 +460,21 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
 
     const handleDeleteFolder = (folder: ContentFolder) => {
       setDeletingFolder(folder);
+    };
+
+    const handleDownloadFolder = async (folder: ContentFolder) => {
+      setDownloadingFolders((prev) => new Set(prev).add(folder.id));
+      try {
+        await downloadFolderAsZip(folder.id);
+      } catch (error) {
+        console.error("Failed to download folder:", error);
+      } finally {
+        setDownloadingFolders((prev) => {
+          const next = new Set(prev);
+          next.delete(folder.id);
+          return next;
+        });
+      }
     };
 
     const confirmDeleteFolder = async () => {
@@ -1358,6 +1381,35 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-40">
                         <DropdownMenuItem
+                          onClick={async () => {
+                            setDownloadingClips((prev) =>
+                              new Set(prev).add(artifact.id)
+                            );
+                            try {
+                              await downloadClipCollectionAsZip(artifact.id);
+                            } catch (error) {
+                              console.error("Failed to download clips:", error);
+                            } finally {
+                              setDownloadingClips((prev) => {
+                                const next = new Set(prev);
+                                next.delete(artifact.id);
+                                return next;
+                              });
+                            }
+                          }}
+                          disabled={downloadingClips.has(artifact.id)}
+                          className="text-[10px] cursor-pointer"
+                        >
+                          {downloadingClips.has(artifact.id) ? (
+                            <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                          ) : (
+                            <Download className="h-3 w-3 mr-2" />
+                          )}
+                          {downloadingClips.has(artifact.id)
+                            ? "Downloading..."
+                            : "Download All Clips"}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
                           onClick={() => handleDeleteArtifact(artifact)}
                           className="text-[10px] text-red-600 focus:text-red-600 cursor-pointer"
                           disabled={deletingArtifacts.has(artifact.id)}
@@ -1505,6 +1557,8 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
                       onCreateFolder={handleCreateFolder}
                       onEditFolder={handleEditFolder}
                       onDeleteFolder={handleDeleteFolder}
+                      onDownloadFolder={handleDownloadFolder}
+                      downloadingFolders={downloadingFolders}
                       totalContentCount={enhancedArtifacts.length}
                     />
                   )}
@@ -1557,6 +1611,8 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
                         onCreateFolder={handleCreateFolder}
                         onEditFolder={handleEditFolder}
                         onDeleteFolder={handleDeleteFolder}
+                        onDownloadFolder={handleDownloadFolder}
+                        downloadingFolders={downloadingFolders}
                         totalContentCount={enhancedArtifacts.length}
                       />
                     </div>

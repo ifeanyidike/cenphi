@@ -19,14 +19,7 @@ export interface ValidateBrollConfigOptions {
 export function validateBrollConfig(
   options: ValidateBrollConfigOptions
 ): ValidationResult {
-  const {
-    brollConfig,
-    testimonialId,
-    contextType,
-    transcriptMissingAcknowledged,
-    brollWarningAcknowledged,
-    videoDuration,
-  } = options;
+  const { brollConfig, brollWarningAcknowledged, videoDuration } = options;
 
   // Validation 1: Auto placement requires clips (AI will place them intelligently)
   if (
@@ -65,10 +58,7 @@ export function validateBrollConfig(
       0
     );
 
-    if (
-      totalBrollDuration > videoDuration * 0.4 &&
-      !brollWarningAcknowledged
-    ) {
+    if (totalBrollDuration > videoDuration * 0.4 && !brollWarningAcknowledged) {
       return {
         isValid: false,
         shouldAcknowledge: true,

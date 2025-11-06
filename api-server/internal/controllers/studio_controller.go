@@ -1418,6 +1418,57 @@ func (c StudioController) GetActiveSessions(w http.ResponseWriter, r *http.Reque
 	})
 }
 
+// GetCompletedSessions returns recently completed sessions for a workspace
+// Returns up to 50 sessions completed within the last 24 hours
+func (c StudioController) GetCompletedSessions(w http.ResponseWriter, r *http.Request) {
+	workspaceIDStr := r.URL.Query().Get("workspace_id")
+
+	if workspaceIDStr == "" {
+		utils.RespondWithError(w, http.StatusBadRequest, "workspace_id is required")
+		return
+	}
+
+	workspaceID, err := uuid.Parse(workspaceIDStr)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusBadRequest, "invalid workspace_id")
+		return
+	}
+
+	c.logger.Info("Getting completed sessions for workspace",
+		zap.String("workspace_id", workspaceIDStr))
+
+	dbSessions, err := c.sessionRepo.GetCompletedByWorkspaceID(r.Context(), workspaceID, c.db)
+	if err != nil {
+		c.logger.Error("Failed to get completed sessions by workspace", zap.Error(err))
+		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	c.logger.Info("Found completed sessions",
+		zap.Int("count", len(dbSessions)),
+		zap.String("workspace_id", workspaceIDStr))
+
+	var sessions []map[string]interface{}
+	for _, session := range dbSessions {
+		sessions = append(sessions, map[string]interface{}{
+			"session_id":     session.ID,
+			"testimonial_id": session.TestimonialID,
+			"workspace_id":   session.WorkspaceID,
+			"session_type":   session.SessionType,
+			"status":         session.Status,
+			"auto_proceed":   session.AutoProceed,
+			"started_at":     session.StartedAt,
+			"completed_at":   session.CompletedAt,
+			"stream_url":     "/studio/sessions/" + session.ID.String() + "/stream",
+		})
+	}
+
+	utils.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
+		"sessions": sessions,
+		"count":    len(sessions),
+	})
+}
+
 // SelectClips allows user to select which clips to keep from the clipping stage
 func (sc *StudioController) SelectClips(w http.ResponseWriter, r *http.Request) {
 	sessionID := chi.URLParam(r, "sessionID")

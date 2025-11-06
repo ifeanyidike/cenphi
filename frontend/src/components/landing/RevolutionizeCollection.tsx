@@ -41,7 +41,7 @@ const RevolutionizeCollection = () => {
   };
 
   const afterScenario = {
-    title: "AI-Powered Smart Management",
+    title: "Intelligent Automation",
     solutions: [
       {
         icon: CheckCircle,
@@ -50,7 +50,7 @@ const RevolutionizeCollection = () => {
       },
       {
         icon: CheckCircle,
-        text: "AI analyzes audience behavior for optimal timing",
+        text: "Analyzes audience behavior for optimal timing",
         time: "3x higher engagement",
       },
       {
@@ -73,7 +73,7 @@ const RevolutionizeCollection = () => {
   };
 
   return (
-    <section className="py-8 sm:py-12 bg-slate-50 relative">
+    <section className="py-8 sm:py-12 bg-slate-100/80 relative">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 relative z-10">
         {/* Header */}
         <div className="text-center mb-6 sm:mb-10">
@@ -83,7 +83,8 @@ const RevolutionizeCollection = () => {
             viewport={{ once: true }}
             className="text-xl sm:text-2xl md:text-3xl font-bold mb-4 text-gray-900 px-2"
           >
-            Revolutionize how you manage testimonials
+            From 8 hours a week to
+            <span className="block text-blue-600">20 minutes of smart automation</span>
           </motion.h2>
 
           <motion.p
@@ -93,72 +94,128 @@ const RevolutionizeCollection = () => {
             transition={{ delay: 0.1 }}
             className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto px-4"
           >
-            Transform from chaotic manual processes to AI-powered automation
-            with smart posting, optimal timing suggestions, and intelligent
-            workflow management.
+            Stop manually posting across platforms. Automatically publish at optimal times, manage approvals, and organize everything—while you focus on growth.
           </motion.p>
         </div>
 
         {/* Toggle Tabs */}
         <div className="flex justify-center mb-6 sm:mb-8 px-4">
-          <div className="bg-white rounded-xl p-1 border border-gray-200 shadow-sm w-full max-w-md">
-            <button
+          <motion.div
+            className="bg-white rounded-xl p-1 border border-gray-200 shadow-sm w-full max-w-md"
+            initial={{ opacity: 0, y: -20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.2 }}
+          >
+            <motion.button
               onClick={() => setActiveTab("before")}
               className={`px-4 sm:px-6 py-2.5 rounded-lg font-medium text-sm transition-all duration-300 w-1/2 ${
                 activeTab === "before"
                   ? "bg-gray-50 text-gray-700 border border-gray-200"
                   : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
               }`}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
             >
               Manual Chaos
-            </button>
-            <button
+            </motion.button>
+            <motion.button
               onClick={() => setActiveTab("after")}
               className={`px-4 sm:px-6 py-2.5 rounded-lg font-medium text-sm transition-all duration-300 w-1/2 ${
                 activeTab === "after"
                   ? "bg-blue-50 text-blue-700 border border-blue-200"
                   : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
               }`}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
             >
-              AI-Powered Management
-            </button>
-          </div>
+Intelligent Automation
+            </motion.button>
+          </motion.div>
         </div>
 
         {/* Comparison Content */}
-        <div className="relative">
+        <div className="relative min-h-[500px] rounded-xl bg-white/50 backdrop-blur-sm border border-gray-200">
           {/* Background Image */}
-          <div className="absolute inset-0 flex items-center justify-center opacity-15">
+          <div className="absolute inset-0 overflow-hidden rounded-xl z-0">
             <img
-              src="https://images.unsplash.com/photo-1551434678-e076c223a692?w=800&h=600&fit=crop&crop=center&auto=format&q=80"
-              alt="Professional team collaboration"
-              className="w-full h-full object-cover rounded-lg"
+              src="/landing-files/scheduling-posting.webp"
+              alt="AI-powered scheduling and posting automation dashboard"
+              className="w-full h-full object-cover opacity-20"
+              loading="lazy"
             />
           </div>
 
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-              className="relative z-10"
+              initial={{
+                opacity: 0,
+                x: activeTab === "before" ? -50 : 50,
+                scale: 0.95,
+              }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{
+                opacity: 0,
+                x: activeTab === "before" ? 50 : -50,
+                scale: 0.95,
+              }}
+              transition={{
+                type: "spring",
+                stiffness: 100,
+                damping: 20,
+                duration: 0.5,
+              }}
+              className="relative z-10 p-6"
             >
               {activeTab === "before" ? (
                 <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 items-start">
                   {/* Left Side - Problems */}
                   <div className="order-2 lg:order-1">
-                    <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">
+                    <motion.h3
+                      className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6"
+                      initial={{ opacity: 0, y: -20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.1 }}
+                    >
                       {beforeScenario.title}
-                    </h3>
-                    <div className="space-y-3 sm:space-y-4">
+                    </motion.h3>
+                    <motion.div
+                      className="space-y-3 sm:space-y-4"
+                      initial="hidden"
+                      animate="visible"
+                      variants={{
+                        hidden: { opacity: 0 },
+                        visible: {
+                          opacity: 1,
+                          transition: {
+                            staggerChildren: 0.1,
+                            delayChildren: 0.2,
+                          },
+                        },
+                      }}
+                    >
                       {beforeScenario.problems.map((problem, index) => (
                         <motion.div
                           key={index}
-                          initial={{ opacity: 0, x: -30 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: index * 0.1 }}
+                          variants={{
+                            hidden: { opacity: 0, x: -40, scale: 0.9 },
+                            visible: {
+                              opacity: 1,
+                              x: 0,
+                              scale: 1,
+                              transition: {
+                                type: "spring",
+                                stiffness: 150,
+                                damping: 15,
+                              },
+                            },
+                          }}
+                          whileHover={{
+                            scale: 1.02,
+                            x: 5,
+                            transition: { type: "spring", stiffness: 400 },
+                          }}
                           className="flex items-start gap-3 p-3 sm:p-4 bg-gray-50 border border-gray-200 rounded-lg"
                         >
                           <problem.icon className="h-4 w-4 text-gray-600 mt-0.5 flex-shrink-0" />
@@ -172,11 +229,16 @@ const RevolutionizeCollection = () => {
                           </div>
                         </motion.div>
                       ))}
-                    </div>
+                    </motion.div>
                   </div>
 
                   {/* Right Side - Stats */}
-                  <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6 shadow-sm order-1 lg:order-2">
+                  <motion.div
+                    className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6 shadow-sm order-1 lg:order-2"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.3, type: "spring" }}
+                  >
                     <h4 className="text-base font-semibold text-gray-900 mb-3 sm:mb-4">
                       Current Metrics
                     </h4>
@@ -214,22 +276,56 @@ const RevolutionizeCollection = () => {
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
                 </div>
               ) : (
                 <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 items-start">
                   {/* Left Side - Solutions */}
                   <div className="order-2 lg:order-1">
-                    <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">
+                    <motion.h3
+                      className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6"
+                      initial={{ opacity: 0, y: -20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.1 }}
+                    >
                       {afterScenario.title}
-                    </h3>
-                    <div className="space-y-3 sm:space-y-4">
+                    </motion.h3>
+                    <motion.div
+                      className="space-y-3 sm:space-y-4"
+                      initial="hidden"
+                      animate="visible"
+                      variants={{
+                        hidden: { opacity: 0 },
+                        visible: {
+                          opacity: 1,
+                          transition: {
+                            staggerChildren: 0.1,
+                            delayChildren: 0.2,
+                          },
+                        },
+                      }}
+                    >
                       {afterScenario.solutions.map((solution, index) => (
                         <motion.div
                           key={index}
-                          initial={{ opacity: 0, x: -30 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: index * 0.1 }}
+                          variants={{
+                            hidden: { opacity: 0, x: -40, scale: 0.9 },
+                            visible: {
+                              opacity: 1,
+                              x: 0,
+                              scale: 1,
+                              transition: {
+                                type: "spring",
+                                stiffness: 150,
+                                damping: 15,
+                              },
+                            },
+                          }}
+                          whileHover={{
+                            scale: 1.02,
+                            x: 5,
+                            transition: { type: "spring", stiffness: 400 },
+                          }}
                           className="flex items-start gap-3 p-3 sm:p-4 bg-blue-50 border border-blue-200 rounded-lg"
                         >
                           <solution.icon className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
@@ -243,13 +339,18 @@ const RevolutionizeCollection = () => {
                           </div>
                         </motion.div>
                       ))}
-                    </div>
+                    </motion.div>
                   </div>
 
                   {/* Right Side - Stats */}
-                  <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6 shadow-sm order-1 lg:order-2">
+                  <motion.div
+                    className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6 shadow-sm order-1 lg:order-2"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.3, type: "spring" }}
+                  >
                     <h4 className="text-base font-semibold text-gray-900 mb-3 sm:mb-4">
-                      AI-Powered Results
+                      Smart Results
                     </h4>
                     <div className="grid grid-cols-2 gap-3 sm:gap-4">
                       <div className="text-center p-2 sm:p-3 bg-blue-50 rounded-lg">
@@ -285,7 +386,7 @@ const RevolutionizeCollection = () => {
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
                 </div>
               )}
             </motion.div>
@@ -299,28 +400,25 @@ const RevolutionizeCollection = () => {
           viewport={{ once: true }}
           className="text-center mt-8 sm:mt-12"
         >
-          <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6 shadow-sm">
-            <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-3">
-              Transform your management today
+          <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 sm:p-8">
+            <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-2">
+              Reclaim 8 hours per week starting today
             </h3>
-            <p className="text-gray-600 mb-4 sm:mb-6 max-w-xl mx-auto text-sm px-2">
-              Join thousands of companies who've revolutionized their
-              testimonial management with intelligent AI organization.
+            <p className="text-gray-600 mb-6 max-w-xl mx-auto text-sm px-2">
+              Let automation handle the tedious work while you focus on what matters. Smart systems that actually deliver results.
             </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
               <Button
                 onClick={() => navigate("/studio")}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 text-sm font-medium shadow-sm transition-colors duration-200 w-full sm:w-auto"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 text-sm font-semibold shadow-sm hover:shadow-md transition-all duration-200 rounded-lg w-full sm:w-auto"
               >
-                Start Intelligent Management
+                Start Saving Time Now
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
-              <Button
-                variant="outline"
-                className="border-2 border-gray-400 text-gray-700 hover:bg-gray-50 hover:border-gray-500 px-6 py-2.5 text-sm font-medium transition-colors duration-200 w-full sm:w-auto"
-              >
-                See Live Demo
-              </Button>
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
+                Setup in 5 minutes • No credit card
+              </div>
             </div>
           </div>
         </motion.div>

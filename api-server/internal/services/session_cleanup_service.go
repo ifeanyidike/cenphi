@@ -44,18 +44,18 @@ func NewSessionCleanupService(
 		artifactsRepo:     artifactsRepo,
 		tempStorage:       tempStorage,
 		logger:            logger,
-		inactivityTimeout: 30 * time.Minute, // 30 minutes inactivity = stale
+		inactivityTimeout: 1 * time.Hour, // 1 hour inactivity = stale (cleanup temp files)
 	}
 }
 
 // RunCleanupLoop runs periodic cleanup in background goroutine
 func (s *SessionCleanupService) RunCleanupLoop(ctx context.Context) {
-	ticker := time.NewTicker(5 * time.Minute) // Check every 5 minutes
+	ticker := time.NewTicker(10 * time.Minute) // Check every 10 minutes
 	defer ticker.Stop()
 
 	s.logger.Info("🧹 Session cleanup service started",
 		zap.Duration("inactivity_timeout", s.inactivityTimeout),
-		zap.Duration("check_interval", 5*time.Minute))
+		zap.Duration("check_interval", 10*time.Minute))
 
 	for {
 		select {

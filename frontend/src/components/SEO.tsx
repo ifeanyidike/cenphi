@@ -22,8 +22,8 @@ const SEO: React.FC<SEOProps> = ({
   title = "Cenphi - AI-Powered Video Testimonial Platform | Turn Customer Stories into Growth",
   description = "Cenphi helps businesses collect, manage, and leverage video testimonials with AI. Automatically generate clips, social posts, and marketing content from customer stories. Boost trust and conversions with authentic video reviews.",
   keywords = "video testimonials, customer testimonials, video reviews, AI video editing, social proof, customer stories, testimonial management, video marketing, UGC content, user generated content, testimonial software",
-  image = "https://cenphi.com/og-image.jpg",
-  url = "https://cenphi.com",
+  image = "https://cenphi.io/og-image.jpg",
+  url = "https://cenphi.io",
   type = "website",
   article,
   noindex = false,
@@ -31,8 +31,10 @@ const SEO: React.FC<SEOProps> = ({
   structuredData,
 }) => {
   const siteTitle = title.includes("Cenphi") ? title : `${title} | Cenphi`;
-  const fullUrl = url.startsWith("http") ? url : `https://cenphi.com${url}`;
-  const imageUrl = image.startsWith("http") ? image : `https://cenphi.com${image}`;
+  const fullUrl = url.startsWith("http") ? url : `https://cenphi.io${url}`;
+  const imageUrl = image.startsWith("http")
+    ? image
+    : `https://cenphi.io${image}`;
 
   return (
     <Helmet>
@@ -60,14 +62,24 @@ const SEO: React.FC<SEOProps> = ({
       {article && (
         <>
           {article.publishedTime && (
-            <meta property="article:published_time" content={article.publishedTime} />
+            <meta
+              property="article:published_time"
+              content={article.publishedTime}
+            />
           )}
           {article.modifiedTime && (
-            <meta property="article:modified_time" content={article.modifiedTime} />
+            <meta
+              property="article:modified_time"
+              content={article.modifiedTime}
+            />
           )}
-          {article.author && <meta property="article:author" content={article.author} />}
+          {article.author && (
+            <meta property="article:author" content={article.author} />
+          )}
           {article.tags &&
-            article.tags.map((tag) => <meta key={tag} property="article:tag" content={tag} />)}
+            article.tags.map((tag) => (
+              <meta key={tag} property="article:tag" content={tag} />
+            ))}
         </>
       )}
 
@@ -82,7 +94,9 @@ const SEO: React.FC<SEOProps> = ({
 
       {/* Structured Data */}
       {structuredData && (
-        <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
+        <script type="application/ld+json">
+          {JSON.stringify(structuredData)}
+        </script>
       )}
     </Helmet>
   );

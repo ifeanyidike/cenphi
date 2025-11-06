@@ -212,12 +212,8 @@ const StoryVideoStudio: React.FC<StoryVideoStudioProps> = ({
     updateJob,
   ]);
 
-  // DO NOT auto-remove jobs when complete - let users manually dismiss or keep for reference
-  // Jobs will be cleaned up after 48 hours via TTL in ProcessingMonitorContext
-
   // Clear preview error when new preview arrives
   useEffect(() => {
-    console.log("IN STORY VIDEO STUDIO");
     if (latestPreview) {
       setPreviewError(null);
       console.log("[StoryVideoStudio] New preview:", latestPreview);
@@ -246,13 +242,6 @@ const StoryVideoStudio: React.FC<StoryVideoStudioProps> = ({
       setSelectedStageId(latestStageWithPreview.stage_id);
     }
   }, [stages, latestPreview]);
-
-  // Log connection status changes
-  useEffect(() => {
-    console.log(
-      `[StoryVideoStudio] SSE connection status: ${isConnected ? "CONNECTED" : "DISCONNECTED"}`
-    );
-  }, [isConnected]);
 
   // Activity tracking
   const updateActivity = useCallback(() => {
@@ -425,7 +414,6 @@ const StoryVideoStudio: React.FC<StoryVideoStudioProps> = ({
     setProcessingActions((prev) => new Set([...prev, "continue"]));
 
     try {
-      console.log("[StoryVideoStudio] Continuing to next stage...");
       await studioAPI.resumeSession(sessionId);
     } catch (error) {
       console.error("Failed to continue to next stage:", error);
@@ -511,42 +499,6 @@ const StoryVideoStudio: React.FC<StoryVideoStudioProps> = ({
     }
   };
 
-  // const getPreviewAspectRatio = () => {
-  //   // Priority 1: Check preview metadata for aspect_ratio
-  //   if (
-  //     latestPreview?.metadata?.aspect_ratio &&
-  //     typeof latestPreview.metadata.aspect_ratio === "string"
-  //   ) {
-  //     console.log(
-  //       "[StoryVideoStudio] Using aspect_ratio from preview metadata:",
-  //       latestPreview.metadata.aspect_ratio
-  //     );
-  //     return latestPreview.metadata.aspect_ratio.replace(":", "/");
-  //   }
-
-  //   // Priority 2: Calculate from width and height
-  //   const { width, height } = latestPreview?.metadata || {};
-  //   if (width && height) {
-  //     console.log(
-  //       "[StoryVideoStudio] Calculating from width/height:",
-  //       width,
-  //       height
-  //     );
-  //     return `${width}/${height}`;
-  //   }
-
-  //   // ⚠️ REMOVED platform-based aspect ratio fallback
-  //   // Story videos should ALWAYS preserve source dimensions
-  //   // Platform metadata should NEVER determine story video aspect ratio
-
-  //   // Default to 16/9 (most common for testimonials)
-  //   // This should NOT happen if backend is working correctly
-  //   console.warn(
-  //     "[StoryVideoStudio] No aspect ratio in metadata, using default 16/9. This indicates a backend issue!"
-  //   );
-  //   return "16/9";
-  // };
-
   const completedStages = stages.filter(
     (s) => s.status === "completed" || s.status === "accepted"
   ).length;
@@ -566,11 +518,6 @@ const StoryVideoStudio: React.FC<StoryVideoStudioProps> = ({
     totalStages > 0 &&
     skippedStages === totalStages &&
     !stages.some((s) => s.status === "processing" || s.status === "pending");
-
-  // const isSessionComplete =
-  //   totalStages > 0 &&
-  //   completedStages + skippedStages === totalStages &&
-  //   !stages.some((s) => s.status === "processing" || s.status === "pending");
 
   // Auto-show finalization modal when session completes
   useEffect(() => {

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import {
@@ -15,8 +15,6 @@ import { ExistingClipsReadOnly } from "../ExistingClipsReadOnly";
 import { MixedClipsPreview } from "../MixedClipsPreview";
 import { ProcessingStage, PreviewArtifact } from "@/hooks/useSessionSSE";
 import SaveFromStageModal from "../SaveFromStageModal";
-// import TextOverlayEditor from "../TextOverlayEditor"; // Disabled - config done in pre-processing step
-// import BrollEditor from "../BrollEditor"; // Disabled - buggy in-session editing
 
 interface PreviewSectionProps {
   stages: ProcessingStage[];
@@ -50,7 +48,6 @@ export const PreviewSection: React.FC<PreviewSectionProps> = ({
   // onUpdateStageConfig,
 }) => {
   const navigate = useNavigate();
-  // CRITICAL: Determine which stage's preview to show
   const selectedStage = selectedStageId
     ? stages.find((s) => s.stage_id === selectedStageId)
     : null;
@@ -76,7 +73,7 @@ export const PreviewSection: React.FC<PreviewSectionProps> = ({
       }
     : latestPreview;
 
-  // CRITICAL FIX: Calculate aspect ratio from the SELECTED stage, not latestPreview
+  // Calculate aspect ratio from the SELECTED stage, not latestPreview
   const getPreviewAspectRatio = (): string => {
     // Use selected stage metadata if available, otherwise use latest preview
     const metadataToUse = selectedStage?.metadata || latestPreview?.metadata;
@@ -86,25 +83,12 @@ export const PreviewSection: React.FC<PreviewSectionProps> = ({
       metadataToUse?.aspect_ratio &&
       typeof metadataToUse.aspect_ratio === "string"
     ) {
-      console.log(
-        "[PreviewSection] Using aspect_ratio from stage metadata:",
-        metadataToUse.aspect_ratio,
-        "Stage:",
-        selectedStage?.stage_id || "latest"
-      );
       return metadataToUse.aspect_ratio.replace(":", "/");
     }
 
     // Priority 2: Calculate from width and height
     const { width, height } = metadataToUse || {};
     if (width && height) {
-      console.log(
-        "[PreviewSection] Calculating from width/height:",
-        width,
-        height,
-        "Stage:",
-        selectedStage?.stage_id || "latest"
-      );
       return `${width}/${height}`;
     }
 
@@ -115,11 +99,6 @@ export const PreviewSection: React.FC<PreviewSectionProps> = ({
     );
     return "16/9";
   };
-
-  useEffect(() => {
-    console.log("selectedStage", selectedStage);
-    console.log("previewToShow", previewToShow);
-  }, [selectedStage]);
 
   // Check if viewing a previous stage (not the latest)
   const latestStageWithPreview = [...stages]
@@ -567,12 +546,6 @@ export const PreviewSection: React.FC<PreviewSectionProps> = ({
           </div>
         </motion.div>
       )}
-
-      {/* Text Overlay & B-roll Editors - DISABLED
-          Configuration is done in the pre-processing step (PlatformOptimizationConfig, etc.)
-          In-session editing was buggy and created UX redundancy.
-          All configs are sent to backend from pre-processing step.
-      */}
 
       {/* Save from This Stage Modal */}
       {showSaveFromStageModal && selectedStage && (

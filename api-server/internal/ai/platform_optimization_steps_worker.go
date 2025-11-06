@@ -22,18 +22,18 @@ import (
 
 // PlatformOptimizationStepsWorker handles step-by-step platform optimization
 type PlatformOptimizationStepsWorker struct {
-	mediaIntelligence    MediaIntelligence
-	aiService            *AIServiceManager
-	cacheService         cache.RedisCache
-	preprocessingCache   *cache.PreprocessingCache
-	testimonialRepo      repositories.TestimonialRepository
-	workspaceRepo        repositories.WorkspaceRepository
-	artifactsRepo        repositories.TestimonialArtifactRepository
-	tempStorageService   *storage.TempStorageService
-	storageProvider      storage.Provider
-	sseManager           *sse.SSEManager
-	db                   *sql.DB
-	logger               *zap.Logger
+	mediaIntelligence  MediaIntelligence
+	aiService          *AIServiceManager
+	cacheService       cache.RedisCache
+	preprocessingCache *cache.PreprocessingCache
+	testimonialRepo    repositories.TestimonialRepository
+	workspaceRepo      repositories.WorkspaceRepository
+	artifactsRepo      repositories.TestimonialArtifactRepository
+	tempStorageService *storage.TempStorageService
+	storageProvider    storage.Provider
+	sseManager         *sse.SSEManager
+	db                 *sql.DB
+	logger             *zap.Logger
 }
 
 func NewPlatformOptimizationStepsWorker(
@@ -53,18 +53,18 @@ func NewPlatformOptimizationStepsWorker(
 	preprocessingCache := cache.NewPreprocessingCache(&cacheService, logger)
 
 	return &PlatformOptimizationStepsWorker{
-		mediaIntelligence:    mediaIntelligence,
-		aiService:            aiService,
-		cacheService:         cacheService,
-		preprocessingCache:   preprocessingCache,
-		testimonialRepo:      testimonialRepo,
-		workspaceRepo:        workspaceRepo,
-		artifactsRepo:        artifactsRepo,
-		tempStorageService:   tempStorageService,
-		storageProvider:      storageProvider,
-		sseManager:           sseManager,
-		db:                   db,
-		logger:               logger,
+		mediaIntelligence:  mediaIntelligence,
+		aiService:          aiService,
+		cacheService:       cacheService,
+		preprocessingCache: preprocessingCache,
+		testimonialRepo:    testimonialRepo,
+		workspaceRepo:      workspaceRepo,
+		artifactsRepo:      artifactsRepo,
+		tempStorageService: tempStorageService,
+		storageProvider:    storageProvider,
+		sseManager:         sseManager,
+		db:                 db,
+		logger:             logger,
 	}
 }
 
@@ -114,11 +114,6 @@ func (w *PlatformOptimizationStepsWorker) HandleCropResize(ctx context.Context, 
 
 	// IMPROVEMENT #7: Check for cached platform derivative first
 	if derivative, exists := w.preprocessingCache.GetPlatformDerivative(ctx, stepCtx.TestimonialID, stepCtx.TargetPlatform, aspectRatio); exists {
-		w.logger.Info("Using cached platform derivative",
-			zap.String("testimonial_id", stepCtx.TestimonialID.String()),
-			zap.String("platform", stepCtx.TargetPlatform),
-			zap.String("aspect_ratio", aspectRatio))
-
 		// Emit progress for consistency with non-cached path
 		w.emitProgress(stepCtx.SessionID, stepCtx.StageID, 50, "Using cached result...")
 		w.emitProgress(stepCtx.SessionID, stepCtx.StageID, 90, "Preview ready")
@@ -184,7 +179,7 @@ func (w *PlatformOptimizationStepsWorker) HandleCropResize(ctx context.Context, 
 		OutputURL:     response.CroppedUrl,
 		ProcessedAt:   time.Now(),
 		Duration:      response.Duration,
-		Width:         0,  // Width/Height not returned by CropResize, will be fetched if needed
+		Width:         0, // Width/Height not returned by CropResize, will be fetched if needed
 		Height:        0,
 		Metadata:      map[string]interface{}{"size": response.Size},
 	}
@@ -226,13 +221,10 @@ func (w *PlatformOptimizationStepsWorker) HandleBurnCaptions(ctx context.Context
 	// CRITICAL FIX: On-demand transcript generation for story video artifacts
 	// If transcript segments are missing AND we have an artifact_id (story video/clip artifact),
 	// generate transcript segments on-demand and cache them for future use
+
 	if len(stepCtx.TranscriptSegments) == 0 {
 		artifactID, hasArtifactID := stepCtx.Config["artifact_id"].(string)
 		if hasArtifactID && artifactID != "" {
-			w.logger.Info("No transcript segments found for artifact, generating on-demand",
-				zap.String("artifact_id", artifactID),
-				zap.String("media_url", stepCtx.CurrentArtifactURL))
-
 			w.emitProgress(stepCtx.SessionID, stepCtx.StageID, 30, "Generating transcript for captions (this may take 30-60 seconds)...")
 
 			// Generate transcript using AudioTranscriptionService
@@ -255,12 +247,6 @@ func (w *PlatformOptimizationStepsWorker) HandleBurnCaptions(ctx context.Context
 
 			stepCtx.TranscriptSegments = transcriptSegments
 
-			w.logger.Info("✅ Generated transcript segments on-demand",
-				zap.String("artifact_id", artifactID),
-				zap.Int("segments_count", len(transcriptSegments)))
-
-			// CRITICAL: Save transcript segments to artifact for caching (async - don't block)
-			// Use step orchestrator's saveTranscriptSegmentsToArtifact method
 			go func(aid string, segments models.TranscriptSegments) {
 				// Create a background context with timeout (not tied to request context)
 				saveCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -314,9 +300,6 @@ func (w *PlatformOptimizationStepsWorker) HandleBurnCaptions(ctx context.Context
 	}
 
 	previewURL := response.CaptionedUrl
-
-	// CRITICAL FIX: Carry over aspect_ratio AND platform from previous step (CropResize) so preview displays correctly
-	// Previous stage metadata is available in stepCtx.Config (see step_orchestrator.go lines 383-391)
 	metadata := map[string]interface{}{
 		"captions_burned": true,
 		"captions_added":  response.CaptionsAdded,
@@ -479,9 +462,6 @@ func (w *PlatformOptimizationStepsWorker) HandleMixMusic(ctx context.Context, st
 	} else {
 		// Fallback: derive aspect ratio from platform
 		aspectRatio = w.getDefaultAspectRatio(platform)
-		w.logger.Info("No aspect_ratio in Config, derived from platform",
-			zap.String("platform", platform),
-			zap.String("aspect_ratio", aspectRatio))
 	}
 	metadata["aspect_ratio"] = aspectRatio
 
@@ -498,7 +478,6 @@ func (w *PlatformOptimizationStepsWorker) HandleMixMusic(ctx context.Context, st
 
 // HandleApplyBranding handles adding logo and watermark
 func (w *PlatformOptimizationStepsWorker) HandleApplyBranding(ctx context.Context, stepCtx *StepContext) (*StepResult, error) {
-	// BUGFIX #13: Validate input media is available
 	if stepCtx.CurrentArtifactURL == "" {
 		return nil, fmt.Errorf("no input media available for branding step")
 	}
@@ -597,10 +576,6 @@ func (w *PlatformOptimizationStepsWorker) HandleApplyBranding(ctx context.Contex
 	}
 	metadata["platform"] = platform
 
-	// CRITICAL BUGFIX: Properly preserve aspect_ratio from previous stage
-	// Priority 1: Use aspect_ratio from previous stage if available
-	// Priority 2: Calculate from width/height from previous stage
-	// Priority 3: NEVER use platform defaults - they're unreliable for actual video dimensions
 	aspectRatio := ""
 	width := 0
 	height := 0
@@ -608,8 +583,6 @@ func (w *PlatformOptimizationStepsWorker) HandleApplyBranding(ctx context.Contex
 	// Try aspect_ratio from Config (previous stage metadata)
 	if ar, ok := stepCtx.Config["aspect_ratio"].(string); ok && ar != "" {
 		aspectRatio = ar
-		w.logger.Info("Using aspect_ratio from previous stage",
-			zap.String("aspect_ratio", aspectRatio))
 	}
 
 	// Try width/height from Config (previous stage metadata)
@@ -854,19 +827,19 @@ func (w *PlatformOptimizationStepsWorker) HandleTextOverlay(ctx context.Context,
 // buildTextOverlayConfig builds the TextOverlayConfig protobuf message from step config
 func (w *PlatformOptimizationStepsWorker) buildTextOverlayConfig(stepCtx *StepContext) (*pb.TextOverlayConfig, error) {
 	config := &pb.TextOverlayConfig{
-		EnableIntro:      false,
-		WorkspaceName:    "",
-		SpeakerName:      "",
-		Role:             "",
-		Location:         "",
-		IntroDuration:    4.0,
-		EnableOutro:      false,
-		Tagline:          "",
-		OutroDuration:    6.0,
-		BrandColor:       "",
-		AnimationStyle:   "elegant",
-		FontFamily:       "DejaVu-Sans-Bold",
-		FadeDuration:     0.5,
+		EnableIntro:       false,
+		WorkspaceName:     "",
+		SpeakerName:       "",
+		Role:              "",
+		Location:          "",
+		IntroDuration:     4.0,
+		EnableOutro:       false,
+		Tagline:           "",
+		OutroDuration:     6.0,
+		BrandColor:        "",
+		AnimationStyle:    "elegant",
+		FontFamily:        "DejaVu-Sans-Bold",
+		FadeDuration:      0.5,
 		BackgroundOverlay: "",
 	}
 
@@ -910,10 +883,6 @@ func (w *PlatformOptimizationStepsWorker) buildTextOverlayConfig(stepCtx *StepCo
 		}
 	}
 
-	// If workspace name not provided, try to get it from workspace context
-	// Note: BrandContext doesn't have a name field, workspace name should come from config
-
-	// If brand color not provided, get from brand context
 	if config.BrandColor == "" && stepCtx.BrandContext != nil {
 		// ColorSlice is a repeated string field containing colors
 		if colors := stepCtx.BrandContext.GetColorSlice(); len(colors) > 0 {
@@ -934,8 +903,6 @@ func (w *PlatformOptimizationStepsWorker) buildTextOverlayConfig(stepCtx *StepCo
 func (w *PlatformOptimizationStepsWorker) HandleApplyBroll(ctx context.Context, stepCtx *StepContext) (*StepResult, error) {
 	// Check if B-roll clips are provided
 	if stepCtx.Config["broll_config"] == nil {
-		w.logger.Info("No B-roll config provided, skipping",
-			zap.String("session_id", stepCtx.SessionID.String()))
 		return &StepResult{
 			OutputArtifactURL:   stepCtx.CurrentArtifactURL,
 			AppliedEnhancements: []string{},
@@ -1005,9 +972,6 @@ func (w *PlatformOptimizationStepsWorker) HandleApplyBroll(ctx context.Context, 
 	// Call AI service
 	response, err := w.mediaIntelligence.ApplyBrollOverlays(ctx, request)
 	if err != nil {
-		w.logger.Error("B-roll overlay failed",
-			zap.Error(err),
-			zap.String("session_id", stepCtx.SessionID.String()))
 		return nil, fmt.Errorf("B-roll overlay failed: %w", err)
 	}
 
@@ -1173,8 +1137,6 @@ func (w *PlatformOptimizationStepsWorker) HandleTextOptimization(ctx context.Con
 
 				w.emitProgress(stepCtx.SessionID, stepCtx.StageID, 100, "Text optimization complete")
 
-				// IMPORTANT: Emit text_optimization_complete instead of preview_ready
-				// to avoid creating a preview artifact that replaces the video
 				w.sseManager.BroadcastStudioEvent(sse.StudioEvent{
 					Type:      "text_optimization_complete",
 					SessionID: stepCtx.SessionID.String(),
@@ -1199,10 +1161,10 @@ func (w *PlatformOptimizationStepsWorker) HandleTextOptimization(ctx context.Con
 					StageID:   &stepCtx.StageID,
 					Timestamp: time.Now(),
 					Data: map[string]interface{}{
-						"chunk":     chunk,
-						"stage_id":  stepCtx.StageID,
-						"is_final":  false,
-						"platform":  stepCtx.TargetPlatform,
+						"chunk":    chunk,
+						"stage_id": stepCtx.StageID,
+						"is_final": false,
+						"platform": stepCtx.TargetPlatform,
 					},
 				})
 			}
@@ -1231,8 +1193,6 @@ func (w *PlatformOptimizationStepsWorker) HandleTextOptimization(ctx context.Con
 
 // Helper methods
 
-// retryGRPCCall wraps a gRPC call with retry logic for transient failures
-// Returns early if context is cancelled or error is non-retryable
 func (w *PlatformOptimizationStepsWorker) retryGRPCCall(
 	ctx context.Context,
 	operation string,
@@ -1267,13 +1227,6 @@ func (w *PlatformOptimizationStepsWorker) retryGRPCCall(
 		if attempt == maxRetries-1 {
 			break
 		}
-
-		w.logger.Warn("gRPC call failed, retrying",
-			zap.String("operation", operation),
-			zap.Int("attempt", attempt+1),
-			zap.Int("max_retries", maxRetries),
-			zap.Duration("backoff", backoff),
-			zap.Error(lastErr))
 
 		// Sleep with context cancellation support
 		select {
@@ -1407,8 +1360,8 @@ func (w *PlatformOptimizationStepsWorker) convertToProtobufSegments(segments mod
 	for i, seg := range segments {
 		pbSegments[i] = &pb.TranscriptSegment{
 			Text:      seg.Text,
-			StartTime: seg.StartTime,
-			EndTime:   seg.EndTime,
+			StartTime: seg.StartTime, // Already in milliseconds from DB
+			EndTime:   seg.EndTime,   // Already in milliseconds from DB
 			Speaker:   seg.Speaker,
 			Words:     w.convertToProtobufWords(seg.Words),
 		}
@@ -1425,8 +1378,8 @@ func (w *PlatformOptimizationStepsWorker) convertToProtobufWords(words []models.
 	for i, word := range words {
 		pbWords[i] = &pb.Word{
 			Text:       word.Text,
-			Start:      word.Start,
-			End:        word.End,
+			Start:      word.Start, // Already in milliseconds from DB
+			End:        word.End,   // Already in milliseconds from DB
 			Confidence: word.Confidence,
 			Speaker:    word.Speaker,
 		}

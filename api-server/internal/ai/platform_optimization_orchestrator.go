@@ -290,7 +290,6 @@ func (o *StepOrchestrator) buildStoryVideoStepContext(ctx context.Context, input
 		currentArtifactURL = *input.InputArtifactPath
 	}
 
-	// CRITICAL FIX: Load previous stage metadata and merge into Config
 	mergedConfig := make(map[string]any)
 	maps.Copy(mergedConfig, input.Config)
 
@@ -324,8 +323,6 @@ func (o *StepOrchestrator) buildStoryVideoStepContext(ctx context.Context, input
 
 // buildStepContext builds the StepContext from StepInput
 func (o *StepOrchestrator) buildStepContext(ctx context.Context, input *StepInput) (*StepContext, error) {
-	// For story video operations, testimonialID might be nil or a zero UUID
-	// In that case, we work with the artifact passed from previous stage
 	var testimonialData *models.TestimonialAIData
 	var err error
 
@@ -351,9 +348,6 @@ func (o *StepOrchestrator) buildStepContext(ctx context.Context, input *StepInpu
 		// Fetch from workspace
 		brandContext, err = o.workspaceRepo.GetPbBrandContext(ctx, input.WorkspaceID, o.db)
 		if err != nil {
-			o.logger.Warn("Failed to get brand context, using empty",
-				zap.String("workspace_id", input.WorkspaceID.String()),
-				zap.Error(err))
 			brandContext = &pb.BrandContext{}
 		}
 	}
@@ -370,7 +364,6 @@ func (o *StepOrchestrator) buildStepContext(ctx context.Context, input *StepInpu
 	}
 
 	// Determine current artifact URL and duration
-	// CRITICAL FIX: Support clip_url and clip_duration directly from config
 	currentArtifactURL := ""
 	var clipDuration *float64 // Track clip duration for B-roll calculations
 
@@ -380,17 +373,12 @@ func (o *StepOrchestrator) buildStepContext(ctx context.Context, input *StepInpu
 		// PRIORITY 1: Check for clip_url directly in config (fastest, most reliable)
 		if clipURL, ok := input.Config["clip_url"].(string); ok && clipURL != "" {
 			currentArtifactURL = clipURL
-			o.logger.Info("Using clip_url from config for processing",
-				zap.String("clip_url", clipURL))
 
 			// Also get clip_duration if provided
 			if dur, ok := input.Config["clip_duration"].(float64); ok && dur > 0 {
 				clipDuration = &dur
-				o.logger.Info("Using clip_duration from config",
-					zap.Float64("clip_duration", dur))
 			}
 		} else {
-			// PRIORITY 2: Try clip_id (fetch from database)
 			clipID, hasClipID := input.Config["clip_id"].(string)
 			if hasClipID && clipID != "" {
 				// Fetch clip URL and metadata from artifacts
@@ -409,10 +397,6 @@ func (o *StepOrchestrator) buildStepContext(ctx context.Context, input *StepInpu
 					clipMeta, err := o.getClipMetadata(ctx, input.TestimonialID, clipID)
 					if err == nil && clipMeta != nil {
 						clipDuration = &clipMeta.Duration
-						o.logger.Info("Using clip from database",
-							zap.String("clip_id", clipID),
-							zap.String("clip_url", clipURL),
-							zap.Float64("clip_duration", clipMeta.Duration))
 					} else {
 						o.logger.Info("Using clip URL (duration unknown)",
 							zap.String("clip_id", clipID),
@@ -420,7 +404,6 @@ func (o *StepOrchestrator) buildStepContext(ctx context.Context, input *StepInpu
 					}
 				}
 			} else if testimonialData != nil && testimonialData.MediaURL != nil {
-				// PRIORITY 3: Fallback to full testimonial
 				currentArtifactURL = *testimonialData.MediaURL
 				o.logger.Info("Using full testimonial video for processing")
 			}
@@ -439,53 +422,74 @@ func (o *StepOrchestrator) buildStepContext(ctx context.Context, input *StepInpu
 		if testimonialData.Content != nil {
 			transcript = *testimonialData.Content
 		}
+
 		if testimonialData.TranscriptSegments != nil {
 			transcriptSegments = *testimonialData.TranscriptSegments
 
-			// CRITICAL FIX: When processing a clip, filter and adjust transcript segments
-			// to match the clip's time range
-			clipID, hasClipID := input.Config["clip_id"].(string)
-			if hasClipID && clipID != "" {
-				// Fetch clip metadata (start_time, end_time, duration)
-				clipMetadata, err := o.getClipMetadata(ctx, input.TestimonialID, clipID)
-				if err != nil {
-					o.logger.Warn("Failed to fetch clip metadata for transcript filtering",
-						zap.String("clip_id", clipID),
-						zap.Error(err))
+			clipStartTime, hasStartTime := input.Config["clip_start_time"].(float64)
+			clipEndTime, hasEndTime := input.Config["clip_end_time"].(float64)
+
+			if hasStartTime && hasEndTime {
+
+				filteredSegments := o.getTranscriptSegmentsByTime(
+					transcriptSegments,
+					clipStartTime,
+					clipEndTime,
+				)
+
+				if len(filteredSegments) > 0 {
+					transcriptSegments = filteredSegments
 				} else {
-					// Use the correct logic from video_platform_optimizer_worker.go
-					// Extract segments that fall WITHIN the clip's time range (start >= clipStart AND end <= clipEnd)
-					filteredSegments := o.getTranscriptSegmentsByTime(
-						transcriptSegments,
-						clipMetadata.StartTime,
-						clipMetadata.EndTime,
-					)
+					o.logger.Warn("No transcript segments found for clip time range when using clip_url",
+						zap.Float64("clip_start", clipStartTime),
+						zap.Float64("clip_end", clipEndTime))
+				}
+			} else {
+				// Check for clip_id (PRIORITY 2 - fallback)
+				clipID, hasClipID := input.Config["clip_id"].(string)
 
-					o.logger.Info("Filtered transcript segments for clip using time-based extraction",
-						zap.String("clip_id", clipID),
-						zap.Int("original_segments", len(*testimonialData.TranscriptSegments)),
-						zap.Int("filtered_segments", len(filteredSegments)),
-						zap.Float64("clip_start", clipMetadata.StartTime),
-						zap.Float64("clip_end", clipMetadata.EndTime),
-						zap.Float64("clip_duration", clipMetadata.Duration))
+				if hasClipID && clipID != "" {
 
-					if len(filteredSegments) == 0 {
-						o.logger.Warn("No transcript segments found for clip time range - using full parent transcript",
+					// If no clip_id, check for single-item clip_ids array
+					if !hasClipID || clipID == "" {
+						if clipIDs, ok := input.Config["clip_ids"].([]interface{}); ok && len(clipIDs) == 1 {
+							if id, ok := clipIDs[0].(string); ok {
+								clipID = id
+								hasClipID = true
+							}
+						}
+					}
+
+					// Fetch clip metadata (start_time, end_time, duration)
+					clipMetadata, err := o.getClipMetadata(ctx, input.TestimonialID, clipID)
+					if err != nil {
+						o.logger.Warn("Failed to fetch clip metadata for transcript filtering",
 							zap.String("clip_id", clipID),
-							zap.Float64("clip_start", clipMetadata.StartTime),
-							zap.Float64("clip_end", clipMetadata.EndTime))
-						// Keep original transcriptSegments
+							zap.Error(err))
 					} else {
-						transcriptSegments = filteredSegments
+						// Use the correct logic from video_platform_optimizer_worker.go
+						// Extract segments that fall WITHIN the clip's time range (start >= clipStart AND end <= clipEnd)
+						filteredSegments := o.getTranscriptSegmentsByTime(
+							transcriptSegments,
+							clipMetadata.StartTime,
+							clipMetadata.EndTime,
+						)
+
+						if len(filteredSegments) == 0 {
+							o.logger.Warn("No transcript segments found for clip time range - using full parent transcript",
+								zap.String("clip_id", clipID),
+								zap.Float64("clip_start", clipMetadata.StartTime),
+								zap.Float64("clip_end", clipMetadata.EndTime))
+							// Keep original transcriptSegments
+						} else {
+							transcriptSegments = filteredSegments
+						}
 					}
 				}
 			}
 		}
 	}
 
-	// CRITICAL FIX: Handle story video artifacts (or other artifacts without testimonialData)
-	// If processing an artifact (like story video) that needs transcript segments for burn_captions
-	// Check if artifact_id is provided in config → load from artifact's Data field or generate on-demand
 	if testimonialData == nil || (testimonialData.TranscriptSegments == nil && currentArtifactURL != "") {
 		artifactID, hasArtifactID := input.Config["artifact_id"].(string)
 		if hasArtifactID && artifactID != "" {
@@ -497,9 +501,6 @@ func (o *StepOrchestrator) buildStepContext(ctx context.Context, input *StepInpu
 					zap.Error(err))
 			} else if len(segments) > 0 {
 				transcriptSegments = segments
-				o.logger.Info("✅ Loaded cached transcript segments from artifact",
-					zap.String("artifact_id", artifactID),
-					zap.Int("segments_count", len(segments)))
 			} else {
 				o.logger.Info("No cached transcript segments found in artifact, will need on-demand generation",
 					zap.String("artifact_id", artifactID))
@@ -507,17 +508,11 @@ func (o *StepOrchestrator) buildStepContext(ctx context.Context, input *StepInpu
 		}
 	}
 
-	// CRITICAL FIX: Load previous stage metadata and merge into Config
-	// This ensures aspect_ratio, platform, and other metadata propagate through the pipeline
 	mergedConfig := make(map[string]any)
-
-	// First, copy user-provided config
 	maps.Copy(mergedConfig, input.Config)
 
 	// Then, load and merge previous stage metadata if available
 	if input.PreviousStageMetadata != nil {
-		// Merge previous stage metadata into config
-		// This allows handlers to access aspect_ratio, platform, etc.
 		for k, v := range input.PreviousStageMetadata {
 			// Only merge if not already set in user config (user config takes precedence)
 			if _, exists := mergedConfig[k]; !exists {
@@ -627,18 +622,12 @@ func (o *StepOrchestrator) getClipURL(ctx context.Context, testimonialID *uuid.U
 		}
 
 		if err := json.Unmarshal(dataJSON, &artifactData); err != nil {
-			o.logger.Warn("Failed to parse artifact data for clip URL",
-				zap.Error(err),
-				zap.String("clip_id", clipID))
 			continue
 		}
 
 		// Find the specific clip by ID
 		for _, clip := range artifactData.GeneratedClips {
 			if clip.ID == clipID {
-				o.logger.Info("✅ Found clip URL in database",
-					zap.String("clip_id", clipID),
-					zap.String("clip_url", clip.URL))
 				return clip.URL, nil
 			}
 		}
@@ -708,7 +697,7 @@ func (o *StepOrchestrator) getClipMetadata(ctx context.Context, testimonialID *u
 // getTranscriptSegmentsByTime extracts transcript segments that fall within the specified time range
 // This is the same logic as video_platform_optimizer_worker.go's getTranscriptSegmentByTime
 // Segments must be FULLY WITHIN the time range (segment.start >= start AND segment.end <= end)
-// Timestamps are adjusted relative to the start time and converted from milliseconds to seconds
+// Timestamps are adjusted relative to the start time (kept in milliseconds for protobuf)
 func (o *StepOrchestrator) getTranscriptSegmentsByTime(segments models.TranscriptSegments, start, end float64) models.TranscriptSegments {
 	if len(segments) == 0 {
 		return segments
@@ -722,21 +711,15 @@ func (o *StepOrchestrator) getTranscriptSegmentsByTime(segments models.Transcrip
 			adjustedSegment := segment
 
 			// Adjust timestamps relative to start time (so clip starts at 0)
+			// Keep in milliseconds - Python AI service will convert to seconds
 			adjustedSegment.StartTime -= start
 			adjustedSegment.EndTime -= start
-
-			// Convert from milliseconds to seconds for AI service compatibility
-			adjustedSegment.StartTime /= 1000.0
-			adjustedSegment.EndTime /= 1000.0
 
 			// Adjust word timestamps if present
 			if len(adjustedSegment.Words) > 0 {
 				for i := range adjustedSegment.Words {
 					adjustedSegment.Words[i].Start -= start
 					adjustedSegment.Words[i].End -= start
-					// Convert word timestamps to seconds as well
-					adjustedSegment.Words[i].Start /= 1000.0
-					adjustedSegment.Words[i].End /= 1000.0
 				}
 			}
 

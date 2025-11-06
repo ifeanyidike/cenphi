@@ -38,6 +38,9 @@ import TestimonialsDashboard from "@/pages/TestimonialsDashboard";
 
 // lazy load (only for non-dashboard routes)
 const LandingPage = lazy(() => import("@/pages/Landing"));
+const MarketingLanding = lazy(() => import("@/pages/MarketingLanding"));
+const SalesLanding = lazy(() => import("@/pages/SalesLanding"));
+const ProductLanding = lazy(() => import("@/pages/ProductLanding"));
 const Pricing = lazy(() => import("@/pages/Pricing"));
 const OnboardingPage = lazy(() => import("@/pages/OnboardingPage"));
 const NotFoundPage = lazy(() => import("@/pages/NotFoundPage"));
@@ -46,6 +49,18 @@ export const router = createBrowserRouter([
   {
     path: "/",
     element: <LandingPage />,
+  },
+  {
+    path: "/for-marketing",
+    element: <MarketingLanding />,
+  },
+  {
+    path: "/for-sales",
+    element: <SalesLanding />,
+  },
+  {
+    path: "/for-product",
+    element: <ProductLanding />,
   },
   {
     element: <DashboardProtectedRoute />,
