@@ -491,7 +491,7 @@ func (r *RedisQueueService) SetJobStatus(ctx context.Context, jobID, status stri
 	var ttl time.Duration
 	switch status {
 	case "completed", "failed", "cancelled":
-		ttl = 2 * time.Minute // Completed jobs disappear quickly
+		ttl = 10 * time.Minute // Keep completed jobs longer for dependent jobs
 	case "processing":
 		ttl = 30 * time.Minute // Active jobs get more time
 	default: // pending, queued, etc
