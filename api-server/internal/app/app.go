@@ -156,7 +156,7 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 	userService := services.NewUserService(repo, db, logger)
 	teamMemberService := services.NewTeamMemberService(teamMemberRepo, db, logger)
 	onboardingService := services.NewOnboardingService(db, logger, repo, aiServiceManager)
-	workspaceService := services.NewWorkspaceService(workspaceRepo, teamMemberRepo, testimonialRepo, db, redisClient, logger)
+	workspaceService := services.NewWorkspaceService(workspaceRepo, teamMemberRepo, testimonialRepo, storageService, db, redisClient, logger)
 	bestTimeService := services.NewBestTimeService(repo, db, logger)
 	linkedinService := sharing.NewLinkedInClient(cfg.Social, logger, cacheService)
 	sharingService := sharing.NewSharingClient(

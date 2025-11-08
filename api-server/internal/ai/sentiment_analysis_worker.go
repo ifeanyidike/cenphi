@@ -55,11 +55,6 @@ func (qw *AIQueueWorker) handleTestimonialSentimentAnalysis(ctx context.Context,
 	// Update job status to processing
 	qw.updateJobStatusWithService(ctx, req.JobID, serviceID, "processing", 10, nil, nil)
 
-	qw.logger.Info("💭 Starting testimonial sentiment analysis",
-		zap.String("job_id", req.JobID),
-		zap.String("testimonial_id", req.TestimonialID),
-		zap.String("type", req.Type))
-
 	testimonialID, err := uuid.Parse(req.TestimonialID)
 	if err != nil {
 		return qw.respondWithFailure(ctx, serviceID, req.JobID, "invalid testimonial ID", err)
@@ -69,6 +64,18 @@ func (qw *AIQueueWorker) handleTestimonialSentimentAnalysis(ctx context.Context,
 	if err != nil {
 		return qw.respondWithFailure(ctx, serviceID, req.JobID, "invalid workspace ID", err)
 	}
+
+	// Update testimonial processing_status to "analyzing_sentiment"
+	if updateErr := qw.testimonialRepo.UpdateAny(ctx, testimonialID, map[string]any{
+		"processing_status": "analyzing_sentiment",
+	}, qw.db); updateErr != nil {
+		qw.logger.Warn("Failed to update testimonial processing_status to analyzing_sentiment", zap.Error(updateErr))
+	}
+
+	qw.logger.Info("💭 Starting testimonial sentiment analysis",
+		zap.String("job_id", req.JobID),
+		zap.String("testimonial_id", req.TestimonialID),
+		zap.String("type", req.Type))
 
 	// Get testimonial content (either from payload or from database)
 	var content string
@@ -90,6 +97,12 @@ func (qw *AIQueueWorker) handleTestimonialSentimentAnalysis(ctx context.Context,
 	// Call sentiment analysis service
 	result, err := qw.aiService.SentimentService.AnalyzeSentiment(ctx, content, nil, "")
 	if err != nil {
+		// Update processing_status to "failed" on error
+		if failErr := qw.testimonialRepo.UpdateAny(ctx, testimonialID, map[string]any{
+			"processing_status": "failed",
+		}, qw.db); failErr != nil {
+			qw.logger.Warn("Failed to update testimonial processing_status to failed", zap.Error(failErr))
+		}
 		return qw.respondWithFailure(ctx, serviceID, req.JobID, "sentiment analysis failed", err)
 	}
 	// qw.aiService.
@@ -113,6 +126,8 @@ func (qw *AIQueueWorker) handleTestimonialSentimentAnalysis(ctx context.Context,
 	response := map[string]interface{}{
 		"sentiment_result": result,
 		"artifact_id":      artifact_id,
+		"testimonial_id":   req.TestimonialID,
+		"job_type":         "sentiment_analysis",
 	}
 
 	qw.updateJobStatusWithService(ctx, req.JobID, serviceID, "completed", 100, response, nil)

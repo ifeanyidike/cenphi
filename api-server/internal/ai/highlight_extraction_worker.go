@@ -55,10 +55,6 @@ func (qw *AIQueueWorker) handleTestimonialHighlightExtraction(ctx context.Contex
 	// Update job status to processing
 	qw.updateJobStatusWithService(ctx, req.JobID, serviceID, "processing", 10, nil, nil)
 
-	qw.logger.Info("⭐ Starting testimonial highlight extraction",
-		zap.String("job_id", req.JobID),
-		zap.String("testimonial_id", req.TestimonialID))
-
 	testimonialID, err := uuid.Parse(req.TestimonialID)
 	if err != nil {
 		return qw.respondWithFailure(ctx, serviceID, req.JobID, "invalid testimonial ID", err)
@@ -68,6 +64,17 @@ func (qw *AIQueueWorker) handleTestimonialHighlightExtraction(ctx context.Contex
 	if err != nil {
 		return qw.respondWithFailure(ctx, serviceID, req.JobID, "invalid workspace ID", err)
 	}
+
+	// Update testimonial processing_status to "extracting_highlights"
+	if updateErr := qw.testimonialRepo.UpdateAny(ctx, testimonialID, map[string]any{
+		"processing_status": "extracting_highlights",
+	}, qw.db); updateErr != nil {
+		qw.logger.Warn("Failed to update testimonial processing_status to extracting_highlights", zap.Error(updateErr))
+	}
+
+	qw.logger.Info("⭐ Starting testimonial highlight extraction",
+		zap.String("job_id", req.JobID),
+		zap.String("testimonial_id", req.TestimonialID))
 
 	highlightRequest := HighlightRequest{
 		// Text:          *testimonial.Content,
@@ -88,6 +95,12 @@ func (qw *AIQueueWorker) handleTestimonialHighlightExtraction(ctx context.Contex
 			zap.String("job_id", req.JobID),
 			zap.String("testimonial_id", req.TestimonialID),
 			zap.Error(err))
+		// Update processing_status to "failed" on error
+		if failErr := qw.testimonialRepo.UpdateAny(ctx, testimonialID, map[string]any{
+			"processing_status": "failed",
+		}, qw.db); failErr != nil {
+			qw.logger.Warn("Failed to update testimonial processing_status to failed", zap.Error(failErr))
+		}
 		return qw.respondWithFailure(ctx, serviceID, req.JobID, "highlight extraction failed", err)
 	}
 
@@ -151,8 +164,17 @@ func (qw *AIQueueWorker) handleTestimonialHighlightExtraction(ctx context.Contex
 			zap.String("testimonial_id", req.TestimonialID))
 
 		response := map[string]interface{}{
-			"highlights":  highlights,
-			"message":     "No highlights passed filtering. Try adjusting your testimonial content or re-record with more specific value propositions.",
+			"highlights":      highlights,
+			"message":         "No highlights passed filtering. Try adjusting your testimonial content or re-record with more specific value propositions.",
+			"testimonial_id":  req.TestimonialID,
+			"job_type":        "highlight_extraction",
+		}
+
+		// Update testimonial processing_status to "completed" even with no highlights
+		if updateErr := qw.testimonialRepo.UpdateAny(ctx, testimonialID, map[string]any{
+			"processing_status": "completed",
+		}, qw.db); updateErr != nil {
+			qw.logger.Warn("Failed to update testimonial processing_status to completed", zap.Error(updateErr))
 		}
 
 		qw.updateJobStatusWithService(ctx, req.JobID, serviceID, "completed", 100, response, nil)
@@ -172,8 +194,17 @@ func (qw *AIQueueWorker) handleTestimonialHighlightExtraction(ctx context.Contex
 	}
 
 	response := map[string]interface{}{
-		"highlights":  highlights,
-		"artifact_id": artifact_id,
+		"highlights":     highlights,
+		"artifact_id":    artifact_id,
+		"testimonial_id": req.TestimonialID,
+		"job_type":       "highlight_extraction",
+	}
+
+	// Update testimonial processing_status to "completed" (last job finishing)
+	if updateErr := qw.testimonialRepo.UpdateAny(ctx, testimonialID, map[string]any{
+		"processing_status": "completed",
+	}, qw.db); updateErr != nil {
+		qw.logger.Warn("Failed to update testimonial processing_status to completed", zap.Error(updateErr))
 	}
 
 	qw.updateJobStatusWithService(ctx, req.JobID, serviceID, "completed", 100, response, nil)

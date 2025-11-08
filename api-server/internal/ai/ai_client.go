@@ -117,7 +117,7 @@ func NewClient(cfg config.AIService) AIClient {
 	return AIClient{
 		openAIKey:  cfg.OpenAIKey,
 		claudeKey:  cfg.ClaudeKey,
-		httpClient: &http.Client{Timeout: 60 * time.Second},
+		httpClient: &http.Client{Timeout: 180 * time.Second}, // Increased from 60s to 3 minutes for complex AI operations
 	}
 }
 

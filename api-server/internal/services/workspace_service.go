@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/ifeanyidike/cenphi/internal/models"
 	"github.com/ifeanyidike/cenphi/internal/repositories"
+	"github.com/ifeanyidike/cenphi/internal/storage"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
@@ -31,6 +32,7 @@ type WorkspaceService struct {
 	repo            repositories.WorkspaceRepository
 	teamMemberRepo  repositories.TeamMemberRepository
 	testimonialRepo repositories.TestimonialRepository
+	storageService  *storage.StorageFactory
 	db              *sql.DB
 	redis           *redis.Client
 	logger          *zap.Logger
@@ -58,15 +60,17 @@ func NewWorkspaceService(
 	teamMemberRepo repositories.TeamMemberRepository,
 	// campaignRepo repositories.CampaignRepository,
 	testimonialRepo repositories.TestimonialRepository,
+	storageService *storage.StorageFactory,
 	db *sql.DB,
 	redis *redis.Client,
 	logger *zap.Logger,
 ) WorkspaceService {
 	return WorkspaceService{
-		repo:           repo,
-		teamMemberRepo: teamMemberRepo,
+		repo:            repo,
+		teamMemberRepo:  teamMemberRepo,
 		// campaignRepo:    campaignRepo,
 		testimonialRepo: testimonialRepo,
+		storageService:  storageService,
 		db:              db,
 		redis:           redis,
 		logger:          logger,
@@ -193,6 +197,11 @@ func (s WorkspaceService) UpdateWorkspace(ctx context.Context, workspace *models
 }
 
 func (s WorkspaceService) DeleteWorkspace(ctx context.Context, id uuid.UUID) error {
+	// Clean up all files for testimonials and artifacts in this workspace
+	// IMPORTANT: File deletion failures should not block workspace deletion
+	s.cleanupWorkspaceFiles(ctx, id)
+
+	// Delete from database (this will cascade delete testimonials, artifacts, etc.)
 	err := s.repo.Delete(ctx, id, s.db)
 	if err != nil {
 		s.logger.Error("Failed to delete workspace", zap.Error(err))
@@ -205,6 +214,104 @@ func (s WorkspaceService) DeleteWorkspace(ctx context.Context, id uuid.UUID) err
 	s.logger.Info("Workspace deleted successfully", zap.String("id", id.String()))
 
 	return nil
+}
+
+// cleanupWorkspaceFiles deletes all files from storage for a workspace's testimonials and artifacts
+// Failures are logged but don't block the deletion process
+func (s WorkspaceService) cleanupWorkspaceFiles(ctx context.Context, workspaceID uuid.UUID) {
+	s.logger.Info("Starting workspace file cleanup",
+		zap.String("workspace_id", workspaceID.String()))
+
+	// Get all testimonials for this workspace (without artifacts to save memory)
+	// We'll query artifacts separately to handle large workspaces efficiently
+	testimonials, err := s.testimonialRepo.FetchByWorkspaceID(ctx, workspaceID, models.TestimonialFilter{
+		ExcludeArtifacts: false, // We need artifacts to clean up their files
+		Limit:            1000,  // Process in batches if needed
+	}, s.db)
+
+	if err != nil {
+		s.logger.Warn("Failed to fetch testimonials for file cleanup",
+			zap.String("workspace_id", workspaceID.String()),
+			zap.Error(err))
+		return
+	}
+
+	if len(testimonials) == 0 {
+		s.logger.Info("No testimonials to clean up",
+			zap.String("workspace_id", workspaceID.String()))
+		return
+	}
+
+	s.logger.Info("Found testimonials to clean up",
+		zap.String("workspace_id", workspaceID.String()),
+		zap.Int("testimonial_count", len(testimonials)))
+
+	// Clean up files for each testimonial
+	filesDeleted := 0
+	filesFailed := 0
+
+	for _, testimonial := range testimonials {
+		// Delete testimonial media file
+		if testimonial.MediaURL != nil && *testimonial.MediaURL != "" {
+			if err := s.deleteFileFromStorage(ctx, *testimonial.MediaURL); err != nil {
+				s.logger.Warn("Failed to delete testimonial media file",
+					zap.String("workspace_id", workspaceID.String()),
+					zap.String("testimonial_id", testimonial.ID.String()),
+					zap.String("media_url", *testimonial.MediaURL),
+					zap.Error(err))
+				filesFailed++
+			} else {
+				filesDeleted++
+			}
+		}
+
+		// Delete testimonial thumbnail
+		if testimonial.ThumbnailURL != nil && *testimonial.ThumbnailURL != "" {
+			if err := s.deleteFileFromStorage(ctx, *testimonial.ThumbnailURL); err != nil {
+				s.logger.Warn("Failed to delete testimonial thumbnail",
+					zap.String("workspace_id", workspaceID.String()),
+					zap.String("testimonial_id", testimonial.ID.String()),
+					zap.String("thumbnail_url", *testimonial.ThumbnailURL),
+					zap.Error(err))
+				filesFailed++
+			} else {
+				filesDeleted++
+			}
+		}
+
+		// Delete artifact assets
+		if len(testimonial.Artifacts) > 0 {
+			for _, artifact := range testimonial.Artifacts {
+				if artifact.AssetURL != nil && *artifact.AssetURL != "" {
+					if err := s.deleteFileFromStorage(ctx, *artifact.AssetURL); err != nil {
+						s.logger.Warn("Failed to delete artifact asset",
+							zap.String("workspace_id", workspaceID.String()),
+							zap.String("testimonial_id", testimonial.ID.String()),
+							zap.String("artifact_id", artifact.ID.String()),
+							zap.String("asset_url", *artifact.AssetURL),
+							zap.Error(err))
+						filesFailed++
+					} else {
+						filesDeleted++
+					}
+				}
+			}
+		}
+	}
+
+	s.logger.Info("Workspace file cleanup completed",
+		zap.String("workspace_id", workspaceID.String()),
+		zap.Int("files_deleted", filesDeleted),
+		zap.Int("files_failed", filesFailed))
+}
+
+// deleteFileFromStorage is a helper that safely deletes a file from storage
+func (s WorkspaceService) deleteFileFromStorage(ctx context.Context, fileURL string) error {
+	if s.storageService == nil {
+		return fmt.Errorf("storage service not available")
+	}
+
+	return s.storageService.Delete(ctx, fileURL)
 }
 
 func (s WorkspaceService) GetWorkspaceStats(ctx context.Context, workspaceID uuid.UUID) (*WorkspaceStats, error) {

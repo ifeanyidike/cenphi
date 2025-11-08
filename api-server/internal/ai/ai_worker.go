@@ -357,12 +357,32 @@ func (qw *AIQueueWorker) checkJobDependency(ctx context.Context, dependsOnJobID 
 		return true, nil
 	}
 
-	// ONLY check Redis - no database fallback to avoid schema issues
+	// First, try to check Redis for the dependency job status
 	jobStatus, err := qw.queueService.GetJobStatus(ctx, dependsOnJobID)
 	if err != nil {
-		qw.logger.Debug("Dependency job not found in Redis",
+		// Redis check failed - fall back to database to check if transcription is complete
+		qw.logger.Warn("Dependency job not found in Redis, checking database fallback",
+			zap.String("dependency_job_id", dependsOnJobID),
+			zap.Error(err))
+
+		// Try to extract testimonial ID and check database
+		isComplete, dbErr := qw.checkTranscriptionCompletionInDB(ctx, dependsOnJobID)
+		if dbErr != nil {
+			qw.logger.Error("Database fallback failed",
+				zap.String("dependency_job_id", dependsOnJobID),
+				zap.Error(dbErr))
+			return false, nil // Dependency not ready, will retry
+		}
+
+		if isComplete {
+			qw.logger.Info("✅ Dependency confirmed complete via database fallback",
+				zap.String("dependency_job_id", dependsOnJobID))
+			return true, nil
+		}
+
+		qw.logger.Debug("Database fallback: transcription not yet complete",
 			zap.String("dependency_job_id", dependsOnJobID))
-		return false, nil // Job not found, dependency not ready
+		return false, nil
 	}
 
 	qw.logger.Debug("Checking dependency from Redis",
@@ -377,6 +397,130 @@ func (qw *AIQueueWorker) checkJobDependency(ctx context.Context, dependsOnJobID 
 	default:
 		return false, nil // Still pending/processing
 	}
+}
+
+// checkTranscriptionCompletionInDB checks if transcription is complete by querying the database
+// This is a fallback when Redis keys have expired
+func (qw *AIQueueWorker) checkTranscriptionCompletionInDB(ctx context.Context, jobID string) (bool, error) {
+	// Check context before starting
+	if ctx.Err() != nil {
+		return false, fmt.Errorf("context cancelled: %w", ctx.Err())
+	}
+
+	// Parse job ID to UUID
+	jobUUID, err := uuid.Parse(jobID)
+	if err != nil {
+		// Invalid UUID format - this is a permanent error, don't retry
+		qw.logger.Error("Invalid job ID format - cannot parse UUID",
+			zap.String("job_id", jobID),
+			zap.Error(err))
+		return false, fmt.Errorf("invalid job ID format: %w", err)
+	}
+
+	// Use job repository to get the job details
+	job, err := qw.jobRepo.GetByID(ctx, jobUUID, qw.db)
+	if err != nil {
+		// Differentiate between "not found" and other database errors
+		if err == sql.ErrNoRows {
+			// Job doesn't exist yet - this is expected, not an error condition
+			qw.logger.Debug("Job not found in database (may not be created yet)",
+				zap.String("job_id", jobID))
+			return false, nil // Not ready, will retry
+		}
+
+		// Database connection error, context timeout, or other transient errors
+		// Return error to trigger retry
+		qw.logger.Warn("Database error while fetching job (transient, will retry)",
+			zap.String("job_id", jobID),
+			zap.Error(err))
+		return false, fmt.Errorf("database error fetching job: %w", err)
+	}
+
+	// Defensive nil check (should never happen but prevents panic in Cloud Run)
+	if job == nil {
+		qw.logger.Error("Job repository returned nil job without error",
+			zap.String("job_id", jobID))
+		return false, fmt.Errorf("job repository returned nil")
+	}
+
+	// Verify job is transcription type and completed
+	if job.JobType != "transcription" {
+		// Job exists but wrong type - log as warning since this shouldn't happen
+		qw.logger.Warn("Job is not a transcription job",
+			zap.String("job_id", jobID),
+			zap.String("job_type", job.JobType))
+		return false, nil // Not ready
+	}
+
+	if job.Status != "completed" {
+		// Transcription job exists but not completed yet - this is normal
+		qw.logger.Debug("Transcription job exists but not completed yet",
+			zap.String("job_id", jobID),
+			zap.String("status", job.Status))
+		return false, nil // Not ready, will retry
+	}
+
+	// Verify testimonial_id exists
+	if job.TestimonialID == nil {
+		// Data integrity issue - this shouldn't happen
+		qw.logger.Error("Transcription job has no testimonial_id (data integrity issue)",
+			zap.String("job_id", jobID))
+		// Return error to retry - maybe it's being updated
+		return false, fmt.Errorf("transcription job missing testimonial_id")
+	}
+
+	// Check context again before expensive testimonial fetch
+	if ctx.Err() != nil {
+		return false, fmt.Errorf("context cancelled before testimonial fetch: %w", ctx.Err())
+	}
+
+	// Use testimonial repository to verify content exists
+	testimonial, err := qw.testimonialRepo.FetchByID(ctx, *job.TestimonialID, qw.db)
+	if err != nil {
+		// Differentiate between "not found" and database errors
+		if err == sql.ErrNoRows {
+			// Testimonial doesn't exist - data integrity issue
+			qw.logger.Error("Testimonial not found for completed transcription job",
+				zap.String("job_id", jobID),
+				zap.String("testimonial_id", job.TestimonialID.String()))
+			// Return error to retry - maybe it's a race condition
+			return false, fmt.Errorf("testimonial not found: %w", err)
+		}
+
+		// Database connection error or timeout - transient, should retry
+		qw.logger.Warn("Database error while fetching testimonial (transient, will retry)",
+			zap.String("job_id", jobID),
+			zap.String("testimonial_id", job.TestimonialID.String()),
+			zap.Error(err))
+		return false, fmt.Errorf("database error fetching testimonial: %w", err)
+	}
+
+	// Defensive nil check
+	if testimonial == nil {
+		qw.logger.Error("Testimonial repository returned nil without error",
+			zap.String("testimonial_id", job.TestimonialID.String()))
+		return false, fmt.Errorf("testimonial repository returned nil")
+	}
+
+	// Check if testimonial has content (transcription result)
+	hasContent := testimonial.Content != nil && *testimonial.Content != ""
+
+	if !hasContent {
+		// Transcription job marked completed but content not saved yet
+		// This could be a race condition or data integrity issue
+		qw.logger.Warn("Transcription job completed but testimonial has no content",
+			zap.String("job_id", jobID),
+			zap.String("testimonial_id", job.TestimonialID.String()))
+		return false, nil // Not ready, will retry
+	}
+
+	// All checks passed - transcription is complete and verified
+	qw.logger.Debug("Database fallback confirmed: transcription complete with content",
+		zap.String("job_id", jobID),
+		zap.String("testimonial_id", job.TestimonialID.String()),
+		zap.Int("content_length", len(*testimonial.Content)))
+
+	return true, nil
 }
 
 func (qw *AIQueueWorker) updateJobStatusWithService(ctx context.Context, jobID, serviceID, status string, progress int, result interface{}, err error) {

@@ -176,7 +176,7 @@ func (s *TestimonialService) UpdateTestimonial(ctx context.Context, testimonial 
 }
 
 func (s *TestimonialService) DeleteTestimonial(ctx context.Context, id uuid.UUID) error {
-	// Check if testimonial exists and get full data for vector store cleanup
+	// Check if testimonial exists and get full data for cleanup
 	testimonial, err := s.GetTestimonialByID(ctx, id)
 	if err != nil {
 		return err
@@ -193,7 +193,11 @@ func (s *TestimonialService) DeleteTestimonial(ctx context.Context, id uuid.UUID
 		}
 	}
 
-	// Delete from database
+	// Clean up files from storage (media_url, thumbnail_url, and artifact assets)
+	// IMPORTANT: File deletion failures should not block database deletion
+	s.cleanupTestimonialFiles(ctx, testimonial)
+
+	// Delete from database (this will cascade delete artifacts via foreign key)
 	err = s.repo.Delete(ctx, id, s.db)
 	if err != nil {
 		s.logger.Error("Failed to delete testimonial", zap.Error(err))
@@ -205,6 +209,68 @@ func (s *TestimonialService) DeleteTestimonial(ctx context.Context, id uuid.UUID
 
 	s.logger.Info("Testimonial deleted successfully", zap.String("id", id.String()))
 	return nil
+}
+
+// cleanupTestimonialFiles deletes files from storage for a testimonial and its artifacts
+// Failures are logged but don't block the deletion process
+func (s *TestimonialService) cleanupTestimonialFiles(ctx context.Context, testimonial *models.Testimonial) {
+	if s.storageService == nil {
+		s.logger.Warn("Storage service not available for file cleanup",
+			zap.String("testimonial_id", testimonial.ID.String()))
+		return
+	}
+
+	// Delete testimonial media file
+	if testimonial.MediaURL != nil && *testimonial.MediaURL != "" {
+		if err := s.storageService.Delete(ctx, *testimonial.MediaURL); err != nil {
+			s.logger.Warn("Failed to delete testimonial media file",
+				zap.String("testimonial_id", testimonial.ID.String()),
+				zap.String("media_url", *testimonial.MediaURL),
+				zap.Error(err))
+		} else {
+			s.logger.Info("Deleted testimonial media file",
+				zap.String("testimonial_id", testimonial.ID.String()),
+				zap.String("media_url", *testimonial.MediaURL))
+		}
+	}
+
+	// Delete testimonial thumbnail
+	if testimonial.ThumbnailURL != nil && *testimonial.ThumbnailURL != "" {
+		if err := s.storageService.Delete(ctx, *testimonial.ThumbnailURL); err != nil {
+			s.logger.Warn("Failed to delete testimonial thumbnail",
+				zap.String("testimonial_id", testimonial.ID.String()),
+				zap.String("thumbnail_url", *testimonial.ThumbnailURL),
+				zap.Error(err))
+		} else {
+			s.logger.Info("Deleted testimonial thumbnail",
+				zap.String("testimonial_id", testimonial.ID.String()),
+				zap.String("thumbnail_url", *testimonial.ThumbnailURL))
+		}
+	}
+
+	// Delete artifact assets
+	if len(testimonial.Artifacts) > 0 {
+		s.logger.Info("Cleaning up artifact files",
+			zap.String("testimonial_id", testimonial.ID.String()),
+			zap.Int("artifact_count", len(testimonial.Artifacts)))
+
+		for _, artifact := range testimonial.Artifacts {
+			if artifact.AssetURL != nil && *artifact.AssetURL != "" {
+				if err := s.storageService.Delete(ctx, *artifact.AssetURL); err != nil {
+					s.logger.Warn("Failed to delete artifact asset",
+						zap.String("testimonial_id", testimonial.ID.String()),
+						zap.String("artifact_id", artifact.ID.String()),
+						zap.String("asset_url", *artifact.AssetURL),
+						zap.Error(err))
+				} else {
+					s.logger.Info("Deleted artifact asset",
+						zap.String("testimonial_id", testimonial.ID.String()),
+						zap.String("artifact_id", artifact.ID.String()),
+						zap.String("asset_url", *artifact.AssetURL))
+				}
+			}
+		}
+	}
 }
 
 func (s *TestimonialService) SearchTestimonials(ctx context.Context, workspaceID uuid.UUID, query string, filter models.TestimonialFilter) ([]*models.Testimonial, error) {
