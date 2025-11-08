@@ -63,14 +63,6 @@ const WordCloudChart: React.FC<WordCloudChartProps> = ({ data, loading }) => {
     deterministic: true,
     fontFamily: 'Urbanist, sans-serif',
     fontWeight: '600',
-    tooltips: {
-      enabled: true,
-      callbacks: {
-        label: (context: any) => {
-          return `${context.text}: ${context.value} mentions`;
-        },
-      },
-    },
   };
 
   const callbacks = {
@@ -88,38 +80,10 @@ const WordCloudChart: React.FC<WordCloudChartProps> = ({ data, loading }) => {
       console.log('Word clicked:', word);
     },
     getWordTooltip: (word: any) => {
-      // Create a styled tooltip
-      const sentimentColor = word.sentiment === 'positive' ? '#10b981' :
-                            word.sentiment === 'negative' ? '#ef4444' : '#64748b';
       const sentimentLabel = word.sentiment.charAt(0).toUpperCase() + word.sentiment.slice(1);
 
-      return `<div style="
-        background: white;
-        border: 1px solid #e2e8f0;
-        border-radius: 6px;
-        padding: 6px 10px;
-        font-family: 'Urbanist', sans-serif;
-        font-size: 11px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        max-width: 200px;
-      ">
-        <div style="font-weight: 600; color: #1e293b; margin-bottom: 2px;">${word.text}</div>
-        <div style="color: #64748b; font-size: 10px;">
-          <span style="font-weight: 500;">${word.value}</span> mentions
-        </div>
-        <div style="
-          display: inline-block;
-          margin-top: 3px;
-          padding: 2px 6px;
-          background: ${sentimentColor}15;
-          color: ${sentimentColor};
-          border-radius: 4px;
-          font-size: 9px;
-          font-weight: 600;
-          text-transform: uppercase;
-          letter-spacing: 0.3px;
-        ">${sentimentLabel}</div>
-      </div>`;
+      // Return plain text tooltip - react-wordcloud doesn't support HTML tooltips
+      return `${word.text}\n${word.value} mentions • ${sentimentLabel}`;
     },
   };
 

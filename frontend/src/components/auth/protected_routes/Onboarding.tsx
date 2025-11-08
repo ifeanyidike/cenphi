@@ -5,7 +5,16 @@ import LoadingIndicator from "@/components/LoadingIndicator";
 
 // OnboardingProtectedRoute.tsx
 const OnboardingProtectedRoute = observer(() => {
-  if (authStore.loading) return <LoadingIndicator />;
+  if (authStore.loading) {
+    return (
+      <LoadingIndicator
+        title="Authenticating"
+        message="Verifying your credentials"
+        variant="minimal"
+        showProgress={false}
+      />
+    );
+  }
 
   // Not authenticated → redirect to login
   if (!authStore.isAuthenticated) {

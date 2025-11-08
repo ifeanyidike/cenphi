@@ -33,34 +33,39 @@ export const CollapsedView: React.FC<CollapsedViewProps> = ({
   // Status configuration - MINIMAL COLORS
   const getStatusConfig = () => {
     if (hasFailedJob) {
+      const failedJob = jobs.find(j => j.status === 'failed' || j.hasFailedStage);
       return {
         icon: AlertCircle,
         iconColor: 'text-red-600',
-        label: 'Needs Attention',
-        message: jobCount === 1 ? jobs[0].serviceName : `${jobCount} jobs`,
+        label: 'Failed',
+        message: jobCount === 1 && failedJob ? failedJob.serviceName : `${jobCount} jobs`,
       };
     }
     if (hasPausedJob) {
+      const pausedJob = jobs.find(j => j.status === 'paused');
       return {
         icon: Pause,
         iconColor: 'text-slate-600',
         label: 'Paused',
-        message: jobCount === 1 ? jobs[0].serviceName : `${jobCount} jobs`,
+        message: jobCount === 1 && pausedJob ? pausedJob.serviceName : `${jobCount} jobs`,
       };
     }
     if (isProcessing) {
+      const processingJob = jobs.find(j => j.status === 'processing');
       return {
         icon: Activity,
         iconColor: 'text-slate-700',
-        label: 'Processing',
-        message: jobCount === 1 ? jobs[0].stageDisplayName : `${jobCount} jobs`,
+        label: jobCount === 1 && processingJob ? processingJob.serviceName : 'Processing',
+        message: jobCount === 1 && processingJob ? processingJob.stageDisplayName : `${jobCount} jobs`,
       };
     }
+    // All jobs completed
+    const completedJob = jobs[0];
     return {
       icon: CheckCircle2,
-      iconColor: 'text-slate-700',
-      label: 'Complete',
-      message: 'Ready to view',
+      iconColor: 'text-emerald-600',
+      label: jobCount === 1 && completedJob ? completedJob.serviceName : 'Complete',
+      message: jobCount === 1 ? 'Click to view' : `${jobCount} jobs ready`,
     };
   };
 

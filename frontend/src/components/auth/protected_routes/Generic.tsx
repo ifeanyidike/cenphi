@@ -7,7 +7,14 @@ const GenericProtectedRoute = observer(() => {
   const location = useLocation();
 
   if (authStore.loading) {
-    return <LoadingIndicator />;
+    return (
+      <LoadingIndicator
+        title="Authenticating"
+        message="Verifying your credentials"
+        variant="minimal"
+        showProgress={false}
+      />
+    );
   }
 
   const from = { pathname: location.pathname, search: location.search };

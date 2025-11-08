@@ -236,6 +236,10 @@ const CustomPipelineConfig: React.FC<CustomPipelineConfigProps> = observer(
       clipsData.length > 0 ? clipsData : undefined // Pass clips if available
     );
 
+    // Check if video is too short for B-roll
+    const MIN_BROLL_DURATION = 20;
+    const isTooShortForBroll = videoDuration < MIN_BROLL_DURATION;
+
     const [selectedSteps, setSelectedSteps] = useState<PipelineStep[]>([]);
     const [isStarting, setIsStarting] = useState(false);
     const [errorModal, setErrorModal] = useState({
@@ -1019,40 +1023,48 @@ const CustomPipelineConfig: React.FC<CustomPipelineConfigProps> = observer(
               <div className="space-y-2">
                 {AVAILABLE_STEPS.map((step) => {
                   const isAdded = selectedSteps.find((s) => s.id === step.id);
+                  const isDisabled = isAdded || (step.type === "apply_broll" && isTooShortForBroll);
                   return (
-                    <motion.button
-                      key={step.id}
-                      onClick={() => addStep(step)}
-                      disabled={!!isAdded}
-                      whileHover={!isAdded ? { scale: 1.02, x: 4 } : {}}
-                      whileTap={!isAdded ? { scale: 0.98 } : {}}
-                      className={`w-full p-3 rounded-lg border transition-all text-left group ${
-                        isAdded
-                          ? "border-slate-200 bg-slate-50/50 opacity-50 cursor-not-allowed"
-                          : "border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 hover:shadow-sm cursor-pointer"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`w-9 h-9 rounded-lg bg-gradient-to-br ${step.gradient} flex items-center justify-center text-white shadow-sm flex-shrink-0`}
-                        >
-                          {step.icon}
+                    <div key={step.id}>
+                      <motion.button
+                        onClick={() => addStep(step)}
+                        disabled={isDisabled}
+                        whileHover={!isDisabled ? { scale: 1.02, x: 4 } : {}}
+                        whileTap={!isDisabled ? { scale: 0.98 } : {}}
+                        className={`w-full p-3 rounded-lg border transition-all text-left group ${
+                          isDisabled
+                            ? "border-slate-200 bg-slate-50/50 opacity-50 cursor-not-allowed"
+                            : "border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 hover:shadow-sm cursor-pointer"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`w-9 h-9 rounded-lg bg-gradient-to-br ${step.gradient} flex items-center justify-center text-white shadow-sm flex-shrink-0`}
+                          >
+                            {step.icon}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-sm font-semibold text-slate-900 mb-0.5">
+                              {step.name}
+                            </h3>
+                            <p className="text-xs text-slate-600 line-clamp-1">
+                              {step.description}
+                            </p>
+                          </div>
+                          {isAdded ? (
+                            <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                          ) : (
+                            <Plus className="h-4 w-4 text-slate-400 group-hover:text-blue-600 flex-shrink-0" />
+                          )}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="text-sm font-semibold text-slate-900 mb-0.5">
-                            {step.name}
-                          </h3>
-                          <p className="text-xs text-slate-600 line-clamp-1">
-                            {step.description}
-                          </p>
+                      </motion.button>
+                      {/* Show warning for B-roll if video too short */}
+                      {step.type === "apply_broll" && isTooShortForBroll && !isAdded && (
+                        <div className="mt-1.5 ml-12 text-xs text-slate-600 bg-slate-50 px-2 py-1 rounded border border-slate-200">
+                          ℹ️ Requires {MIN_BROLL_DURATION}+ second video (yours: {Math.round(videoDuration)}s)
                         </div>
-                        {isAdded ? (
-                          <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
-                        ) : (
-                          <Plus className="h-4 w-4 text-slate-400 group-hover:text-blue-600 flex-shrink-0" />
-                        )}
-                      </div>
-                    </motion.button>
+                      )}
+                    </div>
                   );
                 })}
               </div>
@@ -1127,6 +1139,12 @@ const CustomPipelineConfig: React.FC<CustomPipelineConfigProps> = observer(
                                 <p className="text-xs text-slate-600">
                                   {step.description}
                                 </p>
+                                {/* Show warning for B-roll step when video is too short */}
+                                {step.type === "apply_broll" && isTooShortForBroll && (
+                                  <div className="mt-2 px-2 py-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-300">
+                                    <span className="font-semibold">ℹ️ Disabled:</span> B-roll requires at least {MIN_BROLL_DURATION} seconds of video. Your clip is {Math.round(videoDuration)}s.
+                                  </div>
+                                )}
                               </div>
                               <div className="flex items-center gap-2 flex-shrink-0">
                                 {step.requiresConfig && step.enabled && (
@@ -1148,6 +1166,7 @@ const CustomPipelineConfig: React.FC<CustomPipelineConfigProps> = observer(
                                 <Checkbox
                                   checked={step.enabled}
                                   onCheckedChange={() => toggleStep(step.id)}
+                                  disabled={step.type === "apply_broll" && isTooShortForBroll}
                                 />
                                 <Button
                                   variant="ghost"

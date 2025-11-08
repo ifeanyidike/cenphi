@@ -104,6 +104,11 @@ const BrollConfigSection: React.FC<BrollConfigSectionProps> = ({
   // Use override duration if provided (e.g., from parent component calculating from clips),
   // otherwise use fetched duration from testimonial API
   const videoDuration = overrideVideoDuration ?? fetchedDuration;
+
+  // Check if video is too short for B-roll (< 20 seconds)
+  const MIN_BROLL_DURATION = 20;
+  const isTooShortForBroll = videoDuration < MIN_BROLL_DURATION;
+
   // Handle clip removal
   const handleRemoveClip = (index: number) => {
     onBrollConfigChange({
@@ -329,17 +334,34 @@ const BrollConfigSection: React.FC<BrollConfigSectionProps> = ({
           </div>
         )}
 
-        {/* Action Required Notice */}
+        {/* Action Required Notice or Too Short Warning */}
         {brollConfig.broll_clips.length === 0 && (
-          <div className="mb-3 p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-lg">
-            <p className="text-xs text-amber-800 dark:text-amber-300 font-semibold mb-1">
-              ⚡ Action Required: Select B-roll Clips
-            </p>
-            <p className="text-xs text-amber-700 dark:text-amber-400">
-              Click <strong>"Get AI Suggestions"</strong> to have AI find
-              relevant clips, or <strong>"Browse Library"</strong> to search
-              manually.
-            </p>
+          <div className={`mb-3 p-3 rounded-lg ${
+            isTooShortForBroll
+              ? "bg-slate-50 dark:bg-slate-900/10 border border-slate-200 dark:border-slate-800"
+              : "bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800"
+          }`}>
+            {isTooShortForBroll ? (
+              <>
+                <p className="text-xs text-slate-700 dark:text-slate-300 font-semibold mb-1">
+                  ℹ️ Clip too short for B-roll
+                </p>
+                <p className="text-xs text-slate-600 dark:text-slate-400">
+                  B-roll requires at least {MIN_BROLL_DURATION} seconds of video. Your clip is {Math.round(videoDuration)}s.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-xs text-amber-800 dark:text-amber-300 font-semibold mb-1">
+                  ⚡ Action Required: Select B-roll Clips
+                </p>
+                <p className="text-xs text-amber-700 dark:text-amber-400">
+                  Click <strong>"Get AI Suggestions"</strong> to have AI find
+                  relevant clips, or <strong>"Browse Library"</strong> to search
+                  manually.
+                </p>
+              </>
+            )}
           </div>
         )}
 
@@ -351,7 +373,8 @@ const BrollConfigSection: React.FC<BrollConfigSectionProps> = ({
               console.log("[AIBroll] 'Get AI Suggestions' button clicked");
               setShowAIBrollSuggestion(true);
             }}
-            className="h-10 text-sm border-2 border-purple-300 hover:border-purple-500 hover:bg-purple-50 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20"
+            disabled={isTooShortForBroll}
+            className="h-10 text-sm border-2 border-purple-300 hover:border-purple-500 hover:bg-purple-50 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Sparkles className="h-4 w-4 mr-2" />
             Get AI Suggestions
@@ -362,7 +385,8 @@ const BrollConfigSection: React.FC<BrollConfigSectionProps> = ({
               console.log("[AIBroll] 'Browse Library' button clicked");
               setShowStockLibrary(true);
             }}
-            className="h-10 text-sm border-2 border-dashed border-slate-300 hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+            disabled={isTooShortForBroll}
+            className="h-10 text-sm border-2 border-dashed border-slate-300 hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <ImageIcon className="h-4 w-4 mr-2" />
             Browse Library

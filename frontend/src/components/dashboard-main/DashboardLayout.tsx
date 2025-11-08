@@ -19,9 +19,8 @@ export const DashboardLayout = observer(() => {
   useEffect(() => {
     const fetchTestimonials = async () => {
       try {
-        // Use exclude_artifacts=true for faster initial load
-        // Individual pages can request full data if needed
-        await workspaceHub.testimonialManager.getTestimonials(true);
+        // Include artifacts to show processing status indicators on testimonial cards
+        await workspaceHub.testimonialManager.getTestimonials(false);
       } catch (error) {
         console.error("[DashboardLayout] Failed to prefetch testimonials:", error);
       }

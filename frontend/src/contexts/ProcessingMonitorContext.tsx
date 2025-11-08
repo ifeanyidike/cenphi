@@ -26,7 +26,6 @@ export interface ActiveJob {
     | "platform_optimization"
     | "story_video"
     | "clipping"
-    | "enhancement"
     | "custom_pipeline";
   serviceName: string;
   status: "processing" | "paused" | "failed" | "completed" | "cancelled";
@@ -64,7 +63,7 @@ const ProcessingMonitorContext = createContext<
 >(undefined);
 
 // History settings - backend-based persistence
-const COMPLETED_JOB_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes - move to history
+const COMPLETED_JOB_TIMEOUT_MS = 60 * 60 * 1000; // 1 hour - keep completed jobs visible for user to save
 const FAILED_JOB_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes - move to history
 const CLEANUP_INTERVAL_MS = 30 * 1000; // 30 seconds - how often to check for cleanup
 
@@ -93,6 +92,70 @@ export const ProcessingMonitorProvider: React.FC<{
           .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
           .join(" ");
     }
+  }, []);
+
+  // Helper function to generate display name from stage ID
+  const formatStageDisplayName = useCallback((stageId: string, status?: string): string => {
+    // If status is provided and matches common values, use those
+    if (status === "completed") return "Completed";
+    if (status === "failed") return "Failed";
+    if (status === "cancelled") return "Cancelled";
+    if (status === "paused") return "Paused";
+
+    // Map common stage IDs to display names
+    const stageDisplayNames: Record<string, string> = {
+      // Testimonial processing stages
+      transcription: "Transcription",
+      sentiment_analysis: "Sentiment Analysis",
+      highlight_extraction: "Key Moments",
+      enhancement: "Video Enhancement",
+      noise_removal: "Audio Cleanup",
+
+      // Platform optimization stages
+      platform_optimization: "Platform Optimization",
+      story_video: "Story Video Generation",
+      clipping: "Clipping",
+
+      // Custom pipeline stages
+      crop_resize: "Crop & Resize",
+      burn_captions: "Burn Captions",
+      text_overlay: "Text Overlay",
+      background_removal: "Background Removal",
+      color_grading: "Color Grading",
+      audio_enhancement: "Audio Enhancement",
+    };
+
+    // If we have a mapping, use it
+    if (stageDisplayNames[stageId]) {
+      return stageDisplayNames[stageId];
+    }
+
+    // Otherwise, format the stage ID into a readable name
+    return stageId
+      .split("_")
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ");
+  }, []);
+
+  // Helper function to generate studio URL from session data
+  const getStudioUrl = useCallback((session: any): string => {
+    const sessionType = session.session_type;
+    const testimonialId = session.testimonial_id;
+    const clipId = session.clip_id;
+
+    // Build URL with testimonialId parameter (required for testimonial-based sessions)
+    if (testimonialId) {
+      const studioUrlMap: Record<string, string> = {
+        platform_optimization: `/studio/optimize?testimonialId=${testimonialId}`,
+        story_video: `/studio/story?testimonialId=${testimonialId}`,
+        clipping: `/studio/clipping?testimonialId=${testimonialId}${clipId ? `&clipId=${clipId}` : ''}`,
+        custom_pipeline: `/studio/custom?testimonialId=${testimonialId}`,
+      };
+      return studioUrlMap[sessionType] || `/studio?testimonialId=${testimonialId}`;
+    }
+
+    // Fallback to session ID if no testimonialId (shouldn't happen for typical workflows)
+    return `/studio?session=${session.session_id}`;
   }, []);
 
   // Helper function to move jobs to history (in-memory only, backend is source of truth)
@@ -211,29 +274,39 @@ export const ProcessingMonitorProvider: React.FC<{
           setActiveJobs((prev) => {
             return prev.map((job) => {
               if (job.sessionId === sessionId) {
+                const newStageId = stage.stage_id || job.currentStage;
+                // Use display_name if provided, otherwise generate from stage_id
+                const newDisplayName = stage.display_name ||
+                  formatStageDisplayName(newStageId, stage.status);
+
+                // CRITICAL FIX: Don't mark job as "completed" when a stage completes
+                // Only mark as "completed" when session_complete event is received
+                // A stage completing doesn't mean the entire job is done
+                let newStatus = job.status;
+                if (stage.status === "failed") {
+                  newStatus = "failed";
+                } else if (stage.status === "paused") {
+                  newStatus = "paused";
+                } else if (stage.status === "processing" || stage.status === "in_progress") {
+                  newStatus = "processing";
+                }
+                // Keep current status if stage is "completed" - wait for session_complete
+
                 return {
                   ...job,
-                  status:
-                    stage.status === "completed"
-                      ? "completed"
-                      : stage.status === "failed"
-                        ? "failed"
-                        : "processing",
-                  progress: stage.progress || 0,
-                  currentStage: stage.stage_id || job.currentStage,
-                  stageDisplayName: stage.display_name || job.stageDisplayName,
+                  status: newStatus,
+                  progress: stage.progress || job.progress,
+                  currentStage: newStageId,
+                  stageDisplayName: newDisplayName,
                   previewUrl:
                     stage.message && stage.status === "completed"
                       ? stage.message
                       : job.previewUrl,
                   hasFailedStage:
                     stage.status === "failed" || job.hasFailedStage,
-                  completedAt:
-                    stage.status === "completed" && stage.progress >= 100
-                      ? new Date()
-                      : job.completedAt,
                   failedAt:
                     stage.status === "failed" ? new Date() : job.failedAt,
+                  // Don't set completedAt here - only when session_complete is received
                 };
               }
               return job;
@@ -306,7 +379,7 @@ export const ProcessingMonitorProvider: React.FC<{
     };
 
     sseConnectionsRef.current.set(sessionId, eventSource);
-  }, []);
+  }, [formatStageDisplayName]);
 
   // Update job function - must be defined before subscribeToSession uses it
   const updateJob = useCallback(
@@ -387,21 +460,22 @@ export const ProcessingMonitorProvider: React.FC<{
           ) {
             const completedJobsFromBackend: CompletedJob[] =
               completedResponse.sessions.map((session) => {
-                // Map status to display text
-                let stageDisplayName = "Completed";
+                // Determine final status
                 let finalStatus: "completed" | "failed" | "cancelled" =
                   "completed";
 
                 if (session.status === "failed") {
-                  stageDisplayName = "Failed";
                   finalStatus = "failed";
                 } else if (session.status === "cancelled") {
-                  stageDisplayName = "Cancelled";
                   finalStatus = "cancelled";
                 } else if (session.status === "completed") {
-                  stageDisplayName = "Completed";
                   finalStatus = "completed";
                 }
+
+                // Use current_stage_id if available, otherwise use session status
+                const currentStage = session.current_stage_id || session.status;
+                // Generate display name from stage ID and status
+                const stageDisplayName = formatStageDisplayName(currentStage, session.status);
 
                 return {
                   sessionId: session.session_id,
@@ -409,7 +483,7 @@ export const ProcessingMonitorProvider: React.FC<{
                   serviceName: formatServiceName(session.session_type),
                   status: session.status as any,
                   progress: 100,
-                  currentStage: session.status,
+                  currentStage,
                   stageDisplayName,
                   startedAt: new Date(session.started_at),
                   completedAt: session.completed_at
@@ -417,6 +491,7 @@ export const ProcessingMonitorProvider: React.FC<{
                     : undefined,
                   finalStatus,
                   contentHubUrl: `/content-hub?session=${session.session_id}`,
+                  studioUrl: getStudioUrl(session),
                 } as any;
               });
 
@@ -472,23 +547,22 @@ export const ProcessingMonitorProvider: React.FC<{
             return keep;
           })
           .map((session) => {
-            // Map actual session status to stage
-            let stageDisplayName = "Initializing";
-            if (session.status === "paused") stageDisplayName = "Paused";
-            else if (session.status === "processing")
-              stageDisplayName = "Processing";
-            else if (session.status === "pending") stageDisplayName = "Pending";
+            // Use current_stage_id if available, otherwise use session status
+            const currentStage = session.current_stage_id || session.status;
+            // Generate display name from stage ID and status
+            const stageDisplayName = formatStageDisplayName(currentStage, session.status);
 
             return {
               sessionId: session.session_id,
+              testimonialId: session.testimonial_id,
               serviceType: session.session_type as any,
               serviceName: formatServiceName(session.session_type),
               status: session.status as any,
               progress: session.status === "processing" ? 0 : 100,
-              currentStage: session.status,
+              currentStage,
               stageDisplayName,
               startedAt: new Date(session.created_at),
-              studioUrl: `/studio?session=${session.session_id}`,
+              studioUrl: getStudioUrl(session),
             };
           });
 
@@ -533,7 +607,7 @@ export const ProcessingMonitorProvider: React.FC<{
     };
 
     initializeFromBackend();
-  }, [formatServiceName, subscribeToSession, workspaceHub.workspace?.id]);
+  }, [formatServiceName, formatStageDisplayName, getStudioUrl, subscribeToSession, workspaceHub.workspace?.id]);
 
   // Cleanup SSE connections on unmount
   useEffect(() => {

@@ -56,11 +56,14 @@ export interface CreateSessionRequest {
 
 export interface CreateSessionResponse {
   session_id: string;
+  testimonial_id?: string; // Testimonial ID for testimonial-based sessions
+  clip_id?: string; // Clip ID for clipping sessions
   session_type: string;
   status: string;
   auto_proceed: boolean;
   created_at: string;
   stream_url: string;
+  current_stage_id?: string; // Current stage being processed
   stages_reordered?: boolean; // True if backend reordered stages
   reorder_message?: string; // Human-readable message about what was reordered
 }
@@ -75,6 +78,7 @@ export interface CompletedSessionResponse {
   started_at: string;
   completed_at: string;
   stream_url: string;
+  current_stage_id?: string; // Current stage being processed
 }
 
 /**

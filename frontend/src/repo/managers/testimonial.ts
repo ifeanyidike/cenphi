@@ -220,6 +220,42 @@ export class TestimonialManager {
   }
 
   /**
+   * Updates a specific testimonial in the observable array
+   * Fetches the latest data for that testimonial and updates it in place
+   * @param testimonialId - The testimonial ID to update
+   */
+  async updateTestimonial(testimonialId: string) {
+    try {
+      console.log("[TestimonialManager] Updating testimonial:", testimonialId);
+
+      // Fetch the latest data for this specific testimonial (with artifacts)
+      const updated = await this.fetchTestimonial(testimonialId, false);
+
+      if (updated && this.testimonials) {
+        runInAction(() => {
+          // Update in the testimonials array
+          const index = this.testimonials!.findIndex((t) => t.id === testimonialId);
+          if (index !== -1) {
+            this.testimonials![index] = updated;
+            console.log("[TestimonialManager] ✅ Updated testimonial in array:", testimonialId);
+          }
+
+          // Update the current testimonial if it's the one being viewed
+          if (this.testimonial?.id === testimonialId) {
+            this.testimonial = updated;
+            console.log("[TestimonialManager] ✅ Updated current testimonial:", testimonialId);
+          }
+        });
+      }
+
+      return updated;
+    } catch (error) {
+      console.error("[TestimonialManager] Error updating testimonial:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Invalidates cached testimonial data to force refetch
    * @param testimonialId - Optional specific testimonial ID to invalidate, if not provided clears all
    */

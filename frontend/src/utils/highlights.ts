@@ -4,7 +4,7 @@ import pako from "pako";
 import {
   ArrowUpDown,
   BarChart3,
-  Brain,
+  BookOpen,
   Heart,
   Lightbulb,
   MessageSquare,
@@ -18,7 +18,7 @@ export const HIGHLIGHT_TYPES = {
     // should be general
     label: "General Highlights",
     description: "Most engaging overall moments",
-    icon: Brain,
+    icon: BookOpen,
     color: "gray",
   },
   problem: {

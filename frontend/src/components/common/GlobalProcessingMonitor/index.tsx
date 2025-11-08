@@ -40,8 +40,8 @@ export const GlobalProcessingMonitor: React.FC = () => {
   // Show completion notifications (only for non-cancelled jobs)
   useEffect(() => {
     displayJobs.forEach((job) => {
-      // Check if job is complete and we haven't notified yet
-      if (job.progress === 100 && !notifiedJobs.current.has(job.sessionId)) {
+      // Check if job is actually completed (not just at 100% progress) and we haven't notified yet
+      if (job.status === "completed" && !notifiedJobs.current.has(job.sessionId)) {
         notifiedJobs.current.add(job.sessionId);
 
         console.log(
@@ -88,10 +88,12 @@ export const GlobalProcessingMonitor: React.FC = () => {
 
   const handleJobClick = (sessionId: string) => {
     const job = displayJobs.find((j) => j.sessionId === sessionId);
-    if (job?.studioUrl) {
-      // Always navigate to studio, even if completed
+    if (!job) return;
+
+    // Navigate to studio for ALL job states (processing, paused, failed, completed)
+    // Users need to access studio to save/finalize completed jobs
+    if (job.studioUrl) {
       navigate(job.studioUrl);
-      // Optionally collapse after navigation
       setIsExpanded(false);
     }
   };

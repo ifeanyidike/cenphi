@@ -9,7 +9,14 @@ export type ContentStatus =
   | "approved"
   | "published"
   | "failed";
-export type JobStatus = "pending" | "processing" | "completed" | "failed";
+export type JobStatus =
+  | "pending"
+  | "processing"
+  | "transcribing"
+  | "analyzing_sentiment"
+  | "extracting_highlights"
+  | "completed"
+  | "failed";
 export type SocialPlatform = "linkedin";
 export type PostStatus = "draft" | "scheduled" | "published" | "failed";
 export type OAuthStatus = "connected" | "expired" | "revoked" | "error";

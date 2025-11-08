@@ -14,10 +14,12 @@ import {
   MessageSquare,
   Sparkles,
   Brain,
+  Cpu,
   Maximize,
   BarChart3,
   Lightbulb,
   Video,
+  Loader2,
 } from "lucide-react";
 import AIFeaturesDiscovery from "./AIFeaturesDiscovery";
 import MainTabs from "./MainTabs";
@@ -581,38 +583,81 @@ const TestimonialDetail = observer(() => {
 
   // Render sentiment analysis
   const renderSentimentAnalysis = () => {
+    // Check if sentiment is processing or waiting for transcription
+    const isProcessing =
+      !sentiment &&
+      (testimonial.processing_status === "analyzing_sentiment" ||
+        testimonial.processing_status === "transcribing" ||
+        testimonial.processing_status === "extracting_highlights");
+
+    // Get status message based on processing state
+    const getStatusMessage = () => {
+      if (testimonial.processing_status === "transcribing") {
+        return {
+          title: "Transcribing Video",
+          message:
+            "Sentiment analysis will be performed after transcription completes...",
+        };
+      }
+      if (testimonial.processing_status === "analyzing_sentiment") {
+        return {
+          title: "Analyzing Sentiment",
+          message:
+            "AI is analyzing emotional tone and extracting business insights. This may take a moment...",
+        };
+      }
+      if (testimonial.processing_status === "extracting_highlights") {
+        return {
+          title: "Extracting Highlights",
+          message:
+            "Sentiment analysis has been completed. Processing highlights...",
+        };
+      }
+      return {
+        title: "No Sentiment Analysis",
+        message:
+          "Generate AI-powered sentiment analysis to understand emotional tone and business insights",
+      };
+    };
+
     if (!sentiment) {
+      const statusMsg = getStatusMessage();
       return (
         <Card className="border border-slate-200 bg-white">
           <CardContent className="p-8 text-center">
             <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center mx-auto mb-4">
-              <Brain className="h-5 w-5 text-slate-400" />
+              {isProcessing ? (
+                <Loader2 className="h-5 w-5 text-blue-600 animate-spin" />
+              ) : (
+                <Brain className="h-5 w-5 text-slate-400" />
+              )}
             </div>
             <h3 className="text-sm font-semibold text-slate-900 mb-2">
-              No Sentiment Analysis
+              {statusMsg.title}
             </h3>
             <p className="text-xs text-slate-600 mb-5 max-w-sm mx-auto">
-              Generate AI-powered sentiment analysis to understand emotional
-              tone and business insights
+              {statusMsg.message}
             </p>
-            <Button
-              onClick={handleGenerateSentiment}
-              size="sm"
-              disabled={generatingSentiment}
-              className="bg-slate-900 hover:bg-slate-800 text-white h-8 px-4 text-xs"
-            >
-              {generatingSentiment ? (
-                <>
-                  <Brain className="h-3 w-3 mr-1.5 animate-pulse" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-3 w-3 mr-1.5" />
-                  Generate Analysis
-                </>
-              )}
-            </Button>
+            {!isProcessing && (
+              <Button
+                onClick={handleGenerateSentiment}
+                size="sm"
+                disabled={generatingSentiment}
+                className="bg-slate-900 hover:bg-slate-800 text-white h-8 px-4 text-xs"
+              >
+                {generatingSentiment ? (
+                  <>
+                    <Brain className="h-3 w-3 mr-1.5 animate-pulse" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-3 w-3 mr-1.5" />
+                    Generate Analysis
+                  </>
+                )}
+              </Button>
+            )}
           </CardContent>
         </Card>
       );
@@ -626,7 +671,7 @@ const TestimonialDetail = observer(() => {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-xs font-semibold">
                 <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center">
-                  <Brain className="h-3.5 w-3.5 text-slate-600" />
+                  <Cpu className="h-3.5 w-3.5 text-slate-600" />
                 </div>
                 Overall Sentiment
               </CardTitle>
@@ -1190,7 +1235,9 @@ const TestimonialDetail = observer(() => {
                                   className="h-7 px-2 sm:h-8 sm:px-2.5 text-[10px] border-slate-200"
                                 >
                                   <Download className="h-3 w-3 sm:mr-1.5" />
-                                  <span className="hidden sm:inline">Download</span>
+                                  <span className="hidden sm:inline">
+                                    Download
+                                  </span>
                                 </Button>
                                 <Button
                                   variant="ghost"
@@ -1223,7 +1270,7 @@ const TestimonialDetail = observer(() => {
                 </Card>
 
                 {/* Transcript with Read More */}
-                {isVideoTestimonial && testimonial.content && (
+                {isVideoTestimonial && (
                   <Card className="border border-slate-200 bg-white overflow-hidden">
                     <div className="p-4">
                       <div className="flex items-center gap-2 mb-3">
@@ -1233,35 +1280,52 @@ const TestimonialDetail = observer(() => {
                         <h3 className="text-xs font-semibold text-slate-900">
                           Transcript
                         </h3>
+                        {/* Processing indicator */}
+                        {!testimonial.content &&
+                          testimonial.processing_status === "transcribing" && (
+                            <div className="ml-auto flex items-center gap-1.5 px-2 py-1 bg-blue-50 border border-blue-200 rounded-full">
+                              <Loader2 className="h-3 w-3 text-blue-600 animate-spin" />
+                              <span className="text-xs font-medium text-blue-700">
+                                Transcribing...
+                              </span>
+                            </div>
+                          )}
                       </div>
-                      <div className="relative">
-                        <p
-                          className={`text-xs text-slate-700 leading-relaxed ${!showTranscript ? "line-clamp-3" : ""}`}
-                        >
-                          {testimonial.content}
-                        </p>
-                        {testimonial.content.length > 200 && (
-                          <button
-                            onClick={() => setShowTranscript(!showTranscript)}
-                            className="text-xs text-blue-600 hover:text-blue-700 font-medium mt-2 inline-flex items-center gap-1"
+                      {testimonial.content ? (
+                        <div className="relative">
+                          <p
+                            className={`text-xs text-slate-700 leading-relaxed ${!showTranscript ? "line-clamp-3" : ""}`}
                           >
-                            {showTranscript ? "Read less" : "Read more"}
-                            <svg
-                              className={`h-3 w-3 transform transition-transform ${showTranscript ? "rotate-180" : ""}`}
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
+                            {testimonial.content}
+                          </p>
+                          {testimonial.content.length > 200 && (
+                            <button
+                              onClick={() => setShowTranscript(!showTranscript)}
+                              className="text-xs text-blue-600 hover:text-blue-700 font-medium mt-2 inline-flex items-center gap-1"
                             >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M19 9l-7 7-7-7"
-                              />
-                            </svg>
-                          </button>
-                        )}
-                      </div>
+                              {showTranscript ? "Read less" : "Read more"}
+                              <svg
+                                className={`h-3 w-3 transform transition-transform ${showTranscript ? "rotate-180" : ""}`}
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M19 9l-7 7-7-7"
+                                />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-slate-500 italic">
+                          Transcript will appear here once processing is
+                          complete
+                        </p>
+                      )}
                     </div>
                   </Card>
                 )}
@@ -1398,6 +1462,7 @@ const TestimonialDetail = observer(() => {
                             testimonialId={testimonial.id}
                             artifacts={highlightArtifacts}
                             videoUrl={testimonial.media_url || ""}
+                            processingStatus={testimonial.processing_status}
                             onGenerateHighlights={
                               handleGenerateHighlightsByType
                             }

@@ -852,6 +852,10 @@ const StoryVideoConfig: React.FC<StoryVideoConfigProps> = ({
     [orderedMoments]
   );
 
+  // Check if video is too short for B-roll
+  const MIN_BROLL_DURATION = 20;
+  const isTooShortForBroll = videoDuration < MIN_BROLL_DURATION;
+
   // Error state - check this BEFORE loading state so errors are always visible
   if (loadError) {
     return (
@@ -1165,33 +1169,44 @@ const StoryVideoConfig: React.FC<StoryVideoConfigProps> = ({
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {steps.map((step) => (
-                  <div
-                    key={step.id}
-                    className={`flex items-start gap-3 p-3 rounded-lg border-2 transition-colors ${
-                      step.enabled
-                        ? "border-blue-200 bg-blue-50"
-                        : "border-slate-200 bg-white"
-                    }`}
-                  >
-                    <Checkbox
-                      checked={step.enabled}
-                      onCheckedChange={() => toggleStep(step.id)}
-                      className="mt-0.5"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        {step.icon}
-                        <p className="text-xs font-semibold text-slate-900">
-                          {step.name}
+                {steps.map((step) => {
+                  const isDisabled = step.id === "apply_broll" && isTooShortForBroll;
+                  return (
+                    <div
+                      key={step.id}
+                      className={`flex items-start gap-3 p-3 rounded-lg border-2 transition-colors ${
+                        isDisabled
+                          ? "border-slate-200 bg-slate-50 opacity-60"
+                          : step.enabled
+                            ? "border-blue-200 bg-blue-50"
+                            : "border-slate-200 bg-white"
+                      }`}
+                    >
+                      <Checkbox
+                        checked={step.enabled}
+                        onCheckedChange={() => toggleStep(step.id)}
+                        disabled={isDisabled}
+                        className="mt-0.5"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          {step.icon}
+                          <p className="text-xs font-semibold text-slate-900">
+                            {step.name}
+                          </p>
+                        </div>
+                        <p className="text-xs text-slate-600">
+                          {step.description}
                         </p>
+                        {isDisabled && (
+                          <p className="text-xs text-slate-500 mt-1.5 bg-slate-100 px-2 py-1 rounded border border-slate-200">
+                            ℹ️ Requires {MIN_BROLL_DURATION}+ second video (yours: {Math.round(videoDuration)}s)
+                          </p>
+                        )}
                       </div>
-                      <p className="text-xs text-slate-600">
-                        {step.description}
-                      </p>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </Card>
 

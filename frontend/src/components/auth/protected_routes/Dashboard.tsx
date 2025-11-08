@@ -70,7 +70,14 @@ const DashboardProtectedRoute = observer(() => {
 
   // Show loading while auth is initializing
   if (authStore.loading) {
-    return <LoadingIndicator />;
+    return (
+      <LoadingIndicator
+        title="Authenticating"
+        message="Verifying your credentials"
+        variant="minimal"
+        showProgress={false}
+      />
+    );
   }
 
   // Redirect to login if not authenticated
@@ -86,7 +93,12 @@ const DashboardProtectedRoute = observer(() => {
 
   // Show loading while checking workspace (only on initial check)
   if (isCheckingWorkspace) {
-    return <LoadingIndicator />;
+    return (
+      <LoadingIndicator
+        title="Loading workspace"
+        message="Setting up your dashboard"
+      />
+    );
   }
 
   // Redirect to onboarding ONLY if no workspace exists after checking

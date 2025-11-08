@@ -199,6 +199,10 @@ const PlatformOptimizationConfig: React.FC<PlatformOptimizationConfigProps> =
       clipId: context.type === "clip" ? (context as any).clipId : undefined,
     });
 
+    // Check if video is too short for B-roll
+    const MIN_BROLL_DURATION = 20;
+    const isTooShortForBroll = videoDuration < MIN_BROLL_DURATION;
+
     // State for aspect ratio and platform selection
     const [selectedAspectRatio, setSelectedAspectRatio] =
       useState<AspectRatio | null>(null);
@@ -758,26 +762,30 @@ const PlatformOptimizationConfig: React.FC<PlatformOptimizationConfigProps> =
             </div>
 
             <div className="space-y-2">
-              {steps.map((step) => (
-                <div
-                  key={step.id}
-                  onClick={() => !step.required && toggleStep(step.id)}
-                  className={`
-                  flex items-start gap-3 p-3 rounded-lg border transition-all
-                  ${
-                    step.enabled
-                      ? "border-slate-200 bg-slate-50"
-                      : "border-slate-100 bg-white opacity-60"
-                  }
-                  ${!step.required ? "cursor-pointer hover:border-slate-300" : ""}
-                `}
-                >
-                  <Checkbox
-                    checked={step.enabled}
-                    disabled={step.required}
-                    className="mt-0.5"
-                  />
-                  <div className="flex items-start gap-2 flex-1">
+              {steps.map((step) => {
+                const isDisabled = step.required || (step.id === "apply_broll" && isTooShortForBroll);
+                return (
+                  <div
+                    key={step.id}
+                    onClick={() => !isDisabled && toggleStep(step.id)}
+                    className={`
+                    flex items-start gap-3 p-3 rounded-lg border transition-all
+                    ${
+                      isDisabled && step.id === "apply_broll" && isTooShortForBroll
+                        ? "border-slate-200 bg-slate-50 opacity-60"
+                        : step.enabled
+                          ? "border-slate-200 bg-slate-50"
+                          : "border-slate-100 bg-white opacity-60"
+                    }
+                    ${!isDisabled ? "cursor-pointer hover:border-slate-300" : ""}
+                  `}
+                  >
+                    <Checkbox
+                      checked={step.enabled}
+                      disabled={isDisabled}
+                      className="mt-0.5"
+                    />
+                    <div className="flex items-start gap-2 flex-1">
                     <div
                       className={`
                     w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0
@@ -803,10 +811,16 @@ const PlatformOptimizationConfig: React.FC<PlatformOptimizationConfigProps> =
                       <p className="text-xs text-slate-600 mt-0.5">
                         {step.description}
                       </p>
+                      {step.id === "apply_broll" && isTooShortForBroll && (
+                        <p className="text-xs text-slate-500 mt-1.5 bg-slate-100 px-2 py-1 rounded border border-slate-200">
+                          ℹ️ Requires {MIN_BROLL_DURATION}+ second video (yours: {Math.round(videoDuration)}s)
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
-              ))}
+              );
+              })}
             </div>
           </Card>
 

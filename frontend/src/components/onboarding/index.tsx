@@ -128,7 +128,14 @@ const Onboarding: React.FC<OnboardingProps> = observer(() => {
     }
   };
 
-  if (loadingOnboarding) return <LoadingIndicator />;
+  if (loadingOnboarding) {
+    return (
+      <LoadingIndicator
+        title="Preparing onboarding"
+        message="Getting everything ready for you"
+      />
+    );
+  }
 
   // Error display
   if (error) {

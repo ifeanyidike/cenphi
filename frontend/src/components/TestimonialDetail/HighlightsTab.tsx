@@ -1,5 +1,5 @@
 // components/TestimonialDetail/HighlightsTab.tsx
-import { Brain, Sparkles, RefreshCw, Plus, Loader2 } from "lucide-react";
+import { BookOpen, Sparkles, RefreshCw, Plus, Loader2 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ interface HighlightsTabProps {
   testimonialId: string;
   artifacts: TestimonialArtifact[];
   videoUrl: string;
+  processingStatus?: string;
   onGenerateHighlights: (type: HighlightType) => Promise<void>;
   onRegenerateHighlights: (type: HighlightType) => Promise<void>;
 }
@@ -263,6 +264,7 @@ const HighlightsTab = ({
   testimonialId,
   artifacts,
   videoUrl,
+  processingStatus,
   onGenerateHighlights,
   onRegenerateHighlights,
 }: HighlightsTabProps) => {
@@ -457,6 +459,26 @@ const HighlightsTab = ({
   }, [allMomentsJson, normalizedAvailableTypes.length]);
 
   const isGeneratingAll = loadingStates["generate-all"] || false;
+  // Check if extracting highlights or if transcription is still in progress
+  const isProcessing =
+    (processingStatus === "extracting_highlights" ||
+      processingStatus === "transcribing" ||
+      processingStatus === "analyzing_sentiment") &&
+    allMoments.length === 0;
+
+  // Get processing message based on status
+  const getProcessingMessage = () => {
+    if (processingStatus === "transcribing") {
+      return "Transcribing video... Highlights will be generated after transcription completes.";
+    }
+    if (processingStatus === "analyzing_sentiment") {
+      return "Analyzing sentiment... Highlights will be generated next.";
+    }
+    if (processingStatus === "extracting_highlights") {
+      return "AI is extracting key moments, emotional peaks, and important segments. This may take a moment...";
+    }
+    return "Generate AI-powered highlights to identify key moments, emotional peaks, and important segments in this testimonial.";
+  };
 
   // If no highlights exist at all
   if (allMoments.length === 0) {
@@ -468,31 +490,44 @@ const HighlightsTab = ({
             <LoadingOverlay message="Generating all highlights..." />
           )}
           <CardContent className="p-8 text-center">
-            <Brain className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            {isProcessing ? (
+              <Loader2 className="h-12 w-12 text-blue-600 animate-spin mx-auto mb-4" />
+            ) : (
+              <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            )}
             <h3 className="text font-semibold text-gray-900 mb-2">
-              No Highlights Generated
+              {isProcessing
+                ? processingStatus === "transcribing"
+                  ? "Transcribing Video"
+                  : processingStatus === "analyzing_sentiment"
+                    ? "Analyzing Sentiment"
+                    : "Extracting Highlights"
+                : "No Highlights Generated"}
             </h3>
             <p className="text-gray-600 mb-4 text-xs">
-              Generate AI-powered highlights to identify key moments, emotional
-              peaks, and important segments in this testimonial.
+              {getProcessingMessage()}
             </p>
-            <div className="flex items-center justify-center">
-              <Button
-                onClick={() => {
-                  setLoadingStates({ "generate-all": true });
-                  handleGenerateHighlights("highlights");
-                }}
-                disabled={isGeneratingAll}
-                className="bg-gray-900 hover:bg-gray-800 text-white flex items-center justify-center gap-2"
-              >
-                {isGeneratingAll ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Sparkles className="h-4 w-4" />
-                )}
-                {isGeneratingAll ? "Generating..." : "Generate All Highlights"}
-              </Button>
-            </div>
+            {!isProcessing && (
+              <div className="flex items-center justify-center">
+                <Button
+                  onClick={() => {
+                    setLoadingStates({ "generate-all": true });
+                    handleGenerateHighlights("highlights");
+                  }}
+                  disabled={isGeneratingAll}
+                  className="bg-gray-900 hover:bg-gray-800 text-white flex items-center justify-center gap-2"
+                >
+                  {isGeneratingAll ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-4 w-4" />
+                  )}
+                  {isGeneratingAll
+                    ? "Generating..."
+                    : "Generate General Highlight"}
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </>
@@ -507,7 +542,7 @@ const HighlightsTab = ({
         <Card className="p-3">
           <CardHeader>
             <CardTitle className="p-2 flex items-center gap-2">
-              <Brain className="h-4 w-4 text-gray-600" />
+              <BookOpen className="h-4 w-4 text-gray-600" />
               Highlights Overview
             </CardTitle>
           </CardHeader>

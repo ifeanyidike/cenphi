@@ -20,6 +20,9 @@ import {
   X,
   Brain,
   Clock,
+  CheckCircle2,
+  Circle,
+  AlertCircle,
 } from "lucide-react";
 import { Testimonial } from "@/types/testimonial";
 import { Button } from "@/components/ui/button";
@@ -117,6 +120,55 @@ const TestimonialCard = ({
   const isLongContent = contentLength > 200;
   const isVideoTestimonial = testimonial.type === "video";
   const sentimentScore = testimonial.sentiment_score || 0;
+
+  // Check processing status for each job type
+  const artifacts = testimonial.artifacts || [];
+  // For transcription, check testimonial.content directly (not artifacts)
+  const hasTranscript = isVideoTestimonial && !!testimonial.content;
+  const hasSentiment = artifacts.some(a => a.processing_type === "sentiment_analysis");
+  const hasHighlights = artifacts.some(a => a.processing_type === "highlight_extraction");
+
+  // Determine if jobs should be running (video testimonials need transcription, all need sentiment/highlights)
+  const shouldHaveTranscript = isVideoTestimonial;
+  const shouldHaveSentiment = true; // All testimonials get sentiment
+  const shouldHaveHighlights = true; // All testimonials get highlights
+
+  // Get status for each specific job type
+  const getJobStatus = (
+    hasJob: boolean,
+    shouldHaveJob: boolean,
+    jobType: "transcript" | "sentiment" | "highlights"
+  ) => {
+    if (!shouldHaveJob) return "not_applicable";
+    if (hasJob) return "completed";
+    if (testimonial.processing_status === "failed") return "failed";
+
+    // Check if this specific job is currently processing
+    if (jobType === "transcript" && testimonial.processing_status === "transcribing") {
+      return "processing";
+    }
+    if (jobType === "sentiment" && testimonial.processing_status === "analyzing_sentiment") {
+      return "processing";
+    }
+    if (jobType === "highlights" && testimonial.processing_status === "extracting_highlights") {
+      return "processing";
+    }
+
+    // If another job is processing and this one isn't complete, it's pending
+    if (
+      testimonial.processing_status === "transcribing" ||
+      testimonial.processing_status === "analyzing_sentiment" ||
+      testimonial.processing_status === "extracting_highlights"
+    ) {
+      return "pending";
+    }
+
+    return "pending";
+  };
+
+  const transcriptStatus = getJobStatus(hasTranscript, shouldHaveTranscript, "transcript");
+  const sentimentStatus = getJobStatus(hasSentiment, shouldHaveSentiment, "sentiment");
+  const highlightsStatus = getJobStatus(hasHighlights, shouldHaveHighlights, "highlights");
 
   return (
     <>
@@ -243,25 +295,119 @@ const TestimonialCard = ({
             </div>
           )}
 
-          {/* Text Testimonial Indicator */}
-          {!isVideoTestimonial && (
-            <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-              <div className="flex items-center">
-                <FileText className="w-4 h-4 text-gray-600 mr-2" />
-                <span className="text-xs font-medium text-gray-700">
-                  Text Testimonial
-                </span>
-                {testimonial.processing_status === "completed" && (
-                  <div className="ml-auto flex items-center gap-1 px-2 py-0.5 bg-emerald-50 border border-emerald-200 rounded-full">
+          {/* Processing Status Indicators */}
+          <div className="mb-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
+            <div className="flex items-center justify-between mb-2">
+              {!isVideoTestimonial ? (
+                <>
+                  <FileText className="w-4 h-4 text-slate-600 mr-2" />
+                  <span className="text-xs font-medium text-slate-700">Text Testimonial</span>
+                </>
+              ) : (
+                <>
+                  <Play className="w-4 h-4 text-slate-600 mr-2" />
+                  <span className="text-xs font-medium text-slate-700">Video Processing</span>
+                </>
+              )}
+              <div className="ml-auto flex items-center gap-1">
+                {(hasTranscript || hasSentiment || hasHighlights) && (
+                  <div className="flex items-center gap-1 px-2 py-0.5 bg-emerald-50 border border-emerald-200 rounded-full">
                     <Brain className="w-3 h-3 text-emerald-600" />
-                    <span className="text-xs font-medium text-emerald-700">
-                      AI Enhanced
-                    </span>
+                    <span className="text-xs font-medium text-emerald-700">AI Enhanced</span>
                   </div>
                 )}
               </div>
             </div>
-          )}
+
+            {/* Individual Job Status */}
+            <div className="space-y-1.5 mt-2">
+              {/* Transcription (only for video) */}
+              {isVideoTestimonial && (
+                <div className="flex items-center gap-2 text-xs">
+                  {transcriptStatus === "completed" && (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      <span className="text-slate-700">Transcription</span>
+                    </>
+                  )}
+                  {transcriptStatus === "processing" && (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 text-blue-600 animate-spin" />
+                      <span className="text-slate-700">Transcribing...</span>
+                    </>
+                  )}
+                  {transcriptStatus === "pending" && (
+                    <>
+                      <Circle className="w-3.5 h-3.5 text-slate-400" />
+                      <span className="text-slate-500">Transcription pending</span>
+                    </>
+                  )}
+                  {transcriptStatus === "failed" && (
+                    <>
+                      <AlertCircle className="w-3.5 h-3.5 text-red-600" />
+                      <span className="text-red-600">Transcription failed</span>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Sentiment Analysis */}
+              <div className="flex items-center gap-2 text-xs">
+                {sentimentStatus === "completed" && (
+                  <>
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    <span className="text-slate-700">Sentiment Analysis</span>
+                  </>
+                )}
+                {sentimentStatus === "processing" && (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 text-blue-600 animate-spin" />
+                    <span className="text-slate-700">Analyzing sentiment...</span>
+                  </>
+                )}
+                {sentimentStatus === "pending" && (
+                  <>
+                    <Circle className="w-3.5 h-3.5 text-slate-400" />
+                    <span className="text-slate-500">Sentiment analysis pending</span>
+                  </>
+                )}
+                {sentimentStatus === "failed" && (
+                  <>
+                    <AlertCircle className="w-3.5 h-3.5 text-red-600" />
+                    <span className="text-red-600">Sentiment analysis failed</span>
+                  </>
+                )}
+              </div>
+
+              {/* Highlight Extraction */}
+              <div className="flex items-center gap-2 text-xs">
+                {highlightsStatus === "completed" && (
+                  <>
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    <span className="text-slate-700">Highlight Extraction</span>
+                  </>
+                )}
+                {highlightsStatus === "processing" && (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 text-blue-600 animate-spin" />
+                    <span className="text-slate-700">Extracting highlights...</span>
+                  </>
+                )}
+                {highlightsStatus === "pending" && (
+                  <>
+                    <Circle className="w-3.5 h-3.5 text-slate-400" />
+                    <span className="text-slate-500">Highlight extraction pending</span>
+                  </>
+                )}
+                {highlightsStatus === "failed" && (
+                  <>
+                    <AlertCircle className="w-3.5 h-3.5 text-red-600" />
+                    <span className="text-red-600">Highlight extraction failed</span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
 
           {/* Content Preview */}
           <div className="mb-4">

@@ -6,7 +6,14 @@ import { Navigate, Outlet } from "react-router-dom";
 const AuthPagesProtectedRoute = observer(() => {
   // Show loading while auth state is being determined
   if (authStore.loading) {
-    return <LoadingIndicator />;
+    return (
+      <LoadingIndicator
+        title="Authenticating"
+        message="Checking your session"
+        variant="minimal"
+        showProgress={false}
+      />
+    );
   }
 
   // If user is authenticated, redirect to dashboard

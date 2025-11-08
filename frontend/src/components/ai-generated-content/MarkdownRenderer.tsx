@@ -571,7 +571,9 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
                 className={`prose prose-sm max-w-none transition-all duration-300 ${
                   !isExpanded && analysis.contentHeight !== "short"
                     ? "max-h-32 overflow-hidden"
-                    : ""
+                    : isExpanded
+                      ? "max-h-96 overflow-y-auto"
+                      : ""
                 }`}
                 dangerouslySetInnerHTML={{
                   __html: renderMarkdown(
