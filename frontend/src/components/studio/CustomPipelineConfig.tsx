@@ -1023,12 +1023,14 @@ const CustomPipelineConfig: React.FC<CustomPipelineConfigProps> = observer(
               <div className="space-y-2">
                 {AVAILABLE_STEPS.map((step) => {
                   const isAdded = selectedSteps.find((s) => s.id === step.id);
-                  const isDisabled = isAdded || (step.type === "apply_broll" && isTooShortForBroll);
+                  const isDisabled =
+                    isAdded ||
+                    (step.type === "apply_broll" && isTooShortForBroll);
                   return (
                     <div key={step.id}>
                       <motion.button
                         onClick={() => addStep(step)}
-                        disabled={isDisabled}
+                        disabled={!!isDisabled}
                         whileHover={!isDisabled ? { scale: 1.02, x: 4 } : {}}
                         whileTap={!isDisabled ? { scale: 0.98 } : {}}
                         className={`w-full p-3 rounded-lg border transition-all text-left group ${
@@ -1059,11 +1061,14 @@ const CustomPipelineConfig: React.FC<CustomPipelineConfigProps> = observer(
                         </div>
                       </motion.button>
                       {/* Show warning for B-roll if video too short */}
-                      {step.type === "apply_broll" && isTooShortForBroll && !isAdded && (
-                        <div className="mt-1.5 ml-12 text-xs text-slate-600 bg-slate-50 px-2 py-1 rounded border border-slate-200">
-                          ℹ️ Requires {MIN_BROLL_DURATION}+ second video (yours: {Math.round(videoDuration)}s)
-                        </div>
-                      )}
+                      {step.type === "apply_broll" &&
+                        isTooShortForBroll &&
+                        !isAdded && (
+                          <div className="mt-1.5 ml-12 text-xs text-slate-600 bg-slate-50 px-2 py-1 rounded border border-slate-200">
+                            ℹ️ Requires {MIN_BROLL_DURATION}+ second video
+                            (yours: {Math.round(videoDuration)}s)
+                          </div>
+                        )}
                     </div>
                   );
                 })}
@@ -1140,11 +1145,17 @@ const CustomPipelineConfig: React.FC<CustomPipelineConfigProps> = observer(
                                   {step.description}
                                 </p>
                                 {/* Show warning for B-roll step when video is too short */}
-                                {step.type === "apply_broll" && isTooShortForBroll && (
-                                  <div className="mt-2 px-2 py-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-300">
-                                    <span className="font-semibold">ℹ️ Disabled:</span> B-roll requires at least {MIN_BROLL_DURATION} seconds of video. Your clip is {Math.round(videoDuration)}s.
-                                  </div>
-                                )}
+                                {step.type === "apply_broll" &&
+                                  isTooShortForBroll && (
+                                    <div className="mt-2 px-2 py-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-300">
+                                      <span className="font-semibold">
+                                        ℹ️ Disabled:
+                                      </span>{" "}
+                                      B-roll requires at least{" "}
+                                      {MIN_BROLL_DURATION} seconds of video.
+                                      Your clip is {Math.round(videoDuration)}s.
+                                    </div>
+                                  )}
                               </div>
                               <div className="flex items-center gap-2 flex-shrink-0">
                                 {step.requiresConfig && step.enabled && (
@@ -1166,7 +1177,10 @@ const CustomPipelineConfig: React.FC<CustomPipelineConfigProps> = observer(
                                 <Checkbox
                                   checked={step.enabled}
                                   onCheckedChange={() => toggleStep(step.id)}
-                                  disabled={step.type === "apply_broll" && isTooShortForBroll}
+                                  disabled={
+                                    step.type === "apply_broll" &&
+                                    isTooShortForBroll
+                                  }
                                 />
                                 <Button
                                   variant="ghost"
