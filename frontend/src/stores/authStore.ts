@@ -110,10 +110,18 @@ class AuthStore {
       const result = await getRedirectResult(auth);
       if (result) {
         this.user = result.user;
+
+        // Validate required fields from OAuth provider
+        if (!this.user.email) {
+          throw new Error("Email not provided by authentication provider");
+        }
+
+        const displayName = this.user.displayName || this.user.email.split('@')[0];
+
         await this.registerUser(
           result,
-          this.user.displayName || "",
-          this.user.email!
+          displayName,
+          this.user.email
         );
         console.log("registration successful redirect....");
 
@@ -159,10 +167,17 @@ class AuthStore {
       const creds = await signInWithPopup(auth, authProvider);
       this.user = creds.user;
 
+      // Validate required fields from OAuth provider
+      if (!creds.user.email) {
+        throw new Error("Email not provided by authentication provider");
+      }
+
+      const displayName = creds.user.displayName || creds.user.email.split('@')[0];
+
       await this.registerUser(
         creds,
-        creds.user.displayName!,
-        creds.user.email!
+        displayName,
+        creds.user.email
       );
       console.log("registration successful redirect in social login....");
 
@@ -239,28 +254,54 @@ class AuthStore {
     isEmailPassword = false
   ) {
     try {
+      const requestBody = {
+        name,
+        email,
+        email_verified: isEmailPassword ? cred.user.emailVerified : true,
+        firebase_uid: cred.user.uid,
+      };
+
+      console.log("Registering user with API:", {
+        url: `${this.server}/users/register`,
+        body: requestBody,
+      });
+
       const response = await fetch(`${this.server}/users/register`, {
         method: "POST",
-        body: JSON.stringify({
-          name,
-          email,
-          email_verified: isEmailPassword ? cred.user.emailVerified : true,
-          firebase_uid: cred.user.uid,
-        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
-        const errorText = response.status === 409
-          ? "This email is already registered. Please login instead."
-          : response.statusText;
+        // Try to get detailed error message from response body
+        let errorMessage = response.statusText;
+        try {
+          const errorData = await response.text();
+          console.log("Registration error response:", errorData);
+          errorMessage = errorData || errorMessage;
+        } catch (e) {
+          console.error("Failed to parse error response:", e);
+        }
 
-        console.log("Registration failed", response.status, errorText);
+        const finalErrorText = response.status === 409
+          ? "This email is already registered. Please login instead."
+          : errorMessage;
+
+        console.error("Registration failed:", {
+          status: response.status,
+          statusText: response.statusText,
+          errorMessage: errorMessage,
+          url: `${this.server}/users/register`,
+        });
+
         this.setError({
-          message: errorText,
+          message: finalErrorText,
         });
 
         // Throw error to stop the signup/social login flow
-        throw new Error(errorText);
+        throw new Error(finalErrorText);
       }
       const result = await response.json();
       console.log("result", result);

@@ -88,6 +88,24 @@ const Studio: React.FC = () => {
   // Determine service and step from URL path
   useEffect(() => {
     const pathname = location.pathname;
+    const sessionId = searchParams.get("sessionId");
+
+    // If sessionId is provided, don't override the step - let direct session loading handle it
+    if (sessionId) {
+      // Still need to set the service type based on path
+      if (pathname === "/studio/optimize") {
+        setSelectedService("platform_optimization");
+      } else if (pathname === "/studio/clipping") {
+        setSelectedService("clipping");
+      } else if (pathname === "/studio/story") {
+        setSelectedService("story_video");
+      } else if (pathname === "/studio/content") {
+        setSelectedService("content_generation");
+      } else if (pathname === "/studio/custom") {
+        setSelectedService("custom_pipeline");
+      }
+      return; // Don't set currentStep, let sessionId handler do it
+    }
 
     if (pathname === "/studio") {
       setCurrentStep("service-selection");
@@ -227,10 +245,30 @@ const Studio: React.FC = () => {
     }
   }, [searchParams]);
 
+  // Direct Session Loading: Load a specific session by ID from URL parameter
+  // This takes priority over normal session recovery and is used when navigating from history
+  useEffect(() => {
+    const sessionId = searchParams.get("sessionId");
+
+    // If sessionId is provided, load that session directly
+    if (sessionId && sessionId.trim()) {
+      console.log("[Studio] Direct session load requested:", sessionId);
+      setJobId(sessionId.trim());
+      setCurrentStep("processing");
+      return; // Skip other initialization logic
+    }
+  }, [searchParams]);
+
   // Service-Specific Session Recovery: Only check for active sessions when on a service route
   useEffect(() => {
     const pathname = location.pathname;
     const testimonialId = searchParams.get("testimonialId");
+    const sessionId = searchParams.get("sessionId");
+
+    // Skip if we have a direct sessionId - that takes priority
+    if (sessionId) {
+      return;
+    }
 
     // Only check on service-specific routes (not on /studio)
     if (pathname === "/studio") {

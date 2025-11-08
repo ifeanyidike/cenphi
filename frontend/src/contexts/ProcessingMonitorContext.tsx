@@ -142,20 +142,22 @@ export const ProcessingMonitorProvider: React.FC<{
     const sessionType = session.session_type;
     const testimonialId = session.testimonial_id;
     const clipId = session.clip_id;
+    const sessionId = session.session_id;
 
-    // Build URL with testimonialId parameter (required for testimonial-based sessions)
+    // Build URL with both testimonialId and sessionId parameters
+    // sessionId allows studio to load specific completed sessions
     if (testimonialId) {
       const studioUrlMap: Record<string, string> = {
-        platform_optimization: `/studio/optimize?testimonialId=${testimonialId}`,
-        story_video: `/studio/story?testimonialId=${testimonialId}`,
-        clipping: `/studio/clipping?testimonialId=${testimonialId}${clipId ? `&clipId=${clipId}` : ''}`,
-        custom_pipeline: `/studio/custom?testimonialId=${testimonialId}`,
+        platform_optimization: `/studio/optimize?testimonialId=${testimonialId}&sessionId=${sessionId}`,
+        story_video: `/studio/story?testimonialId=${testimonialId}&sessionId=${sessionId}`,
+        clipping: `/studio/clipping?testimonialId=${testimonialId}${clipId ? `&clipId=${clipId}` : ''}&sessionId=${sessionId}`,
+        custom_pipeline: `/studio/custom?testimonialId=${testimonialId}&sessionId=${sessionId}`,
       };
-      return studioUrlMap[sessionType] || `/studio?testimonialId=${testimonialId}`;
+      return studioUrlMap[sessionType] || `/studio?testimonialId=${testimonialId}&sessionId=${sessionId}`;
     }
 
     // Fallback to session ID if no testimonialId (shouldn't happen for typical workflows)
-    return `/studio?session=${session.session_id}`;
+    return `/studio?sessionId=${sessionId}`;
   }, []);
 
   // Helper function to move jobs to history (in-memory only, backend is source of truth)

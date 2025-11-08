@@ -95,9 +95,9 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
               <HistoryJobCard
                 key={job.sessionId}
                 job={job}
-                onViewInContentHub={() => {
-                  if (job.contentHubUrl) {
-                    navigate(job.contentHubUrl);
+                onViewInStudio={() => {
+                  if (job.studioUrl) {
+                    navigate(job.studioUrl);
                     onClose();
                   }
                 }}
@@ -112,7 +112,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
       {/* Footer */}
       <div className="px-4 py-2 border-t border-slate-200 bg-slate-50">
         <p className="text-[10px] text-slate-500 text-center">
-          Click any job to view results in Content Hub
+          Click any job to open in Studio
         </p>
       </div>
 
@@ -131,14 +131,14 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
 
 interface HistoryJobCardProps {
   job: CompletedJob;
-  onViewInContentHub: () => void;
+  onViewInStudio: () => void;
   onViewDetails: () => void;
   formatTimeAgo: (date: Date | undefined) => string;
 }
 
 const HistoryJobCard: React.FC<HistoryJobCardProps> = ({
   job,
-  onViewInContentHub,
+  onViewInStudio,
   onViewDetails,
   formatTimeAgo,
 }) => {
@@ -167,7 +167,7 @@ const HistoryJobCard: React.FC<HistoryJobCardProps> = ({
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       className={`group relative px-4 py-3 hover:bg-slate-50/50 cursor-pointer transition-colors ${bgColor}`}
-      onClick={onViewInContentHub}
+      onClick={onViewInStudio}
     >
       <div className="flex items-start gap-3">
         {/* Status Icon */}
@@ -192,18 +192,18 @@ const HistoryJobCard: React.FC<HistoryJobCardProps> = ({
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2 mt-2">
-            {isSuccess && job.contentHubUrl && (
+            {isSuccess && job.studioUrl && (
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={(e) => {
                   e.stopPropagation();
-                  onViewInContentHub();
+                  onViewInStudio();
                 }}
                 className="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded text-[10px] font-medium text-slate-700 transition-colors"
               >
                 <ExternalLink className="w-2.5 h-2.5" />
-                View Results
+                Open in Studio
               </motion.button>
             )}
             <motion.button

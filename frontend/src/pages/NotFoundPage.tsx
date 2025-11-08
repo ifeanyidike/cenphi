@@ -10,14 +10,10 @@ import {
   Home,
   Search,
   ArrowRight,
-  X,
   RefreshCw,
   ChevronRight,
   Menu,
   MoveLeft,
-  ExternalLink,
-  Github,
-  Twitter,
   Compass,
   Clock,
 } from "lucide-react";
@@ -461,11 +457,44 @@ const NotFoundPage: React.FC = () => {
     if (!searchValue.trim()) return;
 
     setIsLoading(true);
-    // Simulate search delay
+
+    // Map search terms to actual routes
+    const searchRoutes: Record<string, string> = {
+      dashboard: "/dashboard",
+      testimonials: "/dashboard",
+      studio: "/studio",
+      "ai studio": "/studio",
+      pricing: "/pricing",
+      "why cenphi": "/why-cenphi",
+      analytics: "/analytics",
+      marketing: "/marketing-landing",
+      showcase: "/showcase",
+      collections: "/collections",
+      scheduling: "/scheduling",
+      settings: "/settings",
+      "brand guide": "/brand-guide",
+    };
+
+    const searchTerm = searchValue.toLowerCase().trim();
+    const matchedRoute = searchRoutes[searchTerm];
+
     setTimeout(() => {
       setIsLoading(false);
-      navigate(`/search?q=${encodeURIComponent(searchValue)}`);
-    }, 800);
+      if (matchedRoute) {
+        navigate(matchedRoute);
+      } else {
+        // If no exact match, try to find partial match
+        const partialMatch = Object.keys(searchRoutes).find(
+          (key) => key.includes(searchTerm) || searchTerm.includes(key)
+        );
+        if (partialMatch) {
+          navigate(searchRoutes[partialMatch]);
+        } else {
+          // Default to dashboard if nothing matches
+          navigate("/dashboard");
+        }
+      }
+    }, 300);
   };
 
   const handleGoHome = () => {
@@ -484,11 +513,11 @@ const NotFoundPage: React.FC = () => {
 
   const suggestions = [
     "Dashboard",
-    "Profile",
-    "Settings",
-    "Projects",
+    "Studio",
+    "Pricing",
+    "Why Cenphi",
     "Analytics",
-    "Team",
+    "Marketing",
   ];
 
   const sections = [
@@ -517,50 +546,50 @@ const NotFoundPage: React.FC = () => {
 
   const recentPages = [
     {
-      title: "Dashboard Overview",
+      title: "Testimonials Dashboard",
       path: "/dashboard",
-      time: "5 minutes ago",
+      time: "Recently visited",
     },
     {
-      title: "User Profile",
-      path: "/profile",
-      time: "Yesterday",
+      title: "AI Studio",
+      path: "/studio",
+      time: "Recently visited",
     },
     {
-      title: "Project Analytics",
-      path: "/analytics",
-      time: "2 days ago",
+      title: "Pricing",
+      path: "/pricing",
+      time: "Recently visited",
     },
     {
-      title: "Team Management",
-      path: "/team",
-      time: "Last week",
+      title: "Why Cenphi",
+      path: "/why-cenphi",
+      time: "Recently visited",
     },
     {
-      title: "System Settings",
+      title: "Settings",
       path: "/settings",
-      time: "2 weeks ago",
+      time: "Recently visited",
     },
   ];
 
   const quickLinks = [
     {
-      title: "Homepage",
-      path: "/",
+      title: "Dashboard",
+      path: "/dashboard",
       icon: <Home className="w-4 h-4" />,
-      description: "Return to the starting point",
+      description: "View your testimonials",
     },
     {
-      title: "Search",
-      path: "/search",
-      icon: <Search className="w-4 h-4" />,
-      description: "Find what you're looking for",
-    },
-    {
-      title: "Explore",
-      path: "/explore",
+      title: "AI Studio",
+      path: "/studio",
       icon: <Compass className="w-4 h-4" />,
-      description: "Discover new content",
+      description: "Create AI-generated content",
+    },
+    {
+      title: "Pricing",
+      path: "/pricing",
+      icon: <Search className="w-4 h-4" />,
+      description: "View plans and pricing",
     },
   ];
 
@@ -652,9 +681,30 @@ const NotFoundPage: React.FC = () => {
                       className="px-2 py-1 hover:bg-cyan-500/10 cursor-pointer transition-colors duration-150"
                     >
                       <button
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.preventDefault();
                           setSearchValue(suggestion);
                           setShowSuggestions(false);
+                          // Trigger search with the suggestion
+                          const searchRoutes: Record<string, string> = {
+                            dashboard: "/dashboard",
+                            testimonials: "/dashboard",
+                            studio: "/studio",
+                            "ai studio": "/studio",
+                            pricing: "/pricing",
+                            "why cenphi": "/why-cenphi",
+                            analytics: "/analytics",
+                            marketing: "/marketing-landing",
+                            showcase: "/showcase",
+                            collections: "/collections",
+                            scheduling: "/scheduling",
+                            settings: "/settings",
+                            "brand guide": "/brand-guide",
+                          };
+                          const route = searchRoutes[suggestion.toLowerCase()];
+                          if (route) {
+                            navigate(route);
+                          }
                         }}
                         className="w-full text-left text-white/80 hover:text-cyan-400 flex items-center px-3 py-2"
                       >
@@ -783,12 +833,12 @@ const NotFoundPage: React.FC = () => {
 
           <ul className="space-y-2">
             {[
-              "Dashboard analytics",
-              "User profiles",
-              "System settings",
-              "Project management",
-              "Team collaboration",
-              "Performance metrics",
+              "Testimonials",
+              "AI Studio",
+              "Pricing",
+              "Why Cenphi",
+              "Marketing",
+              "Showcase",
             ].map((term, index) => (
               <motion.li
                 key={index}
@@ -813,19 +863,6 @@ const NotFoundPage: React.FC = () => {
             ))}
           </ul>
         </div>
-      </div>
-
-      <div className="mt-6 bg-slate-900/70 backdrop-blur-lg border border-cyan-500/20 rounded-lg p-5">
-        <h3 className="text-lg font-mono text-white mb-4 flex items-center">
-          <ExternalLink className="w-4 h-4 mr-2 text-cyan-400" />
-          External Resources
-        </h3>
-
-        {/* <ImageGrid
-          images={Array(9)
-            .fill("")
-            .map((_, i) => `image-${i}`)}
-        /> */}
       </div>
     </motion.div>
   );
@@ -883,56 +920,6 @@ const NotFoundPage: React.FC = () => {
             </motion.li>
           ))}
         </ul>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-        <div className="bg-slate-900/70 backdrop-blur-lg border border-cyan-500/20 rounded-lg p-5">
-          <h3 className="text-lg font-mono text-white mb-4">System Status</h3>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-white/70">Server Uptime</span>
-              <span className="text-cyan-400 font-mono">99.98%</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-white/70">API Response</span>
-              <span className="text-green-400 font-mono">23ms</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-white/70">Database Status</span>
-              <span className="text-green-400 font-mono">Online</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-white/70">Memory Usage</span>
-              <span className="text-amber-400 font-mono">76%</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-slate-900/70 backdrop-blur-lg border border-cyan-500/20 rounded-lg p-5">
-          <h3 className="text-lg font-mono text-white mb-4">Quick Actions</h3>
-          <div className="grid grid-cols-2 gap-2">
-            {[
-              {
-                label: "Refresh Cache",
-                icon: <RefreshCw className="w-4 h-4" />,
-              },
-              { label: "Clear Data", icon: <X className="w-4 h-4" /> },
-              { label: "Report Bug", icon: <Github className="w-4 h-4" /> },
-              { label: "Get Support", icon: <Twitter className="w-4 h-4" /> },
-            ].map((action, index) => (
-              <motion.button
-                key={index}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.1 * index, duration: 0.5 }}
-                className="p-3 rounded-md bg-slate-800/50 text-white/70 hover:text-cyan-400 hover:bg-slate-800 transition-all duration-200 flex flex-col items-center justify-center text-sm"
-              >
-                <span className="text-cyan-400/70 mb-2">{action.icon}</span>
-                {action.label}
-              </motion.button>
-            ))}
-          </div>
-        </div>
       </div>
     </motion.div>
   );

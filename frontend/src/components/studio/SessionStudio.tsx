@@ -24,7 +24,7 @@ import {
 } from "./components";
 import { useProcessingMonitor } from "@/contexts/ProcessingMonitorContext";
 import { getServiceDisplayName } from "@/utils/studioHelpers";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 interface SessionStudioProps {
   sessionId: string;
@@ -84,6 +84,7 @@ const SessionStudio: React.FC<SessionStudioProps> = ({
   onClose,
 }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { registerJob, updateJob } = useProcessingMonitor();
   const [lastActivity, setLastActivity] = useState(Date.now());
   const [showTimeoutWarning, setShowTimeoutWarning] = useState(false);
@@ -141,10 +142,24 @@ const SessionStudio: React.FC<SessionStudioProps> = ({
   }, [sessionId, connect, disconnect]);
 
   // Register job with global monitor when session starts
+  // Only register active jobs (processing/paused), not completed/cancelled/failed
   useEffect(() => {
     if (!session || !session.session_type) {
       console.log(
         "[SessionStudio] Skipping registerJob - session or session_type missing"
+      );
+      return;
+    }
+
+    // Skip registering if session is completed or cancelled (viewed from history)
+    // Failed sessions should still be registered so users can retry them
+    if (
+      session.status === "completed" ||
+      session.status === "cancelled"
+    ) {
+      console.log(
+        "[SessionStudio] Skipping registerJob - session in final state:",
+        session.status
       );
       return;
     }
@@ -180,8 +195,18 @@ const SessionStudio: React.FC<SessionStudioProps> = ({
   ]);
 
   // Update job progress in global monitor
+  // Only update if job was registered (active jobs, not completed/cancelled/failed)
   useEffect(() => {
     if (!session) return;
+
+    // Skip updating if session is completed or cancelled (not in active monitor)
+    // Failed sessions should still be updated so users see the failure state
+    if (
+      session.status === "completed" ||
+      session.status === "cancelled"
+    ) {
+      return;
+    }
 
     const currentStageDisplay = currentStage?.display_name || "Initializing...";
     const progress = currentStage?.progress || 0;
@@ -607,6 +632,17 @@ const SessionStudio: React.FC<SessionStudioProps> = ({
   };
 
   const handleClose = async () => {
+    // For completed/cancelled sessions, navigate to dashboard without confirmation or cancellation
+    if (
+      session?.status === "completed" ||
+      session?.status === "cancelled"
+    ) {
+      disconnect();
+      navigate('/dashboard');
+      return;
+    }
+
+    // For active/processing/paused sessions, show confirmation and cancel
     setConfirmModal({
       isOpen: true,
       title: "Close Session",
@@ -700,25 +736,9 @@ const SessionStudio: React.FC<SessionStudioProps> = ({
     skippedStages === totalStages &&
     !stages.some((s) => s.status === "processing" || s.status === "pending");
 
-  // Auto-show finalization modal when session completes with successful stages
-  useEffect(() => {
-    if (
-      session?.status === "completed" &&
-      isReadyToFinalize &&
-      !showFinalizationModal &&
-      completedStages > 0
-    ) {
-      console.log(
-        "[SessionStudio] Session completed with results, showing finalization modal"
-      );
-      setShowFinalizationModal(true);
-    }
-  }, [
-    session?.status,
-    isReadyToFinalize,
-    showFinalizationModal,
-    completedStages,
-  ]);
+  // Finalization modal is now manual-only - users must click "Finalize" button
+  // No auto-show in any case to give users full control over when to finalize
+  // The finalize button is shown in the SessionHeader when session is ready to finalize
 
   // Calculate if Continue button should show
   const hasAcceptedOrCompletedStages = stages.some(
