@@ -21,7 +21,8 @@ const AUTH_ERROR_MAPPINGS: Record<string, ErrorMapping> = {
   // Email-related errors
   "auth/email-already-in-use": {
     field: "email",
-    message: "This email is already registered. Please sign in instead or use a different email.",
+    message:
+      "This email is already registered. Please sign in instead or use a different email.",
   },
   "auth/invalid-email": {
     field: "email",
@@ -114,6 +115,8 @@ export class FirebaseErrorHandler {
         code: "unknown-error",
       };
     }
+    console.log("FirebaseErrorHandler.formatError received error:", error);
+    console.log("Error message:", error.message);
 
     // Get the error mapping or use default
     const errorMapping = AUTH_ERROR_MAPPINGS[error.code] || {
