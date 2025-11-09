@@ -156,7 +156,8 @@ export const StageCard: React.FC<StageCardProps> = ({
             {/* Stale stage warning - only shown when truly stuck (no heartbeat for 3+ min) */}
             {isStale && !isFailed && (
               <div className="mt-2 p-2 bg-amber-100/60 border border-amber-200/60 rounded-md text-[10px] text-amber-900 font-medium">
-                ⚠️ Stage appears stuck with no activity for 3+ minutes. You may retry if this persists.
+                ⚠️ Stage appears stuck with no activity for 3+ minutes. You may
+                retry if this persists.
               </div>
             )}
 

@@ -150,10 +150,7 @@ const StoryVideoStudio: React.FC<StoryVideoStudioProps> = ({
 
     // Skip registering if session is completed or cancelled (viewed from history)
     // Failed sessions should still be registered so users can retry them
-    if (
-      session.status === "completed" ||
-      session.status === "cancelled"
-    ) {
+    if (session.status === "completed" || session.status === "cancelled") {
       console.log(
         "[StoryVideoStudio] Skipping registerJob - session in final state:",
         session.status
@@ -197,10 +194,7 @@ const StoryVideoStudio: React.FC<StoryVideoStudioProps> = ({
 
     // Skip updating if session is completed or cancelled (not in active monitor)
     // Failed sessions should still be updated so users see the failure state
-    if (
-      session.status === "completed" ||
-      session.status === "cancelled"
-    ) {
+    if (session.status === "completed" || session.status === "cancelled") {
       return;
     }
 
@@ -213,7 +207,7 @@ const StoryVideoStudio: React.FC<StoryVideoStudioProps> = ({
     // Determine status
     let status: "processing" | "paused" | "failed" | "completed" = "processing";
     if (session.status === "paused") status = "paused";
-    else if (session.status === "completed") status = "completed";
+    else if ((session.status as any) === "completed") status = "completed";
     else if (hasFailedStage && currentStage?.status === "failed")
       status = "failed";
 
@@ -274,14 +268,31 @@ const StoryVideoStudio: React.FC<StoryVideoStudioProps> = ({
     setShowTimeoutWarning(false);
   }, []);
 
-  // Detect stale processing stages
+  // Detect stale processing stages with smart threshold calculation
   useEffect(() => {
-    const getStaleThreshold = (stageId: string): number => {
-      const longRunningStages = ["enhance", "mix_music", "story_assembly"];
-      if (longRunningStages.includes(stageId)) {
-        return 5 * 60 * 1000; // 5 minutes for compute-intensive stages
+    const getBaseStaleThreshold = (stageId: string): number => {
+      // Very long operations that can take 10+ minutes
+      const veryLongRunningStages = [
+        "assemble_clips", // Story video assembly with multiple clips
+        "story_assembly", // Legacy story assembly
+        "add_intro_outro", // Intro/outro generation with voiceover
+      ];
+
+      // Long operations that typically take 5-8 minutes
+      const longRunningStages = [
+        "enhance", // Video enhancement
+        "mix_music", // Music mixing
+        "burn_captions", // Caption burning
+        "extract_clips", // Clip extraction
+      ];
+
+      if (veryLongRunningStages.includes(stageId)) {
+        return 15 * 60 * 1000; // 15 minutes for very long operations
       }
-      return 2 * 60 * 1000; // 2 minutes for other stages
+      if (longRunningStages.includes(stageId)) {
+        return 8 * 60 * 1000; // 8 minutes for long operations
+      }
+      return 5 * 60 * 1000; // 5 minutes for standard operations
     };
 
     const checkStaleStages = () => {
@@ -292,11 +303,25 @@ const StoryVideoStudio: React.FC<StoryVideoStudioProps> = ({
         if (stage.status === "processing" && stage.started_at) {
           const startTime = new Date(stage.started_at).getTime();
           const elapsed = now - startTime;
-          const threshold = getStaleThreshold(stage.stage_id);
+          const baseThreshold = getBaseStaleThreshold(stage.stage_id);
 
-          if (elapsed > threshold) {
+          // Check if we have recent message activity (heartbeat)
+          const lastMessageTime = stage.updated_at
+            ? new Date(stage.updated_at).getTime()
+            : startTime;
+          const timeSinceLastMessage = now - lastMessageTime;
+
+          // Consider stale only if BOTH conditions are met:
+          // 1. Total time exceeds base threshold
+          // 2. No message/heartbeat activity for >3 minutes (indicates truly stuck)
+          const HEARTBEAT_TIMEOUT = 3 * 60 * 1000; // 3 minutes without any update
+
+          const isStale =
+            elapsed > baseThreshold && timeSinceLastMessage > HEARTBEAT_TIMEOUT;
+
+          if (isStale) {
             console.warn(
-              `[StoryVideoStudio] Stage ${stage.stage_id} is stale - processing for ${Math.floor(elapsed / 1000)}s`
+              `[StoryVideoStudio] Stage ${stage.stage_id} is stale - processing for ${Math.floor(elapsed / 1000)}s, no heartbeat for ${Math.floor(timeSinceLastMessage / 1000)}s`
             );
             newStaleStages.add(stage.stage_id);
           }
@@ -460,29 +485,46 @@ const StoryVideoStudio: React.FC<StoryVideoStudioProps> = ({
 
   const handleClose = async () => {
     // For completed/cancelled sessions, navigate to dashboard without confirmation or cancellation
-    if (
-      session?.status === "completed" ||
-      session?.status === "cancelled"
-    ) {
+    if (session?.status === "completed" || session?.status === "cancelled") {
+      console.log("[StoryVideoStudio] Closing completed/cancelled session");
       disconnect();
-      navigate('/dashboard');
+      navigate("/dashboard");
       return;
     }
 
     // For active/processing/paused sessions, show confirmation and cancel
+    console.log(
+      "[StoryVideoStudio] Showing close confirmation for active session"
+    );
     setConfirmModal({
       isOpen: true,
       title: "Close Session",
       message:
         "Are you sure you want to close? All unsaved progress will be lost.",
       onConfirm: async () => {
+        console.log("🔍 [StoryVideoStudio] ConfirmModal onConfirm called");
+
+        // Don't manually close the modal - ConfirmModal handles that
+        // Just handle session cleanup
         try {
+          console.log(
+            "🔍 [StoryVideoStudio] Calling cancelSession for:",
+            sessionId
+          );
           await studioAPI.cancelSession(sessionId);
+          console.log("✅ [StoryVideoStudio] Session cancelled successfully");
         } catch (error) {
-          console.error("Failed to cancel session:", error);
+          console.error(
+            "❌ [StoryVideoStudio] Failed to cancel session:",
+            error
+          );
+          // Continue with close anyway
         } finally {
+          console.log("🔍 [StoryVideoStudio] Calling disconnect and onClose");
           disconnect();
+          console.log("🔍 [StoryVideoStudio] About to call onClose()");
           onClose();
+          console.log("✅ [StoryVideoStudio] Close completed");
         }
       },
     });

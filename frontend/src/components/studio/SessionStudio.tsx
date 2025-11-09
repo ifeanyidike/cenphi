@@ -153,10 +153,7 @@ const SessionStudio: React.FC<SessionStudioProps> = ({
 
     // Skip registering if session is completed or cancelled (viewed from history)
     // Failed sessions should still be registered so users can retry them
-    if (
-      session.status === "completed" ||
-      session.status === "cancelled"
-    ) {
+    if (session.status === "completed" || session.status === "cancelled") {
       console.log(
         "[SessionStudio] Skipping registerJob - session in final state:",
         session.status
@@ -201,10 +198,7 @@ const SessionStudio: React.FC<SessionStudioProps> = ({
 
     // Skip updating if session is completed or cancelled (not in active monitor)
     // Failed sessions should still be updated so users see the failure state
-    if (
-      session.status === "completed" ||
-      session.status === "cancelled"
-    ) {
+    if (session.status === "completed" || session.status === "cancelled") {
       return;
     }
 
@@ -217,9 +211,9 @@ const SessionStudio: React.FC<SessionStudioProps> = ({
     // Determine status - IMPORTANT: Handle cancelled sessions
     let status: "processing" | "paused" | "failed" | "completed" | "cancelled" =
       "processing";
-    if (session.status === "cancelled") status = "cancelled";
-    else if (session.status === "paused") status = "paused";
-    else if (session.status === "completed") status = "completed";
+    if ((session.status as any) === "cancelled") status = "cancelled";
+    else if ((session.status as any) === "paused") status = "paused";
+    else if ((session.status as any) === "completed") status = "completed";
     else if (hasFailedStage && currentStage?.status === "failed")
       status = "failed";
 
@@ -551,7 +545,6 @@ const SessionStudio: React.FC<SessionStudioProps> = ({
 
     try {
       await studioAPI.acceptStage(sessionId, stageId);
-      console.log("[SessionStudio] Accept stage successful:", stageId);
     } catch (error) {
       console.error("Failed to accept stage:", error);
       setErrorModal({
@@ -633,31 +626,43 @@ const SessionStudio: React.FC<SessionStudioProps> = ({
 
   const handleClose = async () => {
     // For completed/cancelled sessions, navigate to dashboard without confirmation or cancellation
-    if (
-      session?.status === "completed" ||
-      session?.status === "cancelled"
-    ) {
+    if (session?.status === "completed" || session?.status === "cancelled") {
+      console.log("[SessionStudio] Closing completed/cancelled session");
       disconnect();
-      navigate('/dashboard');
+      navigate("/dashboard");
       return;
     }
 
     // For active/processing/paused sessions, show confirmation and cancel
+    console.log(
+      "[SessionStudio] Showing close confirmation for active session"
+    );
     setConfirmModal({
       isOpen: true,
       title: "Close Session",
       message:
         "Are you sure you want to close? All unsaved progress will be lost.",
       onConfirm: async () => {
+        console.log("🔍 [SessionStudio] ConfirmModal onConfirm called");
+
+        // Don't manually close the modal - ConfirmModal handles that
+        // Just handle session cleanup
         try {
-          // Cancel session and cleanup temp artifacts
+          console.log(
+            "🔍 [SessionStudio] Calling cancelSession for:",
+            sessionId
+          );
           await studioAPI.cancelSession(sessionId);
+          console.log("✅ [SessionStudio] Session cancelled successfully");
         } catch (error) {
-          console.error("Failed to cancel session:", error);
+          console.error("❌ [SessionStudio] Failed to cancel session:", error);
           // Continue with close anyway
         } finally {
+          console.log("🔍 [SessionStudio] Calling disconnect and onClose");
           disconnect();
+          console.log("🔍 [SessionStudio] About to call onClose()");
           onClose();
+          console.log("✅ [SessionStudio] Close completed");
         }
       },
     });

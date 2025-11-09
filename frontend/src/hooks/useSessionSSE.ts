@@ -60,7 +60,12 @@ interface BaseSSEEvent {
 }
 
 interface StageSSEEvent extends BaseSSEEvent {
-  type: "stage_started" | "stage_progress" | "stage_complete" | "stage_retry" | "stage_accepted";
+  type:
+    | "stage_started"
+    | "stage_progress"
+    | "stage_complete"
+    | "stage_retry"
+    | "stage_accepted";
   stage_id?: string;
   stage?: any;
 }
@@ -71,10 +76,7 @@ interface PreviewSSEEvent extends BaseSSEEvent {
   preview?: any;
 }
 
-export type SSEEvent =
-  | BaseSSEEvent
-  | StageSSEEvent
-  | PreviewSSEEvent;
+export type SSEEvent = BaseSSEEvent | StageSSEEvent | PreviewSSEEvent;
 
 interface UseSessionSSEReturn {
   session: ProcessingSession | null;
@@ -92,8 +94,12 @@ export const useSessionSSE = (sessionId: string): UseSessionSSEReturn => {
   const [stages, setStages] = useState<ProcessingStage[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentStage, setCurrentStage] = useState<ProcessingStage | null>(null);
-  const [latestPreview, setLatestPreview] = useState<PreviewArtifact | null>(null);
+  const [currentStage, setCurrentStage] = useState<ProcessingStage | null>(
+    null
+  );
+  const [latestPreview, setLatestPreview] = useState<PreviewArtifact | null>(
+    null
+  );
 
   const eventSourceRef = useRef<EventSource | null>(null);
   const artifactsFetchedRef = useRef(false);
@@ -121,49 +127,54 @@ export const useSessionSSE = (sessionId: string): UseSessionSSEReturn => {
   }, [clearReconnectTimeout]);
 
   // Extract and set preview from stage metadata
-  const setPreviewFromStages = useCallback((currentStages: ProcessingStage[]) => {
-    if (!isMountedRef.current) return;
+  const setPreviewFromStages = useCallback(
+    (currentStages: ProcessingStage[]) => {
+      if (!isMountedRef.current) return;
 
-    console.log("[useSessionSSE] Extracting preview from stage metadata");
+      console.log("[useSessionSSE] Extracting preview from stage metadata");
 
-    // Find latest completed/accepted stage with preview_url in metadata
-    let latestStage: ProcessingStage | null = null;
-    let latestOrder = -1;
+      // Find latest completed/accepted stage with preview_url in metadata
+      let latestStage: ProcessingStage | null = null;
+      let latestOrder = -1;
 
-    for (const stage of currentStages) {
-      if (
-        (stage.status === "completed" || stage.status === "accepted") &&
-        stage.metadata?.preview_url &&
-        stage.stage_order > latestOrder
-      ) {
-        latestOrder = stage.stage_order;
-        latestStage = stage;
+      for (const stage of currentStages) {
+        if (
+          (stage.status === "completed" || stage.status === "accepted") &&
+          stage.metadata?.preview_url &&
+          stage.stage_order > latestOrder
+        ) {
+          latestOrder = stage.stage_order;
+          latestStage = stage;
+        }
       }
-    }
 
-    // Set latest preview from stage metadata
-    if (latestStage?.metadata?.preview_url) {
-      console.log(
-        "[useSessionSSE] Setting preview from stage metadata:",
-        latestStage.stage_id,
-        latestStage.metadata.preview_url
-      );
+      // Set latest preview from stage metadata
+      if (latestStage?.metadata?.preview_url) {
+        console.log(
+          "[useSessionSSE] Setting preview from stage metadata:",
+          latestStage.stage_id,
+          latestStage.metadata.preview_url
+        );
 
-      setLatestPreview({
-        id: latestStage.id || "",
-        session_id: sessionId,
-        stage_id: latestStage.stage_id,
-        storage_path: latestStage.metadata.storage_path || "",
-        preview_url: latestStage.metadata.preview_url,
-        artifact_type: latestStage.metadata.artifact_type || "video",
-        file_size_bytes: latestStage.metadata.file_size_bytes,
-        metadata: latestStage.metadata,
-        created_at: latestStage.completed_at || new Date().toISOString(),
-      });
-    } else {
-      console.log("[useSessionSSE] No completed stages with preview_url found");
-    }
-  }, [sessionId]);
+        setLatestPreview({
+          id: latestStage.id || "",
+          session_id: sessionId,
+          stage_id: latestStage.stage_id,
+          storage_path: latestStage.metadata.storage_path || "",
+          preview_url: latestStage.metadata.preview_url,
+          artifact_type: latestStage.metadata.artifact_type || "video",
+          file_size_bytes: latestStage.metadata.file_size_bytes,
+          metadata: latestStage.metadata,
+          created_at: latestStage.completed_at || new Date().toISOString(),
+        });
+      } else {
+        console.log(
+          "[useSessionSSE] No completed stages with preview_url found"
+        );
+      }
+    },
+    [sessionId]
+  );
 
   const connect = useCallback(async () => {
     // Prevent connection if component is unmounted
@@ -193,23 +204,34 @@ export const useSessionSSE = (sessionId: string): UseSessionSSEReturn => {
       eventSource.onerror = () => {
         if (!isMountedRef.current) return;
 
-        console.error("[useSessionSSE] SSE connection error, readyState:", eventSource.readyState);
+        console.error(
+          "[useSessionSSE] SSE connection error, readyState:",
+          eventSource.readyState
+        );
         setIsConnected(false);
 
         // Exponential backoff reconnection
         if (eventSource.readyState === EventSource.CLOSED) {
           if (reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
-            const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
+            const delay = Math.min(
+              1000 * Math.pow(2, reconnectAttemptsRef.current),
+              30000
+            );
             reconnectAttemptsRef.current++;
 
             console.log(
               `[useSessionSSE] Connection closed, reconnecting in ${delay}ms (attempt ${reconnectAttemptsRef.current}/${MAX_RECONNECT_ATTEMPTS})`
             );
-            setError(`Reconnecting... (attempt ${reconnectAttemptsRef.current}/${MAX_RECONNECT_ATTEMPTS})`);
+            setError(
+              `Reconnecting... (attempt ${reconnectAttemptsRef.current}/${MAX_RECONNECT_ATTEMPTS})`
+            );
 
             clearReconnectTimeout();
             reconnectTimeoutRef.current = setTimeout(() => {
-              if (isMountedRef.current && eventSourceRef.current?.readyState === EventSource.CLOSED) {
+              if (
+                isMountedRef.current &&
+                eventSourceRef.current?.readyState === EventSource.CLOSED
+              ) {
                 connect();
               }
             }, delay);
@@ -236,7 +258,7 @@ export const useSessionSSE = (sessionId: string): UseSessionSSEReturn => {
                 testimonial_id: sessionData.testimonial_id,
                 workspace_id: sessionData.workspace_id,
                 session_type: sessionData.type || sessionData.session_type,
-                status: sessionData.status || "active",
+                status: (sessionData.status || "active") as any,
                 auto_proceed: sessionData.auto_proceed ?? false,
                 total_steps: sessionData.total_steps || 0,
                 completed_steps: 0,
@@ -246,42 +268,58 @@ export const useSessionSSE = (sessionId: string): UseSessionSSEReturn => {
 
               const initialStages = sessionData.stages || [];
               if (Array.isArray(initialStages) && initialStages.length > 0) {
-                const mappedStages: ProcessingStage[] = initialStages.map((stage: any) => {
-                  const mapped: ProcessingStage = {
-                    id: stage.id || stage.ID || "",
-                    session_id: sessionData.session_id || sessionId,
-                    stage_id: stage.stage_id || stage.id || stage.ID || "",
-                    stage_name: stage.stage_name || stage.name || stage.Name || "",
-                    display_name: stage.display_name || stage.DisplayName || stage.name || stage.Name || "",
-                    stage_order: stage.stage_order ?? stage.order ?? stage.Order ?? 0,
-                    status: stage.status || "pending",
-                    progress: stage.progress ?? stage.Progress ?? 0,
-                    message: stage.message || stage.Message || "",
-                    skip_reason: stage.skip_reason,
-                    started_at: stage.started_at || stage.StartedAt,
-                    completed_at: stage.completed_at || stage.CompletedAt,
-                    metadata: stage.metadata,
-                  };
+                const mappedStages: ProcessingStage[] = initialStages.map(
+                  (stage: any) => {
+                    const mapped: ProcessingStage = {
+                      id: stage.id || stage.ID || "",
+                      session_id: sessionData.session_id || sessionId,
+                      stage_id: stage.stage_id || stage.id || stage.ID || "",
+                      stage_name:
+                        stage.stage_name || stage.name || stage.Name || "",
+                      display_name:
+                        stage.display_name ||
+                        stage.DisplayName ||
+                        stage.name ||
+                        stage.Name ||
+                        "",
+                      stage_order:
+                        stage.stage_order ?? stage.order ?? stage.Order ?? 0,
+                      status: stage.status || "pending",
+                      progress: stage.progress ?? stage.Progress ?? 0,
+                      message: stage.message || stage.Message || "",
+                      skip_reason: stage.skip_reason,
+                      started_at: stage.started_at || stage.StartedAt,
+                      completed_at: stage.completed_at || stage.CompletedAt,
+                      metadata: stage.metadata,
+                    };
 
-                  // Fix progress/status inconsistency
-                  if (mapped.progress === 100 && mapped.status === "processing") {
-                    console.warn(
-                      `[useSessionSSE] Stage ${mapped.stage_id} has progress=100 but status=processing, fixing to completed`
-                    );
-                    mapped.status = "completed";
-                    if (!mapped.completed_at) {
-                      mapped.completed_at = new Date().toISOString();
+                    // Fix progress/status inconsistency
+                    if (
+                      mapped.progress === 100 &&
+                      mapped.status === "processing"
+                    ) {
+                      console.warn(
+                        `[useSessionSSE] Stage ${mapped.stage_id} has progress=100 but status=processing, fixing to completed`
+                      );
+                      mapped.status = "completed";
+                      if (!mapped.completed_at) {
+                        mapped.completed_at = new Date().toISOString();
+                      }
                     }
+
+                    return mapped;
                   }
+                );
 
-                  return mapped;
-                });
-
-                const sortedStages = mappedStages.sort((a, b) => a.stage_order - b.stage_order);
+                const sortedStages = mappedStages.sort(
+                  (a, b) => a.stage_order - b.stage_order
+                );
                 setStages(sortedStages);
 
                 // Set currentStage if there's a stage currently processing
-                const processingStage = mappedStages.find((s) => s.status === "processing");
+                const processingStage = mappedStages.find(
+                  (s) => s.status === "processing"
+                );
                 if (processingStage) {
                   setCurrentStage(processingStage);
                 }
@@ -302,7 +340,8 @@ export const useSessionSSE = (sessionId: string): UseSessionSSEReturn => {
               const initialStages = sseEvent.data.stages;
               if (Array.isArray(initialStages)) {
                 const sortedStages = initialStages.sort(
-                  (a: ProcessingStage, b: ProcessingStage) => a.stage_order - b.stage_order
+                  (a: ProcessingStage, b: ProcessingStage) =>
+                    a.stage_order - b.stage_order
                 );
                 setStages(sortedStages);
                 if (!artifactsFetchedRef.current) {
@@ -322,10 +361,24 @@ export const useSessionSSE = (sessionId: string): UseSessionSSEReturn => {
               const newStage: ProcessingStage = {
                 id: stageData.id || stageData.ID || "",
                 session_id: sseEvent.session_id || sessionId,
-                stage_id: stageData.stage_id || stageData.id || stageData.ID || "",
-                stage_name: stageData.stage_name || stageData.name || stageData.Name || "",
-                display_name: stageData.display_name || stageData.DisplayName || stageData.name || stageData.Name || "",
-                stage_order: stageData.stage_order ?? stageData.order ?? stageData.Order ?? 0,
+                stage_id:
+                  stageData.stage_id || stageData.id || stageData.ID || "",
+                stage_name:
+                  stageData.stage_name ||
+                  stageData.name ||
+                  stageData.Name ||
+                  "",
+                display_name:
+                  stageData.display_name ||
+                  stageData.DisplayName ||
+                  stageData.name ||
+                  stageData.Name ||
+                  "",
+                stage_order:
+                  stageData.stage_order ??
+                  stageData.order ??
+                  stageData.Order ??
+                  0,
                 status: "processing",
                 progress: stageData.progress ?? 0,
                 message: stageData.message || "",
@@ -334,11 +387,17 @@ export const useSessionSSE = (sessionId: string): UseSessionSSEReturn => {
 
               setCurrentStage(newStage);
               setStages((prev) => {
-                const existing = prev.find((s) => s.stage_id === newStage.stage_id);
+                const existing = prev.find(
+                  (s) => s.stage_id === newStage.stage_id
+                );
                 if (existing) {
-                  return prev.map((s) => (s.stage_id === newStage.stage_id ? newStage : s));
+                  return prev.map((s) =>
+                    s.stage_id === newStage.stage_id ? newStage : s
+                  );
                 }
-                return [...prev, newStage].sort((a, b) => a.stage_order - b.stage_order);
+                return [...prev, newStage].sort(
+                  (a, b) => a.stage_order - b.stage_order
+                );
               });
               break;
             }
@@ -349,18 +408,23 @@ export const useSessionSSE = (sessionId: string): UseSessionSSEReturn => {
               const stageData = stageEvent.stage || sseEvent.data;
               if (!stageData) break;
 
-              const stageId = stageData.stage_id || stageData.id || stageEvent.stage_id || "";
+              const stageId =
+                stageData.stage_id || stageData.id || stageEvent.stage_id || "";
               const progress = stageData.progress ?? 0;
               const message = stageData.message || "";
 
               setStages((prev) =>
                 prev.map((s) =>
-                  s.stage_id === stageId ? { ...s, progress, message, status: "processing" } : s
+                  s.stage_id === stageId
+                    ? { ...s, progress, message, status: "processing" }
+                    : s
                 )
               );
 
               setCurrentStage((prev) =>
-                prev && prev.stage_id === stageId ? { ...prev, progress, message } : prev
+                prev && prev.stage_id === stageId
+                  ? { ...prev, progress, message }
+                  : prev
               );
               break;
             }
@@ -370,13 +434,19 @@ export const useSessionSSE = (sessionId: string): UseSessionSSEReturn => {
               const previewData = previewEvent.preview || sseEvent.data;
               if (!previewData) break;
 
-              const stageId = previewData.stage_id || previewEvent.stage_id || "";
+              const stageId =
+                previewData.stage_id || previewEvent.stage_id || "";
               const eventData = sseEvent.data || {};
-              const previewType = previewData.type || previewData.artifact_type || "video";
+              const previewType =
+                previewData.type || previewData.artifact_type || "video";
 
               // Extract preview URL - only for video/image types, not JSON
               let previewUrl = previewData.preview_url || previewData.url || "";
-              if (!previewUrl && previewData.content && typeof previewData.content === "string") {
+              if (
+                !previewUrl &&
+                previewData.content &&
+                typeof previewData.content === "string"
+              ) {
                 previewUrl = previewData.content;
               }
 
@@ -416,7 +486,8 @@ export const useSessionSSE = (sessionId: string): UseSessionSSEReturn => {
                                 duration: previewData.metadata?.duration,
                                 width: previewData.metadata?.width,
                                 height: previewData.metadata?.height,
-                                aspect_ratio: previewData.metadata?.aspect_ratio,
+                                aspect_ratio:
+                                  previewData.metadata?.aspect_ratio,
                               }),
                         },
                       }
@@ -432,10 +503,14 @@ export const useSessionSSE = (sessionId: string): UseSessionSSEReturn => {
               const stageData = stageEvent.stage || sseEvent.data;
               if (!stageData) break;
 
-              const stageId = stageData.stage_id || stageData.id || stageEvent.stage_id || "";
+              const stageId =
+                stageData.stage_id || stageData.id || stageEvent.stage_id || "";
 
               // Log clips completion
-              if (stageId === "extract_clips" && stageData.metadata?.clips?.length > 0) {
+              if (
+                stageId === "extract_clips" &&
+                stageData.metadata?.clips?.length > 0
+              ) {
                 console.log(
                   `[useSessionSSE] Clips ready: ${stageData.metadata.clips.length} clips extracted`
                 );
@@ -448,16 +523,26 @@ export const useSessionSSE = (sessionId: string): UseSessionSSEReturn => {
                         ...s,
                         status: "completed",
                         progress: 100,
-                        completed_at: stageData.completed_at || stageData.CompletedAt || new Date().toISOString(),
+                        completed_at:
+                          stageData.completed_at ||
+                          stageData.CompletedAt ||
+                          new Date().toISOString(),
                         metadata: stageData.metadata || s.metadata,
                       }
                     : s
                 )
               );
 
-              setCurrentStage((prev) => (prev?.stage_id === stageId ? null : prev));
+              setCurrentStage((prev) =>
+                prev?.stage_id === stageId ? null : prev
+              );
               setSession((prev) =>
-                prev ? { ...prev, completed_steps: (prev.completed_steps || 0) + 1 } : null
+                prev
+                  ? {
+                      ...prev,
+                      completed_steps: (prev.completed_steps || 0) + 1,
+                    }
+                  : null
               );
               break;
             }
@@ -467,7 +552,8 @@ export const useSessionSSE = (sessionId: string): UseSessionSSEReturn => {
               const stageData = stageEvent.stage || sseEvent.data;
               if (!stageData) break;
 
-              const stageId = stageData.stage_id || stageData.id || stageEvent.stage_id || "";
+              const stageId =
+                stageData.stage_id || stageData.id || stageEvent.stage_id || "";
 
               setStages((prev) =>
                 prev.map((s) =>
@@ -491,7 +577,8 @@ export const useSessionSSE = (sessionId: string): UseSessionSSEReturn => {
               const stageData = stageEvent.stage || sseEvent.data;
               if (!stageData) break;
 
-              const stageId = stageData.stage_id || stageData.id || stageEvent.stage_id || "";
+              const stageId =
+                stageData.stage_id || stageData.id || stageEvent.stage_id || "";
 
               setStages((prev) =>
                 prev.map((s) =>
@@ -500,32 +587,45 @@ export const useSessionSSE = (sessionId: string): UseSessionSSEReturn => {
                         ...s,
                         status: "accepted",
                         progress: 100,
-                        completed_at: stageData.completed_at || stageData.CompletedAt || new Date().toISOString(),
+                        completed_at:
+                          stageData.completed_at ||
+                          stageData.CompletedAt ||
+                          new Date().toISOString(),
                       }
                     : s
                 )
               );
 
-              setCurrentStage((prev) => (prev?.stage_id === stageId ? null : prev));
+              setCurrentStage((prev) =>
+                prev?.stage_id === stageId ? null : prev
+              );
               break;
             }
 
             case "session_complete":
-              setSession((prev) => (prev ? { ...prev, status: "completed" } : null));
+              setSession((prev) =>
+                prev ? { ...prev, status: "completed" } : null
+              );
               break;
 
             case "session_paused":
-              setSession((prev) => (prev ? { ...prev, status: "paused" } : null));
+              setSession((prev) =>
+                prev ? { ...prev, status: "paused" } : null
+              );
               break;
 
             case "session_resumed":
-              setSession((prev) => (prev ? { ...prev, status: "active" } : null));
+              setSession((prev) =>
+                prev ? { ...prev, status: "active" } : null
+              );
               break;
 
             case "job_cancelled": // Backend sends this event
             case "session_cancelled": // Keep this for compatibility
               console.log("[useSessionSSE] Session cancelled");
-              setSession((prev) => (prev ? { ...prev, status: "cancelled" } : null));
+              setSession((prev) =>
+                prev ? { ...prev, status: "cancelled" } : null
+              );
               disconnect(); // Close SSE connection since session is done
               break;
 
@@ -539,10 +639,17 @@ export const useSessionSSE = (sessionId: string): UseSessionSSEReturn => {
               break;
 
             default:
-              console.warn("[useSessionSSE] Unknown SSE event type:", sseEvent.type);
+              console.warn(
+                "[useSessionSSE] Unknown SSE event type:",
+                sseEvent.type
+              );
           }
         } catch (err) {
-          console.error("[useSessionSSE] Failed to parse SSE event:", err, event.data);
+          console.error(
+            "[useSessionSSE] Failed to parse SSE event:",
+            err,
+            event.data
+          );
         }
       };
     } catch (err: any) {
