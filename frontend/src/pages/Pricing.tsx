@@ -43,9 +43,17 @@ interface PricingTier {
     teamCollaboration: PricingFeature[];
   };
   limits: {
-    testimonials: string;
-    storage: string;
-    teamMembers: string;
+    testimonials?: string;
+    storage?: string;
+    teamMembers?: string;
+    videoProcessing?: string;
+    aiClips?: string;
+    platformOptimization?: string;
+    contentGeneration?: string;
+    talkToData?: string;
+    shares?: string;
+    apiCalls?: string;
+    linkedInPosts?: string;
   };
   cta: string;
 }
@@ -57,10 +65,16 @@ const pricingTiers: PricingTier[] = [
     tagline: "For individual marketers",
     description:
       "Perfect for testing the platform and processing your first testimonials into marketing content.",
-    monthlyPrice: 49,
-    yearlyPrice: 490,
+    monthlyPrice: 22,
+    yearlyPrice: 220,
     limits: {
-      testimonials: "20 testimonials/month",
+      testimonials: "20 video testimonials/month",
+      videoProcessing: "20 video processing operations/month",
+      aiClips: "Up to 200 AI video clips/month",
+      platformOptimization: "Up to 60 platform optimizations/month",
+      contentGeneration: "100 AI content pieces/month",
+      talkToData: "50 AI analytics queries/month",
+      shares: "Unlimited public shares",
       storage: "10 GB storage",
       teamMembers: "1 user",
     },
@@ -69,13 +83,17 @@ const pricingTiers: PricingTier[] = [
         { text: "Testimonial collection forms", included: true },
         { text: "Video & text testimonials", included: true },
         { text: "Public sharing pages", included: true },
-        { text: "Basic analytics", included: true },
+        { text: "Basic analytics & tracking", included: true },
+        { text: "Standard processing speed", included: true },
       ],
       videoProcessing: [
-        { text: "AI video clipping (10+ clips per video)", included: true },
+        {
+          text: "AI video clipping (up to 10 clips per video)",
+          included: true,
+        },
         { text: "Story video generation", included: true },
-        { text: "Professional audio enhancement", included: true },
-        { text: "Platform optimization", included: true },
+        { text: "Platform optimization (12 platforms)", included: true },
+        { text: "Video enhancement & quality boost", included: true },
         { text: "B-roll overlay", included: false },
         { text: "Custom intro/outro", included: false },
       ],
@@ -89,13 +107,13 @@ const pricingTiers: PricingTier[] = [
         { text: "Share performance tracking", included: true },
         { text: "View & engagement metrics", included: true },
         { text: "Basic sentiment analysis", included: true },
+        { text: "Talk to Your Data (AI analytics chat)", included: true },
         { text: "Advanced analytics dashboard", included: false },
       ],
       teamCollaboration: [
-        { text: "Email support", included: true },
-        { text: "Team members", included: false },
-        { text: "Role-based permissions", included: false },
-        { text: "Priority support", included: false },
+        { text: "Email support (72h response)", included: true },
+        { text: "Export & share content", included: true },
+        { text: "Embed widgets", included: true },
       ],
     },
     cta: "Start Free Trial",
@@ -103,31 +121,39 @@ const pricingTiers: PricingTier[] = [
   {
     id: "growth",
     name: "Growth",
-    tagline: "For growing teams",
+    tagline: "For serious marketers",
     description:
-      "Complete content operations platform with team collaboration and advanced AI features.",
-    monthlyPrice: 149,
-    yearlyPrice: 1490,
+      "Complete content operations platform with advanced AI features and LinkedIn automation.",
+    monthlyPrice: 59,
+    yearlyPrice: 590,
     popular: true,
     limits: {
-      testimonials: "100 testimonials/month",
+      testimonials: "100 video testimonials/month",
+      videoProcessing: "100 video processing operations/month",
+      aiClips: "Up to 1,000 AI video clips/month",
+      platformOptimization: "Up to 300 platform optimizations/month",
+      contentGeneration: "500 AI content pieces/month",
+      talkToData: "250 AI analytics queries/month",
+      linkedInPosts: "Unlimited LinkedIn scheduling",
+      shares: "Unlimited public shares",
       storage: "50 GB storage",
-      teamMembers: "Up to 10 team members",
+      teamMembers: "1 user",
     },
     features: {
       core: [
         { text: "Everything in Starter, plus:", included: true },
         { text: "Custom collection widgets", included: true },
         { text: "Advanced SEO & Open Graph", included: true },
-        { text: "Bulk operations", included: true },
+        { text: "Bulk operations & batch processing", included: true },
+        { text: "Faster processing speed (2x)", included: true },
       ],
       videoProcessing: [
         { text: "All video AI features", included: true },
         { text: "B-roll overlay with AI placement", included: true },
         { text: "Custom intro/outro generation", included: true },
-        { text: "Multi-platform optimization", included: true },
-        { text: "Background music mixing", included: true },
-        { text: "Noise removal & enhancement", included: true },
+        { text: "Multi-platform video optimization", included: true },
+        { text: "Background music integration", included: true },
+        { text: "Advanced video enhancement", included: true },
       ],
       contentManagement: [
         { text: "Advanced content categorization", included: true },
@@ -137,15 +163,16 @@ const pricingTiers: PricingTier[] = [
       ],
       analytics: [
         { text: "Advanced analytics dashboard", included: true },
-        { text: "Social media performance", included: true },
-        { text: "Conversion tracking", included: true },
+        { text: "Talk to Your Data (AI analytics chat)", included: true },
+        { text: "LinkedIn post performance tracking", included: true },
+        { text: "Share conversion tracking", included: true },
         { text: "Sentiment & emotion analysis", included: true },
       ],
       teamCollaboration: [
-        { text: "Social media scheduling & posting", included: true },
-        { text: "Multi-platform auto-publish", included: true },
-        { text: "Role-based permissions", included: true },
-        { text: "Priority email + chat support", included: true },
+        { text: "LinkedIn scheduling & auto-posting", included: true },
+        { text: "Multi-platform content sharing", included: true },
+        { text: "Advanced export options", included: true },
+        { text: "Email support (48h response)", included: true },
       ],
     },
     cta: "Start Free Trial",
@@ -155,13 +182,21 @@ const pricingTiers: PricingTier[] = [
     name: "Pro",
     tagline: "For agencies & enterprises",
     description:
-      "Unlimited processing with white-label options, API access, and dedicated support.",
-    monthlyPrice: 299,
-    yearlyPrice: 2990,
+      "Unlimited processing with white-label options, API access, and priority support.",
+    monthlyPrice: 119,
+    yearlyPrice: 1190,
     limits: {
-      testimonials: "Unlimited testimonials",
+      testimonials: "Unlimited video testimonials",
+      videoProcessing: "Unlimited video processing",
+      aiClips: "Unlimited AI video clips",
+      platformOptimization: "Unlimited platform optimizations",
+      contentGeneration: "Unlimited AI content pieces",
+      talkToData: "Unlimited AI analytics queries",
+      linkedInPosts: "Unlimited LinkedIn scheduling",
+      shares: "Unlimited public shares",
+      apiCalls: "10,000 API calls/month",
       storage: "200 GB storage",
-      teamMembers: "Unlimited team members",
+      teamMembers: "1 user",
     },
     features: {
       core: [
@@ -171,11 +206,11 @@ const pricingTiers: PricingTier[] = [
         { text: "Remove Cenphi branding", included: true },
       ],
       videoProcessing: [
-        { text: "Priority processing queue", included: true },
-        { text: "Batch processing", included: true },
+        { text: "Priority processing queue (3x faster)", included: true },
+        { text: "Batch processing (unlimited)", included: true },
         { text: "Advanced video customization", included: true },
         { text: "Custom platform profiles", included: true },
-        { text: "Webhook integrations", included: true },
+        { text: "Higher quality video output (premium)", included: true },
       ],
       contentManagement: [
         { text: "Multi-workspace support", included: true },
@@ -185,15 +220,16 @@ const pricingTiers: PricingTier[] = [
       ],
       analytics: [
         { text: "Custom reports & dashboards", included: true },
+        { text: "Talk to Your Data (unlimited queries)", included: true },
         { text: "Revenue attribution", included: true },
         { text: "Export to CSV/PDF", included: true },
         { text: "API analytics access", included: true },
       ],
       teamCollaboration: [
-        { text: "Full API access", included: true },
-        { text: "CRM integrations (Zapier)", included: true },
-        { text: "Dedicated account manager", included: true },
-        { text: "Phone + email + chat support", included: true },
+        { text: "API access for integrations", included: true },
+        { text: "Webhook support", included: true },
+        { text: "Priority email support (24h response)", included: true },
+        { text: "Custom onboarding & training", included: true },
       ],
     },
     cta: "Start Free Trial",
