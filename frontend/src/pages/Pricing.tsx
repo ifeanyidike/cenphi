@@ -3,19 +3,15 @@ import { motion } from "framer-motion";
 import {
   Check,
   Users,
-  Zap,
   Shield,
   ArrowRight,
   Video,
-  Scissors,
   FileText,
   Share2,
   BarChart3,
-  Sparkles,
   ChevronDown,
   Globe,
   Folder,
-  Calendar,
   MessageSquare,
   Crown,
 } from "lucide-react";
@@ -657,7 +653,10 @@ const PricingPage: React.FC = () => {
                           <div className="space-y-2">
                             {tier.features.contentManagement.map(
                               (feature, i) => (
-                                <div key={i} className="flex items-start gap-1.5">
+                                <div
+                                  key={i}
+                                  className="flex items-start gap-1.5"
+                                >
                                   {feature.included ? (
                                     <Check className="w-3.5 h-3.5 text-blue-600 mt-0.5 flex-shrink-0" />
                                   ) : (
