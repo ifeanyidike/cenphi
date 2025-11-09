@@ -459,7 +459,7 @@ func (c StudioController) AcceptStage(w http.ResponseWriter, r *http.Request) {
 	sessionIDStr := chi.URLParam(r, "sessionID")
 	stageIDStr := chi.URLParam(r, "stageID")
 
-	c.logger.Info("AcceptStage called",
+	c.logger.Info("🟢 AcceptStage ENDPOINT HIT",
 		zap.String("session_id", sessionIDStr),
 		zap.String("stage_id", stageIDStr))
 

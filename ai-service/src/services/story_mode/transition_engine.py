@@ -8,6 +8,15 @@ from typing import List, Dict, Any, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
+# Safe import of transcript analyzer with fallback
+try:
+    from src.utils.transcript_analyzer import TranscriptBoundaryAnalyzer
+    TRANSCRIPT_ANALYZER_AVAILABLE = True
+    logger.info("✅ Transcript analyzer loaded for improved crossfade quality")
+except ImportError as e:
+    logger.warning(f"Transcript analyzer not available, using defaults: {e}")
+    TRANSCRIPT_ANALYZER_AVAILABLE = False
+
 class TransitionEngine:
     """
     ✅ Production-grade video transition engine with PERFECT audio/video sync
@@ -434,10 +443,24 @@ class TransitionEngine:
                 return False
             
             fps = info1.get("fps", 30)
-            
-            transition_duration = transition["duration"]
+
+            # Get transition parameters with safe defaults and transcript optimization
+            # CRITICAL: Cap at 2.0s max to prevent memory exhaustion (OOM kills)
+            raw_duration = transition.get("duration", self.transition_duration)
+            transition_duration = min(raw_duration, 2.0)  # Hard cap for 4GB memory limit
+            if raw_duration > 2.0:
+                logger.warning(f"⚠️ Crossfade duration capped from {raw_duration}s to 2.0s for memory safety")
+
+            audio_crossfade_curve = transition.get("audio_crossfade_curve", "tri")  # Default: linear
             transition_start = max(0, duration1 - transition_duration)
-            
+
+            # Log transcript-optimized crossfade if available
+            if "transcript_analysis" in transition:
+                logger.info(f"🎬 Applying crossfade: {transition.get('transcript_analysis', 'default')} - dur={transition_duration}s, curve={audio_crossfade_curve}")
+
+            # Calculate audio crossfade duration (90% of transition for smooth overlap)
+            audio_crossfade_duration = transition_duration * 0.9
+
             # ✅ Perfect sync transition filter with synchronized audio/video processing
             video_filter = (
                 f"[0:v]trim=0:{transition_start},setpts=PTS-STARTPTS,fps={fps}[v1_pre];"
@@ -447,14 +470,29 @@ class TransitionEngine:
                 f"[v1_trans][v2_trans]{transition['video_filter']}[transition_segment];"
                 f"[v1_pre][transition_segment][v2_post]concat=n=3:v=1:a=0[video_out]"
             )
-            
-            # ✅ Synchronized audio processing (this was missing in original!)
+
+            # ✅ MEMORY-SAFE audio processing for seamless transitions
+            # Simplified to avoid OOM kills (exit -9) - removed expensive loudnorm/compand
+            # Heavy audio processing is applied to main clips, not transitions
             audio_filter = (
-                f"[0:a]atrim=0:{transition_start},asetpts=PTS-STARTPTS[a1_pre];"
-                f"[0:a]atrim={transition_start}:{duration1},asetpts=PTS-STARTPTS[a1_trans];"
-                f"[1:a]atrim=0:{transition_duration},asetpts=PTS-STARTPTS[a2_trans];"
-                f"[1:a]atrim={transition_duration},asetpts=PTS-STARTPTS[a2_post];"
-                f"[a1_trans][a2_trans]acrossfade=d={transition_duration * 0.9}[audio_transition];"
+                # Extract audio segments from clip 1 with basic normalization only
+                f"[0:a]atrim=0:{transition_start},asetpts=PTS-STARTPTS,"
+                f"volume=1.0[a1_pre];"
+
+                f"[0:a]atrim={transition_start}:{duration1},asetpts=PTS-STARTPTS,"
+                f"volume=1.0[a1_trans];"
+
+                # Extract audio segments from clip 2 with basic normalization only
+                f"[1:a]atrim=0:{transition_duration},asetpts=PTS-STARTPTS,"
+                f"volume=1.0[a2_trans];"
+
+                f"[1:a]atrim={transition_duration},asetpts=PTS-STARTPTS,"
+                f"volume=1.0[a2_post];"
+
+                # Crossfade with transcript-optimized curve (memory-safe)
+                f"[a1_trans][a2_trans]acrossfade=d={audio_crossfade_duration}:curve1={audio_crossfade_curve}:curve2={audio_crossfade_curve}[audio_transition];"
+
+                # Concatenate all segments
                 f"[a1_pre][audio_transition][a2_post]concat=n=3:v=0:a=1[audio_out]"
             )
             
@@ -573,29 +611,84 @@ class TransitionEngine:
         auto_select: bool,
         default_duration: float
     ) -> List[Dict[str, Any]]:
-        """Create intelligent transition plan"""
-        
+        """Create intelligent transition plan with transcript-based crossfade optimization"""
+
         plan = []
-        
+
         for i in range(len(clip_paths) - 1):
             current_moment = moments[i] if i < len(moments) else {}
             next_moment = moments[i + 1] if i + 1 < len(moments) else {}
-            
+
             if auto_select:
                 transition_type = self._auto_select_transition(current_moment, next_moment)
             else:
                 transition_type = "crossfade"  # Default
-            
+
+            # Get transcript-optimized crossfade parameters with safe fallback
+            crossfade_params = self._get_optimal_crossfade_params(
+                current_moment,
+                next_moment,
+                default_duration
+            )
+
             plan.append({
                 "type": transition_type,
-                "duration": default_duration,
+                "duration": crossfade_params["duration"],
                 "video_filter": "xfade=transition=fade",  # Will be updated by specific transition
                 "audio_filter": "acrossfade",
+                "audio_crossfade_curve": crossfade_params["curve"],
                 "clip1_index": i,
-                "clip2_index": i + 1
+                "clip2_index": i + 1,
+                "transcript_analysis": crossfade_params.get("reason", "No analysis")
             })
-        
+
         return plan
+
+    def _get_optimal_crossfade_params(
+        self,
+        current_moment: Dict[str, Any],
+        next_moment: Dict[str, Any],
+        default_duration: float
+    ) -> Dict[str, Any]:
+        """
+        Safely get optimal crossfade parameters using transcript analysis.
+        Always returns valid parameters, never fails.
+        """
+        try:
+            # If transcript analyzer not available, use safe defaults
+            if not TRANSCRIPT_ANALYZER_AVAILABLE:
+                return {
+                    "duration": default_duration,
+                    "curve": "tri",  # Linear - existing behavior
+                    "quality": "default",
+                    "reason": "Transcript analyzer not available"
+                }
+
+            # Extract text content safely
+            clip1_text = current_moment.get("text_content")
+            clip2_text = next_moment.get("text_content")
+
+            # Use transcript analyzer
+            result = TranscriptBoundaryAnalyzer.calculate_optimal_crossfade(
+                clip1_text,
+                clip2_text
+            )
+
+            # Log the analysis for debugging
+            if result.get("quality") != "default":
+                logger.info(f"🎯 Crossfade optimization: {result['quality']} - {result['reason']} (duration: {result['duration']}s, curve: {result['curve']})")
+
+            return result
+
+        except Exception as e:
+            # Safe fallback on any error
+            logger.warning(f"Crossfade optimization failed safely, using defaults: {e}")
+            return {
+                "duration": default_duration,
+                "curve": "tri",
+                "quality": "default",
+                "reason": f"Error: {str(e)}"
+            }
 
     def _auto_select_transition(self, current_moment: Dict[str, Any], next_moment: Dict[str, Any]) -> str:
         """Automatically select optimal transition based on content"""

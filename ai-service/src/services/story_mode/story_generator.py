@@ -1445,7 +1445,11 @@ class StoryModeGenerator:
                 normalized_paths = self._normalize_video_streams(video_paths, story_id, temp_files, target_platform)
 
                 fallback_output = self.file_manager.create_temp_video("main_story_")
-                moment_data = [{"theme": seg.theme} for seg in segments]
+                # Include text_content for transcript-based crossfade optimization
+                moment_data = [{
+                    "theme": seg.theme,
+                    "text_content": getattr(seg, 'text_content', '')
+                } for seg in segments]
 
                 result = self.transition_engine.combine_clips_with_transitions(
                     clip_paths=normalized_paths,

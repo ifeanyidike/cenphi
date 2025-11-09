@@ -573,21 +573,53 @@ class StoryVideoStepProcessor:
                     video_filters.append(xfade_filter)
                     current_label = output_label
 
-                # Build audio crossfade chain
-                current_audio = "[0:a]"
-                for i in range(len(clip_paths) - 1):
-                    next_audio = f"[{i+1}:a]"
-                    output_audio = f"[at{i}]" if i < len(clip_paths) - 2 else "[aout]"
+                # MEMORY-SAFE audio processing for semantic smoothness
+                # Heavy processing removed to prevent OOM kills (exit -9)
+                # Basic volume normalization only - heavy processing done in individual clips
+                for i in range(len(clip_paths)):
+                    normalize_filter = (
+                        f"[{i}:a]"
+                        f"volume=1.0[a{i}_norm]"  # Basic volume - memory-safe
+                    )
+                    audio_filters.append(normalize_filter)
 
+                # Build SYNCHRONIZED audio crossfades matching video transitions
+                # Audio and video must transition together to avoid awkward pauses
+                current_audio = "[a0_norm]"
+                for i in range(len(clip_paths) - 1):
+                    next_audio = f"[a{i+1}_norm]"
+                    output_audio = f"[at{i}]" if i < len(clip_paths) - 2 else "[aout_pre]"
+
+                    # MATCH VIDEO TRANSITION DURATION for synchronized feel
+                    # Short, snappy transitions (0.3-0.5s) feel more natural than long pauses
+                    audio_crossfade_duration = min(
+                        max(transition_duration, 0.3),  # Match video, minimum 0.3s for smoothness
+                        0.6  # Cap at 0.6s - keeps it snappy, prevents pauses
+                    )
+
+                    # Use quarter-sine curve for smooth, natural-feeling transitions
+                    # qsin feels more organic than exponential for short durations
                     acrossfade_filter = (
                         f"{current_audio}{next_audio}acrossfade="
-                        f"d={transition_duration}:"
-                        f"c1=tri:"
-                        f"c2=tri"
+                        f"d={audio_crossfade_duration}:"
+                        f"curve1=qsin:"  # Quarter-sine fade-out (natural)
+                        f"curve2=qsin"  # Quarter-sine fade-in (natural)
                         f"{output_audio}"
                     )
                     audio_filters.append(acrossfade_filter)
                     current_audio = output_audio
+
+                # Final master polish - subtle compression and limiting
+                final_polish = (
+                    # Master bus compression for glue (very gentle)
+                    f"[aout_pre]acompressor=threshold=-18dB:ratio=2:attack=20:release=200:makeup=2,"
+                    # Final EQ tweaks
+                    f"equalizer=f=100:t=q:w=1:g=0.5,"  # Slight warmth
+                    f"equalizer=f=4000:t=q:w=1.5:g=0.8,"  # Voice clarity
+                    # Brick wall limiter for absolute safety
+                    f"alimiter=limit=0.98:attack=2:release=20[aout]"
+                )
+                audio_filters.append(final_polish)
 
                 # Combine video and audio filters
                 filter_complex = ";".join(video_filters + audio_filters)

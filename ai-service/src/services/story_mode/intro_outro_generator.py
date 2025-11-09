@@ -97,7 +97,7 @@ class IntroOutroGenerator:
             job_id: Job identifier
             config: Intro configuration
             width: Video width
-            height: Video height
+            height: int
             upload_to_cloud: Upload result
 
         Returns:
@@ -121,13 +121,17 @@ class IntroOutroGenerator:
             voiceover_path = None
             voiceover_duration = 0.0
 
-            if config.include_voiceover and voiceover_text:
+            # IMPORTANT: Only generate voiceover if text is provided AND voiceover is enabled
+            # If text is empty/None, skip voiceover entirely
+            if config.include_voiceover and voiceover_text and voiceover_text.strip():
+                # NEVER optimize speech - we want EXACT text as provided by user
                 voiceover_result = self._generate_voiceover(
                     job_id=job_id,
                     text=voiceover_text,
                     voice_style=config.voice_style,
                     background_music_url=config.background_music_url,
-                    upload_to_cloud=False
+                    upload_to_cloud=False,
+                    optimize_speech=False  # Always use exact text, no AI modification
                 )
 
                 voiceover_path = voiceover_result.get("audio_path")
@@ -226,13 +230,17 @@ class IntroOutroGenerator:
             voiceover_path = None
             voiceover_duration = 0.0
 
-            if config.include_voiceover and voiceover_text:
+            # IMPORTANT: Only generate voiceover if text is provided AND voiceover is enabled
+            # If text is empty/None, skip voiceover entirely
+            if config.include_voiceover and voiceover_text and voiceover_text.strip():
+                # NEVER optimize speech - we want EXACT text as provided by user
                 voiceover_result = self._generate_voiceover(
                     job_id=job_id,
                     text=voiceover_text,
                     voice_style=config.voice_style,
                     background_music_url=config.background_music_url,
-                    upload_to_cloud=False
+                    upload_to_cloud=False,
+                    optimize_speech=False  # Always use exact text, no AI modification
                 )
 
                 voiceover_path = voiceover_result.get("audio_path")
@@ -290,39 +298,25 @@ class IntroOutroGenerator:
 
     def _generate_intro_script(self, config: IntroOutroConfig) -> str:
         """
-        Generate intro script with warm welcome.
+        Generate intro script.
 
-        Industry best practices:
-        - Welcoming and professional tone
-        - Clear brand mention
-        - Sets the stage for customer testimonials
+        IMPORTANT:
+        - If text_overlay is provided → return it EXACTLY as-is
+        - If text_overlay is NOT provided (None/empty) → return empty string (no voiceover)
         """
-        if config.text_overlay:
-            # User provided custom text
-            return config.text_overlay
-
-        brand_name = config.brand_name or "us"
-
-        # Professional intro: warm welcome that introduces testimonials
-        return f"Welcome. Thank you for choosing {brand_name}. Here's what our customers have to say."
+        # Return the exact text provided, or empty string if nothing provided
+        return config.text_overlay.strip() if config.text_overlay else ""
 
     def _generate_outro_script(self, config: IntroOutroConfig) -> str:
         """
-        Generate professional outro script with gratitude and CTA.
+        Generate outro script.
 
-        Industry best practices:
-        - Express gratitude
-        - Brand reinforcement
-        - Warm closing
+        IMPORTANT:
+        - If text_overlay is provided → return it EXACTLY as-is
+        - If text_overlay is NOT provided (None/empty) → return empty string (no voiceover)
         """
-        if config.text_overlay:
-            # User provided custom text
-            return config.text_overlay
-
-        brand_name = config.brand_name or "us"
-
-        # Professional outro: thank customers warmly
-        return f"Thank you for choosing {brand_name}."
+        # Return the exact text provided, or empty string if nothing provided
+        return config.text_overlay.strip() if config.text_overlay else ""
 
     def _generate_voiceover(
         self,
@@ -330,7 +324,8 @@ class IntroOutroGenerator:
         text: str,
         voice_style: str,
         background_music_url: Optional[str],
-        upload_to_cloud: bool
+        upload_to_cloud: bool,
+        optimize_speech: bool = False
     ) -> Dict[str, Any]:
         """
         Generate premium voiceover with professional settings.
@@ -339,6 +334,10 @@ class IntroOutroGenerator:
         - OpenAI TTS for natural, professional delivery
         - Optimized voice settings per style
         - Background music mixing (subtle, non-distracting)
+
+        Args:
+            optimize_speech: If True, AI will optimize text for natural delivery (may rephrase).
+                           If False, text will be spoken exactly as provided.
         """
         # Map voice styles to optimal voice IDs and settings
         voice_mapping = {
@@ -350,7 +349,7 @@ class IntroOutroGenerator:
 
         voice_config = voice_mapping.get(voice_style, voice_mapping["professional"])
 
-        logger.info(f"[{job_id}] Generating voiceover: \"{text}\" with {voice_config['voice_id']} ({voice_style})")
+        logger.info(f"[{job_id}] Generating voiceover: \"{text}\" with {voice_config['voice_id']} ({voice_style}), optimize={optimize_speech}")
 
         # Generate narration with professional settings
         result = self.narration_service.generate(
@@ -363,7 +362,7 @@ class IntroOutroGenerator:
             music_volume="low",  # Subtle background music (industry standard)
             preferred_provider="openai",  # OpenAI TTS for professional quality
             upload_to_cloud=upload_to_cloud,
-            optimize_speech=True,  # AI text optimization for natural delivery
+            optimize_speech=optimize_speech,  # Only optimize if requested (auto-generated text)
             add_background_music=background_music_url is not None
         )
 

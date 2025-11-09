@@ -603,19 +603,22 @@ class FFmpegOptimizer:
             except Exception as e:
                 logger.debug(f"Audio optimization failed: {e}")
             
-            # OPTIMIZATION 7: Cloud Run memory safety
+            # OPTIMIZATION 7: Aggressive memory safety for 4GB/6GB containers
             try:
                 cloud_run_params = [
-                    ("-max_muxing_queue_size", "1024"),
-                    ("-thread_type", "slice")
+                    ("-max_muxing_queue_size", "256"),  # Reduced from 1024 to 256 for memory safety
+                    ("-thread_type", "slice"),
+                    ("-bufsize", "1M"),  # Very small buffer size to prevent OOM
+                    ("-analyzeduration", "2000000"),  # Limit analysis duration
+                    ("-probesize", "2000000"),  # Limit probe size
                 ]
-                
+
                 inserted_count = self._safe_insert_parameters(optimized_cmd, cloud_run_params, insert_idx)
                 if inserted_count > 0:
                     self._performance_stats["memory_optimizations"] += 1
-                    optimizations_applied.append("cloud_run_safety")
+                    optimizations_applied.append("aggressive_memory_limits")
             except Exception as e:
-                logger.debug(f"Cloud Run optimization failed: {e}")
+                logger.debug(f"Memory safety optimization failed: {e}")
             
             if optimizations_applied:
                 logger.debug(f"Applied optimizations: {', '.join(optimizations_applied)}")
