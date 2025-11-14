@@ -1,6 +1,5 @@
 import {
   BadgeCheck,
-  Bell,
   ChevronsUpDown,
   CreditCard,
   LogOut,
@@ -27,6 +26,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { observer } from "mobx-react-lite";
 import { authStore } from "@/stores/authStore";
+import { useNavigate } from "react-router-dom";
 
 function NavUser({
   user,
@@ -35,6 +35,7 @@ function NavUser({
 }) {
   const { isMobile } = useSidebar();
   const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <SidebarMenu className="px-2 py-3">
@@ -112,7 +113,13 @@ function NavUser({
             </DropdownMenuLabel>
             <DropdownMenuSeparator className="my-1" />
             <DropdownMenuGroup>
-              <DropdownMenuItem className="group flex gap-2 rounded-lg m-1 p-2.5 hover:bg-dropdown-primary/10 transition-colors duration-150">
+              <DropdownMenuItem
+                onClick={() => {
+                  setIsOpen(false);
+                  navigate("/checkout");
+                }}
+                className="group flex gap-2 rounded-lg m-1 p-2.5 hover:bg-dropdown-primary/10 transition-colors duration-150 cursor-pointer"
+              >
                 <div className="flex items-center justify-center size-8 rounded-lg bg-dropdown-primary/10 text-dropdown-primary">
                   <Sparkles className="size-4" />
                 </div>
@@ -126,20 +133,25 @@ function NavUser({
             </DropdownMenuGroup>
             <DropdownMenuSeparator className="my-1" />
             <DropdownMenuGroup>
-              <DropdownMenuItem className="flex gap-2 rounded-lg m-1 p-2.5 hover:bg-dropdown-hover transition-colors duration-150">
+              <DropdownMenuItem
+                onClick={() => {
+                  setIsOpen(false);
+                  navigate("/settings");
+                }}
+                className="flex gap-2 rounded-lg m-1 p-2.5 hover:bg-dropdown-hover transition-colors duration-150 cursor-pointer"
+              >
                 <BadgeCheck className="size-4 text-dropdown-icon" />
                 <span>Account</span>
               </DropdownMenuItem>
-              <DropdownMenuItem className="flex gap-2 rounded-lg m-1 p-2.5 hover:bg-dropdown-hover transition-colors duration-150">
+              <DropdownMenuItem
+                onClick={() => {
+                  setIsOpen(false);
+                  navigate("/checkout");
+                }}
+                className="flex gap-2 rounded-lg m-1 p-2.5 hover:bg-dropdown-hover transition-colors duration-150 cursor-pointer"
+              >
                 <CreditCard className="size-4 text-dropdown-icon" />
                 <span>Billing</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="flex gap-2 rounded-lg m-1 p-2.5 hover:bg-dropdown-hover transition-colors duration-150">
-                <Bell className="size-4 text-dropdown-icon" />
-                <span>Notifications</span>
-                <div className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-dropdown-badge text-dropdown-badge-foreground text-xs font-medium">
-                  3
-                </div>
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator className="my-1" />

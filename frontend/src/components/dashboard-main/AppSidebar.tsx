@@ -68,10 +68,12 @@ export const AppSidebar = observer(
     const userName = firebaseUser?.displayName || "User";
     const userEmail = firebaseUser?.email || "";
     const userAvatar = firebaseUser?.photoURL || undefined;
-    const workspaceName = workspaceHub.workspace?.name || "";
+    const workspaceName = workspaceHub.workspace?.name || "My Workspace";
     const workspacePlan = workspaceHub.workspace?.plan || "";
 
-    // const workspacePlan = member?.workspace_plan || "";
+    // Get workspace logo from brand_context or use fallback
+    const brandContext = workspaceHub.workspace?.brand_context as any;
+    const workspaceLogo = brandContext?.logo_url || brandContext?.logoUrl || null;
 
     // Check active route
     const currentPath = location.pathname;
@@ -87,7 +89,7 @@ export const AppSidebar = observer(
       teams: [
         {
           name: workspaceName,
-          logo: CenphiLogo,
+          logo: workspaceLogo || CenphiLogo, // Use workspace logo if available, otherwise fallback to Cenphi
           plan: workspacePlan,
         },
       ],

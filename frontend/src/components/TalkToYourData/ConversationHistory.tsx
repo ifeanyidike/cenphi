@@ -8,6 +8,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { authStore } from '@/stores/authStore';
 import { workspaceHub } from '@/repo/workspace_hub';
 
@@ -38,6 +39,13 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = observer(({ onSe
   const [isOpen, setIsOpen] = useState(false);
   const [sessions, setSessions] = useState<ConversationSession[]>([]);
   const [loading, setLoading] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    isOpen: boolean;
+    sessionId: string | null;
+  }>({
+    isOpen: false,
+    sessionId: null,
+  });
 
   const workspace = workspaceHub.workspace;
 
@@ -64,14 +72,20 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = observer(({ onSe
     }
   };
 
-  const deleteSession = async (sessionId: string, event: React.MouseEvent) => {
+  const handleDeleteClick = (sessionId: string, event: React.MouseEvent) => {
     event.stopPropagation();
+    setDeleteConfirm({
+      isOpen: true,
+      sessionId,
+    });
+  };
 
-    if (!confirm('Are you sure you want to delete this conversation?')) return;
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfirm.sessionId) return;
 
     try {
       const tokenInfo = await authStore.getToken();
-      const response = await fetch(`${API_BASE_URL}/ai/chat-with-data/sessions/${sessionId}`, {
+      const response = await fetch(`${API_BASE_URL}/ai/chat-with-data/sessions/${deleteConfirm.sessionId}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${tokenInfo.token}`,
@@ -79,7 +93,7 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = observer(({ onSe
       });
 
       if (response.ok) {
-        setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+        setSessions((prev) => prev.filter((s) => s.id !== deleteConfirm.sessionId));
       }
     } catch (error) {
       console.error('Failed to delete session:', error);
@@ -184,7 +198,7 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = observer(({ onSe
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={(e) => deleteSession(session.id, e)}
+                          onClick={(e) => handleDeleteClick(session.id, e)}
                           className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-600"
                         >
                           <Trash2 className="h-3 w-3" />
@@ -199,6 +213,17 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = observer(({ onSe
           </div>
         </Card>
       </PopoverContent>
+
+      <ConfirmDialog
+        isOpen={deleteConfirm.isOpen}
+        onClose={() => setDeleteConfirm({ isOpen: false, sessionId: null })}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Conversation"
+        message="Are you sure you want to delete this conversation? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+      />
     </Popover>
   );
 });

@@ -619,9 +619,23 @@ class BrollOverlayService:
             input_idx = idx + 1  # Main video is input 0
             start_time = clip.get("start_time", 0)
             duration = clip.get("duration", 5.0)
+
+            # CRITICAL: Validate duration and start_time to prevent negative values that cause FFmpeg errors
+            if duration <= 0:
+                logger.warning(f"[{job_id}] B-roll clip {idx} has invalid duration {duration}, using default 5.0s")
+                duration = 5.0
+
+            if start_time < 0:
+                logger.warning(f"[{job_id}] B-roll clip {idx} has invalid start_time {start_time}, using 0")
+                start_time = 0
+
             position_mode = clip.get("position_mode", "fill")
             transition_type = clip.get("transition_type", "fade")
             transition_duration = clip.get("transition_duration", 0.5)
+
+            # Validate transition duration
+            if transition_duration <= 0:
+                transition_duration = 0.5
 
             # Get actual B-roll clip duration to handle looping if needed
             local_path = clip.get("local_path")

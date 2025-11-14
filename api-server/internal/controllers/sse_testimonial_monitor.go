@@ -161,20 +161,27 @@ func (c *SSETestimonialMonitor) StreamTestimonialProcessing(w http.ResponseWrite
 
 // startJobMonitoringSystem monitors Redis for testimonial job completions
 func (c *SSETestimonialMonitor) startJobMonitoringSystem() {
-	c.logger.Info("Starting testimonial job monitoring system")
+	c.logger.Info("Starting testimonial job monitoring system (pub/sub mode only)")
 
-	ticker := time.NewTicker(2 * time.Second) // Check every 2 seconds
-	defer ticker.Stop()
+	// DISABLED: Polling system is redundant with pub/sub
+	// The SSE manager's subscribeToAIServiceProgress() already handles all job updates via Redis pub/sub
+	// This polling was causing 8M+ Redis commands per day by scanning job_status:* keys every 2 seconds
+	//
+	// ticker := time.NewTicker(2 * time.Second) // Check every 2 seconds
+	// defer ticker.Stop()
+	// for {
+	// 	select {
+	// 	case <-c.sseManager.ctx.Done():
+	// 		c.logger.Info("Testimonial job monitoring system stopped")
+	// 		return
+	// 	case <-ticker.C:
+	// 		c.checkTestimonialJobUpdates()
+	// 	}
+	// }
 
-	for {
-		select {
-		case <-c.sseManager.ctx.Done():
-			c.logger.Info("Testimonial job monitoring system stopped")
-			return
-		case <-ticker.C:
-			c.checkTestimonialJobUpdates()
-		}
-	}
+	// Just keep the service alive - pub/sub handles all updates
+	<-c.sseManager.ctx.Done()
+	c.logger.Info("Testimonial job monitoring system stopped")
 }
 
 // checkTestimonialJobUpdates checks for job status changes and notifies clients

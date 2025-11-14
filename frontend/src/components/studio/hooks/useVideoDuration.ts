@@ -60,7 +60,7 @@ export function useVideoDuration(
   const momentsDuration = useMemo(() => {
     if (!moments || moments.length === 0) return null;
 
-    const totalMs = moments.reduce((sum, moment) => sum + moment.duration, 0);
+    const totalMs = moments.reduce((sum, moment) => sum + (moment.duration || moment.end_time - moment.start_time || 0), 0);
 
     // Convert from milliseconds to seconds
     return totalMs / 1000;

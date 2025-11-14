@@ -1,4 +1,5 @@
 import { authStore } from "@/stores/authStore";
+import { workspaceHub } from "@/repo/workspace_hub";
 import {
   HighlightMoment,
   AIOrderingRequest,
@@ -582,10 +583,16 @@ export class StudioAPI {
     artifactId?: string,
     customPrompt?: string
   ): Promise<any[]> {
+    const workspaceId = workspaceHub.workspace?.id;
+    if (!workspaceId) {
+      throw new Error("No workspace selected");
+    }
+
     const response = await fetch(`${this.baseUrl}/ai/highlights/by-type`, {
       method: "POST",
       headers: await this.getHeaders(),
       body: JSON.stringify({
+        workspace_id: workspaceId,
         testimonial_id: testimonialId,
         text,
         segments,
@@ -688,7 +695,7 @@ export class StudioAPI {
       });
 
       const estimatedDuration = orderedMoments.reduce(
-        (sum, m) => sum + m.duration,
+        (sum, m) => sum + (m?.duration || 0),
         0
       );
 
@@ -698,6 +705,44 @@ export class StudioAPI {
         estimated_duration: estimatedDuration,
       };
     }
+  }
+
+  /**
+   * Fetch or generate story_video highlights for multiple testimonials
+   * Route: POST /ai/story-video-highlights
+   *
+   * This endpoint will:
+   * - Check Redis cache first for existing highlights
+   * - Check database for saved highlights
+   * - Generate new highlights using AI if not found
+   * - Save generated highlights to database
+   * - Cache results for future requests
+   */
+  async getStoryVideoHighlights(
+    testimonialIds: string[]
+  ): Promise<{
+    testimonials: Array<{
+      testimonial_id: string;
+      highlights: HighlightMoment[];
+      source: string;
+    }>;
+  }> {
+    const response = await fetch(`${this.baseUrl}/ai/story-video-highlights`, {
+      method: "POST",
+      headers: await this.getHeaders(),
+      body: JSON.stringify({ testimonial_ids: testimonialIds }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({
+        message: "Failed to fetch story video highlights",
+      }));
+      throw new Error(
+        error.message || "Failed to fetch story video highlights"
+      );
+    }
+
+    return response.json();
   }
 }
 

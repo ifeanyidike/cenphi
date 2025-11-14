@@ -1267,9 +1267,8 @@ Respond in JSON format:
     "confidence": 0.0-1.0
 }}"""
 
-                response = ai_client.chat(
+                response = ai_client.chat_completion(
                     messages=[{"role": "user", "content": prompt}],
-                    model="gpt-4",  # Maps to Claude Sonnet
                     temperature=0.3,
                     max_tokens=1000
                 )
@@ -1340,6 +1339,164 @@ Respond in JSON format:
 
         return result
 
+    def generate_context_card(
+        self,
+        job_id: str,
+        text: str,
+        duration: float = 1.2,
+        width: int = 1920,
+        height: int = 1080
+    ) -> str:
+        """
+        Generate a minimal context card video for semantic gap transitions.
+
+        Args:
+            job_id: Job identifier for temp file management
+            text: Text to display on the card (e.g., "CUSTOMER SUPPORT")
+            duration: Duration of the card in seconds (default 1.2s)
+            width: Video width (default 1920)
+            height: Video height (default 1080)
+
+        Returns:
+            Local path to the generated context card video
+        """
+        import uuid
+        from datetime import datetime
+
+        try:
+            # Create output path
+            card_id = uuid.uuid4().hex[:8]
+            output_filename = f"context_card_{card_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.mp4"
+            output_path = os.path.join(self.session_manager.base_path, job_id, output_filename)
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+            # Clean and format text elegantly
+            clean_text = text.strip()
+            # Split into 2 lines if too long for better readability
+            if len(clean_text) > 32:
+                words = clean_text.split()
+                mid = len(words) // 2
+                line1 = ' '.join(words[:mid]).upper()
+                line2 = ' '.join(words[mid:]).upper()
+                if len(line1) > 30:
+                    line1 = line1[:27] + "..."
+                if len(line2) > 30:
+                    line2 = line2[:27] + "..."
+            else:
+                line1 = clean_text.upper()
+                line2 = None
+
+            # Escape text for FFmpeg (escape quotes and colons)
+            escaped_line1 = line1.replace("'", "'\\''").replace(":", "\\:")
+            escaped_line2 = line2.replace("'", "'\\''").replace(":", "\\:") if line2 else None
+
+            # Modern, clean design with centered box
+            box_width = int(width * 0.75)  # 75% of video width
+            box_height = 240 if line2 else 180
+            box_x = (width - box_width) // 2
+            box_y = (height - box_height) // 2
+
+            # Text positions (centered in box)
+            y1 = f"(h-text_h)/2" if not line2 else f"(h-text_h)/2-30"
+            y2 = f"(h-text_h)/2+40"
+
+            # Build modern card design with box and accent
+            text_filter_parts = []
+
+            # 1. Subtle vignette for depth
+            text_filter_parts.append("vignette=angle=PI/4")
+
+            # 2. Draw accent bar at top (brand color - subtle blue/purple)
+            accent_y = box_y - 8
+            text_filter_parts.append(
+                f"drawbox=x={box_x}:y={accent_y}:w={box_width}:h=4:color=0x6366f1@0.9:t=fill"
+            )
+
+            # 3. Draw semi-transparent box background
+            text_filter_parts.append(
+                f"drawbox=x={box_x}:y={box_y}:w={box_width}:h={box_height}:"
+                f"color=0x1a1a1a@0.85:t=fill"
+            )
+
+            # 4. Draw box border (subtle)
+            text_filter_parts.append(
+                f"drawbox=x={box_x}:y={box_y}:w={box_width}:h={box_height}:"
+                f"color=0x404040@0.6:t=2"
+            )
+
+            # 5. Line 1: Text with strong shadow for readability
+            # Shadow (offset and blurred effect via multiple layers)
+            text_filter_parts.append(
+                f"drawtext=text='{escaped_line1}':"
+                f"fontsize=64:"
+                f"fontcolor=0x000000@0.7:"
+                f"x=(w-text_w)/2+3:y={y1}+3"
+            )
+            # Main text (clean white)
+            text_filter_parts.append(
+                f"drawtext=text='{escaped_line1}':"
+                f"fontsize=64:"
+                f"fontcolor=0xFFFFFF:"
+                f"x=(w-text_w)/2:y={y1}"
+            )
+
+            # 6. Line 2 if present (slightly smaller, lighter)
+            if line2:
+                # Shadow
+                text_filter_parts.append(
+                    f"drawtext=text='{escaped_line2}':"
+                    f"fontsize=56:"
+                    f"fontcolor=0x000000@0.7:"
+                    f"x=(w-text_w)/2+3:y={y2}+3"
+                )
+                # Main text (light gray for hierarchy)
+                text_filter_parts.append(
+                    f"drawtext=text='{escaped_line2}':"
+                    f"fontsize=56:"
+                    f"fontcolor=0xE5E5E5:"
+                    f"x=(w-text_w)/2:y={y2}"
+                )
+
+            video_filter = ",".join(text_filter_parts)
+
+            # Generate modern context card
+            cmd = [
+                "ffmpeg", "-y",
+                # Deep dark background with subtle gradient
+                "-f", "lavfi", "-i", f"color=c=#0a0a0a:s={width}x{height}:d={duration}",
+                # Silent audio
+                "-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100",
+                # Apply elegant filter (vignette + text)
+                "-vf", video_filter,
+                # High quality encoding for text
+                "-c:v", "libx264",
+                "-preset", "medium",
+                "-crf", "18",
+                "-pix_fmt", "yuv420p",
+                "-r", "30",
+                "-c:a", "aac",
+                "-b:a", "128k",
+                "-ar", "44100",
+                "-t", str(duration),
+                "-movflags", "+faststart",
+                output_path
+            ]
+
+            result = self.ffmpeg_optimizer.optimize_and_execute(
+                cmd, capture_output=True, text=True, timeout=30
+            )
+
+            if result.returncode == 0 and os.path.exists(output_path):
+                logger.info(f"[{job_id}] Generated context card: {text} ({duration}s)")
+                return output_path
+            else:
+                logger.error(f"[{job_id}] Context card generation failed: {result.stderr}")
+                return None
+
+        except Exception as e:
+            logger.error(f"[{job_id}] Exception generating context card: {e}")
+            return None
+
     def assemble_draft(
         self,
         job_id: str,
@@ -1348,7 +1505,8 @@ Respond in JSON format:
         clips: List[Dict[str, Any]],
         transition_type: str,
         transition_duration: float,
-        upload_intermediate: bool
+        upload_intermediate: bool,
+        semantic_gaps: List[int] = None
     ) -> Dict[str, Any]:
         """
         Assemble clips into draft story video (wrapper around assemble_story_video).
@@ -1361,6 +1519,7 @@ Respond in JSON format:
             transition_type: Transition type
             transition_duration: Transition duration in seconds
             upload_intermediate: Upload for preview
+            semantic_gaps: List of indices where semantic gaps exist (for context cards)
 
         Returns:
             {
@@ -1372,6 +1531,12 @@ Respond in JSON format:
             }
         """
         logger.info(f"[{job_id}] Assemble Draft: {len(clips)} clips")
+
+        # Store semantic_gaps in clips metadata for later use (if provided)
+        if semantic_gaps:
+            logger.info(f"[{job_id}] Processing with semantic gaps: {semantic_gaps}")
+            if clips:
+                clips[0]['_semantic_gaps'] = semantic_gaps
 
         # Extract local paths from clips metadata
         # CRITICAL: Preserve clip order - iterate in sequence, append in order
@@ -1401,12 +1566,92 @@ Respond in JSON format:
         if not clip_paths:
             raise Exception("No valid clip paths found for assembly")
 
+        # Check for semantic gaps and insert context cards
+        semantic_gaps = []
+
+        # Try to extract semantic_gaps from clips metadata (set by AI ordering)
+        if clips and isinstance(clips, list) and len(clips) > 0:
+            # Check if first clip has semantic_gaps metadata
+            if isinstance(clips[0], dict) and 'semantic_gaps' in clips[0]:
+                semantic_gaps = clips[0].get('semantic_gaps', [])
+            # Alternative: check for _semantic_gaps in metadata
+            elif isinstance(clips[0], dict) and '_semantic_gaps' in clips[0]:
+                semantic_gaps = clips[0].get('_semantic_gaps', [])
+
+        if semantic_gaps and len(semantic_gaps) > 0:
+            logger.info(f"[{job_id}] Detected semantic gaps at indices: {semantic_gaps}")
+
+            # Insert context cards at gap indices (in reverse order to preserve indices)
+            for gap_idx in sorted(semantic_gaps, reverse=True):
+                # Gap at index i means insert card AFTER clip i (before clip i+1)
+                insert_position = gap_idx + 1
+
+                if insert_position < len(clips):
+                    # Get the topic/theme of the NEXT clip after the gap
+                    next_clip = clips[insert_position]
+
+                    # Try to get meaningful topic text from various fields
+                    # Priority: theme > text excerpt > highlight_type
+                    topic = None
+
+                    # 1. Check for explicit theme field
+                    if next_clip.get('theme'):
+                        topic = next_clip.get('theme')
+
+                    # 2. If no theme, try text excerpt (first meaningful words)
+                    elif next_clip.get('text_content'):
+                        text = next_clip.get('text_content', '').strip()
+                        if text:
+                            # Extract first 3-5 words as topic
+                            words = text.split()[:5]
+                            topic = ' '.join(words)
+                            if len(topic) > 40:
+                                topic = topic[:37] + '...'
+
+                    # 3. Fallback to highlight_type, but skip if it's generic
+                    else:
+                        hl_type = next_clip.get('highlight_type', '')
+                        if hl_type and hl_type.lower() not in ['general', 'highlight', 'clip', 'moment']:
+                            topic = hl_type
+
+                    # Skip card if we don't have meaningful topic
+                    if not topic or len(topic.strip()) < 3:
+                        logger.info(f"[{job_id}] Skipping context card at {gap_idx} - no meaningful topic found")
+                        continue
+
+                    # Clean up topic text for display
+                    topic = topic.replace('_', ' ').replace('-', ' ')
+                    topic_words = topic.split()
+                    topic = ' '.join(word.capitalize() for word in topic_words)
+
+                    # Generate context card
+                    card_path = self.generate_context_card(
+                        job_id=job_id,
+                        text=topic,
+                        duration=1.2
+                    )
+
+                    if card_path:
+                        # Insert card into clip_paths at the correct position
+                        clip_paths.insert(insert_position, card_path)
+                        logger.info(f"[{job_id}] Inserted context card '{topic}' at position {insert_position}")
+                    else:
+                        logger.warning(f"[{job_id}] Failed to generate context card for gap at {gap_idx}")
+
+        # CRITICAL: Force no transitions when context cards are present
+        # xfade overlaps clips which causes A/V sync issues with silent context cards
+        has_context_cards = semantic_gaps and len(semantic_gaps) > 0
+        final_transition_type = "none" if has_context_cards else transition_type
+
+        if has_context_cards:
+            logger.info(f"[{job_id}] Disabling transitions to maintain A/V sync with {len(semantic_gaps)} context cards")
+
         # Use existing assemble_story_video method
         result = self.assemble_story_video(
             job_id=job_id,
             testimonial_id=testimonial_id,
             clip_paths=clip_paths,
-            transition_type=transition_type,
+            transition_type=final_transition_type,
             transition_duration=transition_duration,
             upload_intermediate=upload_intermediate
         )
@@ -1419,7 +1664,175 @@ Respond in JSON format:
             result["assembled_url"] = result.pop("cloud_url")
 
         return result
-    
+
+    def detect_semantic_gaps(
+        self,
+        job_id: str,
+        clips: List[Dict[str, Any]]
+    ) -> List[int]:
+        """
+        Use AI to intelligently detect semantic gaps in already-ordered clips.
+
+        Args:
+            job_id: Job identifier for logging
+            clips: List of clip dictionaries in their final order
+
+        Returns:
+            List of gap indices (positions where context cards should be inserted)
+        """
+        semantic_gaps = []
+        ai_succeeded = False  # Track if AI actually ran successfully
+
+        if len(clips) <= 1:
+            logger.info(f"[{job_id}] Only {len(clips)} clip(s), no gaps needed")
+            return semantic_gaps
+
+        try:
+            from src.ai_providers.client import ai_client
+            import json
+
+            # Build clips summary for AI analysis
+            clips_summary = []
+            for i, clip in enumerate(clips):
+                clips_summary.append({
+                    "index": i,
+                    "theme": clip.get('highlight_type', 'unknown'),
+                    "content": clip.get('text_content', '')[:150],  # Truncate for efficiency
+                    "speaker": clip.get('testimonial_id', 'unknown')
+                })
+
+            # Check if all clips are from the same speaker (single testimonial story)
+            unique_speakers = set(c.get('speaker', '') for c in clips_summary)
+            is_single_speaker = len(unique_speakers) == 1
+
+            # Create AI prompt for gap detection (adjusted based on speaker count)
+            if is_single_speaker:
+                guidelines = """IMPORTANT GUIDELINES FOR SINGLE-SPEAKER STORIES:
+- Add context cards when there's a noticeable shift that would help viewer comprehension
+- A semantic gap exists when ANY of these occur:
+  ✓ MAJOR topic/category change (e.g., "personal background" → "product features" → "results")
+  ✓ Time period jump (e.g., "before using product" → "6 months later")
+  ✓ Emotional tone shift (e.g., "struggle/problem" → "breakthrough" → "success/celebration")
+  ✓ Inconsistent or abrupt transition (clips feel disconnected or jump unexpectedly)
+  ✓ Theme change (e.g., "credibility" → "problem solved" → "recommendation")
+
+- DO NOT add gaps for:
+  ✗ Minor topic variations within the same theme
+  ✗ Natural narrative progression (story flows smoothly)
+  ✗ Related points that build on each other
+  ✗ Clips that naturally connect without jarring transitions
+
+KEY: Ask yourself "Would a viewer be confused by this transition?" If YES → add gap. If NO → skip gap.
+
+For a {len(clips)}-clip single-speaker story, expect 0-{max(1, len(clips)//2)} gaps."""
+            else:
+                guidelines = """IMPORTANT GUIDELINES FOR MULTI-SPEAKER STORIES:
+- Context cards help viewers understand speaker changes and topic shifts
+- A semantic gap exists when:
+  ✓ Speaker changes (different testimonial_id)
+  ✓ Major topic/theme changes (e.g., "product features" → "customer support")
+  ✓ Emotional tone shifts (e.g., "problem" → "solution")
+  ✓ Inconsistent or abrupt transitions
+
+For a {len(clips)}-clip multi-speaker story, expect 1-{max(1, len(clips)//2)} gaps."""
+
+            prompt = f"""Analyze these {len(clips)} video clips that are ALREADY in optimal order.
+Your task: Identify positions where a brief context card (1-2 seconds) would help viewers transition between clips.
+
+Clips (in current order):
+{chr(10).join([f"{i}. [{c['theme']}] Speaker: {c['speaker'][:20]} | {c['content'][:100]}..." for i, c in enumerate(clips_summary)])}
+
+{guidelines}
+
+Respond with ONLY a JSON array of gap indices (positions AFTER which to insert a context card):
+{{"gaps": [index1, index2, ...]}}
+
+Example: {{"gaps": [0, 2]}} means insert context card after clip 0 and after clip 2.
+If no gaps are needed, return: {{"gaps": []}}"""
+
+            response = ai_client.chat_completion(
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.4,  # Balanced temp for detecting genuine tone shifts while avoiding over-detection
+                max_tokens=400
+            )
+
+            # Parse AI response
+            try:
+                # Log raw response for debugging
+                raw_content = response.content.strip()
+                logger.debug(f"[{job_id}] AI raw response: {raw_content[:200]}")
+
+                # Try multiple extraction methods
+                json_content = None
+
+                # Method 1: Try to extract JSON if wrapped in markdown code blocks
+                if "```" in raw_content:
+                    lines = raw_content.split('\n')
+                    json_lines = []
+                    in_code_block = False
+                    for line in lines:
+                        if line.startswith("```"):
+                            in_code_block = not in_code_block
+                            continue
+                        if in_code_block:
+                            json_lines.append(line)
+                    if json_lines:
+                        json_content = '\n'.join(json_lines).strip()
+                        logger.debug(f"[{job_id}] Extracted JSON from markdown code block")
+
+                # Method 2: Try regex to find JSON pattern {"gaps": [...]}
+                if not json_content:
+                    import re
+                    json_match = re.search(r'\{["\']gaps["\']\s*:\s*\[[^\]]*\]\s*\}', raw_content)
+                    if json_match:
+                        json_content = json_match.group(0)
+                        logger.debug(f"[{job_id}] Extracted JSON using regex pattern match")
+
+                # Method 3: Try direct parsing if no extraction worked
+                if not json_content:
+                    json_content = raw_content
+                    logger.debug(f"[{job_id}] Attempting direct JSON parse of full response")
+
+                result = json.loads(json_content)
+                semantic_gaps = result.get('gaps', [])
+
+                # Validate gap indices
+                semantic_gaps = [g for g in semantic_gaps if isinstance(g, int) and 0 <= g < len(clips) - 1]
+
+                ai_succeeded = True  # AI ran successfully
+
+                if semantic_gaps:
+                    logger.info(f"[{job_id}] AI detected {len(semantic_gaps)} semantic gaps at positions: {semantic_gaps}")
+                else:
+                    logger.info(f"[{job_id}] AI determined no semantic gaps needed - clips flow smoothly")
+
+            except json.JSONDecodeError as e:
+                logger.warning(f"[{job_id}] Failed to parse AI gap response: {e}. Raw response: {response.content[:300]}")
+                semantic_gaps = []
+                ai_succeeded = False
+
+        except Exception as e:
+            logger.warning(f"[{job_id}] AI gap detection failed, using fallback: {e}")
+            semantic_gaps = []
+            ai_succeeded = False
+
+        # Fallback: ONLY use heuristic if AI actually failed (not if AI said "no gaps")
+        if not ai_succeeded and not semantic_gaps and len(clips) > 1:
+            logger.info(f"[{job_id}] Using fallback heuristic (speaker changes only)")
+            for i in range(len(clips) - 1):
+                current_speaker = clips[i].get('testimonial_id', '')
+                next_speaker = clips[i + 1].get('testimonial_id', '')
+
+                if current_speaker != next_speaker and current_speaker and next_speaker:
+                    semantic_gaps.append(i)
+                    logger.info(f"[{job_id}] Gap at position {i}: speaker change")
+
+        if semantic_gaps:
+            logger.info(f"[{job_id}] Total semantic gaps detected: {len(semantic_gaps)} at indices {semantic_gaps}")
+        else:
+            logger.info(f"[{job_id}] No semantic gaps detected between {len(clips)} clips")
+
+        return semantic_gaps
 
     def collect_and_assemble_clips(
         self,
@@ -1508,6 +1921,9 @@ Respond in JSON format:
 
             logger.info(f"[{job_id}] All clips normalized successfully")
 
+        # Detect semantic gaps using AI
+        semantic_gaps = self.detect_semantic_gaps(job_id, clips)
+
         assembly_result = self.assemble_draft(
             job_id=job_id,
             session_id=session_id,
@@ -1515,7 +1931,8 @@ Respond in JSON format:
             clips=clips,
             transition_type=transition_type or "fade",
             transition_duration=transition_duration or 0.2,
-            upload_intermediate=upload_intermediate
+            upload_intermediate=upload_intermediate,
+            semantic_gaps=semantic_gaps  # Pass detected gaps to assembly
         )
 
         return assembly_result

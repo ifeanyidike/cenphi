@@ -39,7 +39,7 @@ export interface BrollConfig {
 }
 
 export interface BrollCache {
-  testimonialId: string;
+  testimonialId: string | undefined;
   suggestions: AIBrollSuggestionResponse;
   timestamp: number;
 }
@@ -59,12 +59,12 @@ interface BrollConfigSectionProps {
 
   // Cache management (optional - if not provided, managed internally)
   cachedAISuggestions?: {
-    testimonialId: string;
+    testimonialId: string | undefined;
     suggestions: AIBrollSuggestionResponse;
     timestamp: number;
   } | null;
   onCacheSuggestions?: (cache: {
-    testimonialId: string;
+    testimonialId: string | undefined;
     suggestions: AIBrollSuggestionResponse;
     timestamp: number;
   }) => void;
@@ -84,7 +84,7 @@ const BrollConfigSection: React.FC<BrollConfigSectionProps> = ({
 }) => {
   // Internal cache state (used if external cache not provided)
   const [internalCache, setInternalCache] = useState<{
-    testimonialId: string;
+    testimonialId: string | undefined;
     suggestions: AIBrollSuggestionResponse;
     timestamp: number;
   } | null>(null);
@@ -371,6 +371,8 @@ const BrollConfigSection: React.FC<BrollConfigSectionProps> = ({
             variant="outline"
             onClick={() => {
               console.log("[AIBroll] 'Get AI Suggestions' button clicked");
+              console.log("[AIBroll] testimonialId:", testimonialId);
+              console.log("[AIBroll] showAIBrollSuggestion will be set to:", true);
               setShowAIBrollSuggestion(true);
             }}
             disabled={isTooShortForBroll}
@@ -426,7 +428,7 @@ const BrollConfigSection: React.FC<BrollConfigSectionProps> = ({
       )}
 
       {/* AI B-roll Suggestion Modal */}
-      {showAIBrollSuggestion && testimonialId && (
+      {showAIBrollSuggestion && (
         <AIBrollSuggestionModal
           isOpen={showAIBrollSuggestion}
           onClose={() => {
@@ -444,7 +446,7 @@ const BrollConfigSection: React.FC<BrollConfigSectionProps> = ({
           orientation={aspectRatio === "9:16" ? "portrait" : "landscape"}
           cachedSuggestions={
             cachedAISuggestions?.testimonialId === testimonialId
-              ? cachedAISuggestions.suggestions
+              ? cachedAISuggestions?.suggestions ?? null
               : null
           }
           onSuggestionsLoaded={(suggestions) => {

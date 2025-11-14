@@ -69,6 +69,20 @@ export interface TeamMember extends BaseEntity {
   permissions: Record<string, any>;
 }
 
+// Sentiment data structure (stored directly in testimonials.sentiment_data)
+export interface SentimentData {
+  label: string; // e.g., "very_positive", "positive", "neutral", "negative"
+  sentiment_score: number; // 0-1
+  emotions: string[]; // e.g., ["joy", "trust", "excitement"]
+  business_recommendations: Array<{
+    action: string;
+    category: string; // e.g., "marketing", "product", "customer_service"
+    priority: "high" | "medium" | "low";
+    reasoning: string;
+  }>;
+  processed_at?: string; // ISO timestamp
+}
+
 // Testimonials table
 export interface Testimonial extends BaseEntity {
   workspace_id: string;
@@ -93,6 +107,7 @@ export interface Testimonial extends BaseEntity {
 
   // Collection metadata
   sentiment_score: number;
+  sentiment_data?: SentimentData; // New: Direct sentiment data (not in artifacts)
   collection_method: CollectionMethod;
   rating?: number; // 1-5
   metadata: Record<string, any>;
@@ -106,6 +121,7 @@ export interface Testimonial extends BaseEntity {
 
   tags: string[];
   artifacts: TestimonialArtifact[];
+  highlights?: TestimonialHighlightRecord[]; // New: Direct highlight records (from testimonial_highlights table)
 
   // Approval fields
   approval_status: "draft" | "pending" | "approved" | "rejected";
@@ -166,6 +182,22 @@ export interface TestimonialArtifact extends BaseEntity {
   is_public: boolean;
   approved_at?: string;
   approved_by?: string;
+}
+
+// Testimonial Highlights table (new dedicated table for highlights)
+export interface TestimonialHighlightRecord extends BaseEntity {
+  testimonial_id: string;
+  workspace_id: string;
+
+  highlight_type: string; // general, problem, solution, emotional, etc.
+  extraction_mode: "standalone" | "story_video";
+
+  moments: any[]; // Array of HighlightMoment objects
+  story_metadata?: Record<string, any>;
+  processing_metadata: Record<string, any>;
+
+  moment_count: number;
+  total_duration: number;
 }
 
 // Social Accounts table

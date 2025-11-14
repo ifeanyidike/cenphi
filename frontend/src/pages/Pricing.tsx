@@ -3,16 +3,15 @@ import { motion } from "framer-motion";
 import {
   Check,
   Users,
-  Shield,
   ArrowRight,
   Video,
   FileText,
   Share2,
   BarChart3,
   ChevronDown,
+  ChevronUp,
   Globe,
   Folder,
-  MessageSquare,
   Crown,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -64,56 +63,70 @@ const pricingTiers: PricingTier[] = [
     name: "Starter",
     tagline: "For individual marketers",
     description:
-      "Perfect for testing the platform and processing your first testimonials into marketing content.",
+      "Perfect for small businesses testing testimonial video marketing with core AI features.",
     monthlyPrice: 22,
     yearlyPrice: 220,
     limits: {
-      testimonials: "20 video testimonials/month",
-      videoProcessing: "20 video processing operations/month",
-      aiClips: "Up to 200 AI video clips/month",
-      platformOptimization: "Up to 60 platform optimizations/month",
-      contentGeneration: "100 AI content pieces/month",
-      talkToData: "50 AI analytics queries/month",
-      shares: "Unlimited public shares",
-      storage: "10 GB storage",
+      testimonials: "15 videos/month",
+      videoProcessing: "15 processing operations/month",
+      aiClips: "150 AI clips total/month (10 per video)",
+      platformOptimization: "45 platform posts/month (3 per video)",
+      contentGeneration: "75 AI content pieces/month (5 per video)",
+      talkToData: "30 AI analytics queries/month",
+      shares: "Unlimited shares",
+      storage: "10 GB",
       teamMembers: "1 user",
     },
     features: {
       core: [
-        { text: "Testimonial collection forms", included: true },
-        { text: "Video & text testimonials", included: true },
-        { text: "Public sharing pages", included: true },
-        { text: "Basic analytics & tracking", included: true },
-        { text: "Standard processing speed", included: true },
+        { text: "Testimonial collection widget & forms", included: true },
+        { text: "Video, text & voice testimonials", included: true },
+        { text: "SEO-optimized public sharing pages", included: true },
+        { text: "Basic analytics & view tracking", included: true },
+        { text: "Standard processing (24h)", included: true },
       ],
       videoProcessing: [
         {
-          text: "AI video clipping (up to 10 clips per video)",
+          text: "AI highlight extraction (9 types)",
+          included: true,
+          tooltip:
+            "General, emotional, problem, solution, results, metrics, recommendation, before/after, thematic",
+        },
+        {
+          text: "AI video clipping (10 clips/video max)",
           included: true,
         },
-        { text: "Story video generation", included: true },
-        { text: "Platform optimization (12 platforms)", included: true },
-        { text: "Video enhancement & quality boost", included: true },
-        { text: "B-roll overlay", included: false },
-        { text: "Custom intro/outro", included: false },
+        { text: "Story video generation with AI", included: true },
+        {
+          text: "Platform optimization (LinkedIn, Twitter, FB, IG, TikTok, YouTube)",
+          included: true,
+        },
+        { text: "Automatic transcription", included: true },
+        { text: "B-roll overlay & custom branding", included: false },
       ],
       contentManagement: [
-        { text: "Content generation (13+ formats)", included: true },
-        { text: "AI moment detection", included: true },
-        { text: "Content folders & organization", included: true },
-        { text: "Approval workflows", included: false },
+        {
+          text: "AI content generation (LinkedIn, Twitter, email, blog)",
+          included: true,
+        },
+        { text: "13+ content format templates", included: true },
+        { text: "AI moment detection & sentiment", included: true },
+        { text: "Content folders & tagging", included: true },
+        { text: "Approval workflows & team roles", included: false },
       ],
       analytics: [
         { text: "Share performance tracking", included: true },
         { text: "View & engagement metrics", included: true },
         { text: "Basic sentiment analysis", included: true },
-        { text: "Talk to Your Data (AI analytics chat)", included: true },
+        { text: "Talk to Your Data (30 queries/month)", included: true },
         { text: "Advanced analytics dashboard", included: false },
+        { text: "LinkedIn post analytics", included: false },
       ],
       teamCollaboration: [
         { text: "Email support (72h response)", included: true },
-        { text: "Export & share content", included: true },
-        { text: "Embed widgets", included: true },
+        { text: "Export content (MP4, PDF, text)", included: true },
+        { text: "Embeddable widgets", included: true },
+        { text: "LinkedIn auto-posting", included: false },
       ],
     },
     cta: "Start Free Trial",
@@ -123,56 +136,60 @@ const pricingTiers: PricingTier[] = [
     name: "Growth",
     tagline: "For serious marketers",
     description:
-      "Complete content operations platform with advanced AI features and LinkedIn automation.",
+      "Scale your testimonial marketing with LinkedIn automation, advanced AI, and premium features.",
     monthlyPrice: 59,
     yearlyPrice: 590,
     popular: true,
     limits: {
-      testimonials: "100 video testimonials/month",
-      videoProcessing: "100 video processing operations/month",
-      aiClips: "Up to 1,000 AI video clips/month",
-      platformOptimization: "Up to 300 platform optimizations/month",
-      contentGeneration: "500 AI content pieces/month",
-      talkToData: "250 AI analytics queries/month",
-      linkedInPosts: "Unlimited LinkedIn scheduling",
-      shares: "Unlimited public shares",
-      storage: "50 GB storage",
-      teamMembers: "1 user",
+      testimonials: "60 videos/month",
+      videoProcessing: "60 processing operations/month",
+      aiClips: "600 AI clips total/month (10 per video)",
+      platformOptimization: "180 platform posts/month (3 per video)",
+      contentGeneration: "300 AI content pieces/month (5 per video)",
+      talkToData: "150 AI analytics queries/month",
+      linkedInPosts: "Unlimited LinkedIn posts",
+      shares: "Unlimited shares",
+      storage: "50 GB",
+      teamMembers: "3 users",
     },
     features: {
       core: [
         { text: "Everything in Starter, plus:", included: true },
-        { text: "Custom collection widgets", included: true },
-        { text: "Advanced SEO & Open Graph", included: true },
-        { text: "Bulk operations & batch processing", included: true },
-        { text: "Faster processing speed (2x)", included: true },
+        { text: "Custom-branded collection widgets", included: true },
+        { text: "Advanced SEO & Open Graph meta", included: true },
+        { text: "Bulk upload & batch processing", included: true },
+        { text: "Priority processing (12h turnaround)", included: true },
+        { text: "3 team member seats", included: true },
       ],
       videoProcessing: [
-        { text: "All video AI features", included: true },
+        { text: "All AI video features from Starter", included: true },
         { text: "B-roll overlay with AI placement", included: true },
         { text: "Custom intro/outro generation", included: true },
-        { text: "Multi-platform video optimization", included: true },
+        { text: "Advanced captions & subtitles", included: true },
         { text: "Background music integration", included: true },
-        { text: "Advanced video enhancement", included: true },
+        { text: "HD video export (1080p)", included: true },
       ],
       contentManagement: [
-        { text: "Advanced content categorization", included: true },
-        { text: "Approval workflows", included: true },
-        { text: "Content calendar", included: true },
-        { text: "Natural language search", included: true },
+        { text: "Approval workflows & team roles", included: true },
+        { text: "Content calendar with scheduling", included: true },
+        { text: "Natural language content search", included: true },
+        { text: "Advanced content tagging & filters", included: true },
+        { text: "Custom content templates", included: true },
       ],
       analytics: [
         { text: "Advanced analytics dashboard", included: true },
-        { text: "Talk to Your Data (AI analytics chat)", included: true },
+        { text: "Talk to Your Data (150 queries/month)", included: true },
         { text: "LinkedIn post performance tracking", included: true },
         { text: "Share conversion tracking", included: true },
-        { text: "Sentiment & emotion analysis", included: true },
+        { text: "Sentiment & emotion analysis with insights", included: true },
+        { text: "Export reports (CSV, PDF)", included: true },
       ],
       teamCollaboration: [
-        { text: "LinkedIn scheduling & auto-posting", included: true },
+        { text: "LinkedIn auto-posting & scheduling", included: true },
         { text: "Multi-platform content sharing", included: true },
-        { text: "Advanced export options", included: true },
+        { text: "Advanced export options (all formats)", included: true },
         { text: "Email support (48h response)", included: true },
+        { text: "Team collaboration & comments", included: true },
       ],
     },
     cta: "Start Free Trial",
@@ -180,56 +197,65 @@ const pricingTiers: PricingTier[] = [
   {
     id: "pro",
     name: "Pro",
-    tagline: "For agencies & enterprises",
+    tagline: "For agencies & teams",
     description:
-      "Unlimited processing with white-label options, API access, and priority support.",
+      "Unlimited AI processing, white-label branding, API access, and multi-user collaboration.",
     monthlyPrice: 119,
     yearlyPrice: 1190,
     limits: {
-      testimonials: "Unlimited video testimonials",
-      videoProcessing: "Unlimited video processing",
-      aiClips: "Unlimited AI video clips",
-      platformOptimization: "Unlimited platform optimizations",
-      contentGeneration: "Unlimited AI content pieces",
-      talkToData: "Unlimited AI analytics queries",
-      linkedInPosts: "Unlimited LinkedIn scheduling",
-      shares: "Unlimited public shares",
+      testimonials: "Unlimited videos",
+      videoProcessing: "Unlimited processing",
+      aiClips: "Unlimited AI clips",
+      platformOptimization: "Unlimited platform posts",
+      contentGeneration: "Unlimited AI content",
+      talkToData: "Unlimited AI queries",
+      linkedInPosts: "Unlimited LinkedIn posts",
+      shares: "Unlimited shares",
       apiCalls: "10,000 API calls/month",
-      storage: "200 GB storage",
-      teamMembers: "1 user",
+      storage: "200 GB",
+      teamMembers: "10 users",
     },
     features: {
       core: [
         { text: "Everything in Growth, plus:", included: true },
-        { text: "White-label options", included: true },
-        { text: "Custom branding", included: true },
-        { text: "Remove Cenphi branding", included: true },
+        {
+          text: "White-label platform (remove Cenphi branding)",
+          included: true,
+        },
+        { text: "Custom domain & branding", included: true },
+        { text: "10 team member seats", included: true },
+        { text: "Role-based permissions", included: true },
+        { text: "Express processing (6h turnaround)", included: true },
       ],
       videoProcessing: [
-        { text: "Priority processing queue (3x faster)", included: true },
-        { text: "Batch processing (unlimited)", included: true },
+        { text: "Unlimited AI video processing", included: true },
+        { text: "Batch processing (unlimited videos)", included: true },
+        { text: "4K video export", included: true },
+        { text: "Custom platform video profiles", included: true },
         { text: "Advanced video customization", included: true },
-        { text: "Custom platform profiles", included: true },
-        { text: "Higher quality video output (premium)", included: true },
+        { text: "Premium video enhancement", included: true },
       ],
       contentManagement: [
-        { text: "Multi-workspace support", included: true },
-        { text: "Advanced automation rules", included: true },
-        { text: "Custom content templates", included: true },
-        { text: "Bulk content generation", included: true },
+        { text: "Multi-workspace support (3 workspaces)", included: true },
+        { text: "Advanced automation rules & triggers", included: true },
+        { text: "Custom content templates library", included: true },
+        { text: "Bulk AI content generation", included: true },
+        { text: "Content versioning & history", included: true },
       ],
       analytics: [
         { text: "Custom reports & dashboards", included: true },
         { text: "Talk to Your Data (unlimited queries)", included: true },
-        { text: "Revenue attribution", included: true },
-        { text: "Export to CSV/PDF", included: true },
+        { text: "Revenue attribution tracking", included: true },
+        { text: "Advanced export (CSV, PDF, JSON)", included: true },
         { text: "API analytics access", included: true },
+        { text: "Custom data retention", included: true },
       ],
       teamCollaboration: [
-        { text: "API access for integrations", included: true },
-        { text: "Webhook support", included: true },
-        { text: "Priority email support (24h response)", included: true },
-        { text: "Custom onboarding & training", included: true },
+        { text: "REST API access (10k calls/month)", included: true },
+        { text: "Webhook integrations", included: true },
+        { text: "Priority email support (24h)", included: true },
+        { text: "Dedicated onboarding & training", included: true },
+        { text: "Monthly strategy consultation", included: true },
       ],
     },
     cta: "Start Free Trial",
@@ -239,41 +265,65 @@ const pricingTiers: PricingTier[] = [
     name: "Enterprise",
     tagline: "Custom solutions",
     description:
-      "Tailored infrastructure, custom integrations, SLA guarantees, and dedicated support.",
+      "Dedicated infrastructure, custom integrations, SLA guarantees, and 24/7 support for large teams.",
     monthlyPrice: 0,
     yearlyPrice: 0,
     limits: {
       testimonials: "Custom limits",
+      videoProcessing: "Custom limits",
+      aiClips: "Custom limits",
+      platformOptimization: "Custom limits",
+      contentGeneration: "Custom limits",
+      talkToData: "Custom limits",
+      linkedInPosts: "Unlimited",
+      shares: "Unlimited",
+      apiCalls: "Custom API limits",
       storage: "Custom storage",
-      teamMembers: "Unlimited",
+      teamMembers: "Unlimited users",
     },
     features: {
       core: [
         { text: "Everything in Pro, plus:", included: true },
-        { text: "Custom integrations", included: true },
-        { text: "SSO & SAML", included: true },
-        { text: "99.9% uptime SLA", included: true },
+        { text: "Custom integrations & development", included: true },
+        { text: "SSO & SAML authentication", included: true },
+        { text: "99.9% uptime SLA guarantee", included: true },
+        { text: "Unlimited team members", included: true },
+        { text: "Instant processing (priority queue)", included: true },
       ],
       videoProcessing: [
         { text: "Dedicated processing infrastructure", included: true },
-        { text: "Custom video pipelines", included: true },
-        { text: "Advanced security & compliance", included: true },
+        { text: "Custom video AI pipelines", included: true },
+        {
+          text: "Advanced security & compliance (SOC 2, GDPR)",
+          included: true,
+        },
+        { text: "Custom video quality settings", included: true },
+        { text: "Reserved processing capacity", included: true },
       ],
       contentManagement: [
         { text: "Custom feature development", included: true },
-        { text: "Advanced workflow automation", included: true },
-        { text: "Multi-region deployment", included: true },
+        { text: "Advanced workflow automation & AI", included: true },
+        { text: "Multi-region deployment options", included: true },
+        { text: "Unlimited workspaces", included: true },
+        {
+          text: "Custom integrations (Salesforce, HubSpot, etc.)",
+          included: true,
+        },
       ],
       analytics: [
         { text: "Custom analytics integrations", included: true },
-        { text: "Data residency options", included: true },
-        { text: "Advanced security audits", included: true },
+        { text: "Data residency & sovereignty options", included: true },
+        { text: "Advanced security audits & compliance", included: true },
+        { text: "Custom reporting & BI integrations", included: true },
+        { text: "Real-time data exports", included: true },
       ],
       teamCollaboration: [
-        { text: "24/7 dedicated customer success", included: true },
-        { text: "Onboarding & training", included: true },
+        { text: "24/7 dedicated customer success manager", included: true },
+        { text: "Unlimited REST API calls", included: true },
+        { text: "Custom onboarding & training program", included: true },
         { text: "Quarterly business reviews", included: true },
-        { text: "Custom SLA agreements", included: true },
+        { text: "Custom SLA & performance guarantees", included: true },
+        { text: "Priority feature requests", included: true },
       ],
     },
     cta: "Contact Sales",
@@ -288,44 +338,49 @@ const PricingPage: React.FC = () => {
 
   const faqs = [
     {
-      question: "What counts as a 'testimonial processed' per month?",
+      question: "How do the monthly limits work?",
       answer:
-        "Each unique testimonial video or text submission that you upload and process counts as one testimonial. Re-processing the same testimonial (e.g., creating new clips or formats) doesn't count as additional usage. The limit resets monthly.",
+        "Each plan has specific monthly limits. For example, Starter includes 15 videos/month with 150 AI clips total (10 clips per video), 75 AI content pieces (5 per video), and 45 platform posts (3 per video). All limits reset on your billing date. Growth scales to 60 videos with proportionally higher limits, while Pro offers unlimited processing.",
+    },
+    {
+      question: "What counts as one 'video processing operation'?",
+      answer:
+        "Each time you upload and process a new testimonial video, it counts as one operation. This includes transcription, AI analysis, and initial clip generation. Re-processing the same video (like creating additional clips or regenerating content) doesn't count against your limit.",
     },
     {
       question: "Can I upgrade or downgrade my plan anytime?",
       answer:
-        "Yes! You can change your plan at any time. Upgrades take effect immediately and you'll be charged a prorated amount. Downgrades take effect at your next billing cycle with no penalties. All your data and content remain accessible.",
+        "Yes! You can change your plan at any time. Upgrades take effect immediately with prorated billing. Downgrades take effect at your next billing cycle with no penalties. All your existing content and data remain accessible.",
     },
     {
       question: "What happens during the 14-day free trial?",
       answer:
-        "You get full access to all features of your chosen plan for 14 days. No credit card required to start. Process testimonials, create content, test all AI features. You'll only be charged after your trial ends if you decide to continue.",
+        "You get full access to all features of your chosen plan for 14 days. No credit card required to start. Process testimonials, create AI clips, test all features. You'll only be charged after your trial ends if you decide to continue.",
     },
     {
-      question: "What video AI features are included?",
+      question: "What AI features are included in each plan?",
       answer:
-        "All plans include: AI video clipping (extracts 10+ shareable moments), story video generation (sequences clips with transitions), professional audio enhancement (8-stage processing), platform optimization (auto-resize for each social platform), and sentiment-based moment detection. Growth+ plans add B-roll overlay, custom intro/outro, and background music mixing.",
+        "All plans include: AI highlight extraction (9 types), video clipping (10 clips/video on Starter), story video generation, automatic transcription, platform optimization for 6+ social platforms, sentiment analysis, and AI content generation. Growth adds B-roll, custom branding, and team collaboration. Pro unlocks unlimited processing and white-label options.",
     },
     {
-      question: "How does content generation work?",
+      question: "How does AI content generation work?",
       answer:
-        "Our AI analyzes your testimonial and automatically generates 13+ content formats: blog posts, social media posts (LinkedIn, Twitter, Instagram), email campaigns, case studies, ad copy, and more. Each piece is customized for the platform and maintains the authentic voice of your customer.",
+        "Our AI analyzes your testimonial and generates content in 13+ formats: LinkedIn posts, Twitter threads, email campaigns, blog posts, case studies, ad copy, and more. Each piece is platform-optimized and maintains your customer's authentic voice. Starter gets 5 pieces per video, Growth gets more, and Pro has unlimited generation.",
     },
     {
-      question: "Can I use this for multiple clients/brands?",
+      question: "Can I use this for multiple clients or brands?",
       answer:
-        "Yes! The Pro plan includes multi-workspace support, perfect for agencies managing multiple clients. Each workspace has separate branding, content, and team members. You can also white-label the platform to match your agency branding.",
+        "Yes! The Pro plan includes 3 workspaces, perfect for agencies managing multiple clients. Enterprise offers unlimited workspaces. Each workspace has separate branding, content, team members, and white-label options for Pro/Enterprise plans.",
     },
     {
-      question: "What social media platforms are supported?",
+      question: "What social platforms can I post to?",
       answer:
-        "We support LinkedIn, Twitter, Facebook, Instagram, TikTok, and YouTube. Our platform optimization automatically resizes, crops, and formats your content for each platform's requirements. Growth+ plans include social media scheduling and auto-posting.",
+        "We support LinkedIn, Twitter, Facebook, Instagram, TikTok, and YouTube. Platform optimization auto-formats your content for each network. Growth and Pro plans include LinkedIn auto-posting and scheduling. You can export content for manual posting to any platform.",
     },
     {
       question: "Is there an API for custom integrations?",
       answer:
-        "Yes! Pro and Enterprise plans include full API access. You can integrate with your existing tools, automate workflows, and build custom solutions on top of our platform. We provide comprehensive API documentation and webhooks for real-time updates.",
+        "Yes! Pro plans include 10,000 API calls/month with full REST API access and webhook support. Enterprise plans offer unlimited API calls, custom integrations (Salesforce, HubSpot, etc.), and dedicated technical support for building on our platform.",
     },
   ];
 
@@ -426,7 +481,7 @@ const PricingPage: React.FC = () => {
     <>
       <SEO
         title="Pricing - Testimonial Content Operations Platform | Cenphi"
-        description="Transform testimonials into 10+ marketing assets automatically. Plans start at $99/mo with 14-day free trial. No credit card required."
+        description="Transform testimonials into AI-powered marketing content. Plans from $22/mo: 15-60 videos/month with AI clipping, content generation & LinkedIn automation. 14-day free trial."
         keywords="testimonial software pricing, video testimonial platform cost, AI content generation pricing, social media automation pricing"
         url={pageSEO.pricing.url}
       />
@@ -442,12 +497,13 @@ const PricingPage: React.FC = () => {
               transition={{ duration: 0.5 }}
             >
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">
-                Turn testimonials into revenue-driving content
+                Simple, transparent pricing for every team size
               </h1>
               <p className="text-sm sm:text-base text-gray-600 mb-6">
-                Choose the plan that fits your needs. All plans include AI video
-                processing, content generation, and analytics. Start with a
-                14-day free trial.
+                All plans include AI video clipping, content generation,
+                platform optimization, and analytics. Start with 15 videos/month
+                or scale to unlimited. 14-day free trial, no credit card
+                required.
               </p>
             </motion.div>
 
@@ -493,14 +549,14 @@ const PricingPage: React.FC = () => {
 
         {/* Pricing Cards */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-16">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
             {pricingTiers.map((tier, index) => (
               <motion.div
                 key={tier.id}
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
-                className={`bg-white rounded-xl border-2 transition-all duration-300 hover:shadow-xl ${
+                className={`bg-white rounded-xl border-2 transition-all duration-300 hover:shadow-xl self-start ${
                   tier.popular
                     ? "border-blue-500 shadow-lg relative"
                     : "border-gray-200 hover:border-gray-300"
@@ -579,24 +635,57 @@ const PricingPage: React.FC = () => {
                     )}
                   </button>
 
-                  {/* Limits */}
+                  {/* Limits - Comprehensive View */}
                   <div className="mb-5 pb-5 border-b border-gray-100">
+                    <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                      Monthly Limits
+                    </p>
                     <div className="space-y-2 text-xs">
-                      <div className="flex items-center gap-2">
-                        <MessageSquare className="w-3.5 h-3.5 text-gray-400" />
-                        <span className="text-gray-700">
-                          {tier.limits.testimonials}
-                        </span>
+                      <div className="flex items-start gap-2">
+                        <Video className="w-3.5 h-3.5 text-blue-500 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1">
+                          <span className="text-gray-700 font-medium block">
+                            {tier.limits.testimonials}
+                          </span>
+                          {tier.limits.videoProcessing && (
+                            <span className="text-[10px] text-gray-500">
+                              {tier.limits.videoProcessing}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
+
+                      {tier.limits.aiClips && (
+                        <div className="flex items-start gap-2">
+                          <FileText className="w-3.5 h-3.5 text-purple-500 mt-0.5 flex-shrink-0" />
+                          <div className="flex-1">
+                            <span className="text-gray-700 font-medium block">
+                              {tier.limits.aiClips}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {tier.limits.contentGeneration && (
+                        <div className="flex items-start gap-2">
+                          <Share2 className="w-3.5 h-3.5 text-green-500 mt-0.5 flex-shrink-0" />
+                          <div className="flex-1">
+                            <span className="text-gray-700 font-medium block">
+                              {tier.limits.contentGeneration}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-2 pt-2 border-t border-gray-50">
                         <Folder className="w-3.5 h-3.5 text-gray-400" />
-                        <span className="text-gray-700">
+                        <span className="text-gray-600">
                           {tier.limits.storage}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Users className="w-3.5 h-3.5 text-gray-400" />
-                        <span className="text-gray-700">
+                        <span className="text-gray-600">
                           {tier.limits.teamMembers}
                         </span>
                       </div>
@@ -662,29 +751,48 @@ const PricingPage: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Show More Button */}
-                    {showAllFeatures !== tier.id && (
-                      <button
-                        onClick={() => setShowAllFeatures(tier.id)}
-                        className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 mt-3"
-                      >
-                        View all features
-                        <ChevronDown className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-
                     {/* Expanded Features */}
                     {showAllFeatures === tier.id && (
                       <motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
                         className="space-y-3 pt-3 border-t border-gray-100"
                       >
+                        {/* Remaining Video Processing Features */}
+                        {tier.features.videoProcessing.length > 4 && (
+                          <div>
+                            <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                              More Video AI
+                            </p>
+                            <div className="space-y-2">
+                              {tier.features.videoProcessing
+                                .slice(4)
+                                .map((feature, i) => (
+                                  <div
+                                    key={i}
+                                    className="flex items-start gap-1.5"
+                                  >
+                                    {feature.included ? (
+                                      <Check className="w-3.5 h-3.5 text-blue-600 mt-0.5 flex-shrink-0" />
+                                    ) : (
+                                      <div className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                                    )}
+                                    <span
+                                      className={`text-xs ${feature.included ? "text-gray-700" : "text-gray-400"}`}
+                                    >
+                                      {feature.text}
+                                    </span>
+                                  </div>
+                                ))}
+                            </div>
+                          </div>
+                        )}
+
                         {/* Content Management */}
                         <div>
                           <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                            <FileText className="w-3 h-3 inline mr-1" />
-                            Content Management
+                            Content & Distribution
                           </p>
                           <div className="space-y-2">
                             {tier.features.contentManagement.map(
@@ -699,11 +807,7 @@ const PricingPage: React.FC = () => {
                                     <div className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
                                   )}
                                   <span
-                                    className={`text-xs ${
-                                      feature.included
-                                        ? "text-gray-700"
-                                        : "text-gray-400"
-                                    }`}
+                                    className={`text-xs ${feature.included ? "text-gray-700" : "text-gray-400"}`}
                                   >
                                     {feature.text}
                                   </span>
@@ -716,8 +820,7 @@ const PricingPage: React.FC = () => {
                         {/* Analytics */}
                         <div>
                           <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                            <BarChart3 className="w-3 h-3 inline mr-1" />
-                            Analytics
+                            Analytics & Insights
                           </p>
                           <div className="space-y-2">
                             {tier.features.analytics.map((feature, i) => (
@@ -728,11 +831,7 @@ const PricingPage: React.FC = () => {
                                   <div className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
                                 )}
                                 <span
-                                  className={`text-xs ${
-                                    feature.included
-                                      ? "text-gray-700"
-                                      : "text-gray-400"
-                                  }`}
+                                  className={`text-xs ${feature.included ? "text-gray-700" : "text-gray-400"}`}
                                 >
                                   {feature.text}
                                 </span>
@@ -741,27 +840,25 @@ const PricingPage: React.FC = () => {
                           </div>
                         </div>
 
-                        {/* Team & Support */}
+                        {/* Team Collaboration */}
                         <div>
-                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
-                            <Shield className="w-3 h-3 inline mr-1" />
+                          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-2">
                             Team & Support
                           </p>
-                          <div className="space-y-2.5">
+                          <div className="space-y-2">
                             {tier.features.teamCollaboration.map(
                               (feature, i) => (
-                                <div key={i} className="flex items-start gap-2">
+                                <div
+                                  key={i}
+                                  className="flex items-start gap-1.5"
+                                >
                                   {feature.included ? (
-                                    <Check className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                                    <Check className="w-3.5 h-3.5 text-blue-600 mt-0.5 flex-shrink-0" />
                                   ) : (
-                                    <div className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                                    <div className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
                                   )}
                                   <span
-                                    className={`text-sm ${
-                                      feature.included
-                                        ? "text-gray-700"
-                                        : "text-gray-400"
-                                    }`}
+                                    className={`text-xs ${feature.included ? "text-gray-700" : "text-gray-400"}`}
                                   >
                                     {feature.text}
                                   </span>
@@ -770,16 +867,29 @@ const PricingPage: React.FC = () => {
                             )}
                           </div>
                         </div>
-
-                        <button
-                          onClick={() => setShowAllFeatures(null)}
-                          className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 mt-4"
-                        >
-                          Show less
-                          <ChevronDown className="w-4 h-4 rotate-180" />
-                        </button>
                       </motion.div>
                     )}
+
+                    {/* See More/Less Button */}
+                    <button
+                      onClick={() =>
+                        setShowAllFeatures(
+                          showAllFeatures === tier.id ? null : tier.id
+                        )
+                      }
+                      className="w-full text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center justify-center gap-1 mt-4 py-2 border-t border-gray-100"
+                    >
+                      {showAllFeatures === tier.id ? (
+                        <>
+                          See Less <ChevronUp className="w-3.5 h-3.5" />
+                        </>
+                      ) : (
+                        <>
+                          See All Features{" "}
+                          <ChevronDown className="w-3.5 h-3.5" />
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
               </motion.div>

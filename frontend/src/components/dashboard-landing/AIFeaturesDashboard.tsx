@@ -33,8 +33,7 @@ const AIFeaturesDashboard: React.FC = observer(() => {
     (t) =>
       (t.sentiment_score >= 0.7 ||
         (t.sentiment_score > 0.5 && (t.rating || 0) >= 4)) &&
-      t.type === "video" &&
-      t.artifacts?.some((a) => a.processing_type === "highlight_extraction")
+      t.type === "video"
   );
 
   const hasQualityTestimonials = testimonials.some(
@@ -158,11 +157,17 @@ const AIFeaturesDashboard: React.FC = observer(() => {
                   </div>
                   <div className="text-xs text-slate-600">
                     {!hasVideoTestimonials && !hasQualityTestimonials ? (
-                      <p>Add video testimonials to unlock story generation and content tools</p>
+                      <p>
+                        Add video testimonials to unlock story generation and
+                        content tools
+                      </p>
                     ) : !hasVideoTestimonials ? (
                       <p>Add video testimonials for story generation</p>
                     ) : (
-                      <p>Collect more testimonials for advanced content generation</p>
+                      <p>
+                        Collect more testimonials for advanced content
+                        generation
+                      </p>
                     )}
                   </div>
                 </div>

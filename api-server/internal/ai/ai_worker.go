@@ -123,6 +123,7 @@ type AIQueueWorker struct {
 	workspaceRepo         repositories.WorkspaceRepository
 	testimonialRepo       repositories.TestimonialRepository
 	artifactRepo          repositories.TestimonialArtifactRepository
+	highlightRepo         repositories.HighlightRepository
 	jobRepo               repositories.JobRepository
 	activeCancelFunctions map[string]context.CancelFunc
 	mu                    sync.RWMutex
@@ -138,6 +139,7 @@ func NewAIQueueWorker(ctx context.Context,
 	workspaceRepo repositories.WorkspaceRepository,
 	testimonialRepo repositories.TestimonialRepository,
 	artifactRepo repositories.TestimonialArtifactRepository,
+	highlightRepo repositories.HighlightRepository,
 	jobRepo repositories.JobRepository,
 	logger *zap.Logger,
 	sseNotifier *sse.SSEManager,
@@ -157,6 +159,7 @@ func NewAIQueueWorker(ctx context.Context,
 		testimonialRepo:   testimonialRepo,
 		jobRepo:           jobRepo,
 		artifactRepo:      artifactRepo,
+		highlightRepo:     highlightRepo,
 
 		circuitBreaker: NewCircuitBreaker(5, 5*time.Minute, logger), // 3 failures, 5 min timeout
 		queues: []string{

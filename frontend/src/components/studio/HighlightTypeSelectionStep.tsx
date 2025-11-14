@@ -23,7 +23,6 @@ import { cn } from "@/lib/utils";
 import * as momentHelpers from "@/utils/momentHelpers";
 import { workspaceHub } from "@/repo/workspace_hub";
 import { authStore } from "@/stores/authStore";
-import { runInAction } from "mobx";
 import { observer } from "mobx-react-lite";
 
 interface HighlightTypeSelectionStepProps {
@@ -223,28 +222,21 @@ const HighlightTypeSelectionStep: React.FC<HighlightTypeSelectionStepProps> = ({
 
       if (response.status === 200) {
         console.log("Highlights generated successfully");
-        const data = await response.json();
-        console.log("Generation response data:", data);
-        runInAction(() => {
-          workspaceHub.testimonialManager.testimonial = {
-            ...(workspaceHub.testimonialManager.testimonial as any),
-            artifacts: [
-              ...(workspaceHub.testimonialManager.testimonial?.artifacts || []),
-              data,
-            ],
-          };
-        });
+        const highlights = await response.json();
+        console.log("Generation response data (highlights):", highlights);
+
+        // Highlights are now saved to testimonial_highlights table
+        // Refresh testimonial to get new highlights
+        await workspaceHub.testimonialManager.fetchTestimonial(
+          testimonial.id,
+          false
+        );
+
+        console.log("[HighlightTypeSelectionStep] Testimonial refreshed after highlight generation");
+
+        // Mark type as available to update UI
+        setAvailableTypes((prev) => new Set([...prev, type]));
       }
-
-      // Refresh testimonial to get new highlights
-      // IMPORTANT: Pass false to include artifacts
-      await workspaceHub.testimonialManager.fetchTestimonial(
-        testimonial.id,
-        false
-      );
-
-      // Mark type as available
-      setAvailableTypes((prev) => new Set([...prev, type]));
 
       console.log(
         "[HighlightTypeSelectionStep] Highlights generated and refreshed, proceeding to next step"

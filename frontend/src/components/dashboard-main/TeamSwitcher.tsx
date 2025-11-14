@@ -1,12 +1,11 @@
 import { useState } from "react";
-import { CheckIcon, ChevronsUpDown, Plus } from "lucide-react";
+import { CheckIcon, ChevronsUpDown } from "lucide-react";
 
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -18,14 +17,71 @@ import {
 } from "@/components/ui/sidebar";
 import { AnimatePresence, motion } from "framer-motion";
 
-export function TeamSwitcher({
-  teams,
-}: {
-  teams: { name: string; logo: React.ElementType; plan: string }[];
-}) {
+type TeamLogo = React.ElementType | string;
+
+interface Team {
+  name: string;
+  logo: TeamLogo;
+  plan: string;
+}
+
+export function TeamSwitcher({ teams }: { teams: Team[] }) {
   const { isMobile } = useSidebar();
   const [activeTeam, setActiveTeam] = useState(teams[0]);
   const [isOpen, setIsOpen] = useState(false);
+
+  // Helper to render logo (either component or image URL or fallback)
+  const renderLogo = (team: Team, containerSize: string = "size-20") => {
+    // If logo is a string (URL)
+    if (typeof team.logo === "string") {
+      return (
+        <div
+          className={`${containerSize} rounded-lg relative flex items-center justify-center p-3`}
+        >
+          {/* Subtle ring for contrast - barely visible but helps distinguish logo */}
+          <div className="absolute inset-0 rounded-lg ring-1 ring-black/5" />
+          <img
+            src={team.logo}
+            alt={`${team.name} logo`}
+            className="w-full h-full object-contain relative z-10"
+            style={{
+              filter: "drop-shadow(0 0 1px rgba(0,0,0,0.1))",
+            }}
+          />
+        </div>
+      );
+    }
+
+    // If logo is a React component
+    if (team.logo) {
+      const LogoComponent = team.logo;
+      return (
+        <div
+          className={`${containerSize} rounded-lg relative flex items-center justify-center p-3`}
+        >
+          {/* Subtle ring for contrast */}
+          <div className="absolute inset-0 rounded-lg ring-1 ring-black/5" />
+          <div
+            className="w-full h-full relative z-10"
+            style={{ filter: "drop-shadow(0 0 1px rgba(0,0,0,0.1))" }}
+          >
+            <LogoComponent className="w-full h-full" />
+          </div>
+        </div>
+      );
+    }
+
+    // Fallback: Show first letter of workspace name in a circle
+    const initial = team.name?.charAt(0)?.toUpperCase() || "W";
+    return (
+      <div
+        className={`${containerSize} rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-semibold`}
+        style={{ fontSize: "1.5rem" }}
+      >
+        {initial}
+      </div>
+    );
+  };
 
   return (
     <SidebarMenu>
@@ -38,11 +94,10 @@ export function TeamSwitcher({
                 className="group transition-all duration-300 hover:bg-sidebar-accent/40 data-[state=open]:bg-sidebar-accent/80 data-[state=open]:text-sidebar-accent-foreground rounded-xl"
               >
                 <motion.div
-                  className="flex aspect-square size-20 items-center justify-center shadow-md"
                   whileHover={{ scale: 1.05 }}
                   transition={{ type: "spring", stiffness: 300, damping: 20 }}
                 >
-                  <activeTeam.logo className="size-8" />
+                  {renderLogo(activeTeam, "size-16")}
                 </motion.div>
                 <div className="grid flex-1 text-left text-sm leading-tight pl-2">
                   <AnimatePresence mode="wait">
@@ -91,19 +146,8 @@ export function TeamSwitcher({
                       : "hover:bg-dropdown-hover"
                   }`}
                 >
-                  <motion.div
-                    className={`flex size-12 items-center justify-center rounded-lg ${
-                      activeTeam.name === team.name
-                        ? " shadow-md"
-                        : "border border-dropdown-border"
-                    }`}
-                    whileHover={{ scale: 1.05 }}
-                  >
-                    <team.logo
-                      className={`size-4 shrink-0 ${
-                        activeTeam.name === team.name ? "text-white" : ""
-                      }`}
-                    />
+                  <motion.div whileHover={{ scale: 1.05 }}>
+                    {renderLogo(team, "size-10")}
                   </motion.div>
                   <div className="flex flex-col">
                     <span className="font-medium">{team.name}</span>
@@ -133,15 +177,6 @@ export function TeamSwitcher({
                 </DropdownMenuItem>
               ))}
             </div>
-            <DropdownMenuSeparator className="my-1" />
-            <DropdownMenuItem className="gap-3 p-2.5 mx-1 my-1 rounded-lg hover:bg-dropdown-hover group">
-              <div className="flex size-8 items-center justify-center rounded-lg border border-dashed border-dropdown-border bg-dropdown-bg group-hover:border-dropdown-primary/50 transition-colors duration-200">
-                <Plus className="size-4 text-dropdown-muted group-hover:text-dropdown-primary" />
-              </div>
-              <div className="font-medium text-dropdown-muted group-hover:text-dropdown-foreground transition-colors duration-200">
-                Add team
-              </div>
-            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>

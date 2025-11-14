@@ -810,6 +810,7 @@ message AIOrderingResponse {
   string ordering_rationale = 2; // AI explanation of why this order makes sense
   double confidence_score = 3; // 0.0-1.0 confidence in ordering quality
   string error = 4;
+  repeated int32 semantic_gaps = 5; // AI-detected semantic gaps for context card insertion
 }
 
 message AssembleDraftRequest {
@@ -820,6 +821,7 @@ message AssembleDraftRequest {
   double transition_duration = 5; // Duration in seconds
   string job_id = 6;
   bool upload_intermediate = 7; // true = upload assembled video for preview
+  repeated int32 semantic_gaps = 8; // Indices where semantic gaps exist between consecutive clips (for context cards)
 }
 
 message CollectAndAssembleClipsRequest {
@@ -832,6 +834,7 @@ message CollectAndAssembleClipsRequest {
   repeated ClipInfo existing_clips = 7; // Already-extracted clips with metadata
   double transition_duration = 8; // Duration in seconds
   string transition_type = 9; // "fade", "dissolve", "wipe", "slideright", "slidedown", "none"
+  repeated int32 semantic_gaps = 10; // Indices where semantic gaps exist between consecutive clips (for context cards)
 }
 
 message AssembleDraftResponse {

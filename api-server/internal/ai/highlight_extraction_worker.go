@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/ifeanyidike/cenphi/internal/models"
@@ -181,23 +182,52 @@ func (qw *AIQueueWorker) handleTestimonialHighlightExtraction(ctx context.Contex
 		return nil
 	}
 
-	// Save highlights artifact
-	artifact_id, err := qw.aiService.ArtifactsRepo.CreateArtifactWithLineage(ctx, "highlight_extraction", workspaceID, &testimonialID, models.JSONMap{
-		"highlights":           highlights,
-		"max_highlights":       req.MaxHighlights,
-		"min_importance_score": req.MinImportanceScore,
-		"highlight_type":       "general",
-	}, models.CreateArtifactSourceParams{Type: models.NoTypeSource}, nil, qw.db)
+	// Convert highlights to JSONArray for storage
+	highlightsJSON := models.JSONArray{}
+	if err := json.Unmarshal([]byte(fmt.Sprintf("%v", highlights)), &highlightsJSON); err != nil {
+		// If direct conversion fails, marshal then unmarshal
+		highlightsBytes, marshalErr := json.Marshal(highlights)
+		if marshalErr != nil {
+			qw.logger.Error("Failed to marshal highlights", zap.Error(marshalErr))
+			return qw.respondWithFailure(ctx, serviceID, req.JobID, "failed to save highlights", marshalErr)
+		}
+		if err := json.Unmarshal(highlightsBytes, &highlightsJSON); err != nil {
+			qw.logger.Error("Failed to unmarshal highlights", zap.Error(err))
+			return qw.respondWithFailure(ctx, serviceID, req.JobID, "failed to save highlights", err)
+		}
+	}
 
-	if err != nil {
-		qw.logger.Error("Failed to save highlights artifact", zap.Error(err), zap.String("testimonialID", req.TestimonialID))
+	// Create TestimonialHighlight record
+	highlight := &models.TestimonialHighlight{
+		TestimonialID:  testimonialID,
+		WorkspaceID:    workspaceID,
+		HighlightType:  "general",
+		ExtractionMode: "standalone", // Default extraction mode for general highlights
+		Moments:        highlightsJSON,
+		MomentCount:    len(highlights),
+		TotalDuration:  totalDuration, // Already calculated above in seconds
+		ProcessingMetadata: models.JSONMap{
+			"ai_model":             "claude-3-5-sonnet",
+			"max_highlights":       req.MaxHighlights,
+			"min_importance_score": req.MinImportanceScore,
+			"processed_at":         fmt.Sprintf("%v", time.Now()),
+			"duration_breakdown":   durationBreakdown,
+		},
+	}
+
+	// Save highlight using new repository
+	if err := qw.highlightRepo.Upsert(ctx, highlight, qw.db); err != nil {
+		qw.logger.Error("Failed to save highlight", zap.Error(err), zap.String("testimonialID", req.TestimonialID))
+		return qw.respondWithFailure(ctx, serviceID, req.JobID, "failed to save highlights", err)
 	}
 
 	response := map[string]interface{}{
-		"highlights":     highlights,
-		"artifact_id":    artifact_id,
-		"testimonial_id": req.TestimonialID,
-		"job_type":       "highlight_extraction",
+		"highlights":      highlights,
+		"highlight_id":    highlight.ID.String(),
+		"testimonial_id":  req.TestimonialID,
+		"highlight_type":  "general",
+		"extraction_mode": "standalone",
+		"job_type":        "highlight_extraction",
 	}
 
 	// Update testimonial processing_status to "completed" (last job finishing)

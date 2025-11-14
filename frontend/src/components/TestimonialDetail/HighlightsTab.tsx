@@ -9,15 +9,11 @@ import { notification } from "antd";
 import VideoPlayer from "./HighlightVideoPlayer";
 import { Segment } from "@/types/ai-service";
 import { HIGHLIGHT_TYPES, HighlightType } from "@/utils/highlights";
-import { TestimonialArtifact, Testimonial } from "@/types/testimonial";
-import {
-  getAvailableHighlightTypes as getAvailableTypesFromTestimonial,
-  parseMomentsFromArtifacts,
-} from "@/utils/momentHelpers";
 
 interface HighlightsTabProps {
   testimonialId: string;
-  artifacts: TestimonialArtifact[];
+  highlights: any[]; // Array of TestimonialHighlight from testimonial_highlights table
+  loading?: boolean; // Loading state for on-demand highlights fetch
   videoUrl: string;
   processingStatus?: string;
   onGenerateHighlights: (type: HighlightType) => Promise<void>;
@@ -261,8 +257,7 @@ const HighlightTypeSection = ({
 
 // Main Highlights Tab Component
 const HighlightsTab = ({
-  testimonialId,
-  artifacts,
+  highlights,
   videoUrl,
   processingStatus,
   onGenerateHighlights,
@@ -392,19 +387,40 @@ const HighlightsTab = ({
     }
   };
 
-  // Parse all moments from artifacts using momentHelpers
+  // Parse all moments from highlights (from testimonial_highlights table)
   // Use JSON.stringify for stable dependency comparison
-  const artifactsJson = JSON.stringify(artifacts);
+  const highlightsJson = JSON.stringify(highlights);
   const allMoments = useMemo(() => {
-    return parseMomentsFromArtifacts(artifacts);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [artifactsJson]);
+    const moments: any[] = [];
 
-  // Get available types
-  const availableTypes = getAvailableTypesFromTestimonial({
-    id: testimonialId,
-    artifacts: artifacts,
-  } as Testimonial) as HighlightType[];
+    // Extract moments from each highlight
+    highlights.forEach((highlight: any) => {
+      if (highlight.moments && Array.isArray(highlight.moments)) {
+        highlight.moments.forEach((moment: any) => {
+          moments.push({
+            ...moment,
+            id: moment.id || `${highlight.id}-${moment.start_time}`,
+            type: highlight.highlight_type, // e.g., "general", "problem", "solution"
+            start_time: moment.start_time * 1000, // Convert seconds to milliseconds for consistency
+            end_time: moment.end_time * 1000,
+            text: moment.text,
+            theme: moment.theme,
+            importance_score:
+              moment.importance_score || moment.engagement_score,
+          });
+        });
+      }
+    });
+
+    return moments;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [highlightsJson]);
+
+  // Get available types from highlights
+  const availableTypes = useMemo(() => {
+    const types = highlights.map((h: any) => h.highlight_type);
+    return [...new Set(types)];
+  }, [highlights]) as HighlightType[];
 
   // Map "general" to "highlights" to match HIGHLIGHT_TYPES keys
   const normalizedAvailableTypes = availableTypes.map((type: any) =>

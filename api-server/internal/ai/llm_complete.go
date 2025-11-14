@@ -17,12 +17,7 @@ import (
 func (ai AIClient) Complete(ctx context.Context, prompt, systemPrompt string) (string, error) {
 	// Try OpenAI first
 	response, err := ai.callOpenAI(ctx, prompt, systemPrompt)
-	if err != nil {
-		fmt.Printf("open ai returned with err %s\n", err)
-	}
-
 	if err == nil {
-		fmt.Println("open ai response", response)
 		return response, nil
 	}
 
@@ -171,29 +166,24 @@ func (s AIClient) callOpenAI(ctx context.Context, prompt, systemPrompt string) (
 }
 
 func (s AIClient) callClaude(ctx context.Context, prompt, systemPrompt string) (string, error) {
-	fmt.Println("calling claude")
 	resp, err := s.makeClaudeCall(ctx, prompt, systemPrompt, false)
 	if err != nil {
-		fmt.Printf("an error occurred when making claude call %s\n", err)
 		return "", err
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		fmt.Printf("claude failed with status %s\n", resp.Status)
-		// Read error response body
-		body, _ := io.ReadAll(resp.Body)
-		fmt.Printf("claude error response: %s\n", string(body))
+		// Read and discard error response body
+		io.ReadAll(resp.Body)
+		resp.Body.Close()
 		return "", fmt.Errorf("claude API error: %s", resp.Status)
 	}
 	defer resp.Body.Close()
 
-	// Read response body first for debugging
+	// Read response body
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", fmt.Errorf("failed to read response body: %w", err)
 	}
-
-	fmt.Printf("Claude raw response: %s\n", string(body))
 
 	// Correct Claude API v3 response structure
 	var response struct {
@@ -216,18 +206,14 @@ func (s AIClient) callClaude(ctx context.Context, prompt, systemPrompt string) (
 	}
 
 	if err := json.Unmarshal(body, &response); err != nil {
-		fmt.Printf("error occurred when decoding claude json %s\n", err)
-		fmt.Printf("response body was: %s\n", string(body))
 		return "", fmt.Errorf("failed to decode Claude response: %w", err)
 	}
 
 	if response.Error.Message != "" {
-		fmt.Printf("error occurred in claude message %s", response.Error.Message)
 		return "", fmt.Errorf("claude error: %s", response.Error.Message)
 	}
 
 	if len(response.Content) == 0 {
-		fmt.Println("claude: no completion generated")
 		return "", fmt.Errorf("no completion generated")
 	}
 

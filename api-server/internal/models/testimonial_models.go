@@ -140,6 +140,7 @@ type Testimonial struct {
 
 	// Collection metadata
 	SentimentScore   float32 `json:"sentiment_score" db:"sentiment_score"`
+	SentimentData    JSONMap `json:"sentiment_data" db:"sentiment_data"` // Full sentiment analysis data
 	CollectionMethod string  `json:"collection_method" db:"collection_method"`
 	Metadata         JSONMap `json:"metadata" db:"metadata"`
 
@@ -162,8 +163,9 @@ type Testimonial struct {
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 
 	// Relationships
-	Workspace *Workspace            `json:"workspace,omitempty" db:"_"`
-	Artifacts []TestimonialArtifact `json:"artifacts,omitempty" db:"-"`
+	Workspace  *Workspace              `json:"workspace,omitempty" db:"_"`
+	Artifacts  []TestimonialArtifact   `json:"artifacts,omitempty" db:"-"`
+	Highlights []TestimonialHighlight  `json:"highlights,omitempty" db:"-"`
 }
 
 type TestimonialAIData struct {
@@ -188,7 +190,7 @@ type TestimonialArtifact struct {
 	TestimonialID *uuid.UUID `db:"testimonial_id" json:"testimonial_id"`
 	WorkspaceID   uuid.UUID  `db:"workspace_id" json:"workspace_id"`
 
-	ProcessingType string `db:"processing_type" json:"processing_type"` // e.g. sentiment_analysis
+	ProcessingType string `db:"processing_type" json:"processing_type"` // e.g. clipping, story_mode_generation
 	ResultCategory string `db:"result_category" json:"result_category"` // e.g. analysis, content
 
 	TextContent  *string  `db:"text_content" json:"text_content,omitempty"` // nullable
@@ -216,6 +218,28 @@ type TestimonialArtifact struct {
 	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 
 	ArtifactSources []ArtifactSource `json:"artifact_sources,omitempty" db:"-"`
+}
+
+// TestimonialHighlight represents extracted highlight moments from a testimonial
+// Supports dual extraction modes: standalone (for clips) and story_video (for story assembly)
+type TestimonialHighlight struct {
+	ID            uuid.UUID `db:"id" json:"id"`
+	TestimonialID uuid.UUID `db:"testimonial_id" json:"testimonial_id"`
+	WorkspaceID   uuid.UUID `db:"workspace_id" json:"workspace_id"`
+
+	HighlightType  string `db:"highlight_type" json:"highlight_type"`   // general, problem, solution, results, etc.
+	ExtractionMode string `db:"extraction_mode" json:"extraction_mode"` // standalone | story_video
+
+	Moments       JSONArray `db:"moments" json:"moments"`                           // Array of HighlightMoment objects
+	StoryMetadata JSONMap   `db:"story_metadata" json:"story_metadata,omitempty"`   // Story-specific metadata
+
+	ProcessingMetadata JSONMap `db:"processing_metadata" json:"processing_metadata"` // AI model, processing time, etc.
+
+	MomentCount   int     `db:"moment_count" json:"moment_count"`
+	TotalDuration float64 `db:"total_duration" json:"total_duration"`
+
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }
 
 type ArtifactSource struct {

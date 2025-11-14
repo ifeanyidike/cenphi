@@ -57,6 +57,16 @@ const TestimonialCard = ({
   };
 
   const getSentimentLabel = (score: number) => {
+    // Prefer sentiment_data.label if available
+    if (testimonial.sentiment_data?.label) {
+      const label = testimonial.sentiment_data.label;
+      // Map AI labels to display labels
+      if (label === "very_positive" || label === "positive") return "Positive";
+      if (label === "neutral") return "Neutral";
+      if (label === "negative" || label === "very_negative") return "Negative";
+    }
+
+    // Fallback to score-based calculation
     if (score >= 0.7) return "Positive";
     if (score >= 0.4) return "Neutral";
     return "Negative";
@@ -125,7 +135,8 @@ const TestimonialCard = ({
   const artifacts = testimonial.artifacts || [];
   // For transcription, check testimonial.content directly (not artifacts)
   const hasTranscript = isVideoTestimonial && !!testimonial.content;
-  const hasSentiment = artifacts.some(a => a.processing_type === "sentiment_analysis");
+  // Sentiment is now in testimonial.sentiment_data (not artifacts)
+  const hasSentiment = !!testimonial.sentiment_data;
   const hasHighlights = artifacts.some(a => a.processing_type === "highlight_extraction");
 
   // Determine if jobs should be running (video testimonials need transcription, all need sentiment/highlights)

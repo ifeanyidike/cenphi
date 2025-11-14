@@ -47,6 +47,7 @@ import { socialManager, SocialPost } from "@/repo/managers/social_manager";
 import { workspaceHub } from "@/repo/workspace_hub";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 const SchedulingPage = observer(() => {
   const [activeTab, setActiveTab] = useState<string>("all");
@@ -57,6 +58,13 @@ const SchedulingPage = observer(() => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [platformFilter, setPlatformFilter] = useState<string>("all");
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    isOpen: boolean;
+    postId: string | null;
+  }>({
+    isOpen: false,
+    postId: null,
+  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -106,11 +114,18 @@ const SchedulingPage = observer(() => {
     }
   };
 
-  const handleDeletePost = async (postId: string) => {
-    if (!window.confirm("Are you sure you want to delete this post?")) return;
+  const handleDeleteClick = (postId: string) => {
+    setDeleteConfirm({
+      isOpen: true,
+      postId,
+    });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfirm.postId) return;
 
     try {
-      await socialManager.deletePost(postId);
+      await socialManager.deletePost(deleteConfirm.postId);
       toast({
         title: "Success",
         description: "Post deleted successfully",
@@ -433,7 +448,7 @@ const SchedulingPage = observer(() => {
                   setSelectedPost(post);
                   setIsEditDialogOpen(true);
                 }}
-                onDelete={handleDeletePost}
+                onDelete={handleDeleteClick}
                 formatDateTime={formatDateTime}
                 getStatusBadge={getStatusBadge}
               />
@@ -457,6 +472,17 @@ const SchedulingPage = observer(() => {
           </DialogContent>
         </Dialog>
       )}
+
+      <ConfirmDialog
+        isOpen={deleteConfirm.isOpen}
+        onClose={() => setDeleteConfirm({ isOpen: false, postId: null })}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Post"
+        message="Are you sure you want to delete this post? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+      />
     </div>
   );
 });

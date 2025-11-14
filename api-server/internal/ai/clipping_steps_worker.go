@@ -25,6 +25,7 @@ type ClippingStepsWorker struct {
 	testimonialRepo    repositories.TestimonialRepository
 	workspaceRepo      repositories.WorkspaceRepository
 	artifactsRepo      repositories.TestimonialArtifactRepository
+	highlightRepo      repositories.HighlightRepository
 	tempStorageService *storage.TempStorageService
 	storageProvider    storage.Provider
 	sseManager         *sse.SSEManager
@@ -39,6 +40,7 @@ func NewClippingStepsWorker(
 	testimonialRepo repositories.TestimonialRepository,
 	workspaceRepo repositories.WorkspaceRepository,
 	artifactsRepo repositories.TestimonialArtifactRepository,
+	highlightRepo repositories.HighlightRepository,
 	tempStorageService *storage.TempStorageService,
 	storageProvider storage.Provider,
 	sseManager *sse.SSEManager,
@@ -52,6 +54,7 @@ func NewClippingStepsWorker(
 		testimonialRepo:    testimonialRepo,
 		workspaceRepo:      workspaceRepo,
 		artifactsRepo:      artifactsRepo,
+		highlightRepo:      highlightRepo,
 		tempStorageService: tempStorageService,
 		storageProvider:    storageProvider,
 		sseManager:         sseManager,
@@ -94,44 +97,18 @@ func (w *ClippingStepsWorker) HandleGenerateHighlights(ctx context.Context, step
 		zap.String("highlight_type", highlightType),
 		zap.String("testimonial_id", stepCtx.TestimonialID.String()))
 
-	// PATH 2: Check if highlights already exist in artifacts DB
-	artifacts, err := w.artifactsRepo.GetHighlights(ctx, stepCtx.TestimonialID, w.db)
+	// PATH 2: Check if highlights already exist in new testimonial_highlights table
+	highlight, err := w.highlightRepo.GetByTestimonialAndType(ctx, stepCtx.TestimonialID, highlightType, "standalone", w.db)
 	if err != nil {
 		w.logger.Warn("Failed to check for existing highlights", zap.Error(err))
 	}
 
-	// Find the latest highlights artifact matching the requested type
-	var latestArtifact *models.TestimonialArtifact
-	for i := range artifacts {
-		a := &artifacts[i]
-		if a.ProcessingType == "highlight_extraction" {
-			// Check if this artifact matches the requested highlight type
-			if a.Data != nil {
-				if typeVal, ok := a.Data["highlight_type"]; ok {
-					if typeStr, ok := typeVal.(string); ok && typeStr == highlightType {
-						if latestArtifact == nil || a.CreatedAt.After(latestArtifact.CreatedAt) {
-							latestArtifact = a
-						}
-					}
-				} else if highlightType == "general" {
-					// If no type specified in artifact, assume it's general
-					if latestArtifact == nil || a.CreatedAt.After(latestArtifact.CreatedAt) {
-						latestArtifact = a
-					}
-				}
-			}
-		}
-	}
-
 	var existingHighlights []*pb.HighlightMoment
-	if latestArtifact != nil && latestArtifact.Data != nil {
-		if raw, ok := latestArtifact.Data["highlights"]; ok {
-			b, err := json.Marshal(raw)
-			if err == nil {
-				if err := json.Unmarshal(b, &existingHighlights); err != nil {
-					w.logger.Warn("Failed to unmarshal highlights from artifact", zap.Error(err))
-				}
-			}
+	if highlight != nil && highlight.Moments != nil {
+		// Parse the moments from JSONArray to []*pb.HighlightMoment
+		momentsBytes, _ := json.Marshal(highlight.Moments)
+		if err := json.Unmarshal(momentsBytes, &existingHighlights); err != nil {
+			w.logger.Warn("Failed to unmarshal highlights from database", zap.Error(err))
 		}
 	}
 
@@ -220,24 +197,39 @@ func (w *ClippingStepsWorker) HandleGenerateHighlights(ctx context.Context, step
 		return nil, fmt.Errorf("highlight generation failed: %w", err)
 	}
 
-	// Save highlights to artifacts DB
-	artifact := &models.TestimonialArtifact{
-		ID:             uuid.New(),
-		TestimonialID:  &stepCtx.TestimonialID,
-		WorkspaceID:    stepCtx.WorkspaceID,
-		ProcessingType: "highlight_extraction",
-		ResultCategory: "content",
-		Data: models.JSONMap{
-			"highlights":     highlightResult,
-			"highlight_type": highlightType,
-		},
-		ContentType: "highlights",
-		IsStreamed:  false,
-	}
+	// Save highlights to new testimonial_highlights table
+	if len(highlightResult) > 0 {
+		// Calculate total duration
+		var totalDuration float64
+		for _, h := range highlightResult {
+			totalDuration += (h.EndTime - h.StartTime) / 1000.0 // Convert ms to seconds
+		}
 
-	if err := w.artifactsRepo.Create(ctx, artifact, w.db); err != nil {
-		w.logger.Warn("Failed to save highlights artifact", zap.Error(err))
-		// Continue anyway, highlights are still in memory
+		// Convert highlights to JSONArray
+		highlightsJSON := models.JSONArray{}
+		highlightsBytes, _ := json.Marshal(highlightResult)
+		_ = json.Unmarshal(highlightsBytes, &highlightsJSON)
+
+		highlightRecord := &models.TestimonialHighlight{
+			TestimonialID:  stepCtx.TestimonialID,
+			WorkspaceID:    stepCtx.WorkspaceID,
+			HighlightType:  highlightType,
+			ExtractionMode: "standalone",
+			Moments:        highlightsJSON,
+			MomentCount:    len(highlightResult),
+			TotalDuration:  totalDuration,
+			ProcessingMetadata: models.JSONMap{
+				"ai_model":       "claude-3-5-sonnet",
+				"max_highlights": 5,
+				"generated_at":   time.Now().Format(time.RFC3339),
+				"context":        "clipping_workflow",
+			},
+		}
+
+		if err := w.highlightRepo.Upsert(ctx, highlightRecord, w.db); err != nil {
+			w.logger.Warn("Failed to save highlights", zap.Error(err))
+			// Continue anyway, highlights are still in memory
+		}
 	}
 
 	// Convert highlights to preview format

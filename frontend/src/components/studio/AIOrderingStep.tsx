@@ -83,7 +83,7 @@ const AIOrderingStep: React.FC<AIOrderingStepProps> = ({
     onComplete(orderedMoments);
   };
 
-  const totalDuration = orderedMoments.reduce((sum, m) => sum + m.duration, 0);
+  const totalDuration = orderedMoments.reduce((sum, m) => sum + (m.duration || m.end_time - m.start_time || 0), 0);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -226,7 +226,8 @@ const AIOrderingStep: React.FC<AIOrderingStepProps> = ({
           </div>
           <div className="flex items-center gap-2 overflow-x-auto pb-2">
             {orderedMoments.map((moment, index) => {
-              const widthPercent = (moment.duration / totalDuration) * 100;
+              const momentDuration = moment.duration || moment.end_time - moment.start_time || 0;
+              const widthPercent = (momentDuration / totalDuration) * 100;
               return (
                 <div
                   key={moment.id}
@@ -247,7 +248,7 @@ const AIOrderingStep: React.FC<AIOrderingStepProps> = ({
                     {index + 1}
                   </p>
                   <p className="text-[10px] text-slate-500">
-                    {formatTime(moment.duration / 1000)}
+                    {formatTime(momentDuration / 1000)}
                   </p>
                 </div>
               );
@@ -328,7 +329,7 @@ const AIOrderingStep: React.FC<AIOrderingStepProps> = ({
                             className="text-[10px] px-1.5 py-0.5 bg-slate-50 text-slate-600 border-slate-200"
                           >
                             <Clock className="h-2.5 w-2.5 mr-1" />
-                            {formatTime(moment.duration / 1000)}
+                            {formatTime((moment.duration || moment.end_time - moment.start_time || 0) / 1000)}
                           </Badge>
                         </div>
                       </div>

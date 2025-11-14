@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
@@ -11,6 +11,10 @@ import {
   Zap,
   FileVideo,
   Loader2,
+  AlertCircle,
+  Heart,
+  TrendingUp,
+  MessageSquare,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,7 +22,6 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -31,12 +34,18 @@ import { StudioContext } from "@/pages/Studio";
 import { studioAPI } from "@/services/studioAPI";
 import { workspaceHub } from "@/repo/workspace_hub";
 import { backgroundMusicOptions } from "@/components/studio/constants";
-import { HighlightMoment, TestimonialWithMoments } from "@/types/ai-service";
+import {
+  HighlightMoment,
+  TestimonialWithMoments,
+  HighlightType,
+} from "@/types/ai-service";
+import { cn } from "@/lib/utils";
 import MomentSelectionStep from "./MomentSelectionStep";
 import AIOrderingStep from "./AIOrderingStep";
 import HighlightTypeSelectionStep from "./HighlightTypeSelectionStep";
 import * as momentHelpers from "@/utils/momentHelpers";
 import { observer } from "mobx-react-lite";
+import { AlertDialog } from "@/components/ui/ConfirmDialog";
 import BrollConfigSection, {
   BrollConfig,
   BrollCache,
@@ -59,10 +68,79 @@ interface ProcessingStep {
 
 type ConfigStep =
   | "loading"
+  | "insufficient-highlights-fallback"
+  | "loading-fallback-highlights"
   | "select-highlight-type"
   | "select-moments"
   | "order-moments"
   | "configure-options";
+
+interface HighlightTypeOption {
+  id: HighlightType | "highlight";
+  name: string;
+  description: string;
+  icon: React.ReactNode;
+  color: string;
+}
+
+const HIGHLIGHT_TYPES: HighlightTypeOption[] = [
+  {
+    id: "general",
+    name: "General Highlights",
+    description: "Most engaging overall moments",
+    icon: <Sparkles className="h-4 w-4" />,
+    color: "blue",
+  },
+  {
+    id: "emotional",
+    name: "Emotional Peaks",
+    description: "Genuine excitement, relief, satisfaction",
+    icon: <Heart className="h-4 w-4" />,
+    color: "pink",
+  },
+  {
+    id: "problem",
+    name: "Problem Highlights",
+    description: "Pain points and challenges",
+    icon: <AlertCircle className="h-4 w-4" />,
+    color: "orange",
+  },
+  {
+    id: "solution",
+    name: "Solution Highlights",
+    description: "How they chose your solution",
+    icon: <Zap className="h-4 w-4" />,
+    color: "emerald",
+  },
+  {
+    id: "results",
+    name: "Results & Outcomes",
+    description: "Specific achievements",
+    icon: <TrendingUp className="h-4 w-4" />,
+    color: "purple",
+  },
+  {
+    id: "metrics",
+    name: "Metrics & Numbers",
+    description: "ROI, percentages, data points",
+    icon: <MessageSquare className="h-4 w-4" />,
+    color: "blue",
+  },
+  {
+    id: "recommendation",
+    name: "Recommendations",
+    description: "Direct endorsements",
+    icon: <Check className="h-4 w-4" />,
+    color: "emerald",
+  },
+  {
+    id: "before_after",
+    name: "Before & After",
+    description: "Transformation stories",
+    icon: <Clock className="h-4 w-4" />,
+    color: "purple",
+  },
+];
 
 const StoryVideoConfig: React.FC<StoryVideoConfigProps> = ({
   context,
@@ -85,7 +163,7 @@ const StoryVideoConfig: React.FC<StoryVideoConfigProps> = ({
   );
 
   // Configuration state
-  const [targetDuration, setTargetDuration] = useState<number>(60);
+  // Note: targetDuration is calculated from totalDuration, not set by user
   const [addIntro, setAddIntro] = useState<boolean>(true);
   const [addOutro, setAddOutro] = useState<boolean>(true);
   const [introText, setIntroText] = useState<string>("");
@@ -144,8 +222,18 @@ const StoryVideoConfig: React.FC<StoryVideoConfigProps> = ({
   ]);
 
   const [isStarting, setIsStarting] = useState(false);
+  const [validationAlert, setValidationAlert] = useState<{
+    isOpen: boolean;
+    message: string;
+  }>({
+    isOpen: false,
+    message: "",
+  });
   const [loadError, setLoadError] = useState<string | null>(null);
   // const [selectedHighlightType, setSelectedHighlightType] = useState<string>('highlight');
+  const [fallbackHighlightType, setFallbackHighlightType] = useState<
+    HighlightType | "highlight" | null
+  >(null);
 
   // Music configuration
   const [musicConfig, setMusicConfig] = useState({
@@ -209,159 +297,165 @@ const StoryVideoConfig: React.FC<StoryVideoConfigProps> = ({
     }
   }, []);
 
+  // Guard to prevent duplicate calls (React.StrictMode runs useEffect twice in dev)
+  const hasLoadedRef = useRef(false);
+
   // Load testimonials and extract moments based on context
   useEffect(() => {
+    if (hasLoadedRef.current) return;
+    hasLoadedRef.current = true;
     loadTestimonialsAndMoments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run once on mount
 
   const loadTestimonialsAndMoments = async () => {
     try {
-      console.log(
-        "[StoryVideoConfig] Starting to load moments, context:",
-        context
-      );
       setCurrentStep("loading");
       setLoadError(null);
 
       let testimonialsData: TestimonialWithMoments[] = [];
 
       if (context.type === "testimonial") {
-        console.log(
-          "[StoryVideoConfig] Loading single testimonial:",
-          context.testimonialId
-        );
+        try {
+          // Fetch testimonial for validation
+          const testimonial =
+            await workspaceHub.testimonialManager.fetchTestimonial(
+              context.testimonialId,
+              false
+            );
 
-        // For single testimonial, show highlight type selection first
-        // IMPORTANT: Must load artifacts to determine available highlight types
-        const testimonial =
-          await workspaceHub.testimonialManager.fetchTestimonial(
+          // Validate testimonial exists
+          if (!testimonial) {
+            setLoadError(
+              "The selected testimonial could not be found. It may have been deleted or moved to another workspace."
+            );
+            return;
+          }
+
+          // Validate testimonial is video type
+          if (testimonial.type !== "video") {
+            console.error(
+              "[StoryVideoConfig] Testimonial is not video type:",
+              testimonial.type
+            );
+            setLoadError(
+              "Story videos can only be created from video testimonials. This is a text testimonial."
+            );
+            return;
+          }
+
+          // Cache the testimonial
+          setCachedTestimonial(testimonial);
+          setCachedTestimonialId(testimonial.id);
+
+          const response = await studioAPI.getStoryVideoHighlights([
             context.testimonialId,
-            false // Load artifacts to check available highlight types
-          );
+          ]);
 
-        // Validate testimonial exists
-        if (!testimonial) {
+          if (response.testimonials && response.testimonials.length > 0) {
+            const testimonialHighlights = response.testimonials[0];
+            const storyVideoMoments = testimonialHighlights.highlights;
+
+            // Check if insufficient highlights (≤1)
+            if (storyVideoMoments.length <= 1) {
+              setLoadError(
+                `Only ${storyVideoMoments.length} story video highlight${storyVideoMoments.length === 1 ? "" : "s"} found. Story video requires at least 2 highlights to create a compelling narrative.`
+              );
+              setCurrentStep("insufficient-highlights-fallback");
+              return;
+            }
+
+            testimonialsData = [
+              {
+                id: testimonial.id,
+                author_name: testimonial.author_name,
+                author_company: testimonial.author_company,
+                media_url: testimonial.media_url || "",
+                rating: testimonial.rating,
+                sentiment_score: testimonial.sentiment_score,
+                moments: storyVideoMoments,
+              },
+            ];
+          }
+        } catch (apiError) {
           console.error(
-            "[StoryVideoConfig] Testimonial not found:",
-            context.testimonialId
+            "[StoryVideoConfig] Failed to load story_video highlights:",
+            apiError
           );
           setLoadError(
-            "The selected testimonial could not be found. It may have been deleted or moved to another workspace."
+            `Failed to load story video highlights: ${apiError instanceof Error ? apiError.message : "Please try again."}`
           );
           return;
         }
-
-        // Validate testimonial is video type
-        if (testimonial.type !== "video") {
-          console.error(
-            "[StoryVideoConfig] Testimonial is not video type:",
-            testimonial.type
-          );
-          setLoadError(
-            "Story videos can only be created from video testimonials. This is a text testimonial."
-          );
-          return;
-        }
-
-        // Cache the full testimonial object to avoid refetching
-        // Store both data and ID for validation
-        setCachedTestimonial(testimonial);
-        setCachedTestimonialId(testimonial.id);
-
-        // Store testimonial for highlight type selection
-        setTestimonialsWithMoments([
-          {
-            id: testimonial.id,
-            author_name: testimonial.author_name,
-            author_company: testimonial.author_company,
-            media_url: testimonial.media_url || "",
-            rating: testimonial.rating,
-            sentiment_score: testimonial.sentiment_score,
-            moments: [], // Will be loaded after highlight type selection
-          },
-        ]);
-
-        // Go to highlight type selection step
-        setCurrentStep("select-highlight-type");
-        return;
       } else if (context.type === "multi-testimonial") {
-        // Multiple testimonials - use all highlights from each
-        // IMPORTANT: Need artifacts to extract moments, so don't exclude them
-        const testimonials = await Promise.all(
-          context.testimonialIds.map((id) =>
-            workspaceHub.testimonialManager.fetchTestimonial(id, false)
-          )
-        );
+        // Multiple testimonials - fetch story_video highlights via API
 
-        // Validate all testimonials are video type
-        const nonVideoTestimonials = testimonials.filter(
-          (t) => t.type !== "video"
-        );
-        if (nonVideoTestimonials.length > 0) {
-          const nonVideoIds = nonVideoTestimonials.map((t) => t.id).join(", ");
-          console.error(
-            "[StoryVideoConfig] Non-video testimonials found:",
-            nonVideoIds
-          );
-          setLoadError(
-            `Story videos can only be created from video testimonials. Found ${nonVideoTestimonials.length} text testimonial(s). Please remove them and try again.`
-          );
-          return;
-        }
-
-        const testimonialsResult =
-          momentHelpers.getMomentsForMultipleTestimonials(testimonials);
-        testimonialsData = testimonialsResult.map((t) => ({
-          id: t.testimonial.id,
-          author_name: t.testimonial.author_name,
-          author_company: t.testimonial.author_company,
-          media_url: t.testimonial.media_url || "",
-          rating: t.testimonial.rating,
-          sentiment_score: t.testimonial.sentiment_score,
-          moments: t.moments,
-        }));
-      } else if (context.type === "best-moments") {
-        // Best moments - BestMomentsStoryGenerator already filtered and ranked
-        // We receive testimonialIds that have already been through extractBestMomentsFromTestimonials
-        // IMPORTANT: Do NOT re-filter or re-rank - trust the IDs provided
-        const allTestimonials =
-          workspaceHub.testimonialManager.testimonials || [];
-
-        if (!context.testimonialIds || context.testimonialIds.length === 0) {
-          // No IDs provided - run extraction ourselves
-          const best = momentHelpers.extractBestMomentsFromTestimonials(
-            allTestimonials,
-            4, // max 4 testimonials
-            undefined // no limit per testimonial
-          );
-
-          testimonialsData = best.map((t) => ({
-            id: t.testimonial.id,
-            author_name: t.testimonial.author_name,
-            author_company: t.testimonial.author_company,
-            media_url: t.testimonial.media_url || "",
-            rating: t.testimonial.rating,
-            sentiment_score: t.testimonial.sentiment_score,
-            moments: t.moments,
-          }));
-        } else {
-          // IDs provided - they're already filtered and ranked by BestMomentsStoryGenerator
-          // Just load the moments for those specific testimonials
+        try {
+          // Fetch testimonials for metadata and validation
           const testimonials = await Promise.all(
             context.testimonialIds.map((id) =>
               workspaceHub.testimonialManager.fetchTestimonial(id, false)
             )
           );
 
-          // Extract moments using the same criteria for consistency
-          const best = momentHelpers.extractBestMomentsFromTestimonials(
-            testimonials,
-            testimonials.length, // Keep all testimonials (already ranked)
-            undefined
+          // Validate all testimonials are video type
+          const nonVideoTestimonials = testimonials.filter(
+            (t) => t.type !== "video"
+          );
+          if (nonVideoTestimonials.length > 0) {
+            const nonVideoIds = nonVideoTestimonials
+              .map((t) => t.id)
+              .join(", ");
+            console.error(
+              "[StoryVideoConfig] Non-video testimonials found:",
+              nonVideoIds
+            );
+            setLoadError(
+              `Story videos can only be created from video testimonials. Found ${nonVideoTestimonials.length} text testimonial(s). Please remove them and try again.`
+            );
+            return;
+          }
+
+          // Fetch story_video highlights via API
+          const response = await studioAPI.getStoryVideoHighlights(
+            context.testimonialIds
           );
 
-          testimonialsData = best.map((t) => ({
+          // Map API response to testimonialsData format
+          testimonialsData = response.testimonials
+            .map((highlightData) => {
+              const testimonial = testimonials.find(
+                (t) => t.id === highlightData.testimonial_id
+              );
+              if (!testimonial) {
+                console.warn(
+                  `[StoryVideoConfig] Testimonial ${highlightData.testimonial_id} not found in fetched data`
+                );
+                return null;
+              }
+
+              return {
+                id: testimonial.id,
+                author_name: testimonial.author_name,
+                author_company: testimonial.author_company,
+                media_url: testimonial.media_url || "",
+                rating: testimonial.rating,
+                sentiment_score: testimonial.sentiment_score,
+                moments: highlightData.highlights,
+              };
+            })
+            .filter(Boolean) as TestimonialWithMoments[];
+        } catch {
+          // Fallback to local extraction if API fails
+          const testimonials = await Promise.all(
+            context.testimonialIds.map((id) =>
+              workspaceHub.testimonialManager.fetchTestimonial(id, false)
+            )
+          );
+
+          const testimonialsResult =
+            momentHelpers.getMomentsForMultipleTestimonials(testimonials);
+          testimonialsData = testimonialsResult.map((t) => ({
             id: t.testimonial.id,
             author_name: t.testimonial.author_name,
             author_company: t.testimonial.author_company,
@@ -370,6 +464,111 @@ const StoryVideoConfig: React.FC<StoryVideoConfigProps> = ({
             sentiment_score: t.testimonial.sentiment_score,
             moments: t.moments,
           }));
+        }
+      } else if (context.type === "best-moments") {
+        // Best moments - fetch story_video highlights via API
+        console.log(
+          "[StoryVideoConfig] Fetching story_video highlights via API for best moments:",
+          context.testimonialIds
+        );
+
+        try {
+          if (!context.testimonialIds || context.testimonialIds.length === 0) {
+            // No IDs provided - cannot proceed
+            setLoadError(
+              "No testimonial IDs provided for best moments. Please select testimonials first."
+            );
+            return;
+          }
+
+          // Fetch testimonials for metadata
+          const testimonials = await Promise.all(
+            context.testimonialIds.map((id) =>
+              workspaceHub.testimonialManager.fetchTestimonial(id, false)
+            )
+          );
+
+          // Fetch story_video highlights via API
+          const response = await studioAPI.getStoryVideoHighlights(
+            context.testimonialIds
+          );
+
+          // Map API response to testimonialsData format
+          testimonialsData = response.testimonials
+            .map((highlightData) => {
+              const testimonial = testimonials.find(
+                (t) => t.id === highlightData.testimonial_id
+              );
+              if (!testimonial) {
+                console.warn(
+                  `[StoryVideoConfig] Testimonial ${highlightData.testimonial_id} not found in fetched data`
+                );
+                return null;
+              }
+
+              return {
+                id: testimonial.id,
+                author_name: testimonial.author_name,
+                author_company: testimonial.author_company,
+                media_url: testimonial.media_url || "",
+                rating: testimonial.rating,
+                sentiment_score: testimonial.sentiment_score,
+                moments: highlightData.highlights,
+              };
+            })
+            .filter(Boolean) as TestimonialWithMoments[];
+        } catch (apiError) {
+          console.error(
+            "[StoryVideoConfig] API call failed for best-moments, falling back to local extraction:",
+            apiError
+          );
+
+          // Fallback to local extraction if API fails
+          const allTestimonials =
+            workspaceHub.testimonialManager.testimonials || [];
+
+          if (!context.testimonialIds || context.testimonialIds.length === 0) {
+            // No IDs provided - run extraction ourselves
+            const best = momentHelpers.extractBestMomentsFromTestimonials(
+              allTestimonials,
+              4, // max 4 testimonials
+              undefined // no limit per testimonial
+            );
+
+            testimonialsData = best.map((t) => ({
+              id: t.testimonial.id,
+              author_name: t.testimonial.author_name,
+              author_company: t.testimonial.author_company,
+              media_url: t.testimonial.media_url || "",
+              rating: t.testimonial.rating,
+              sentiment_score: t.testimonial.sentiment_score,
+              moments: t.moments,
+            }));
+          } else {
+            // IDs provided - they're already filtered and ranked by BestMomentsStoryGenerator
+            const testimonials = await Promise.all(
+              context.testimonialIds.map((id) =>
+                workspaceHub.testimonialManager.fetchTestimonial(id, false)
+              )
+            );
+
+            // Extract moments using the same criteria for consistency
+            const best = momentHelpers.extractBestMomentsFromTestimonials(
+              testimonials,
+              testimonials.length, // Keep all testimonials (already ranked)
+              undefined
+            );
+
+            testimonialsData = best.map((t) => ({
+              id: t.testimonial.id,
+              author_name: t.testimonial.author_name,
+              author_company: t.testimonial.author_company,
+              media_url: t.testimonial.media_url || "",
+              rating: t.testimonial.rating,
+              sentiment_score: t.testimonial.sentiment_score,
+              moments: t.moments,
+            }));
+          }
         }
       } else if (context.type === "selected-clips") {
         console.log(
@@ -377,144 +576,97 @@ const StoryVideoConfig: React.FC<StoryVideoConfigProps> = ({
           context.clipIds
         );
 
-        // Convert clips to moments
-        // IMPORTANT: Pass false to include artifacts (needed to find the clips)
-        const testimonial =
-          await workspaceHub.testimonialManager.fetchTestimonial(
-            context.testimonialId,
-            false
-          );
+        try {
+          // Fetch testimonial WITH artifacts to get clips from processing_type='clipping'
+          const testimonial =
+            await workspaceHub.testimonialManager.fetchTestimonial(
+              context.testimonialId,
+              false // INCLUDE artifacts - clips are stored there
+            );
 
-        // Validate testimonial is video type
-        if (testimonial.type !== "video") {
-          console.error(
-            "[StoryVideoConfig] Testimonial is not video type:",
-            testimonial.type
-          );
-          setLoadError(
-            "Story videos can only be created from video testimonials. This is a text testimonial."
-          );
-          return;
-        }
-
-        console.log(
-          "[StoryVideoConfig] Testimonial artifacts:",
-          testimonial.artifacts?.length
-        );
-
-        // IMPORTANT: clipIds are the IDs of clips within artifacts, NOT artifact IDs
-        // We need to find artifacts that contain clips with matching IDs
-        const selectedClips: any[] = [];
-        const requestedClipIds = new Set(context.clipIds);
-        const foundClipIds = new Set<string>();
-
-        testimonial.artifacts?.forEach((artifact: any) => {
-          if (
-            artifact.processing_type === "clipping" &&
-            artifact.data?.generated_clips?.clips
-          ) {
-            const clips = artifact.data.generated_clips.clips;
-            clips.forEach((clip: any) => {
-              if (requestedClipIds.has(clip.id)) {
-                foundClipIds.add(clip.id);
-
-                // Extract transcript text from clip time range
-                let clipText = "";
-                if (
-                  testimonial.transcript_segments &&
-                  clip.start_time !== undefined &&
-                  clip.end_time !== undefined
-                ) {
-                  const relevantSegments =
-                    testimonial.transcript_segments.filter(
-                      (seg: any) =>
-                        seg.start_time >= clip.start_time &&
-                        seg.end_time <= clip.end_time
-                    );
-                  clipText = relevantSegments
-                    .map((seg: any) => seg.text)
-                    .join(" ");
-
-                  if (!clipText && relevantSegments.length === 0) {
-                    console.warn(
-                      `[StoryVideoConfig] No transcript found for clip ${clip.id} ` +
-                        `(${clip.start_time}s - ${clip.end_time}s)`
-                    );
-                  }
-                }
-
-                selectedClips.push({
-                  ...clip,
-                  artifactId: artifact.id, // Store the parent artifact ID
-                  text_content:
-                    clipText ||
-                    clip.text ||
-                    clip.metadata?.transcript ||
-                    `Clip from ${clip.start_time}s to ${clip.end_time}s`, // Fallback description
-                  testimonial_id: testimonial.id,
-                  parent_testimonial_id: testimonial.id,
-                  storage_url: clip.url || clip.storage_path,
-                });
-              }
-            });
+          // Validate testimonial is video type
+          if (testimonial.type !== "video") {
+            console.error(
+              "[StoryVideoConfig] Testimonial is not video type:",
+              testimonial.type
+            );
+            setLoadError(
+              "Story videos can only be created from video testimonials. This is a text testimonial."
+            );
+            return;
           }
-        });
 
-        // Validate all clips were found
-        const missingClipIds = [...requestedClipIds].filter(
-          (id) => !foundClipIds.has(id)
-        );
-        if (missingClipIds.length > 0) {
+          // Find clipping artifacts
+          const clippingArtifacts =
+            testimonial.artifacts?.filter(
+              (a: any) => a.processing_type === "clipping"
+            ) || [];
+
+          // Extract all clips from clipping artifacts
+          const allClips: any[] = [];
+          for (const artifact of clippingArtifacts) {
+            // Clips can be in result_data.clips OR result_data.generated_clips
+            const clips = artifact.data?.generated_clips || [];
+            if (clips.length > 0) {
+              allClips.push(...clips);
+            }
+          }
+
+          // Filter clips by requested clip IDs
+          const requestedClipIds = new Set(context.clipIds);
+          const selectedClips = allClips.filter((clip: any) =>
+            requestedClipIds.has(clip.id || clip.artifact_id)
+          );
+
+          // Validate all clips were found
+          if (selectedClips.length !== context.clipIds.length) {
+            const foundIds = new Set(
+              selectedClips.map((c: any) => c.id || c.artifact_id)
+            );
+            const missingIds = context.clipIds.filter(
+              (id) => !foundIds.has(id)
+            );
+            console.error(
+              `[StoryVideoConfig] Missing clips: ${missingIds.join(", ")}`
+            );
+            setLoadError(
+              `Could not find ${missingIds.length} of ${context.clipIds.length} selected clips. ` +
+                `They may have been deleted or are not yet available.`
+            );
+            return;
+          }
+
+          // Convert clips to moments
+          const moments = momentHelpers.convertClipsToMoments(selectedClips);
+
+          testimonialsData = [
+            {
+              id: testimonial.id,
+              author_name: testimonial.author_name,
+              author_company: testimonial.author_company,
+              media_url: testimonial.media_url || "",
+              rating: testimonial.rating,
+              sentiment_score: testimonial.sentiment_score,
+              moments,
+            },
+          ];
+
+          // Since user already selected specific clips, skip moment selection and go to ordering
+          setTestimonialsWithMoments(testimonialsData);
+          setSelectedMoments(moments); // Pre-select all moments
+
+          setCurrentStep("order-moments");
+          return;
+        } catch (error) {
           console.error(
-            `[StoryVideoConfig] Missing clips: ${missingClipIds.join(", ")}. ` +
-              `Found ${selectedClips.length}/${context.clipIds.length} clips.`
+            "[StoryVideoConfig] Failed to load selected clips:",
+            error
           );
           setLoadError(
-            `Could not find ${missingClipIds.length} of ${context.clipIds.length} selected clips. ` +
-              `They may have been deleted or are not yet available.`
+            `Failed to load selected clips: ${error instanceof Error ? error.message : "Please try again."}`
           );
           return;
         }
-
-        console.log(
-          `[StoryVideoConfig] Successfully loaded ${selectedClips.length}/${context.clipIds.length} clips`,
-          "with text:",
-          selectedClips.map((c) => ({ id: c.id, hasText: !!c.text_content }))
-        );
-
-        const moments = momentHelpers.convertClipsToMoments(selectedClips);
-        console.log("[StoryVideoConfig] Converted to moments:", moments.length);
-        console.log(
-          "[StoryVideoConfig] Moment details:",
-          moments.map((m) => ({
-            id: m.id,
-            duration: m.duration,
-            text: m.text?.substring(0, 50) + "...",
-            theme: m.theme,
-            storage_path: m.storage_path,
-          }))
-        );
-
-        testimonialsData = [
-          {
-            id: testimonial.id,
-            author_name: testimonial.author_name,
-            author_company: testimonial.author_company,
-            media_url: testimonial.media_url || "",
-            rating: testimonial.rating,
-            sentiment_score: testimonial.sentiment_score,
-            moments,
-          },
-        ];
-
-        // Since user already selected specific clips, skip moment selection and go to ordering
-        setTestimonialsWithMoments(testimonialsData);
-        setSelectedMoments(moments); // Pre-select all moments
-        console.log(
-          "[StoryVideoConfig] Pre-selected clips, skipping to ordering"
-        );
-        setCurrentStep("order-moments");
-        return;
       }
 
       setTestimonialsWithMoments(testimonialsData);
@@ -524,7 +676,6 @@ const StoryVideoConfig: React.FC<StoryVideoConfigProps> = ({
         (sum, t) => sum + t.moments.length,
         0
       );
-      console.log("[StoryVideoConfig] Total moments:", totalMoments);
 
       if (totalMoments === 0) {
         console.log("[StoryVideoConfig] No moments found, setting error");
@@ -532,7 +683,6 @@ const StoryVideoConfig: React.FC<StoryVideoConfigProps> = ({
         return;
       }
 
-      console.log("[StoryVideoConfig] Setting step to select-moments");
       setCurrentStep("select-moments");
     } catch (error) {
       console.error("[StoryVideoConfig] Failed to load testimonials:", error);
@@ -561,76 +711,94 @@ const StoryVideoConfig: React.FC<StoryVideoConfigProps> = ({
   }, [addIntro, addOutro]);
 
   const handleHighlightTypeSelected = async (highlightType: string) => {
-    // setSelectedHighlightType(highlightType);
-
     // Load moments for the selected highlight type
     try {
       setCurrentStep("loading");
 
-      // Validate cache before using it
       const currentTestimonialId =
         context.type === "testimonial" ? context.testimonialId : "";
-      const isCacheValid =
-        cachedTestimonial &&
-        cachedTestimonialId === currentTestimonialId &&
-        cachedTestimonial.artifacts &&
-        cachedTestimonial.artifacts.length > 0;
 
-      let testimonial;
+      let moments: HighlightMoment[] = [];
+      let testimonial: any;
 
-      if (isCacheValid) {
-        // Use cached testimonial to avoid redundant API call
-        console.log(
-          "[StoryVideoConfig] ✅ Using cached testimonial for highlight type:",
-          highlightType
-        );
-        testimonial = cachedTestimonial;
-      } else {
-        // Cache invalid or empty - refetch
-        console.log(
-          "[StoryVideoConfig] ⚠️ Cache invalid, refetching testimonial for highlight type:",
-          highlightType,
-          {
-            hasCachedData: !!cachedTestimonial,
-            cachedId: cachedTestimonialId,
-            currentId: currentTestimonialId,
-            hasArtifacts: cachedTestimonial?.artifacts?.length > 0,
+      // For story_video type, use the new backend endpoint
+      if (highlightType === "story_video") {
+        try {
+          const response = await studioAPI.getStoryVideoHighlights([
+            currentTestimonialId,
+          ]);
+
+          if (response.testimonials && response.testimonials.length > 0) {
+            const testimonialHighlights = response.testimonials[0];
+            moments = testimonialHighlights.highlights;
           }
-        );
-        testimonial = await workspaceHub.testimonialManager.fetchTestimonial(
-          currentTestimonialId,
-          false // Include artifacts
-        );
 
-        // Update cache with fresh data
-        setCachedTestimonial(testimonial);
-        setCachedTestimonialId(testimonial.id);
+          // Still need testimonial object for testimonial metadata
+          testimonial =
+            cachedTestimonial ||
+            (await workspaceHub.testimonialManager.fetchTestimonial(
+              currentTestimonialId,
+              false
+            ));
+
+          if (testimonial) {
+            setCachedTestimonial(testimonial);
+            setCachedTestimonialId(testimonial.id);
+          }
+        } catch (apiError) {
+          console.error(
+            "[StoryVideoConfig] API call failed, falling back to local extraction:",
+            apiError
+          );
+
+          // Fallback to local extraction if API fails
+          testimonial =
+            cachedTestimonial ||
+            (await workspaceHub.testimonialManager.fetchTestimonial(
+              currentTestimonialId,
+              false
+            ));
+
+          if (testimonial) {
+            setCachedTestimonial(testimonial);
+            setCachedTestimonialId(testimonial.id);
+            moments = momentHelpers.getMomentsForSingleTestimonial(
+              testimonial,
+              highlightType as any
+            );
+          }
+        }
+      } else {
+        // For other highlight types, use the existing local extraction
+        // Validate cache before using it
+        const isCacheValid =
+          cachedTestimonial &&
+          cachedTestimonialId === currentTestimonialId &&
+          cachedTestimonial.artifacts &&
+          cachedTestimonial.artifacts.length > 0;
+
+        if (isCacheValid) {
+          // Use cached testimonial to avoid redundant API call
+
+          testimonial = cachedTestimonial;
+        } else {
+          // Cache invalid or empty - refetch
+
+          testimonial = await workspaceHub.testimonialManager.fetchTestimonial(
+            currentTestimonialId,
+            false // Include artifacts
+          );
+
+          // Update cache with fresh data
+          setCachedTestimonial(testimonial);
+          setCachedTestimonialId(testimonial.id);
+        }
+
+        moments = momentHelpers.getMomentsForSingleTestimonial(
+          testimonial,
+          highlightType as any
+        );
       }
-
-      console.log("[StoryVideoConfig] Using testimonial:", {
-        id: testimonial.id,
-        type: testimonial.type,
-        artifactsCount: testimonial.artifacts?.length || 0,
-        artifacts: testimonial.artifacts?.map((a: any) => ({
-          id: a.id,
-          processing_type: a.processing_type,
-          hasData: !!a.data,
-        })),
-      });
-
-      const moments = momentHelpers.getMomentsForSingleTestimonial(
-        testimonial,
-        highlightType as any
-      );
-
-      console.log(
-        "[StoryVideoConfig] Loaded moments for type:",
-        highlightType,
-        "count:",
-        moments.length,
-        "artifacts count:",
-        testimonial.artifacts?.length
-      );
 
       setTestimonialsWithMoments([
         {
@@ -701,6 +869,12 @@ const StoryVideoConfig: React.FC<StoryVideoConfigProps> = ({
   const handleAIOrder = async (
     moments: HighlightMoment[]
   ): Promise<HighlightMoment[]> => {
+    // Calculate target duration from selected moments (in ms)
+    const targetDuration = moments.reduce(
+      (sum, m) => sum + (m.duration || m.end_time - m.start_time || 0),
+      0
+    );
+
     const response = await studioAPI.orderMoments({
       moments,
       context: "story_video",
@@ -739,6 +913,12 @@ const StoryVideoConfig: React.FC<StoryVideoConfigProps> = ({
       );
       const hasBrollStep = steps.some(
         (s) => s.enabled && s.id === "apply_broll"
+      );
+
+      // Calculate target duration from ordered moments (in ms)
+      const targetDuration = orderedMoments.reduce(
+        (sum, m) => sum + (m.duration || m.end_time - m.start_time || 0),
+        0
       );
 
       const config: Record<string, any> = {
@@ -784,7 +964,11 @@ const StoryVideoConfig: React.FC<StoryVideoConfigProps> = ({
         });
 
         if (!validationResult.isValid) {
-          alert(validationResult.errorMessage || "B-roll validation failed");
+          setValidationAlert({
+            isOpen: true,
+            message:
+              validationResult.errorMessage || "B-roll validation failed",
+          });
 
           // Set acknowledgment flags for warnings that can be bypassed
           if (validationResult.shouldAcknowledge) {
@@ -848,7 +1032,11 @@ const StoryVideoConfig: React.FC<StoryVideoConfigProps> = ({
   // NOTE: moment.duration is in milliseconds, so divide by 1000 to get seconds
   const videoDuration = useMemo(
     () =>
-      orderedMoments.reduce((sum, moment) => sum + moment.duration, 0) / 1000,
+      orderedMoments.reduce(
+        (sum, moment) =>
+          sum + (moment.duration || moment.end_time - moment.start_time || 0),
+        0
+      ) / 1000,
     [orderedMoments]
   );
 
@@ -856,8 +1044,81 @@ const StoryVideoConfig: React.FC<StoryVideoConfigProps> = ({
   const MIN_BROLL_DURATION = 20;
   const isTooShortForBroll = videoDuration < MIN_BROLL_DURATION;
 
+  const handleLoadFallbackHighlights = async () => {
+    if (!fallbackHighlightType) {
+      return;
+    }
+
+    // Only support fallback for single testimonial context
+    if (context.type !== "testimonial") {
+      setLoadError(
+        "Fallback highlights are only available for single testimonial stories."
+      );
+      return;
+    }
+
+    setCurrentStep("loading-fallback-highlights");
+    setLoadError(null);
+
+    try {
+      // Get the testimonial (use cached if available)
+      let testimonial = cachedTestimonial;
+
+      if (!testimonial || cachedTestimonialId !== context.testimonialId) {
+        testimonial = await workspaceHub.testimonialManager.fetchTestimonial(
+          context.testimonialId,
+          false
+        );
+        setCachedTestimonial(testimonial);
+        setCachedTestimonialId(context.testimonialId);
+      }
+
+      // Get moments for the selected fallback highlight type
+      const moments = momentHelpers.getMomentsForClipping(
+        testimonial,
+        fallbackHighlightType
+      );
+
+      // Validate that we have >1 highlights
+      if (moments.length <= 1) {
+        setLoadError(
+          `Only ${moments.length} ${fallbackHighlightType} highlight${moments.length === 1 ? "" : "s"} found. Please select a different highlight type. Story video requires at least 2 highlights.`
+        );
+        setCurrentStep("insufficient-highlights-fallback");
+        return;
+      }
+
+      // Success! Set up the testimonials with moments
+      const testimonialsData: TestimonialWithMoments[] = [
+        {
+          id: testimonial.id,
+          author_name: testimonial.author_name,
+          author_company: testimonial.author_company,
+          media_url: testimonial.media_url || "",
+          rating: testimonial.rating,
+          sentiment_score: testimonial.sentiment_score,
+          moments,
+        },
+      ];
+
+      setTestimonialsWithMoments(testimonialsData);
+
+      // Pre-select all moments (user can deselect in next step)
+      setSelectedMoments(moments);
+
+      // Move to moment selection step
+      setCurrentStep("select-moments");
+    } catch (error: any) {
+      console.error("Error loading fallback highlights:", error);
+      setLoadError(
+        error.message || "Failed to load fallback highlights. Please try again."
+      );
+      setCurrentStep("insufficient-highlights-fallback");
+    }
+  };
+
   // Error state - check this BEFORE loading state so errors are always visible
-  if (loadError) {
+  if (loadError && currentStep !== "insufficient-highlights-fallback") {
     return (
       <div className="max-w-2xl mx-auto px-6 py-12">
         <Card className="p-8 text-center border-2 border-red-200 bg-red-50">
@@ -884,6 +1145,156 @@ const StoryVideoConfig: React.FC<StoryVideoConfigProps> = ({
           <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-3" />
           <p className="text-sm text-slate-600">Loading moments...</p>
         </div>
+      </div>
+    );
+  }
+
+  // Insufficient Highlights Fallback Step
+  if (currentStep === "insufficient-highlights-fallback") {
+    return (
+      <div className="max-w-4xl mx-auto px-6 py-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-6"
+        >
+          <Card className="p-6">
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5" />
+                <div className="flex-1">
+                  <h3 className="text-sm font-medium text-slate-900 mb-1">
+                    Insufficient Story Video Highlights
+                  </h3>
+                  <p className="text-xs text-slate-600 mb-4">
+                    {loadError ||
+                      "Not enough story video highlights were found. Would you like to use standalone highlights instead?"}
+                  </p>
+                  <p className="text-xs text-slate-600 mb-4">
+                    Standalone highlights are optimized for specific types of
+                    content (problems, solutions, results, etc.). Select a
+                    highlight type below to continue with your story video.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                {HIGHLIGHT_TYPES.map((type) => {
+                  const isSelected = fallbackHighlightType === type.id;
+
+                  // Safe color classes for Tailwind JIT
+                  const getCardClasses = () => {
+                    if (!isSelected)
+                      return "border-slate-200 hover:border-slate-300 hover:bg-slate-50";
+                    switch (type.color) {
+                      case "blue":
+                        return "border-blue-500 bg-blue-50/30";
+                      case "pink":
+                        return "border-pink-500 bg-pink-50/30";
+                      case "orange":
+                        return "border-orange-500 bg-orange-50/30";
+                      case "emerald":
+                        return "border-emerald-500 bg-emerald-50/30";
+                      case "purple":
+                        return "border-purple-500 bg-purple-50/30";
+                      default:
+                        return "border-blue-500 bg-blue-50/30";
+                    }
+                  };
+
+                  const getIconClasses = () => {
+                    if (!isSelected) return "bg-slate-100 text-slate-600";
+                    switch (type.color) {
+                      case "blue":
+                        return "bg-blue-100 text-blue-600";
+                      case "pink":
+                        return "bg-pink-100 text-pink-600";
+                      case "orange":
+                        return "bg-orange-100 text-orange-600";
+                      case "emerald":
+                        return "bg-emerald-100 text-emerald-600";
+                      case "purple":
+                        return "bg-purple-100 text-purple-600";
+                      default:
+                        return "bg-blue-100 text-blue-600";
+                    }
+                  };
+
+                  return (
+                    <Card
+                      key={type.id}
+                      className={cn(
+                        "p-4 cursor-pointer transition-all border-2",
+                        getCardClasses()
+                      )}
+                      onClick={() => setFallbackHighlightType(type.id)}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={cn("p-2 rounded-lg", getIconClasses())}>
+                          {type.icon}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-xs font-medium text-slate-900 mb-1">
+                            {type.name}
+                          </h4>
+                          <p className="text-[10px] text-slate-600 line-clamp-2">
+                            {type.description}
+                          </p>
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+
+              <div className="flex gap-3 pt-4 border-t">
+                <Button variant="outline" onClick={onBack} className="flex-1">
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleLoadFallbackHighlights}
+                  disabled={!fallbackHighlightType}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700"
+                >
+                  Continue with{" "}
+                  {fallbackHighlightType
+                    ? HIGHLIGHT_TYPES.find(
+                        (t) => t.id === fallbackHighlightType
+                      )?.name
+                    : "Selected Type"}
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Loading Fallback Highlights Step
+  if (currentStep === "loading-fallback-highlights") {
+    return (
+      <div className="min-h-[400px] flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex flex-col items-center justify-center py-12 space-y-4"
+        >
+          <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
+          <div className="text-center">
+            <h3 className="text-sm font-medium text-slate-900 mb-1">
+              Loading{" "}
+              {fallbackHighlightType
+                ? HIGHLIGHT_TYPES.find((t) => t.id === fallbackHighlightType)
+                    ?.name
+                : "Highlights"}
+              ...
+            </h3>
+            <p className="text-xs text-slate-600">
+              Fetching highlights from your testimonial
+            </p>
+          </div>
+        </motion.div>
       </div>
     );
   }
@@ -990,41 +1401,6 @@ const StoryVideoConfig: React.FC<StoryVideoConfigProps> = ({
 
           {/* Configuration Options */}
           <div className="space-y-6">
-            {/* Target Duration */}
-            <Card className="p-5">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-                  <Clock className="h-4 w-4 text-blue-600" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-slate-900">
-                    Target Duration
-                  </h3>
-                  <p className="text-xs text-slate-600">
-                    Aim for this total video length
-                  </p>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-600">
-                    {targetDuration / 1000}s
-                  </span>
-                  <span className="text-xs text-slate-600">
-                    Current: {Math.round(totalDuration / 1000)}s
-                  </span>
-                </div>
-                <Slider
-                  value={[targetDuration / 1000]}
-                  onValueChange={(v) => setTargetDuration(v[0])}
-                  min={30}
-                  max={300}
-                  step={15}
-                  className="w-full"
-                />
-              </div>
-            </Card>
-
             {/* Intro/Outro */}
             <Card className="p-5 border-purple-200 bg-gradient-to-br from-purple-50/30 to-transparent">
               <div className="flex items-center gap-3 mb-5">
@@ -1170,7 +1546,8 @@ const StoryVideoConfig: React.FC<StoryVideoConfigProps> = ({
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {steps.map((step) => {
-                  const isDisabled = step.id === "apply_broll" && isTooShortForBroll;
+                  const isDisabled =
+                    step.id === "apply_broll" && isTooShortForBroll;
                   return (
                     <div
                       key={step.id}
@@ -1200,7 +1577,8 @@ const StoryVideoConfig: React.FC<StoryVideoConfigProps> = ({
                         </p>
                         {isDisabled && (
                           <p className="text-xs text-slate-500 mt-1.5 bg-slate-100 px-2 py-1 rounded border border-slate-200">
-                            ℹ️ Requires {MIN_BROLL_DURATION}+ second video (yours: {Math.round(videoDuration)}s)
+                            ℹ️ Requires {MIN_BROLL_DURATION}+ second video
+                            (yours: {Math.round(videoDuration)}s)
                           </p>
                         )}
                       </div>
@@ -1548,7 +1926,7 @@ const StoryVideoConfig: React.FC<StoryVideoConfigProps> = ({
                   aspectRatio="9:16"
                   maxSelection={10}
                   videoDuration={videoDuration} // Use selected moments duration, not full testimonial
-                  transcriptText={orderedMoments.map(m => m.text).join(" ")}
+                  transcriptText={orderedMoments.map((m) => m.text).join(" ")}
                   cachedAISuggestions={cachedAISuggestions}
                   onCacheSuggestions={setCachedAISuggestions}
                 />
@@ -1591,6 +1969,14 @@ const StoryVideoConfig: React.FC<StoryVideoConfigProps> = ({
           </Card>
         </motion.div>
       </AnimatePresence>
+
+      <AlertDialog
+        isOpen={validationAlert.isOpen}
+        onClose={() => setValidationAlert({ isOpen: false, message: "" })}
+        title="B-roll Validation Error"
+        message={validationAlert.message}
+        variant="warning"
+      />
     </div>
   );
 };

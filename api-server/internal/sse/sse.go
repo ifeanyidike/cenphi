@@ -57,22 +57,28 @@ func (m *SSEManager) SetStageRepo(stageRepo repositories.ProcessingStageReposito
 }
 
 func (s *SSEManager) startSSENotificationSystem() {
-	s.logger.Info("Starting SSE notification system")
+	s.logger.Info("Starting SSE notification system (pub/sub mode only)")
 
-	ticker := time.NewTicker(4 * time.Second) // Check every 4 seconds
-	defer ticker.Stop()
+	// DISABLED: Polling system is redundant with pub/sub
+	// The subscribeToAIServiceProgress() goroutine already handles all job updates via Redis pub/sub
+	// This polling was causing 12M+ Redis commands per day by scanning job_status:* keys every 4 seconds
+	//
+	// ticker := time.NewTicker(4 * time.Second) // Check every 4 seconds
+	// defer ticker.Stop()
+	// trackedJobs := make(map[string]queue.JobResult)
+	// for {
+	// 	select {
+	// 	case <-s.ctx.Done():
+	// 		s.logger.Info("SSE notification system stopped")
+	// 		return
+	// 	case <-ticker.C:
+	// 		s.checkJobUpdates(trackedJobs)
+	// 	}
+	// }
 
-	trackedJobs := make(map[string]queue.JobResult)
-
-	for {
-		select {
-		case <-s.ctx.Done():
-			s.logger.Info("SSE notification system stopped")
-			return
-		case <-ticker.C:
-			s.checkJobUpdates(trackedJobs)
-		}
-	}
+	// Just keep the service alive - pub/sub handles all updates
+	<-s.ctx.Done()
+	s.logger.Info("SSE notification system stopped")
 }
 
 // // checkJobUpdates checks for job status changes and notifies clients

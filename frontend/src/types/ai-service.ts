@@ -334,7 +334,7 @@ export interface HighlightMoment {
   type: HighlightType | "highlight"; // 'highlight' is legacy name for 'general'
   start_time: number;
   end_time: number;
-  duration: number;
+  duration?: number; // Optional - can be calculated from end_time - start_time if not provided
   text: string;
   theme?: string;
   importance_score?: number;

@@ -511,7 +511,7 @@ func (tcs TestimonialCollectionService) queueVideoProcessingJobs(ctx context.Con
 	}
 	*transcriptionJob.ScheduledAt = time.Now()
 
-	// Create dependent jobs
+	// Create dependent jobs (only sentiment analysis - highlights are now on-demand)
 	dependentJobs := []*models.Job{
 		{
 			ID:            uuid.New(),
@@ -524,24 +524,6 @@ func (tcs TestimonialCollectionService) queueVideoProcessingJobs(ctx context.Con
 				"testimonial_id": testimonial.ID.String(),
 				"type":           "video",
 				"depends_on":     transcriptionJob.ID.String(),
-			},
-			MaxRetries:  5,
-			ScheduledAt: &time.Time{},
-			CreatedAt:   time.Now(),
-			UpdatedAt:   time.Now(),
-		},
-		{
-			ID:            uuid.New(),
-			JobType:       "highlight_extraction",
-			TestimonialID: &testimonial.ID,
-			WorkspaceID:   &testimonial.WorkspaceID,
-			Status:        "pending",
-			Priority:      3,
-			Payload: models.JSONMap{
-				"testimonial_id":       testimonial.ID.String(),
-				"max_highlights":       5,
-				"min_importance_score": 0.7,
-				"depends_on":           transcriptionJob.ID.String(),
 			},
 			MaxRetries:  5,
 			ScheduledAt: &time.Time{},

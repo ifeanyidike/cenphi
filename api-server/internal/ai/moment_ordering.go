@@ -40,6 +40,7 @@ type OrderMomentsResponse struct {
 	OrderedMomentIDs  []string `json:"ordered_moment_ids"`
 	Reasoning         string   `json:"reasoning"`
 	EstimatedDuration float64  `json:"estimated_duration"`
+	SemanticGaps      []int    `json:"semantic_gaps"` // Indices in the NEW order where semantic gaps exist
 }
 
 // momentSummary represents a simplified moment for AI analysis
@@ -66,6 +67,7 @@ func (s *MomentOrderingService) OrderMoments(ctx context.Context, req OrderMomen
 			OrderedMomentIDs:  momentIDs,
 			Reasoning:         "Only one or zero moments provided, no ordering needed.",
 			EstimatedDuration: totalDuration,
+			SemanticGaps:      []int{}, // No gaps with single moment
 		}, nil
 	}
 
@@ -112,8 +114,8 @@ func (s *MomentOrderingService) OrderMoments(ctx context.Context, req OrderMomen
 
 	s.logger.Debug("AI ordering response", zap.String("response", truncateText(aiResponse, 200)))
 
-	// Parse AI response and reorder moments
-	newOrder, reasoning := s.parseAIOrderingResponse(aiResponse, len(req.Moments))
+	// Parse AI response and reorder moments (now includes semantic gaps)
+	newOrder, reasoning, gaps := s.parseAIOrderingResponse(aiResponse, len(req.Moments))
 
 	if newOrder == nil || len(newOrder) != len(req.Moments) {
 		s.logger.Warn("AI ordering validation failed, using original order",
@@ -132,6 +134,7 @@ func (s *MomentOrderingService) OrderMoments(ctx context.Context, req OrderMomen
 			OrderedMomentIDs:  momentIDs,
 			Reasoning:         "AI ordering failed validation, using original chronological order.",
 			EstimatedDuration: totalDuration,
+			SemanticGaps:      []int{}, // No gaps in fallback
 		}, nil
 	}
 
@@ -148,12 +151,14 @@ func (s *MomentOrderingService) OrderMoments(ctx context.Context, req OrderMomen
 
 	s.logger.Info("AI successfully reordered moments",
 		zap.Ints("new_order", newOrder),
-		zap.String("reasoning", reasoning))
+		zap.String("reasoning", reasoning),
+		zap.Ints("semantic_gaps", gaps))
 
 	return &OrderMomentsResponse{
 		OrderedMomentIDs:  orderedMomentIDs,
 		Reasoning:         reasoning,
 		EstimatedDuration: totalDuration,
+		SemanticGaps:      gaps, // Include detected semantic gaps
 	}, nil
 }
 
@@ -216,6 +221,25 @@ Please analyze these moments and provide the optimal order (0-based indices) tha
 3. Logical flow of ideas
 4. Strong opening and closing
 
+IMPORTANT: After creating your optimal order, you MUST identify semantic gaps for context card insertion.
+
+SEMANTIC GAP DEFINITION:
+A semantic gap exists between two consecutive moments in your NEW order when:
+- The topic shifts significantly (e.g., "product features" → "customer support")
+- There's a speaker change (different person)
+- The emotional tone changes dramatically (e.g., "celebration" → "struggle")
+- The time period jumps (e.g., "early career" → "current role")
+
+Even in an optimal order, semantic gaps are NORMAL and DESIRABLE for longer stories.
+They mark natural chapter transitions where a brief context card helps the viewer mentally shift.
+
+EXAMPLES:
+✓ GAP: "Personal achievement in coding" → "Family inspiration for accessibility" (different focus areas)
+✓ GAP: "Technical challenges" → "Business growth" (topic shift from tech to business)
+✓ GAP: Person A speaking → Person B speaking (speaker change)
+✗ NO GAP: "Coding journey begins" → "Discovering passion in coding" (coherent progression)
+✗ NO GAP: "Team collaboration" → "Building strong team culture" (same theme)
+
 `, entityName, contextDesc, momentsText.String())
 
 	if userPrompt != "" {
@@ -226,10 +250,14 @@ Please analyze these moments and provide the optimal order (0-based indices) tha
 Respond with:
 1. The optimal order as a comma-separated list of indices (e.g., "2,0,1,3")
 2. Brief reasoning for this order
+3. **CRITICAL**: Semantic gap indices in the NEW order where a context card should be inserted
+
+For gaps, provide the index BEFORE the gap (e.g., "1,4" means insert context card after moment at position 1 and after position 4 in the NEW order).
 
 Format:
 ORDER: [indices]
 REASONING: [explanation]
+GAPS: [comma-separated indices where viewers would benefit from a context card, or "none" if story flows without any topic shifts]
 `
 
 	return basePrompt
@@ -251,12 +279,13 @@ Respond with just the optimal order as comma-separated indices (e.g., "2,0,1,3")
 `, momentsText.String())
 }
 
-// parseAIOrderingResponse parses AI response to extract new moment order
-func (s *MomentOrderingService) parseAIOrderingResponse(aiResponse string, expectedCount int) ([]int, string) {
+// parseAIOrderingResponse parses AI response to extract new moment order and semantic gaps
+func (s *MomentOrderingService) parseAIOrderingResponse(aiResponse string, expectedCount int) ([]int, string, []int) {
 	reasoning := ""
 	orderLine := ""
+	gapsLine := ""
 
-	// Look for ORDER: and REASONING: patterns
+	// Look for ORDER:, REASONING:, and GAPS: patterns
 	lines := strings.Split(aiResponse, "\n")
 
 	for _, line := range lines {
@@ -273,9 +302,15 @@ func (s *MomentOrderingService) parseAIOrderingResponse(aiResponse string, expec
 				reasoning = strings.TrimSpace(parts[1])
 			}
 		}
+		if strings.Contains(upperLine, "GAPS:") {
+			parts := strings.SplitN(line, ":", 2)
+			if len(parts) == 2 {
+				gapsLine = strings.TrimSpace(parts[1])
+			}
+		}
 	}
 
-	// Fallback: look for comma-separated numbers
+	// Fallback: look for comma-separated numbers for order
 	if orderLine == "" {
 		for _, line := range lines {
 			if strings.Contains(line, ",") && containsDigit(line) {
@@ -290,7 +325,7 @@ func (s *MomentOrderingService) parseAIOrderingResponse(aiResponse string, expec
 		orderLine = lines[0]
 	}
 
-	// Extract numbers using regex
+	// Extract order indices using regex
 	re := regexp.MustCompile(`\d+`)
 	numberStrs := re.FindAllString(orderLine, -1)
 
@@ -315,14 +350,32 @@ func (s *MomentOrderingService) parseAIOrderingResponse(aiResponse string, expec
 		s.logger.Warn("AI ordering incomplete or invalid",
 			zap.Int("expected", expectedCount),
 			zap.Int("received", len(indices)))
-		return nil, ""
+		return nil, "", nil
 	}
 
 	if reasoning == "" {
 		reasoning = "AI-optimized order for narrative flow and engagement."
 	}
 
-	return indices, reasoning
+	// Parse semantic gaps
+	gaps := make([]int, 0)
+	if gapsLine != "" && strings.ToLower(gapsLine) != "none" {
+		gapNumberStrs := re.FindAllString(gapsLine, -1)
+		for _, numStr := range gapNumberStrs {
+			num, err := strconv.Atoi(numStr)
+			if err != nil {
+				continue
+			}
+			// Gap indices should be in range of the NEW order (0 to expectedCount-2)
+			// Gap at index i means gap between moment i and moment i+1
+			if num >= 0 && num < expectedCount-1 {
+				gaps = append(gaps, num)
+			}
+		}
+		s.logger.Info("Semantic gaps detected", zap.Ints("gap_indices", gaps))
+	}
+
+	return indices, reasoning, gaps
 }
 
 // containsDigit checks if a string contains at least one digit

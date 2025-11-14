@@ -415,15 +415,27 @@ func (r *RedisQueueService) handleRetryableError(ctx context.Context, msg Messag
 	}
 }
 
-// ackMessage acknowledges a message in the stream
+// ackMessage acknowledges a message in the stream and trims old entries
 func (r *RedisQueueService) ackMessage(ctx context.Context, queueName, consumerGroup, messageID string) {
 	streamKey := fmt.Sprintf("queue:%s", queueName)
+
+	// Acknowledge the message
 	err := r.client.XAck(ctx, streamKey, consumerGroup, messageID).Err()
 	if err != nil {
 		r.logger.Error("Failed to acknowledge message",
 			zap.String("stream", streamKey),
 			zap.String("message_id", messageID),
 			zap.Error(err))
+	}
+
+	// Trim the stream to prevent unbounded growth
+	// Keep last 1000 entries using approximate trimming (more efficient)
+	// The "~" makes it approximate, allowing Redis to trim in a more efficient way
+	trimErr := r.client.XTrimMaxLenApprox(ctx, streamKey, 1000, 0).Err()
+	if trimErr != nil {
+		r.logger.Warn("Failed to trim stream",
+			zap.String("stream", streamKey),
+			zap.Error(trimErr))
 	}
 }
 

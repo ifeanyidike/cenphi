@@ -23,6 +23,7 @@ import (
 
 type TestimonialService struct {
 	repo               repositories.TestimonialRepository
+	highlightRepo      repositories.HighlightRepository
 	userRepo           repositories.UserRepository
 	storageService     *storage.StorageFactory
 	vectorStoreService *vector_store.VectorStoreService
@@ -34,6 +35,7 @@ type TestimonialService struct {
 
 func NewTestimonialService(
 	repo repositories.TestimonialRepository,
+	highlightRepo repositories.HighlightRepository,
 	userRepo repositories.UserRepository,
 	storageService *storage.StorageFactory,
 	vectorStoreService *vector_store.VectorStoreService,
@@ -44,6 +46,7 @@ func NewTestimonialService(
 ) TestimonialService {
 	return TestimonialService{
 		repo:               repo,
+		highlightRepo:      highlightRepo,
 		userRepo:           userRepo,
 		storageService:     storageService,
 		vectorStoreService: vectorStoreService,
@@ -637,4 +640,42 @@ func (s *TestimonialService) GeneratePlatformRecommendations(ctx context.Context
 	}
 
 	return resp, nil
+}
+
+// GetHighlights retrieves highlights for a testimonial based on extraction mode
+// mode can be "" (all), "standalone" (for clips), or "story_video" (for story generation)
+func (s *TestimonialService) GetHighlights(ctx context.Context, testimonialID uuid.UUID, mode string) ([]models.TestimonialHighlight, error) {
+	s.logger.Info("Fetching highlights",
+		zap.String("testimonial_id", testimonialID.String()),
+		zap.String("mode", mode))
+
+	var highlights []models.TestimonialHighlight
+	var err error
+
+	switch mode {
+	case "standalone":
+		// Get only standalone highlights (for clips/highlights tab)
+		highlights, err = s.highlightRepo.GetStandaloneHighlights(ctx, testimonialID, s.db)
+	case "story_video":
+		// Get only story_video highlights (for story generation)
+		highlights, err = s.highlightRepo.GetStoryVideoHighlights(ctx, testimonialID, s.db)
+	default:
+		// Get all highlights (no mode filter)
+		highlights, err = s.highlightRepo.GetByTestimonialID(ctx, testimonialID, s.db)
+	}
+
+	if err != nil {
+		s.logger.Error("Failed to fetch highlights",
+			zap.Error(err),
+			zap.String("testimonial_id", testimonialID.String()),
+			zap.String("mode", mode))
+		return nil, fmt.Errorf("failed to fetch highlights: %w", err)
+	}
+
+	s.logger.Info("Highlights fetched successfully",
+		zap.String("testimonial_id", testimonialID.String()),
+		zap.String("mode", mode),
+		zap.Int("count", len(highlights)))
+
+	return highlights, nil
 }

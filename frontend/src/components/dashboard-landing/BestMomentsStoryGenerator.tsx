@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { workspaceHub } from "@/repo/workspace_hub";
 import { observer } from "mobx-react-lite";
 import { useNavigate } from "react-router-dom";
-import * as momentHelpers from "@/utils/momentHelpers";
 
 interface BestMomentsStoryGeneratorProps {
   onError?: (error: string) => void;
@@ -32,52 +31,80 @@ const BestMomentsStoryGenerator: React.FC<BestMomentsStoryGeneratorProps> =
 
     const testimonials = workspaceHub.testimonialManager.testimonials || [];
 
-    // Get eligible testimonials with best moments using momentHelpers
-    const testimonialsWithMoments = useMemo(() => {
+    // Get eligible video testimonials for story creation
+    // Based on quality (sentiment + rating), no highlights required
+
+    const eligibleVideos = useMemo(() => {
       try {
-        // extractBestMomentsFromTestimonials handles all filtering logic:
-        // - engagement_score >= 0.7
-        // - type === 'general' OR 'highlight'
-        // - Composite score ranking
-        const result = momentHelpers.extractBestMomentsFromTestimonials(
-          testimonials,
-          4, // max 4 testimonials
-          undefined // no limit per testimonial
+        // Filter video testimonials - prioritize those with good sentiment or rating
+        const videoTestimonials = testimonials.filter(
+          (t) =>
+            t.type === "video" &&
+            t.media_url &&
+            // Include if: has good rating OR good sentiment OR both
+            ((t.rating && t.rating >= 4) ||
+              (t.sentiment_score && t.sentiment_score >= 0.6) ||
+              (t.sentiment_data !== undefined && t.sentiment_data !== null))
         );
 
-        return result;
+        // Score and rank testimonials by composite quality
+        const scored = videoTestimonials.map((t) => {
+          const sentimentScore = t.sentiment_score || 0;
+          const ratingScore = (t.rating || 0) / 5;
+          const hasSentimentData = t.sentiment_data ? 1 : 0;
+
+          return {
+            testimonial: t,
+            score:
+              sentimentScore * 0.5 + // Sentiment weight
+              ratingScore * 0.3 + // Rating weight
+              hasSentimentData * 0.2, // Bonus if has detailed sentiment
+          };
+        });
+
+        // Return top 4 testimonials, sorted by quality score
+        return scored
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 4)
+          .map((s) => ({
+            id: s.testimonial.id,
+            author_name: s.testimonial.author_name,
+            author_company: s.testimonial.author_company,
+            media_url: s.testimonial.media_url || "",
+            rating: s.testimonial.rating,
+            sentiment_score: s.testimonial.sentiment_score || 0,
+          }));
       } catch (error) {
-        console.error("Error extracting best moments:", error);
+        console.error("Error filtering quality videos:", error);
         return [];
       }
     }, [testimonials]);
 
-    // Calculate stats
+    // Calculate stats based on testimonial quality
     const stats = useMemo(() => {
-      const totalMoments = testimonialsWithMoments.reduce(
-        (sum, t) => sum + t.moments.length,
-        0
-      );
-      const totalDuration = testimonialsWithMoments.reduce(
-        (sum, t) => sum + momentHelpers.calculateTotalDuration(t.moments),
-        0
-      );
-      const avgEngagement =
-        testimonialsWithMoments.length > 0
-          ? testimonialsWithMoments.reduce(
-              (sum, t) =>
-                sum + momentHelpers.calculateAverageEngagement(t.moments),
-              0
-            ) / testimonialsWithMoments.length
+      const avgSentiment =
+        eligibleVideos.length > 0
+          ? eligibleVideos.reduce((sum, t) => sum + t.sentiment_score, 0) /
+            eligibleVideos.length
+          : 0;
+
+      const avgRating =
+        eligibleVideos.length > 0
+          ? eligibleVideos.reduce((sum, t) => sum + (t.rating || 0), 0) /
+            eligibleVideos.length
           : 0;
 
       return {
-        testimonialCount: testimonialsWithMoments.length,
-        momentCount: totalMoments,
-        totalDuration,
-        avgEngagement,
+        testimonialCount: eligibleVideos.length,
+        avgSentiment,
+        avgRating,
+        hasDetailedSentiment: eligibleVideos.some(
+          (t) =>
+            testimonials.find((orig) => orig.id === t.id)?.sentiment_data !==
+            undefined
+        ),
       };
-    }, [testimonialsWithMoments]);
+    }, [eligibleVideos, testimonials]);
 
     const handleGenerateStory = async () => {
       setIsProcessing(true);
@@ -86,9 +113,7 @@ const BestMomentsStoryGenerator: React.FC<BestMomentsStoryGeneratorProps> =
         // Navigate to Studio with best-moments context
         // The Studio will use StoryVideoConfig which loads moments via:
         // momentHelpers.extractBestMomentsFromTestimonials (same logic)
-        const testimonialIds = testimonialsWithMoments
-          .map((t) => t.testimonial.id)
-          .join(",");
+        const testimonialIds = eligibleVideos.map((t) => t.id).join(",");
         navigate(
           `/studio/story?context=best-moments&testimonialIds=${testimonialIds}`
         );
@@ -104,10 +129,8 @@ const BestMomentsStoryGenerator: React.FC<BestMomentsStoryGeneratorProps> =
       }
     };
 
-    // IMPORTANT: Minimum 2 testimonials required (changed from 4)
-    // This matches the max=4 parameter in extractBestMomentsFromTestimonials
-    // but allows story creation with fewer testimonials if that's all that's available
-    const hasEligibleTestimonials = testimonialsWithMoments.length >= 2;
+    // IMPORTANT: Minimum 2 testimonials required for story creation
+    const hasEligibleTestimonials = eligibleVideos.length >= 2;
 
     // Not enough eligible testimonials
     if (!hasEligibleTestimonials) {
@@ -125,12 +148,6 @@ const BestMomentsStoryGenerator: React.FC<BestMomentsStoryGeneratorProps> =
         </Card>
       );
     }
-
-    const formatDuration = (seconds: number) => {
-      const mins = Math.floor(seconds / 60);
-      const secs = Math.floor(seconds % 60);
-      return `${mins}:${secs.toString().padStart(2, "0")}`;
-    };
 
     return (
       <Card className="border border-slate-200 bg-white shadow-sm">
@@ -152,12 +169,12 @@ const BestMomentsStoryGenerator: React.FC<BestMomentsStoryGeneratorProps> =
           <div className="flex items-center justify-between p-2 bg-slate-50 rounded-lg border border-slate-200">
             <div className="flex items-center gap-2 text-xs text-slate-600">
               <span className="font-medium text-slate-900">
-                {stats.testimonialCount} videos
+                {stats.testimonialCount} quality videos
               </span>
               <span>•</span>
-              <span>{stats.momentCount} moments</span>
+              <span>{Math.round(stats.avgSentiment * 100)}% sentiment</span>
               <span>•</span>
-              <span>~{formatDuration(stats.totalDuration / 1000)}</span>
+              <span>{stats.avgRating.toFixed(1)}⭐ avg rating</span>
             </div>
             <Button
               variant="ghost"
@@ -177,16 +194,12 @@ const BestMomentsStoryGenerator: React.FC<BestMomentsStoryGeneratorProps> =
               exit={{ height: 0, opacity: 0 }}
               className="space-y-1 max-h-48 overflow-y-auto"
             >
-              {testimonialsWithMoments.map((item) => {
-                const testimonial = item.testimonial;
-                const moments = item.moments;
-                // const totalDuration = momentHelpers.calculateTotalDuration(moments);
-                const avgEngagement =
-                  momentHelpers.calculateAverageEngagement(moments);
+              {eligibleVideos.map((item) => {
+                const sentimentPercent = Math.round(item.sentiment_score * 100);
 
                 return (
                   <div
-                    key={testimonial.id}
+                    key={item.id}
                     className="flex items-center justify-between p-2 bg-white rounded-lg border border-slate-200 hover:border-slate-300 transition-colors"
                   >
                     <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -195,16 +208,16 @@ const BestMomentsStoryGenerator: React.FC<BestMomentsStoryGeneratorProps> =
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium text-slate-900 truncate">
-                          {testimonial.author_name || "Anonymous"}
+                          {item.author_name || "Anonymous"}
                         </p>
                         <p className="text-[10px] text-slate-500 truncate">
-                          {testimonial.author_company || "Unknown Company"}
+                          {item.author_company || "Unknown Company"}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
                       <div className="flex items-center gap-0.5">
-                        {[...Array(testimonial.rating || 0)].map((_, i) => (
+                        {[...Array(item.rating || 0)].map((_, i) => (
                           <Star
                             key={i}
                             className="h-2.5 w-2.5 fill-amber-400 text-amber-400"
@@ -215,7 +228,7 @@ const BestMomentsStoryGenerator: React.FC<BestMomentsStoryGeneratorProps> =
                         variant="outline"
                         className="text-[10px] py-0 px-1.5 bg-slate-900 text-white border-slate-900"
                       >
-                        {moments.length} • {Math.round(avgEngagement * 100)}%
+                        {sentimentPercent}% sentiment
                       </Badge>
                     </div>
                   </div>
@@ -246,7 +259,7 @@ const BestMomentsStoryGenerator: React.FC<BestMomentsStoryGeneratorProps> =
 
           <p className="text-[10px] text-slate-500 text-center">
             Processing time: 3-5 minutes •{" "}
-            {Math.round(stats.avgEngagement * 100)}% avg engagement
+            {Math.round(stats.avgSentiment * 100)}% avg sentiment
           </p>
         </CardContent>
       </Card>

@@ -60,11 +60,6 @@ func (qw *AIQueueWorker) handleTestimonialSentimentAnalysis(ctx context.Context,
 		return qw.respondWithFailure(ctx, serviceID, req.JobID, "invalid testimonial ID", err)
 	}
 
-	workspaceID, err := uuid.Parse(req.WorkspaceID)
-	if err != nil {
-		return qw.respondWithFailure(ctx, serviceID, req.JobID, "invalid workspace ID", err)
-	}
-
 	// Update testimonial processing_status to "analyzing_sentiment"
 	if updateErr := qw.testimonialRepo.UpdateAny(ctx, testimonialID, map[string]any{
 		"processing_status": "analyzing_sentiment",
@@ -105,18 +100,21 @@ func (qw *AIQueueWorker) handleTestimonialSentimentAnalysis(ctx context.Context,
 		}
 		return qw.respondWithFailure(ctx, serviceID, req.JobID, "sentiment analysis failed", err)
 	}
-	// qw.aiService.
-	artifact_id, err := qw.aiService.ArtifactsRepo.CreateArtifactWithLineage(ctx, "sentiment_analysis", workspaceID, &testimonialID, models.JSONMap{
+	// Save sentiment data directly to testimonials.sentiment_data
+	sentimentData := models.JSONMap{
 		"sentiment_score":          result.SentimentScore,
 		"label":                    result.Label,
 		"emotions":                 result.Emotions,
 		"business_recommendations": result.BusinessRecommendations,
-	}, models.CreateArtifactSourceParams{Type: models.NoTypeSource}, nil, qw.db)
-
-	if err != nil {
-		qw.logger.Error("Failed to save sentiment artifact", zap.Error(err))
 	}
 
+	// Update sentiment_data using new UpdateSentiment method
+	if err := qw.testimonialRepo.UpdateSentiment(ctx, testimonialID, sentimentData, qw.db); err != nil {
+		qw.logger.Error("Failed to update testimonial sentiment data", zap.Error(err))
+		return qw.respondWithFailure(ctx, serviceID, req.JobID, "failed to save sentiment data", err)
+	}
+
+	// Also update the sentiment_score field for quick filtering
 	if err := qw.testimonialRepo.UpdateAny(ctx, testimonialID, map[string]any{
 		"sentiment_score": result.SentimentScore,
 	}, qw.db); err != nil {
@@ -125,7 +123,6 @@ func (qw *AIQueueWorker) handleTestimonialSentimentAnalysis(ctx context.Context,
 
 	response := map[string]interface{}{
 		"sentiment_result": result,
-		"artifact_id":      artifact_id,
 		"testimonial_id":   req.TestimonialID,
 		"job_type":         "sentiment_analysis",
 	}

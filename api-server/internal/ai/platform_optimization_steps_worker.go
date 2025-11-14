@@ -1068,15 +1068,30 @@ func (w *PlatformOptimizationStepsWorker) buildBrollConfig(stepCtx *StepContext)
 						TransitionDuration: getFloat64(clipMap, "transition_duration"),
 					}
 
-					// Set defaults
+					// CRITICAL: Validate and set defaults to prevent negative/invalid values
 					if clip.PositionMode == "" {
 						clip.PositionMode = "fill"
 					}
 					if clip.TransitionType == "" {
 						clip.TransitionType = config.DefaultTransition
 					}
-					if clip.TransitionDuration == 0 {
+					if clip.TransitionDuration <= 0 {
 						clip.TransitionDuration = config.DefaultTransitionDuration
+					}
+
+					// Validate duration and start_time to prevent FFmpeg errors
+					if clip.Duration <= 0 {
+						w.logger.Warn("B-roll clip has invalid duration, using default",
+							zap.String("clip_id", clipID),
+							zap.Float64("invalid_duration", clip.Duration),
+							zap.Float64("default_duration", 5.0))
+						clip.Duration = 5.0
+					}
+					if clip.StartTime < 0 {
+						w.logger.Warn("B-roll clip has invalid start_time, using 0",
+							zap.String("clip_id", clipID),
+							zap.Float64("invalid_start_time", clip.StartTime))
+						clip.StartTime = 0
 					}
 
 					clips = append(clips, clip)

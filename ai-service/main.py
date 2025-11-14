@@ -24,10 +24,80 @@ import intelligence_pb2_grpc
 from src.config.settings import settings
 from src.utils.logging_config import setup_logging
 from src.utils.job_cancellation_manager import job_checker
+from src.utils.grpc_helpers import (
+    initialize_job_id,
+    handle_job_cancellation,
+    handle_grpc_error,
+    complete_and_log_job,
+    convert_clip_protobuf_to_dict,
+    build_hook_candidate_response
+)
 
 # Initialize logging first
 setup_logging(settings.log_level, settings.log_format)
 logger = logging.getLogger(__name__)
+
+
+# ============================================================================
+# SHARED HELPER FUNCTIONS
+# ============================================================================
+
+def parse_broll_request(request, job_id):
+    """
+    Parse B-roll overlay request protobuf into Python dicts.
+    Shared between PlatformOptimizerServicer and StoryModeServicer.
+
+    Returns:
+        tuple: (broll_clips, config, transcript_segments)
+    """
+    # Convert protobuf B-roll clips to dict
+    broll_clips = []
+    for clip in request.broll_clips:
+        broll_clips.append({
+            "clip_id": clip.clip_id,
+            "source_url": clip.source_url,
+            "start_time": clip.start_time,
+            "duration": clip.duration,
+            "position_mode": clip.position_mode if clip.position_mode else "fill",
+            "transition_type": clip.transition_type if clip.transition_type else "fade",
+            "transition_duration": clip.transition_duration if clip.transition_duration > 0 else 0.5,
+            "pip_position": clip.pip_position if clip.pip_position else "bottom_right",
+            "pip_scale": clip.pip_scale if clip.pip_scale > 0 else 0.3,
+            "split_orientation": clip.split_orientation if clip.split_orientation else "vertical",
+            "source_type": clip.source_type if clip.source_type else "uploaded",
+            "search_query": clip.search_query if clip.search_query else "",
+            "keywords": list(clip.keywords) if clip.keywords else []
+        })
+
+    # Convert config to dict
+    config = {
+        "placement_strategy": request.config.placement_strategy if request.config.placement_strategy else "even",
+        "preserve_audio": request.config.preserve_audio,
+        "audio_ducking": request.config.audio_ducking if request.config.audio_ducking > 0 else 0.3,
+        "default_transition": request.config.default_transition if request.config.default_transition else "fade",
+        "default_transition_duration": request.config.default_transition_duration if request.config.default_transition_duration > 0 else 0.5,
+        "quality_preset": request.config.quality_preset if request.config.quality_preset else "high",
+        "auto_adjust_timing": request.config.auto_adjust_timing,
+        "max_broll_duration": request.config.max_broll_duration if request.config.max_broll_duration > 0 else 10.0,
+        "max_broll_percent": request.config.max_broll_percent if request.config.max_broll_percent > 0 else 0.3,
+        "position_mode": request.config.position_mode if request.config.position_mode else "fill",
+        "transition_type": request.config.transition_type if request.config.transition_type else "fade"
+    }
+
+    # Convert transcript segments from protobuf to list of dicts
+    transcript_segments = None
+    if request.transcript_segments:
+        transcript_segments = []
+        for seg in request.transcript_segments:
+            transcript_segments.append({
+                "text": seg.text,
+                "start": seg.start_time,
+                "end": seg.end_time,
+                "confidence": getattr(seg, 'confidence', 1.0)
+            })
+        logger.info(f"[{job_id}] Received {len(transcript_segments)} transcript segments for AI placement")
+
+    return broll_clips, config, transcript_segments
 
 
 import signal
@@ -35,16 +105,21 @@ class MediaEnhancementServicer(intelligence_pb2_grpc.MediaEnhancementServiceServ
     """Media Enhancement Service Implementation"""
     
     def EnhanceMedia(self, request, context):
-        job_id = request.job_id or str(uuid.uuid4())
-        
+        job_id = initialize_job_id(request)
+
         try:
-            if job_checker.handle_cancellation(job_id, context):
-                return intelligence_pb2.EnhanceResponse(success=False)
+            # Check for cancellation
+            is_cancelled, response = handle_job_cancellation(
+                job_id, context, job_checker, intelligence_pb2.EnhanceResponse
+            )
+            if is_cancelled:
+                return response
+
             logger.info(f"Media enhancement request for: {request.media_url}")
 
             from src.services.enhancement.enhancer import MediaEnhancer
             enhancer = MediaEnhancer()
-            
+
             # Call RunPod function
             # result = runpod_client.call_function_safely('media-enhancement', **request_params)
             result = enhancer.enhance(
@@ -61,33 +136,29 @@ class MediaEnhancementServicer(intelligence_pb2_grpc.MediaEnhancementServiceServ
                 remove_noise=request.remove_noise or True,
                 job_id=job_id
             )
-            
+
             if result.get("error"):
                 context.set_code(grpc.StatusCode.INTERNAL)
                 context.set_details(result["error"])
                 return intelligence_pb2.EnhanceResponse(error=result["error"])
-            
+
             # Convert result to protobuf response
             response = intelligence_pb2.EnhanceResponse()
             response.enhanced_url = result.get("enhanced_url", "")
             response.quality_score = result.get("quality_score", 0.0)
             response.media_type = result.get("media_type", "unknown")
-            
+
             # Add applied enhancements
             for enhancement in result.get("applied_enhancements", []):
                 response.applied_enhancements.append(enhancement)
-            
-            logger.info(f"✅ Media enhancement completed for: {request.media_url}")
-            job_checker.complete_job(job_id)
+
+            complete_and_log_job(job_id, "Media enhancement", job_checker, f"URL: {request.media_url}")
             return response
 
         except Exception as e:
-            error_msg = f"Media enhancement error: {str(e)}"
-            logger.error(f"❌ {error_msg}")
-            context.set_code(grpc.StatusCode.INTERNAL)
-            context.set_details(error_msg)
-            job_checker.complete_job(job_id)
-            return intelligence_pb2.EnhanceResponse(error=error_msg)
+            return handle_grpc_error(
+                e, "Media enhancement", job_id, context, job_checker, intelligence_pb2.EnhanceResponse
+            )
 
     def AdaptiveEnhanceMedia(self, request, context):
         """Scene-aware adaptive video enhancement"""
@@ -856,46 +927,8 @@ class PlatformOptimizerServicer(intelligence_pb2_grpc.PlatformOptimizerServiceSe
 
             logger.info(f"[{job_id}] Apply B-roll Overlays: {len(request.broll_clips)} clips, strategy: {request.config.placement_strategy if request.config else 'default'}")
 
-            # Convert protobuf B-roll clips to dict
-            broll_clips = []
-            for clip in request.broll_clips:
-                broll_clips.append({
-                    "clip_id": clip.clip_id,
-                    "source_url": clip.source_url,
-                    "start_time": clip.start_time,
-                    "duration": clip.duration,
-                    "position_mode": clip.position_mode if clip.position_mode else "fill",
-                    "transition_type": clip.transition_type if clip.transition_type else "fade",
-                    "transition_duration": clip.transition_duration if clip.transition_duration > 0 else 0.5,
-                })
-
-            # Convert config to dict
-            config = {
-                "placement_strategy": request.config.placement_strategy if request.config.placement_strategy else "even",
-                "preserve_audio": request.config.preserve_audio if request.config else True,
-                "audio_ducking": request.config.audio_ducking if request.config and request.config.audio_ducking > 0 else 0.3,
-                "default_transition": request.config.default_transition if request.config and request.config.default_transition else "fade",
-                "default_transition_duration": request.config.default_transition_duration if request.config and request.config.default_transition_duration > 0 else 0.5,
-                "quality_preset": request.config.quality_preset if request.config and request.config.quality_preset else "high",
-                "auto_adjust_timing": request.config.auto_adjust_timing if request.config else True,
-                "max_broll_duration": request.config.max_broll_duration if request.config and request.config.max_broll_duration > 0 else 10.0,
-                "max_broll_percent": request.config.max_broll_percent if request.config and request.config.max_broll_percent > 0 else 0.3,
-                "position_mode": request.config.position_mode if request.config and request.config.position_mode else "fill",
-                "transition_type": request.config.transition_type if request.config and request.config.transition_type else "fade"
-            }
-
-            # Convert transcript segments from protobuf to list of dicts
-            transcript_segments = None
-            if request.transcript_segments:
-                transcript_segments = []
-                for seg in request.transcript_segments:
-                    transcript_segments.append({
-                        "text": seg.text,
-                        "start": seg.start_time,
-                        "end": seg.end_time,
-                        "confidence": getattr(seg, 'confidence', 1.0)
-                    })
-                logger.info(f"[{job_id}] Received {len(transcript_segments)} transcript segments for AI placement")
+            # Parse request using shared helper function
+            broll_clips, config, transcript_segments = parse_broll_request(request, job_id)
 
             result = self.step_processor.apply_broll_overlays(
                 job_id=job_id,
@@ -1186,14 +1219,14 @@ class StoryModeServicer(intelligence_pb2_grpc.StoryModeServiceServicer):
             intro_config = {
                 "enabled": add_intro,
                 "style": "branded",
-                "duration": 6.0,  # Longer duration for complete delivery
+                "duration": 6.0 if intro_text else 3.0,  # Longer duration for complete delivery
                 "text_overlay": intro_text  # Custom text from frontend (displayed and spoken)
             } if add_intro else None
 
             outro_config = {
                 "enabled": add_outro,
                 "style": "branded",
-                "duration": 4.5,  # Slightly shorter for outro
+                "duration": 4.5 if outro_text else 2.0,  # Slightly shorter for outro
                 "text_overlay": outro_text  # Custom text from frontend (displayed and spoken)
             } if add_outro else None
 
@@ -1397,6 +1430,11 @@ class StoryModeServicer(intelligence_pb2_grpc.StoryModeServiceServicer):
                     "text_content": clip.text_content
                 })
 
+            # Extract semantic_gaps from request
+            semantic_gaps = list(request.semantic_gaps) if request.semantic_gaps else []
+            if semantic_gaps:
+                logger.info(f"[{job_id}] Semantic gaps received: {semantic_gaps}")
+
             result = self.step_processor.assemble_draft(
                 job_id=job_id,
                 session_id=request.session_id,
@@ -1404,7 +1442,8 @@ class StoryModeServicer(intelligence_pb2_grpc.StoryModeServiceServicer):
                 clips=clips,
                 transition_type=request.transition_type,
                 transition_duration=request.transition_duration,
-                upload_intermediate=request.upload_intermediate
+                upload_intermediate=request.upload_intermediate,
+                semantic_gaps=semantic_gaps
             )
 
             response = intelligence_pb2.AssembleDraftResponse(
@@ -1614,62 +1653,13 @@ class StoryModeServicer(intelligence_pb2_grpc.StoryModeServiceServicer):
 
             logger.info(f"[{job_id}] Apply B-roll Overlays: {len(request.broll_clips)} clips")
 
-            # Convert protobuf B-roll clips to dict
-            broll_clips = []
-            for clip in request.broll_clips:
-                broll_clips.append({
-                    "clip_id": clip.clip_id,
-                    "source_url": clip.source_url,
-                    "start_time": clip.start_time,
-                    "duration": clip.duration,
-                    "position_mode": clip.position_mode if clip.position_mode else "fill",
-                    "transition_type": clip.transition_type if clip.transition_type else "fade",
-                    "transition_duration": clip.transition_duration if clip.transition_duration > 0 else 0.5,
-                    "pip_position": clip.pip_position if clip.pip_position else "bottom_right",
-                    "pip_scale": clip.pip_scale if clip.pip_scale > 0 else 0.3,
-                    "split_orientation": clip.split_orientation if clip.split_orientation else "vertical",
-                    "source_type": clip.source_type if clip.source_type else "uploaded",
-                    "search_query": clip.search_query if clip.search_query else "",
-                    "keywords": list(clip.keywords) if clip.keywords else []
-                })
+            # Parse request using shared helper function
+            broll_clips, config, transcript_segments = parse_broll_request(request, job_id)
 
-            # Convert config to dict
-            config = {
-                "placement_strategy": request.config.placement_strategy if request.config.placement_strategy else "even",
-                "preserve_audio": request.config.preserve_audio,
-                "audio_ducking": request.config.audio_ducking if request.config.audio_ducking > 0 else 0.3,
-                "default_transition": request.config.default_transition if request.config.default_transition else "fade",
-                "default_transition_duration": request.config.default_transition_duration if request.config.default_transition_duration > 0 else 0.5,
-                "quality_preset": request.config.quality_preset if request.config.quality_preset else "high",
-                "auto_adjust_timing": request.config.auto_adjust_timing,
-                "max_broll_duration": request.config.max_broll_duration if request.config.max_broll_duration > 0 else 10.0,
-                "max_broll_percent": request.config.max_broll_percent if request.config.max_broll_percent > 0 else 0.3,
-                "position_mode": request.config.position_mode if request.config.position_mode else "fill",
-                "transition_type": request.config.transition_type if request.config.transition_type else "fade"
-            }
-
-            # Convert transcript segments from protobuf to list of dicts
-            transcript_segments = None
-            if request.transcript_segments:
-                transcript_segments = []
-                for seg in request.transcript_segments:
-                    transcript_segments.append({
-                        "text": seg.text,
-                        "start": seg.start_time,
-                        "end": seg.end_time,
-                        "confidence": getattr(seg, 'confidence', 1.0)
-                    })
-                logger.info(f"[{job_id}] Received {len(transcript_segments)} transcript segments for AI placement")
-
-            # Download media file
+            # Pass media URL directly to service - it will check session cache first, then download if needed
+            # This is more efficient as it reuses cached files from previous stages
             from src.utils.storage import StorageManager
             storage_manager = StorageManager()
-
-            logger.info(f"[{job_id}] Downloading media from: {request.media_url}")
-            video_path = storage_manager.download_media(request.media_url)
-
-            if not video_path or not os.path.exists(video_path):
-                raise Exception(f"Failed to download media from: {request.media_url}")
 
             # Download B-roll clips
             downloaded_broll_clips = []
@@ -1685,8 +1675,9 @@ class StoryModeServicer(intelligence_pb2_grpc.StoryModeServiceServicer):
                         logger.warning(f"[{job_id}] Failed to download B-roll: {clip['source_url']}")
 
             # Apply B-roll overlays using BrollOverlayService
+            # Pass the URL directly - service will check session cache before downloading
             result = self.broll_overlay_service.apply_broll_overlays(
-                video_path=video_path,
+                video_path=request.media_url,  # Service handles cache check + download
                 broll_clips=downloaded_broll_clips,
                 config=config,
                 job_id=job_id,

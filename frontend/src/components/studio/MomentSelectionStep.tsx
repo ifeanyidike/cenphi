@@ -129,7 +129,7 @@ const MomentSelectionStep: React.FC<MomentSelectionStepProps> = ({
     (!maxSelection || selectedCount <= maxSelection);
   const totalDuration = allMoments
     .filter((m) => selectedMomentIds.has(m.id))
-    .reduce((sum, m) => sum + m.duration, 0);
+    .reduce((sum, m) => sum + (m.duration || m.end_time - m.start_time || 0), 0);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);

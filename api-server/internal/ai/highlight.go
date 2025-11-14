@@ -30,6 +30,7 @@ const (
 	HighlightTypeRecommendation HighlightType = "recommendation" // Direct endorsements/recommendations
 	HighlightTypeBeforeAfter    HighlightType = "before_after"   // Transformation/comparison stories
 	HighlightTypeEmotional      HighlightType = "emotional"      // Genuine excitement, relief, satisfaction
+	HighlightTypeStoryVideo     HighlightType = "story_video"    // Longer moments optimized for story video (6-25s)
 )
 
 type HighlightRequest struct {
@@ -259,7 +260,7 @@ Extract well-crafted, meaningful standalone clips that maximize persuasion and c
 	highlightsWithWords := s.addWordsToHighlights(tempHighlights, segments)
 
 	// Apply quality filters and scoring on FINAL highlights (after word adjustment)
-	pbHighlights := s.filterAndScoreHighlights(highlightsWithWords)
+	pbHighlights := s.filterAndScoreHighlights(highlightsWithWords, HighlightTypeGeneral)
 
 	// Cache the filtered highlights
 	s.cacheService.Set(ctx, cacheKey, pbHighlights, 2*time.Hour)
@@ -361,6 +362,7 @@ func (s HighlightService) defaultHighlightFields(h *HighlightWithWords) {
 // IMPORTANT: All durations are in MILLISECONDS
 func (s *HighlightService) filterAndScoreHighlights(
 	highlights []*pb.HighlightMoment,
+	highlightType HighlightType,
 ) []*pb.HighlightMoment {
 
 	filtered := make([]*pb.HighlightMoment, 0, len(highlights))
@@ -419,12 +421,13 @@ func (s *HighlightService) filterAndScoreHighlights(
 	}
 
 	// Remove duplicates and overlaps from the filtered list
-	return s.removeDuplicatesAndOverlaps(filtered)
+	return s.removeDuplicatesAndOverlaps(filtered, highlightType)
 }
 
 // removeDuplicatesAndOverlaps ensures no duplicate or overlapping highlights
 func (s *HighlightService) removeDuplicatesAndOverlaps(
 	highlights []*pb.HighlightMoment,
+	highlightType HighlightType,
 ) []*pb.HighlightMoment {
 
 	if len(highlights) == 0 {
@@ -441,26 +444,41 @@ func (s *HighlightService) removeDuplicatesAndOverlaps(
 		if cur == nil {
 			continue
 		}
-		overlapFound := false
+		shouldReject := false
 
 		for i, exist := range deduped {
 			overlap := s.calculateOverlap(
 				exist.StartTime, exist.EndTime, cur.StartTime, cur.EndTime,
 			)
 
-			// Merge only when they overlap ≥50% of shorter segment
-			shorter := math.Min(exist.EndTime-exist.StartTime, cur.EndTime-cur.StartTime)
-			if overlap/shorter >= 0.5 {
-				overlapFound = true
-				// Replace weaker importance
+			// STRICTER: Reject ANY overlap (even 1 second) to prevent overlapping segments
+			if overlap > 0 {
+				shouldReject = true
+				// Keep the one with higher importance score
 				if cur.ImportanceScore > exist.ImportanceScore {
 					deduped[i] = cur
 				}
 				break
 			}
+
+			// STORY VIDEO SPECIFIC: Reject consecutive/adjacent segments to prevent chaining
+			// This ONLY applies to story_video highlights to ensure we get peaks, not the whole mountain
+			if highlightType == HighlightTypeStoryVideo {
+				// If current segment starts within 3 seconds of where previous segment ended,
+				// they are too close and likely part of a chain covering the whole video
+				minGap := 3.0 // Minimum 3 second gap between story_video highlights
+				if math.Abs(cur.StartTime-exist.EndTime) < minGap || math.Abs(exist.StartTime-cur.EndTime) < minGap {
+					shouldReject = true
+					// Keep the one with higher importance score
+					if cur.ImportanceScore > exist.ImportanceScore {
+						deduped[i] = cur
+					}
+					break
+				}
+			}
 		}
 
-		if !overlapFound {
+		if !shouldReject {
 			deduped = append(deduped, cur)
 		}
 	}
@@ -762,8 +780,8 @@ func (s HighlightService) ExtractHighlightsByType(ctx context.Context, request H
 	}
 
 	// Apply quality filters and scoring on FINAL highlights (after word adjustment)
-	fmt.Printf("🔍 Applying graduated filtering to %d highlights...\n", len(highlightsWithWords))
-	pbHighlights := s.filterAndScoreHighlights(highlightsWithWords)
+	fmt.Printf("🔍 Applying graduated filtering to %d highlights (type: %s)...\n", len(highlightsWithWords), request.HighlightType)
+	pbHighlights := s.filterAndScoreHighlights(highlightsWithWords, request.HighlightType)
 
 	fmt.Printf("✅ Final result: %d/%d highlights passed filtering (%.1f%% retention)\n",
 		len(pbHighlights), len(highlightsResponse),
@@ -1005,10 +1023,7 @@ func (s *HighlightService) expandToCompleteSentences(
 		return nil
 	}
 
-	endIdx := startIdx + len(h.Words)
-	if endIdx > len(allWords) {
-		endIdx = len(allWords)
-	}
+	endIdx := min(startIdx+len(h.Words), len(allWords))
 
 	// Expand backward to find sentence start
 	expandedStart := startIdx
@@ -1307,6 +1322,86 @@ REQUIREMENT: Include both BEFORE and AFTER states for completeness.`
 		typeSpecific = `
 FOCUS: Genuine emotional reactions with clear contextual triggers.
 PRIORITY: Relief, pride, gratitude, advocacy rooted in their story journey.`
+	case HighlightTypeStoryVideo:
+		typeSpecific = `
+FOCUS: Extract ONLY the most impactful KEY moments that together tell a compelling customer journey story.
+Optimize for story video format (Instagram Stories, TikTok, YouTube Shorts) where highlights will be sewn together into a 60-90 second narrative.
+
+⚠️ CRITICAL: QUALITY OVER QUANTITY
+DO NOT extract the entire testimonial. Extract ONLY the most powerful, story-worthy moments.
+Target: 4-8 highlights (NOT 6-15). Fewer, better highlights create stronger stories.
+
+NARRATIVE STRUCTURE - EXTRACT PEAK MOMENTS FROM:
+1. PROBLEM/CHALLENGE (0-2 highlights - ONLY if powerful):
+   - Extract ONLY the single most dramatic or relatable pain point
+   - Skip generic problems - focus on specific, quantified struggles
+   - ✓ GOOD: "We were losing $50K monthly to errors and couldn't figure out why"
+   - ✗ SKIP: "We had some challenges with our process"
+
+2. DECISION/AHA MOMENT (0-1 highlight - ONLY if compelling):
+   - Extract ONLY the most compelling "why we chose this" insight
+   - Skip vague decision talk - focus on specific aha moments
+   - ✓ GOOD: "When I saw it could automate what took us 20 hours weekly, I knew immediately"
+   - ✗ SKIP: "We decided to try it out and see how it went"
+
+3. TRANSFORMATION/RESULTS (1-3 highlights - THE MOST IMPORTANT):
+   - Extract the most impressive quantified outcomes or transformation moments
+   - This is the CORE of the story - prioritize these over problems/decisions
+   - ✓ GOOD: "Within the first week, our error rate dropped from 15% to under 1%"
+   - ✓ GOOD: "We went from spending 20 hours weekly on this to just 2 hours"
+   - ✗ SKIP: "Things started to improve gradually over time"
+
+4. RECOMMENDATION/EMOTION (0-2 highlights - ONLY if genuine):
+   - Extract ONLY authentic, passionate endorsements
+   - Skip polite recommendations - focus on "can't live without it" moments
+   - ✓ GOOD: "I honestly can't imagine going back. It's been a complete game-changer"
+   - ✗ SKIP: "I would recommend it to others who need this"
+
+CRITICAL SELECTION RULES:
+✓ EXTRACT highlights that are:
+  - Independently powerful (could stand alone as a social media clip)
+  - Specific with metrics, vivid details, or strong emotion
+  - Between 8-20 seconds duration
+  - Non-overlapping in time or content
+
+✗ REJECT highlights that are:
+  - Generic/vague ("it's really good", "it helped us a lot")
+  - Pure setup without payoff ("so we started looking around...")
+  - Repetitive of already-selected highlights
+  - Corporate jargon without emotion
+  - Longer than 20 seconds without exceptional value
+
+QUALITY THRESHOLDS (STRICT):
+- importance_score: Minimum 0.75 (be HIGHLY selective)
+- engagement_score: Minimum 0.65 (must be captivating)
+- Extract 4-8 highlights MAXIMUM (prefer 4-6 for tight stories)
+
+⚠️ ANTI-PATTERN TO AVOID:
+DO NOT extract consecutive or adjacent segments that together cover the entire testimonial.
+Example of WHAT NOT TO DO:
+- Segment 1: 0-10s
+- Segment 2: 10-20s
+- Result: Entire testimonial extracted ❌
+
+Instead, leave gaps between highlights. Extract peaks, not the whole mountain.
+Example of CORRECT APPROACH:
+- Segment 1: 5-15s (peak problem moment)
+- Segment 2: 45-55s (peak result moment)
+- Segment 3: 80-90s (peak recommendation)
+- Result: 3 powerful moments from 100s testimonial ✓
+
+FINAL VALIDATION:
+Before finalizing, ask yourself:
+1. If I only had 60 seconds to tell this customer's story, are these the moments I'd choose?
+2. Does each highlight deliver significant value independently?
+3. Have I left significant gaps (not extracted consecutive segments)?
+4. Would removing any highlight make the story stronger or tighter?
+
+If the answer to #4 is YES for any highlight, remove it.
+
+PHILOSOPHY:
+Story videos are highlight reels of PEAK MOMENTS, not comprehensive documentaries.
+Think Instagram Reels, not Netflix documentary. Extract the hook, the wow, and the CTA.`
 	default:
 		typeSpecific = `
 FOCUS: Highest ROI clips with strong business impact, clear narrative, and emotional authenticity.`

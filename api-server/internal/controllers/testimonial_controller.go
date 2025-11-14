@@ -492,3 +492,36 @@ func (tc *TestimonialController) GeneratePlatformRecommendation(w http.ResponseW
 		"message":                "Platform recommendations generated successfully",
 	})
 }
+
+// GetHighlights retrieves highlights for a testimonial (on-demand)
+// Supports filtering by extraction mode: standalone (for clips) or story_video (for story generation)
+func (tc *TestimonialController) GetHighlights(w http.ResponseWriter, r *http.Request) {
+	testimonialIDStr := chi.URLParam(r, "id")
+	testimonialID, err := uuid.Parse(testimonialIDStr)
+	if err != nil {
+		tc.logger.Error("Invalid testimonial ID", zap.Error(err))
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid testimonial ID")
+		return
+	}
+
+	// Get optional mode filter from query params
+	mode := r.URL.Query().Get("mode") // "" | "standalone" | "story_video"
+
+	// Fetch highlights from service
+	highlights, err := tc.service.GetHighlights(r.Context(), testimonialID, mode)
+	if err != nil {
+		tc.logger.Error("Failed to get highlights",
+			zap.Error(err),
+			zap.String("testimonial_id", testimonialID.String()),
+			zap.String("mode", mode))
+		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	utils.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
+		"highlights": highlights,
+		"count":      len(highlights),
+		"mode":       mode,
+		"message":    "Highlights retrieved successfully",
+	})
+}

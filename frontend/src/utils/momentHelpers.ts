@@ -1,9 +1,64 @@
 import { HighlightMoment, HighlightType } from "@/types/ai-service";
-import { TestimonialArtifact, Testimonial } from "@/types/testimonial";
+import {
+  TestimonialArtifact,
+  Testimonial,
+  TestimonialHighlightRecord,
+} from "@/types/testimonial";
 
 /**
  * Moment Helpers - Utilities for parsing and managing highlight moments
  */
+
+/**
+ * Parse highlight moments from new testimonial_highlights table records
+ *
+ * @param highlights - Array of TestimonialHighlightRecord from testimonial_highlights table
+ * @param filterType - Optional filter by specific highlight type
+ * @returns Array of HighlightMoment objects
+ */
+export function parseMomentsFromHighlights(
+  highlights: TestimonialHighlightRecord[],
+  filterType?: HighlightType | "highlight"
+): HighlightMoment[] {
+  const moments: HighlightMoment[] = [];
+
+  // Normalize filter type
+  const normalizedFilterType =
+    filterType === "highlight" ? "general" : filterType;
+
+  for (const highlightRecord of highlights) {
+    // Skip if filtering by type and this record doesn't match
+    if (normalizedFilterType && highlightRecord.highlight_type !== normalizedFilterType) {
+      continue;
+    }
+
+    // Parse moments from the JSONB moments array
+    if (Array.isArray(highlightRecord.moments)) {
+      for (const moment of highlightRecord.moments) {
+        const startTime = moment.start_time || 0;
+        const endTime = moment.end_time || 0;
+        const duration = endTime - startTime;
+
+        moments.push({
+          id: moment.id || `${highlightRecord.id}-${moments.length}`,
+          testimonial_id: highlightRecord.testimonial_id,
+          type: (highlightRecord.highlight_type as HighlightType) || "general",
+          start_time: startTime,
+          end_time: endTime,
+          duration,
+          text: moment.text || "",
+          theme: moment.theme,
+          importance_score: moment.importance_score,
+          engagement_score: moment.engagement_score || 0.5,
+          keywords: moment.keywords || [],
+          thumbnail_url: moment.thumbnail_url,
+        });
+      }
+    }
+  }
+
+  return moments;
+}
 
 /**
  * Parse highlight moments from testimonial artifacts
@@ -187,7 +242,10 @@ export function sortByChronological(
  * @returns Total duration in seconds
  */
 export function calculateTotalDuration(moments: HighlightMoment[]): number {
-  return moments.reduce((sum, m) => sum + m.duration, 0);
+  return moments.reduce(
+    (sum, m) => sum + (m.duration || m.end_time - m.start_time || 0),
+    0
+  );
 }
 
 /**
@@ -315,10 +373,18 @@ export function getMomentsForClipping(
   testimonial: Testimonial,
   highlightType: HighlightType | "highlight"
 ): HighlightMoment[] {
-  const moments = parseMomentsFromArtifacts(
-    testimonial.artifacts || [],
+  // First try to get moments from new highlights field
+  const momentsFromHighlights = parseMomentsFromHighlights(
+    testimonial.highlights || [],
     highlightType
   );
+
+  // Fallback to artifacts if no moments found in highlights
+  const moments =
+    momentsFromHighlights.length > 0
+      ? momentsFromHighlights
+      : parseMomentsFromArtifacts(testimonial.artifacts || [], highlightType);
+
   // Sort by engagement for clipping (user likely wants best clips first)
   return sortByEngagement(moments);
 }
@@ -335,33 +401,40 @@ export function getMomentsForClipping(
  */
 export function convertClipsToMoments(clips: any[]): HighlightMoment[] {
   return clips.map((clip) => {
-    // Extract duration - clips can have it at different levels
+    // Extract timestamps - clips can have them at different levels
+    const startTime = clip.start_time || clip.metadata?.start_time || 0;
+    const endTime = clip.end_time || clip.metadata?.end_time || 0;
     const duration = clip.duration || clip.metadata?.duration || 0;
 
-    // Convert duration to milliseconds if it's in seconds (< 1000 likely means seconds)
+    // Convert to milliseconds if in seconds (< 1000 likely means seconds)
+    // All HighlightMoment timestamps must be in milliseconds
+    const startTimeMs = startTime < 1000 ? startTime * 1000 : startTime;
+    const endTimeMs = endTime < 1000 ? endTime * 1000 : endTime;
     const durationMs = duration < 1000 ? duration * 1000 : duration;
+    let theme =
+      clip.theme ||
+      clip.title ||
+      clip.metadata?.theme ||
+      clip.metadata?.title ||
+      `Clip ${clip.id}`;
+    theme = theme?.split("_")?.join(" ") || theme;
+    theme = theme ? theme.charAt(0).toUpperCase() + theme.slice(1) : theme;
 
     return {
       id: clip.id || clip.artifact_id,
       testimonial_id: clip.testimonial_id || clip.parent_testimonial_id,
       type: "general" as const,
-      start_time: clip.start_time || clip.metadata?.start_time || 0,
-      end_time: clip.end_time || clip.metadata?.end_time || 0,
+      start_time: startTimeMs,
+      end_time: endTimeMs,
       duration: durationMs,
       text: clip.text_content || clip.text || clip.metadata?.transcript || "",
-      theme:
-        clip.theme ||
-        clip.title ||
-        clip.metadata?.theme ||
-        clip.metadata?.title ||
-        `Clip ${clip.id}`,
+      theme,
       importance_score:
         clip.importance_score || clip.metadata?.importance_score,
       engagement_score:
         clip.engagement_score || clip.metadata?.engagement_score || 0.8,
       keywords: clip.keywords || clip.metadata?.keywords || [],
       thumbnail_url: clip.thumbnail_url || clip.metadata?.thumbnail_url,
-      // CRITICAL: Preserve clip artifact metadata for backend
       clip_artifact_id: clip.id || clip.artifact_id,
       storage_path:
         clip.storage_url || clip.url || clip.storage_path || clip.media_url,

@@ -230,6 +230,9 @@ func RegisterTestimonialRoutes(r chi.Router, controller controllers.TestimonialC
 			r.Get("/{id}/transcript-segments", transcriptController.GetTranscriptSegments) // Full segments array
 			r.Get("/{id}/duration", transcriptController.GetVideoDuration)                 // Calculated duration only
 
+			// Lazy-loaded highlights data (on-demand fetch from testimonial_highlights table)
+			r.Get("/{id}/highlights", controller.GetHighlights) // Query param: ?mode=standalone|story_video
+
 			// Upload endpoint
 			//r.Post("/upload", controller.HandleTestimonialUpload)
 		})
@@ -414,6 +417,7 @@ func RegisterAIProcessorRoutes(r chi.Router, controller controllers.AIProcessorC
 		r.Post("/ai/highlights", controller.ExtractHighlights)               // highlight
 		r.Post("/ai/highlights/by-type", controller.ExtractHighlightsByType) // highlight by type
 		r.Post("/ai/highlights/save-order", controller.SaveHighlightOrder)   // save highlight order
+		r.Post("/ai/story-video-highlights", controller.GetOrGenerateStoryVideoHighlights) // story video highlights (batch)
 		r.Post("/ai/polish", controller.PolishText)                          // polish
 		r.Post("/ai/regenerate-content", controller.RegenerateContent)       // regenerate content (no save)
 		r.Post("/ai/generate-content", controller.GenerateContent)           // generation

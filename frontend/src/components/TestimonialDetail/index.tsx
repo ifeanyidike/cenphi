@@ -48,18 +48,7 @@ import {
   EnhancedArtifact,
   CONTENT_CATEGORIES,
 } from "@/components/ai-generated-content/ContentCategorization";
-
-interface SentimentData {
-  label: string;
-  emotions: string[];
-  sentiment_score: number;
-  business_recommendations: Array<{
-    action: string;
-    category: string;
-    priority: "high" | "medium" | "low";
-    reasoning: string;
-  }>;
-}
+import { SentimentData } from "@/types/testimonial";
 
 const getCompletedFeaturesCount = (
   artifacts: any[],
@@ -128,6 +117,10 @@ const TestimonialDetail = observer(() => {
   const [sharingClips, setSharingClips] = useState(false);
   const [clipsToShare, setClipsToShare] = useState<EnhancedArtifact[]>([]);
 
+  // Highlights state - fetch on-demand from testimonial_highlights table
+  const [highlights, setHighlights] = useState<any[]>([]);
+  const [loadingHighlights, setLoadingHighlights] = useState(false);
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const fullscreenRef = useRef<HTMLDivElement>(null);
 
@@ -138,6 +131,40 @@ const TestimonialDetail = observer(() => {
       await workspaceHub.testimonialManager.fetchTestimonial(testimonialId);
     })();
   }, [testimonialId]);
+
+  // Fetch highlights on-demand when testimonial is loaded (only for highlights tab)
+  useEffect(() => {
+    if (!testimonialId || activeTab !== "artifacts" || activeArtifactTab !== "highlights") return;
+
+    const fetchHighlights = async () => {
+      try {
+        setLoadingHighlights(true);
+        const { token } = await authStore.getToken();
+
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/testimonials/${testimonialId}/highlights?mode=standalone`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (!response.ok) throw new Error("Failed to fetch highlights");
+
+        const data = await response.json();
+        setHighlights(data.highlights || []);
+      } catch (error) {
+        console.error("Error fetching highlights:", error);
+        setHighlights([]);
+      } finally {
+        setLoadingHighlights(false);
+      }
+    };
+
+    fetchHighlights();
+  }, [testimonialId, activeTab, activeArtifactTab]);
 
   // Update tabs when URL params change
   useEffect(() => {
@@ -517,18 +544,21 @@ const TestimonialDetail = observer(() => {
     const shouldShow = shouldShowInContext(artifact, "testimonial-detail");
     return shouldShow.show && shouldShow.isPrimary;
   });
-  // Parse different artifact types from contextual artifacts
-  const sentimentArtifact = contextualArtifacts.find(
+  // Parse different artifact types from ALL artifacts (not filtered by context)
+  // This ensures sentiment is accessible even if filtered from display
+  const sentimentArtifact = artifacts.find(
     (a) => a.processing_type === "sentiment_analysis"
   );
-  const highlightArtifacts = contextualArtifacts.filter(
-    (a) => a.processing_type === "highlight_extraction"
-  );
+
+  // IMPORTANT: Highlights are now fetched on-demand from testimonial_highlights table
+  // They are no longer stored in artifacts - see highlights state and fetchHighlights useEffect above
+
   const clippingArtifacts = contextualArtifacts.filter(
     (a) => a.processing_type === "clipping"
   );
 
-  const sentiment = sentimentArtifact?.data as SentimentData | undefined;
+  // Get sentiment from testimonial.sentiment_data (new schema) or fall back to artifacts (legacy)
+  const sentiment = (testimonial?.sentiment_data || sentimentArtifact?.data) as SentimentData | undefined;
 
   const getSentimentColor = (label: string) => {
     if (label.includes("positive"))
@@ -1460,7 +1490,8 @@ const TestimonialDetail = observer(() => {
                         <TabsContent value="highlights" className="mt-0">
                           <HighlightsTab
                             testimonialId={testimonial.id}
-                            artifacts={highlightArtifacts}
+                            highlights={highlights}
+                            loading={loadingHighlights}
                             videoUrl={testimonial.media_url || ""}
                             processingStatus={testimonial.processing_status}
                             onGenerateHighlights={

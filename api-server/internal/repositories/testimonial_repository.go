@@ -28,6 +28,7 @@ type TestimonialRepository interface {
 	BulkDelete(ctx context.Context, testimonialIDs []uuid.UUID, db *sql.DB) error
 	GetCachedPlatformRecommendations(ctx context.Context, testimonialID uuid.UUID, db *sql.DB) ([]byte, error)
 	SavePlatformRecommendations(ctx context.Context, testimonialID uuid.UUID, workspaceID uuid.UUID, artifactData []byte, db *sql.DB) error
+	UpdateSentiment(ctx context.Context, testimonialID uuid.UUID, sentimentData models.JSONMap, db DB) error
 }
 
 type testimonialRepository struct {
@@ -179,7 +180,7 @@ func (r *testimonialRepository) Create(ctx context.Context, testimonial *models.
 func (r *testimonialRepository) FetchByID(ctx context.Context, id uuid.UUID, db DB) (*models.Testimonial, error) {
 	query := `-- FetchByID
 		SELECT id, workspace_id, author_name, author_email, author_company,
-			   author_title, author_avatar_url, type, status, content, sentiment_score,
+			   author_title, author_avatar_url, type, status, content, sentiment_score, sentiment_data,
 			   media_url, transcript_segments, collection_method, metadata,
 			   rating, tags, processing_status, processing_metadata,
 			   created_at, updated_at
@@ -200,6 +201,7 @@ func (r *testimonialRepository) FetchByID(ctx context.Context, id uuid.UUID, db 
 		&testimonial.Status,
 		&testimonial.Content,
 		&testimonial.SentimentScore,
+		&testimonial.SentimentData,
 		&testimonial.MediaURL,
 		&testimonial.TranscriptSegments,
 		&testimonial.CollectionMethod,
@@ -253,7 +255,7 @@ func (r *testimonialRepository) FetchByTestimonialAndWorkspaceID(ctx context.Con
 	query := `
 		SELECT
 			t.id, t.workspace_id, t.author_name, t.author_email, t.author_company,
-			t.author_title, t.author_avatar_url, t.type, t.status, t.content, t.sentiment_score,
+			t.author_title, t.author_avatar_url, t.type, t.status, t.content, t.sentiment_score, t.sentiment_data,
 			t.media_url, t.transcript_segments, t.collection_method, t.metadata,
 			t.rating, t.tags, t.processing_status, t.processing_metadata,
 			t.created_at, t.updated_at,
@@ -310,7 +312,7 @@ func (r *testimonialRepository) FetchByTestimonialAndWorkspaceID(ctx context.Con
 		err := rows.Scan(
 			// Testimonial fields
 			&t.ID, &t.WorkspaceID, &t.AuthorName, &t.AuthorEmail, &t.AuthorCompany,
-			&t.AuthorTitle, &t.AuthorAvatarURL, &t.Type, &t.Status, &t.Content, &t.SentimentScore,
+			&t.AuthorTitle, &t.AuthorAvatarURL, &t.Type, &t.Status, &t.Content, &t.SentimentScore, &t.SentimentData,
 			&t.MediaURL, &tempTranscriptSegmentsJSON, &t.CollectionMethod, &t.Metadata,
 			&t.Rating, &t.Tags, &t.ProcessingStatus, &t.ProcessingMetadata,
 			&t.CreatedAt, &t.UpdatedAt,
@@ -526,7 +528,7 @@ func (r *testimonialRepository) FetchByWorkspaceID(ctx context.Context, workspac
 			SELECT
 				-- Testimonial fields only
 				id, workspace_id, author_name, author_email, author_company,
-				author_title, author_avatar_url, type, status, content, sentiment_score,
+				author_title, author_avatar_url, type, status, content, sentiment_score, sentiment_data,
 				media_url, collection_method, metadata,
 				rating, tags, processing_status, processing_metadata,
 				created_at, updated_at
@@ -539,7 +541,7 @@ func (r *testimonialRepository) FetchByWorkspaceID(ctx context.Context, workspac
 			SELECT
 				-- Testimonial fields
 				t.id, t.workspace_id, t.author_name, t.author_email, t.author_company,
-				t.author_title, t.author_avatar_url, t.type, t.status, t.content, t.sentiment_score,
+				t.author_title, t.author_avatar_url, t.type, t.status, t.content, t.sentiment_score, t.sentiment_data,
 				t.media_url, t.collection_method, t.metadata,
 				t.rating, t.tags, t.processing_status, t.processing_metadata,
 				t.created_at, t.updated_at,
@@ -754,7 +756,7 @@ func (r *testimonialRepository) FetchByWorkspaceID(ctx context.Context, workspac
 			var t models.Testimonial
 			err := rows.Scan(
 				&t.ID, &t.WorkspaceID, &t.AuthorName, &t.AuthorEmail, &t.AuthorCompany,
-				&t.AuthorTitle, &t.AuthorAvatarURL, &t.Type, &t.Status, &t.Content, &t.SentimentScore,
+				&t.AuthorTitle, &t.AuthorAvatarURL, &t.Type, &t.Status, &t.Content, &t.SentimentScore, &t.SentimentData,
 				&t.MediaURL, &t.CollectionMethod, &t.Metadata,
 				&t.Rating, &t.Tags, &t.ProcessingStatus, &t.ProcessingMetadata,
 				&t.CreatedAt, &t.UpdatedAt,
@@ -802,7 +804,7 @@ func (r *testimonialRepository) FetchByWorkspaceID(ctx context.Context, workspac
 		err := rows.Scan(
 			// Testimonial fields
 			&t.ID, &t.WorkspaceID, &t.AuthorName, &t.AuthorEmail, &t.AuthorCompany,
-			&t.AuthorTitle, &t.AuthorAvatarURL, &t.Type, &t.Status, &t.Content, &t.SentimentScore,
+			&t.AuthorTitle, &t.AuthorAvatarURL, &t.Type, &t.Status, &t.Content, &t.SentimentScore, &t.SentimentData,
 			&t.MediaURL, &t.CollectionMethod, &t.Metadata,
 			&t.Rating, &t.Tags, &t.ProcessingStatus, &t.ProcessingMetadata,
 			&t.CreatedAt, &t.UpdatedAt,
@@ -1039,12 +1041,12 @@ func (r *testimonialRepository) Delete(ctx context.Context, id uuid.UUID, db DB)
 func (r *testimonialRepository) Search(ctx context.Context, workspaceID uuid.UUID, query string, filter models.TestimonialFilter, db *sql.DB) ([]*models.Testimonial, error) {
 	searchQuery := `
 		SELECT id, workspace_id, author_name, author_email, author_company,
-			   author_title, author_avatar_url, type, status, content, sentiment_score,
+			   author_title, author_avatar_url, type, status, content, sentiment_score, sentiment_data,
 			   media_url, transcript_segments, collection_method, metadata,
 			   rating, tags, processing_status, processing_metadata,
 			   created_at, updated_at
-		FROM testimonials 
-		WHERE workspace_id = $1 
+		FROM testimonials
+		WHERE workspace_id = $1
 		AND (
 			content ILIKE '%' || $2 || '%' OR
 			author_name ILIKE '%' || $2 || '%' OR
@@ -1100,7 +1102,7 @@ func (r *testimonialRepository) Search(ctx context.Context, workspaceID uuid.UUI
 		var t models.Testimonial
 		err := rows.Scan(
 			&t.ID, &t.WorkspaceID, &t.AuthorName, &t.AuthorEmail, &t.AuthorCompany,
-			&t.AuthorTitle, &t.AuthorAvatarURL, &t.Type, &t.Status, &t.Content, &t.SentimentScore,
+			&t.AuthorTitle, &t.AuthorAvatarURL, &t.Type, &t.Status, &t.Content, &t.SentimentScore, &t.SentimentData,
 			&t.MediaURL, &t.TranscriptSegments, &t.CollectionMethod, &t.Metadata,
 			&t.Rating, &t.Tags, &t.ProcessingStatus, &t.ProcessingMetadata,
 			&t.CreatedAt, &t.UpdatedAt,
@@ -1254,6 +1256,43 @@ func (r *testimonialRepository) SavePlatformRecommendations(ctx context.Context,
 
 	if err != nil {
 		return fmt.Errorf("failed to save platform recommendations artifact: %w", err)
+	}
+
+	return nil
+}
+
+// UpdateSentiment updates the sentiment_data field for a testimonial
+func (r *testimonialRepository) UpdateSentiment(
+	ctx context.Context,
+	testimonialID uuid.UUID,
+	sentimentData models.JSONMap,
+	db DB,
+) error {
+	// Serialize sentiment data - CRITICAL: use string(...)
+	sentimentJSON, err := json.Marshal(sentimentData)
+	if err != nil {
+		return fmt.Errorf("marshal sentiment data: %w", err)
+	}
+
+	query := `
+		UPDATE testimonials
+		SET sentiment_data = $2::jsonb,
+		    updated_at = NOW()
+		WHERE id = $1
+	`
+
+	result, err := db.ExecContext(ctx, query, testimonialID, string(sentimentJSON))
+	if err != nil {
+		return fmt.Errorf("failed to update sentiment data for testimonial (ID: %s): %w", testimonialID, err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("testimonial not found (ID: %s)", testimonialID)
 	}
 
 	return nil

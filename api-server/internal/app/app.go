@@ -139,6 +139,7 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 	testimonialReqRepo := repositories.NewTestimonialRequestRepository(db)
 	jobRepo := repositories.NewJobRepository(redisClient)
 	artifactsRepo := repositories.NewTestimonialArtifactRepository(redisClient, logger)
+	highlightRepo := repositories.NewHighlightRepository(redisClient, logger)
 	driveRepo := repositories.NewGoogleDriveRepository(redisClient)
 	presetRepo := repositories.NewPresetRepository(redisClient)
 	sessionRepo := repositories.NewProcessingSessionRepository(redisClient)
@@ -152,7 +153,7 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 	aiServiceManager := ai.NewAIServiceManager(cfg, cacheService, aiClient, audioExtractor, artifactsRepo, workspaceRepo, testimonialRepo, jobRepo, db, logger)
 	vectorStoreService := vector_store.NewVectorStoreService(logger, workspaceRepo, testimonialRepo, db)
 	publicShareRepo := repositories.NewPublicShareRepository(redisClient, logger, testimonialRepo, artifactsRepo)
-	testimonialService := services.NewTestimonialService(testimonialRepo, userRepo, storageService, vectorStoreService, media_intelligence, db, redisClient, logger)
+	testimonialService := services.NewTestimonialService(testimonialRepo, highlightRepo, userRepo, storageService, vectorStoreService, media_intelligence, db, redisClient, logger)
 	userService := services.NewUserService(repo, db, logger)
 	teamMemberService := services.NewTeamMemberService(teamMemberRepo, db, logger)
 	onboardingService := services.NewOnboardingService(db, logger, repo, aiServiceManager)
@@ -208,10 +209,10 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 		workspaceRepo, artifactsRepo, tempStorageService, storageProvider, sseManager, db, logger)
 	clippingWorker := ai.NewClippingStepsWorker(
 		media_intelligence, &aiServiceManager, cacheService, testimonialRepo,
-		workspaceRepo, artifactsRepo, tempStorageService, storageProvider, sseManager, db, logger)
+		workspaceRepo, artifactsRepo, highlightRepo, tempStorageService, storageProvider, sseManager, db, logger)
 	storyVideoWorker := ai.NewStoryVideoStepsWorker(
 		media_intelligence, &aiServiceManager, cacheService, testimonialRepo,
-		workspaceRepo, artifactsRepo, tempStorageService, storageProvider, sseManager, db, logger)
+		workspaceRepo, artifactsRepo, highlightRepo, tempStorageService, storageProvider, sseManager, db, logger)
 
 	// Register handlers with the orchestrator
 	stepOrchestrator.RegisterPlatformOptimizationHandlers(platformOptWorker)
@@ -245,7 +246,7 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 	googleDriveController := controllers.NewGoogleDriveController(cfg, driveService, testimonialCollService, logger)
 	testimonialCollController := controllers.NewTestimonialCollectionController(testimonialCollService, *driveService, aiServiceManager.AudioTranscriptionService, queueService, logger)
 	sseTestimonialMonitor := controllers.NewSSETestimonialMonitor(cacheService, logger)
-	aiProcessorController := controllers.NewAIProcessorController(aiServiceManager, queueService, logger, cacheService, sseManager, storageProvider)
+	aiProcessorController := controllers.NewAIProcessorController(aiServiceManager, queueService, logger, cacheService, sseManager, storageProvider, highlightRepo)
 	presetController := controllers.NewPresetController(presetService, logger)
 	publicShareController := controllers.NewPublicShareController(publicShareRepo, testimonialRepo, artifactsRepo, db, *storageService, logger)
 	widgetController := controllers.NewWidgetController(publicShareRepo, testimonialRepo, artifactsRepo, db, logger)
@@ -262,7 +263,7 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 	testController := controllers.NewTestController(driveService, sharingService, logger)
 	var queueWorkers []queue.Worker
 	aiWorkers := ai.NewAIQueueWorker(ctx, queueService, aiServiceManager,
-		media_intelligence, cacheService, db, workspaceRepo, testimonialRepo, artifactsRepo, jobRepo, logger, sseManager)
+		media_intelligence, cacheService, db, workspaceRepo, testimonialRepo, artifactsRepo, highlightRepo, jobRepo, logger, sseManager)
 
 	sharingWorker := sharing.NewSharingWorker(
 		cfg.Social,

@@ -57,28 +57,18 @@ const VideoSegmentPreview: React.FC<VideoSegmentPreviewProps> = ({
   const isSegmentCompleteRef = useRef(false);
   const hasInitialized = useRef(false);
 
-  // Convert milliseconds to seconds
-  const startTimeSeconds = moment.start_time / 1000;
-  const endTimeSeconds = moment.end_time / 1000;
-  const durationSeconds = moment.duration / 1000;
+  const startTimeSeconds = (moment.start_time || 0) / 1000;
+  const endTimeSeconds = (moment.end_time || 0) / 1000;
+
+  // Calculate duration if not provided (duration = end_time - start_time)
+  const durationMs =
+    moment.duration || moment.end_time - moment.start_time || 0;
+  const durationSeconds = durationMs / 1000;
 
   // Initialize video when component mounts or moment changes
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-
-    console.log(
-      "[VideoSegmentPreview] Initializing segment (ms):",
-      moment.start_time,
-      "->",
-      moment.end_time
-    );
-    console.log(
-      "[VideoSegmentPreview] Initializing segment (s):",
-      startTimeSeconds,
-      "->",
-      endTimeSeconds
-    );
 
     // Reset state
     video.pause();
@@ -90,11 +80,6 @@ const VideoSegmentPreview: React.FC<VideoSegmentPreviewProps> = ({
     // Wait for metadata to be loaded before setting time
     const initializeVideo = () => {
       if (video.readyState >= 1) {
-        console.log(
-          "[VideoSegmentPreview] Setting currentTime to:",
-          startTimeSeconds,
-          "seconds"
-        );
         video.currentTime = startTimeSeconds;
         setCurrentTime(startTimeSeconds);
         hasInitialized.current = true;
@@ -126,7 +111,6 @@ const VideoSegmentPreview: React.FC<VideoSegmentPreviewProps> = ({
 
       // Check if we've reached the end of the segment
       if (currentVideoTime >= endTimeSeconds && !isSegmentCompleteRef.current) {
-        console.log("[VideoSegmentPreview] Segment complete, looping back");
         isSegmentCompleteRef.current = true;
         video.pause();
         setIsPlaying(false);
@@ -150,7 +134,6 @@ const VideoSegmentPreview: React.FC<VideoSegmentPreviewProps> = ({
     };
 
     const handleLoadedMetadata = () => {
-      console.log("[VideoSegmentPreview] Metadata loaded");
       if (!hasInitialized.current) {
         video.currentTime = startTimeSeconds;
         hasInitialized.current = true;
@@ -158,7 +141,6 @@ const VideoSegmentPreview: React.FC<VideoSegmentPreviewProps> = ({
     };
 
     const handleLoadedData = () => {
-      console.log("[VideoSegmentPreview] Data loaded");
       setIsLoading(false);
       if (autoPlay && hasInitialized.current) {
         video.play().catch((err) => {
@@ -228,24 +210,17 @@ const VideoSegmentPreview: React.FC<VideoSegmentPreviewProps> = ({
           video.currentTime < startTimeSeconds ||
           isSegmentCompleteRef.current
         ) {
-          console.log(
-            "[VideoSegmentPreview] Restarting from:",
-            startTimeSeconds
-          );
           video.currentTime = startTimeSeconds;
           isSegmentCompleteRef.current = false;
         }
 
         // Ensure video is ready to play
         if (video.readyState >= 2) {
-          console.log("[VideoSegmentPreview] Playing immediately");
           await video.play();
         } else {
-          console.log("[VideoSegmentPreview] Waiting for canplay");
           // Wait for video to be ready
           const playWhenReady = async () => {
             try {
-              console.log("[VideoSegmentPreview] Now playing after canplay");
               await video.play();
             } catch (error) {
               console.error("Delayed play failed:", error);
@@ -277,7 +252,6 @@ const VideoSegmentPreview: React.FC<VideoSegmentPreviewProps> = ({
     0,
     Math.min(currentTime - startTimeSeconds, durationSeconds)
   );
-
   return (
     <Card
       className={cn(

@@ -26,6 +26,7 @@ type StoryVideoStepsWorker struct {
 	testimonialRepo    repositories.TestimonialRepository
 	workspaceRepo      repositories.WorkspaceRepository
 	artifactsRepo      repositories.TestimonialArtifactRepository
+	highlightRepo      repositories.HighlightRepository
 	tempStorageService *storage.TempStorageService
 	storageProvider    storage.Provider
 	sseManager         *sse.SSEManager
@@ -40,6 +41,7 @@ func NewStoryVideoStepsWorker(
 	testimonialRepo repositories.TestimonialRepository,
 	workspaceRepo repositories.WorkspaceRepository,
 	artifactsRepo repositories.TestimonialArtifactRepository,
+	highlightRepo repositories.HighlightRepository,
 	tempStorageService *storage.TempStorageService,
 	storageProvider storage.Provider,
 	sseManager *sse.SSEManager,
@@ -53,6 +55,7 @@ func NewStoryVideoStepsWorker(
 		testimonialRepo:    testimonialRepo,
 		workspaceRepo:      workspaceRepo,
 		artifactsRepo:      artifactsRepo,
+		highlightRepo:      highlightRepo,
 		tempStorageService: tempStorageService,
 		storageProvider:    storageProvider,
 		sseManager:         sseManager,
@@ -509,11 +512,19 @@ func (w *StoryVideoStepsWorker) HandleAIOrdering(ctx context.Context, stepCtx *S
 		orderedClips = append(orderedClips, clipMap)
 	}
 
+	// Convert semantic_gaps to []interface{} for metadata
+	semanticGapsInterface := make([]interface{}, len(orderingResp.SemanticGaps))
+	for i, gap := range orderingResp.SemanticGaps {
+		semanticGapsInterface[i] = int(gap)
+	}
+
 	w.logger.Info("Clips ordered successfully by AI",
 		zap.String("session_id", stepCtx.SessionID.String()),
 		zap.String("strategy", orderingStrategy),
 		zap.String("rationale", orderingResp.OrderingRationale),
-		zap.Float64("confidence", orderingResp.ConfidenceScore))
+		zap.Float64("confidence", orderingResp.ConfidenceScore),
+		zap.Int("semantic_gaps_count", len(orderingResp.SemanticGaps)),
+		zap.Any("semantic_gaps", orderingResp.SemanticGaps))
 
 	w.emitProgress(stepCtx.SessionID, stepCtx.StageID, 100, "Clips ordered successfully")
 
@@ -528,6 +539,7 @@ func (w *StoryVideoStepsWorker) HandleAIOrdering(ctx context.Context, stepCtx *S
 			"clips_count":         len(orderedClips),
 			"ordering_strategy":   orderingStrategy,
 			"confidence_score":    orderingResp.ConfidenceScore,
+			"semantic_gaps":       semanticGapsInterface, // CRITICAL: Pass semantic gaps detected by AI to assembly step
 		},
 	}, nil
 }
@@ -596,6 +608,31 @@ func (w *StoryVideoStepsWorker) HandleAssembleDraft(ctx context.Context, stepCtx
 
 	w.emitProgress(stepCtx.SessionID, stepCtx.StageID, 50, "Assembling clips into story video...")
 
+	// Extract semantic_gaps from config if available
+	var semanticGaps []int32
+	if gapsData, ok := stepCtx.Config["semantic_gaps"]; ok {
+		// Handle both []int and []interface{} formats
+		switch gaps := gapsData.(type) {
+		case []int:
+			for _, gap := range gaps {
+				semanticGaps = append(semanticGaps, int32(gap))
+			}
+		case []interface{}:
+			for _, gapData := range gaps {
+				if gapInt, ok := gapData.(int); ok {
+					semanticGaps = append(semanticGaps, int32(gapInt))
+				} else if gapFloat, ok := gapData.(float64); ok {
+					semanticGaps = append(semanticGaps, int32(gapFloat))
+				}
+			}
+		case []int32:
+			semanticGaps = gaps
+		}
+		w.logger.Info("Semantic gaps detected for assembly",
+			zap.String("session_id", stepCtx.SessionID.String()),
+			zap.Int32s("gaps", semanticGaps))
+	}
+
 	// Build AssembleDraft request
 	assembleReq := &pb.AssembleDraftRequest{
 		SessionId:          stepCtx.SessionID.String(),
@@ -605,6 +642,7 @@ func (w *StoryVideoStepsWorker) HandleAssembleDraft(ctx context.Context, stepCtx
 		TransitionDuration: transitionDuration,
 		JobId:              stepCtx.SessionID.String(),
 		UploadIntermediate: true, // Upload to cloud for preview
+		SemanticGaps:       semanticGaps,
 	}
 
 	// CRITICAL: Start heartbeat goroutine to prevent "stuck" detection during long assembly operation
@@ -746,20 +784,27 @@ func (w *StoryVideoStepsWorker) HandleCollectAndAssembleClips(ctx context.Contex
 			existingClips := []*pb.ClipInfo{}
 			momentsByTestimonial := make(map[string][]*pb.HighlightMoment)
 
-			for _, momentData := range momentsSlice {
+			for i, momentData := range momentsSlice {
 				if momentMap, ok := momentData.(map[string]interface{}); ok {
-					testimonialID := getStringValue(momentMap, "testimonial_id")
-					if testimonialID == "" {
-						continue
-					}
-
-					// CRITICAL FIX: Check if this moment references an existing clip
+					// Check if this moment references an existing clip
 					clipArtifactID := getStringValue(momentMap, "clip_artifact_id")
 					storagePath := getStringValue(momentMap, "storage_path")
 
 					if clipArtifactID != "" && storagePath != "" {
-						// This is a moment from an existing clip - use it directly!
+						// This is an existing clip - testimonial_id is optional
+						testimonialID := getStringValue(momentMap, "testimonial_id")
+						if testimonialID == "" {
+							// CRITICAL: Use a consistent placeholder for unknown testimonial_id
+							// This prevents each clip from appearing as a different speaker
+							// Frontend should be updated to pass testimonial_id for clips
+							testimonialID = "unknown_single_speaker"
+							w.logger.Warn("Clip missing testimonial_id, using placeholder",
+								zap.Int("moment_index", i),
+								zap.String("clip_artifact_id", clipArtifactID))
+						}
+
 						w.logger.Info("Using existing clip from moment",
+							zap.Int("moment_index", i),
 							zap.String("clip_artifact_id", clipArtifactID),
 							zap.String("testimonial_id", testimonialID))
 
@@ -776,7 +821,18 @@ func (w *StoryVideoStepsWorker) HandleCollectAndAssembleClips(ctx context.Contex
 						}
 						existingClips = append(existingClips, clipInfo)
 					} else {
+						// This moment needs extraction - testimonial_id is REQUIRED
+						testimonialID := getStringValue(momentMap, "testimonial_id")
+						if testimonialID == "" {
+							w.logger.Warn("Moment missing testimonial_id for extraction, skipping",
+								zap.Int("moment_index", i))
+							continue
+						}
 						// This is a moment that needs extraction - convert to HighlightMoment
+						w.logger.Info("Moment needs extraction, adding to segments",
+							zap.Int("moment_index", i),
+							zap.String("testimonial_id", testimonialID))
+
 						highlight := &pb.HighlightMoment{
 							Id:                 getStringValue(momentMap, "id"),
 							StartTime:          getFloat64Value(momentMap, "start_time"),
@@ -1012,6 +1068,32 @@ executeCollection:
 		transitionDuration = dur
 	}
 	assembleReq.TransitionDuration = transitionDuration
+
+	// Extract semantic_gaps from config if available
+	var semanticGaps []int32
+	if gapsData, ok := stepCtx.Config["semantic_gaps"]; ok {
+		// Handle both []int and []interface{} formats
+		switch gaps := gapsData.(type) {
+		case []int:
+			for _, gap := range gaps {
+				semanticGaps = append(semanticGaps, int32(gap))
+			}
+		case []interface{}:
+			for _, gapData := range gaps {
+				if gapInt, ok := gapData.(int); ok {
+					semanticGaps = append(semanticGaps, int32(gapInt))
+				} else if gapFloat, ok := gapData.(float64); ok {
+					semanticGaps = append(semanticGaps, int32(gapFloat))
+				}
+			}
+		case []int32:
+			semanticGaps = gaps
+		}
+		w.logger.Info("Semantic gaps detected for collect and assemble",
+			zap.String("session_id", stepCtx.SessionID.String()),
+			zap.Int32s("gaps", semanticGaps))
+	}
+	assembleReq.SemanticGaps = semanticGaps
 
 	w.emitProgress(stepCtx.SessionID, stepCtx.StageID, 60, "Extracting clips...")
 
@@ -1314,25 +1396,21 @@ func (w *StoryVideoStepsWorker) emitProgress(sessionID uuid.UUID, stageID string
 
 // getOrGenerateHighlights retrieves existing highlights or generates new ones
 func (w *StoryVideoStepsWorker) getOrGenerateHighlights(ctx context.Context, testimonialID uuid.UUID, stepCtx *StepContext) ([]*pb.HighlightMoment, error) {
-	// Check for existing highlights
-	artifacts, err := w.artifactsRepo.GetHighlights(ctx, testimonialID, w.db)
-	if err == nil && len(artifacts) > 0 {
-		// Use latest general highlights
-		for i := range artifacts {
-			a := &artifacts[i]
-			if a.ProcessingType == "highlight_extraction" && a.Data != nil {
-				if raw, ok := a.Data["highlights"]; ok {
-					b, _ := json.Marshal(raw)
-					var highlights []*pb.HighlightMoment
-					if err := json.Unmarshal(b, &highlights); err == nil && len(highlights) > 0 {
-						return highlights, nil
-					}
-				}
-			}
+	// Check for existing story_video highlights in new table
+	highlight, err := w.highlightRepo.GetByTestimonialAndType(ctx, testimonialID, "story_video", "story_video", w.db)
+	if err == nil && highlight != nil && highlight.Moments != nil {
+		// Parse the moments from JSONArray to []*pb.HighlightMoment
+		var moments []*pb.HighlightMoment
+		momentsBytes, _ := json.Marshal(highlight.Moments)
+		if err := json.Unmarshal(momentsBytes, &moments); err == nil && len(moments) > 0 {
+			w.logger.Info("Using existing story_video highlights",
+				zap.String("testimonial_id", testimonialID.String()),
+				zap.Int("moments_count", len(moments)))
+			return moments, nil
 		}
 	}
 
-	// Generate new highlights
+	// Generate new highlights optimized for story video (6-25s duration)
 	testimonialData, err := w.testimonialRepo.FetchForAIProcessing(ctx, testimonialID, w.db)
 	if err != nil {
 		return nil, err
@@ -1346,8 +1424,8 @@ func (w *StoryVideoStepsWorker) getOrGenerateHighlights(ctx context.Context, tes
 		TestimonialID: testimonialID,
 		Text:          *testimonialData.Content,
 		Segments:      *testimonialData.TranscriptSegments,
-		MaxHighlights: 5,
-		HighlightType: HighlightTypeGeneral,
+		MaxHighlights: 0, // Extract ALL important moments (no limit)
+		HighlightType: HighlightTypeStoryVideo, // Use story_video type for longer moments
 	}
 
 	highlights, err := w.aiService.HighlightService.ExtractHighlightsByType(ctx, highlightRequest)
@@ -1355,21 +1433,43 @@ func (w *StoryVideoStepsWorker) getOrGenerateHighlights(ctx context.Context, tes
 		return nil, err
 	}
 
-	// Save for future use
-	artifact := &models.TestimonialArtifact{
-		ID:             uuid.New(),
-		TestimonialID:  &testimonialID,
-		ProcessingType: "highlight_extraction",
-		ResultCategory: "content",
-		Data: models.JSONMap{
-			"highlights":     highlights,
-			"highlight_type": "general",
-		},
-		ContentType: "highlights",
-		IsStreamed:  false,
-	}
+	w.logger.Info("Generated new story_video highlights",
+		zap.String("testimonial_id", testimonialID.String()),
+		zap.Int("highlights_count", len(highlights)))
 
-	_ = w.artifactsRepo.Create(ctx, artifact, w.db)
+	// Save to new testimonial_highlights table
+	if len(highlights) > 0 {
+		// Calculate total duration
+		var totalDuration float64
+		for _, h := range highlights {
+			totalDuration += (h.EndTime - h.StartTime) / 1000.0 // Convert ms to seconds
+		}
+
+		// Convert highlights to JSONArray
+		highlightsJSON := models.JSONArray{}
+		highlightsBytes, _ := json.Marshal(highlights)
+		_ = json.Unmarshal(highlightsBytes, &highlightsJSON)
+
+		highlightRecord := &models.TestimonialHighlight{
+			TestimonialID:  testimonialID,
+			WorkspaceID:    stepCtx.WorkspaceID,
+			HighlightType:  "story_video",
+			ExtractionMode: "story_video",
+			Moments:        highlightsJSON,
+			MomentCount:    len(highlights),
+			TotalDuration:  totalDuration,
+			ProcessingMetadata: models.JSONMap{
+				"ai_model":       "openai-gpt-4o (fallback: claude-3-5-sonnet)", // OpenAI tried first, Claude on failure
+				"max_highlights": 0, // Extract ALL moments (no limit)
+				"generated_at":   time.Now().Format(time.RFC3339),
+				"context":        "story_video_generation",
+			},
+		}
+
+		if err := w.highlightRepo.Upsert(ctx, highlightRecord, w.db); err != nil {
+			w.logger.Warn("Failed to save story_video highlights", zap.Error(err))
+		}
+	}
 
 	return highlights, nil
 }
