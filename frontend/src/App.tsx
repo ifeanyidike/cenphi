@@ -4,8 +4,12 @@ import { testimonialSSE } from "./services/testimonialSSE";
 import { workspaceHub } from "./repo/workspace_hub";
 import { authStore } from "./stores/authStore";
 import { reaction } from "mobx";
+import { usePostHogIdentify } from "./hooks/usePostHogIdentify";
 
 const App = () => {
+  // Track user identification in PostHog
+  usePostHogIdentify();
+
   useEffect(() => {
     // Start health check
     appService.startHealthCheck(4 * 60 * 60 * 1000);
