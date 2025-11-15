@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import {
   MessageSquare,
-  Plus,
   Star,
   Sparkles,
   Mail,
@@ -161,19 +160,11 @@ const DashboardView: React.FC = observer(() => {
             </Button>
             <Button
               onClick={() => setIsRequestModalOpen(true)}
-              variant="outline"
-              size="sm"
-              className="border-slate-300 text-slate-700 hover:bg-slate-50 h-9 px-4 text-xs"
-            >
-              <Mail className="h-3.5 w-3.5 mr-2" />
-              Request
-            </Button>
-            <Button
               size="sm"
               className="bg-slate-900 hover:bg-slate-800 text-white h-9 px-4 text-xs shadow-sm"
             >
-              <Plus className="h-3.5 w-3.5 mr-2" />
-              Add Testimonial
+              <Mail className="h-3.5 w-3.5 mr-2" />
+              {hasTestimonials ? "Request" : "Request Testimonials"}
             </Button>
           </div>
         </div>

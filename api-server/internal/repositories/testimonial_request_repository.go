@@ -4,6 +4,7 @@ package repositories
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -54,10 +55,22 @@ func (r *testimonialRequestRepository) CreateEmailRequest(ctx context.Context, r
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 	`
 
+	// Properly serialize JSONB field
+	var providerResponseJSON string
+	if len(req.ProviderResponse) == 0 {
+		providerResponseJSON = "{}"
+	} else {
+		jsonBytes, err := json.Marshal(req.ProviderResponse)
+		if err != nil {
+			return fmt.Errorf("failed to marshal provider_response: %w", err)
+		}
+		providerResponseJSON = string(jsonBytes)
+	}
+
 	_, err := r.db.ExecContext(ctx, query,
 		req.ID, req.WorkspaceID, req.ContactName, req.ContactEmail, req.CompanyName,
 		req.Subject, req.CustomMessage, req.TemplateName, req.CollectionURL, req.TrackingToken,
-		req.Status, req.ProviderMessageID, req.ProviderResponse, req.CreatedAt, req.UpdatedAt,
+		req.Status, req.ProviderMessageID, providerResponseJSON, req.CreatedAt, req.UpdatedAt,
 	)
 
 	return err
@@ -295,9 +308,21 @@ func (r *testimonialRequestRepository) CreateTemplate(ctx context.Context, templ
 		template.ID = uuid.New()
 	}
 
+	// Properly serialize JSONB field
+	var variablesJSON string
+	if len(template.Variables) == 0 {
+		variablesJSON = "[]"
+	} else {
+		jsonBytes, err := json.Marshal(template.Variables)
+		if err != nil {
+			return fmt.Errorf("failed to marshal variables: %w", err)
+		}
+		variablesJSON = string(jsonBytes)
+	}
+
 	_, err := r.db.ExecContext(ctx, query,
 		template.ID, template.WorkspaceID, template.Name, template.Subject, template.HTMLContent, template.TextContent,
-		template.Variables, template.IsDefault, template.CreatedAt, template.UpdatedAt,
+		variablesJSON, template.IsDefault, template.CreatedAt, template.UpdatedAt,
 	)
 
 	return err
@@ -313,9 +338,21 @@ func (r *testimonialRequestRepository) UpdateTemplate(ctx context.Context, templ
 
 	template.UpdatedAt = time.Now()
 
+	// Properly serialize JSONB field
+	var variablesJSON string
+	if len(template.Variables) == 0 {
+		variablesJSON = "[]"
+	} else {
+		jsonBytes, err := json.Marshal(template.Variables)
+		if err != nil {
+			return fmt.Errorf("failed to marshal variables: %w", err)
+		}
+		variablesJSON = string(jsonBytes)
+	}
+
 	_, err := r.db.ExecContext(ctx, query,
 		template.ID, template.Subject, template.HTMLContent, template.TextContent,
-		template.Variables, template.IsDefault, template.UpdatedAt,
+		variablesJSON, template.IsDefault, template.UpdatedAt,
 	)
 
 	return err

@@ -7,11 +7,8 @@ import { motion } from "framer-motion";
 import { itemVariants } from "./constants";
 import {
   MessageSquare,
-  Plus,
-  Send,
   Lightbulb,
 } from "lucide-react";
-import { Button } from "../ui/button";
 import { observer } from "mobx-react-lite";
 import LoadingSkeleton from "./LoadingSkeleton";
 import { workspaceHub } from "@/repo/workspace_hub";
@@ -67,27 +64,10 @@ export const EmptyStateView = observer(() => {
             <h3 className="text-lg font-semibold text-slate-900 mb-2">
               No Testimonials Yet
             </h3>
-            <p className="text-sm text-slate-600 max-w-md mb-8 leading-relaxed">
+            <p className="text-sm text-slate-600 max-w-md leading-relaxed">
               Customer testimonials build trust and showcase your value.
-              Start collecting feedback to transform visitors into customers.
+              Use the "Request" or "Share Link" buttons above to start collecting feedback.
             </p>
-
-            {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3 w-full max-w-sm">
-              <Button
-                className="w-full bg-slate-900 hover:bg-slate-800 text-white h-11 shadow-sm"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add First Testimonial
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full border-slate-300 text-slate-700 hover:bg-slate-50 h-11"
-              >
-                <Send className="h-4 w-4 mr-2" />
-                Send Request
-              </Button>
-            </div>
           </div>
         </CardContent>
 
