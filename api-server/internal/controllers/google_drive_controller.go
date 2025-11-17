@@ -118,7 +118,7 @@ func (gdc *googleDriveController) HandleOAuthCallback(w http.ResponseWriter, r *
 		return
 	}
 
-	redirectURL := fmt.Sprintf("%s/settings?platform=google_drive&workspace_id=%s", gdc.config.Server.BaseURL, authState.WorkspaceID.String())
+	redirectURL := fmt.Sprintf("https://cenphi.io/settings?platform=google_drive&workspace_id=%s", authState.WorkspaceID.String())
 
 	http.Redirect(w, r, redirectURL, http.StatusFound)
 }

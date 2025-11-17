@@ -65,8 +65,7 @@ func (s Service) SendTestimonialRequest(ctx context.Context, req models.SendEmai
 	}
 
 	// Build collection URL with contact information for prefilling
-	collectionURL := fmt.Sprintf("%s/collect?workspace_id=%s&token=%s&email=%s&contact_name=%s&company=%s",
-		s.baseURL,
+	collectionURL := fmt.Sprintf("https://cenphi.io/collect?workspace_id=%s&token=%s&email=%s&contact_name=%s&company=%s",
 		req.WorkspaceID,
 		token,
 		url.QueryEscape(req.ContactEmail),

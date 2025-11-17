@@ -4,7 +4,6 @@ package controllers
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -130,19 +129,17 @@ func (c *SocialController) HandleOAuthCallback(w http.ResponseWriter, r *http.Re
 	state := r.URL.Query().Get("state")
 	errorParam := r.URL.Query().Get("error")
 
-	log.Printf("OAuth Code:\t%s, \t\tOAuth State:%s\t, \t\t, Oauth Error:%s\t\n", code, state, errorParam)
-
 	if errorParam != "" {
 		c.logger.Error("OAuth error", zap.String("error", errorParam))
 		// Redirect to settings with error
-		redirectURL := fmt.Sprintf("%s/settings?error=%s", c.config.Server.BaseURL, errorParam)
+		redirectURL := fmt.Sprintf("https://cenphi.io/settings?error=%s", errorParam)
 		http.Redirect(w, r, redirectURL, http.StatusFound)
 		return
 	}
 
 	if code == "" || state == "" {
 		// Redirect to settings with error
-		redirectURL := fmt.Sprintf("%s/settings?error=missing_parameters", c.config.Server.BaseURL)
+		redirectURL := "https://cenphi.io/settings?error=missing_parameters"
 		http.Redirect(w, r, redirectURL, http.StatusFound)
 		return
 	}
@@ -155,7 +152,7 @@ func (c *SocialController) HandleOAuthCallback(w http.ResponseWriter, r *http.Re
 	// Validate request
 	if err := models.ValidateOAuthCallbackRequest(&req); err != nil {
 		c.logger.Error("OAuth callback validation failed", zap.Error(err))
-		redirectURL := fmt.Sprintf("%s/settings?error=validation_failed", c.config.Server.BaseURL)
+		redirectURL := "https://cenphi.io/settings?error=validation_failed"
 		http.Redirect(w, r, redirectURL, http.StatusFound)
 		return
 	}
@@ -165,14 +162,13 @@ func (c *SocialController) HandleOAuthCallback(w http.ResponseWriter, r *http.Re
 	if err != nil {
 		c.logger.Error("Failed to handle OAuth callback", zap.Error(err))
 		// Redirect to settings with error
-		redirectURL := fmt.Sprintf("%s/settings?error=connection_failed", c.config.Server.BaseURL)
+		redirectURL := "https://cephi.io/settings?error=connection_failed"
 		http.Redirect(w, r, redirectURL, http.StatusFound)
 		return
 	}
 
 	// Build redirect URL using returnURL from state
-	redirectURL := fmt.Sprintf("%s%s?platform=%s&status=connected&workspace_id=%s",
-		c.config.Server.BaseURL,
+	redirectURL := fmt.Sprintf("https://cenphi.io%s?platform=%s&status=connected&workspace_id=%s",
 		oauthState.ReturnURL,
 		account.Platform,
 		account.WorkspaceID.String())
