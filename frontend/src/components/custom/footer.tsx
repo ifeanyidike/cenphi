@@ -210,11 +210,29 @@ const Footer: React.FC = () => {
           </div>
         </div>
 
-        {/* Copyright */}
-        <div className="mt-8 text-center">
-          <p className="text-gray-500 text-sm">
-            © {currentYear} Cenphi.io. All rights reserved.
-          </p>
+        {/* Copyright and Company Info */}
+        <div className="mt-8 flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="text-center md:text-left">
+            <p className="text-gray-500 text-sm">
+              © {currentYear} Cenphi.io. All rights reserved.
+            </p>
+          </div>
+
+          {/* Company Registration Info */}
+          <div className="flex flex-col md:flex-row items-center gap-3 text-xs text-gray-600">
+            <div className="flex items-center gap-2">
+              <div className="px-2 py-1 bg-blue-100 text-blue-800 rounded font-medium">
+                🇺🇸 U.S. Company
+              </div>
+              <span>Registered in Delaware</span>
+            </div>
+            <span className="hidden md:inline text-gray-400">|</span>
+            <div className="text-center md:text-left">
+              <p className="text-gray-600">
+                1090 El Rancho Dr, Billings, MT 59105, United States
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </footer>
