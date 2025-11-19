@@ -234,16 +234,24 @@ export class TestimonialManager {
       if (updated && this.testimonials) {
         runInAction(() => {
           // Update in the testimonials array
-          const index = this.testimonials!.findIndex((t) => t.id === testimonialId);
+          const index = this.testimonials!.findIndex(
+            (t) => t.id === testimonialId
+          );
           if (index !== -1) {
             this.testimonials![index] = updated;
-            console.log("[TestimonialManager] ✅ Updated testimonial in array:", testimonialId);
+            console.log(
+              "[TestimonialManager] ✅ Updated testimonial in array:",
+              testimonialId
+            );
           }
 
           // Update the current testimonial if it's the one being viewed
           if (this.testimonial?.id === testimonialId) {
             this.testimonial = updated;
-            console.log("[TestimonialManager] ✅ Updated current testimonial:", testimonialId);
+            console.log(
+              "[TestimonialManager] ✅ Updated current testimonial:",
+              testimonialId
+            );
           }
         });
       }
@@ -302,49 +310,179 @@ export class TestimonialManager {
     rating: number;
     content?: string;
     videoBlob: Blob;
-  }): Promise<{ testimonial_id?: string; job_id?: string; compression_session_id?: string }> {
+  }): Promise<{
+    testimonial_id?: string;
+    job_id?: string;
+    compression_session_id?: string;
+  }> {
     try {
-      const formData = new FormData();
-      formData.append(
-        "video",
-        params.videoBlob,
-        `testimonial_${Date.now()}.${params.videoBlob.type.includes("webm") ? "webm" : "mp4"}`
-      );
-      formData.append("author_name", params.author_name);
-      formData.append("author_email", params.author_email);
-      formData.append("author_company", params.author_company || "");
-      formData.append("rating", params.rating.toString());
-      formData.append("content", params.content || "");
-      formData.append("collection_method", "form");
+      // const CLOUD_RUN_LIMIT = 30 * 1024 * 1024; // 30MB (conservative)
+      const CLOUD_RUN_LIMIT = 5 * 1024 * 1024; // 5MB (conservative)
 
-      if (params.collection_id) {
-        formData.append("collection_id", params.collection_id);
+      // For large files >30MB, use presigned URL to bypass Cloud Run's 32MB limit
+      if (params.videoBlob.size > CLOUD_RUN_LIMIT) {
+        return await this.uploadLargeVideoTestimonial(params);
+      } else {
+        return await this.uploadSmallVideoTestimonial(params);
       }
-
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/collection/workspaces/${params.workspace_id}/testimonials/upload/video/queue`,
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        // Backend returns either "error" or "message" field
-        const errorMessage = errorData.error || errorData.message || `Upload failed with status ${response.status}`;
-        throw new Error(errorMessage);
-      }
-
-      const result = await response.json();
-
-      return {
-        testimonial_id: result.testimonial_id,
-        job_id: result.job_id,
-      };
     } catch (error) {
       console.error("Error creating video testimonial:", error);
       throw error;
     }
+  }
+
+  // Standard upload for files ≤30MB
+  private async uploadSmallVideoTestimonial(params: {
+    workspace_id: string;
+    collection_id?: string;
+    author_name: string;
+    author_email: string;
+    author_company?: string;
+    rating: number;
+    content?: string;
+    videoBlob: Blob;
+  }): Promise<{
+    testimonial_id?: string;
+    job_id?: string;
+    compression_session_id?: string;
+  }> {
+    const formData = new FormData();
+    formData.append(
+      "video",
+      params.videoBlob,
+      `testimonial_${Date.now()}.${params.videoBlob.type.includes("webm") ? "webm" : "mp4"}`
+    );
+    formData.append("author_name", params.author_name);
+    formData.append("author_email", params.author_email);
+    formData.append("author_company", params.author_company || "");
+    formData.append("rating", params.rating.toString());
+    formData.append("content", params.content || "");
+    formData.append("collection_method", "form");
+
+    if (params.collection_id) {
+      formData.append("collection_id", params.collection_id);
+    }
+
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL}/collection/workspaces/${params.workspace_id}/testimonials/upload/video/queue`,
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage =
+        errorData.error ||
+        errorData.message ||
+        `Upload failed with status ${response.status}`;
+      throw new Error(errorMessage);
+    }
+
+    const result = await response.json();
+
+    return {
+      testimonial_id: result.testimonial_id,
+      compression_session_id: result.compression_session_id,
+    };
+  }
+
+  // Direct OCI upload for files >30MB (bypasses Cloud Run)
+  private async uploadLargeVideoTestimonial(params: {
+    workspace_id: string;
+    collection_id?: string;
+    author_name: string;
+    author_email: string;
+    author_company?: string;
+    rating: number;
+    content?: string;
+    videoBlob: Blob;
+  }): Promise<{
+    testimonial_id?: string;
+    job_id?: string;
+    compression_session_id?: string;
+  }> {
+    const filename = `testimonial_${Date.now()}.${params.videoBlob.type.includes("webm") ? "webm" : "mp4"}`;
+
+    // Step 1: Get presigned URL from backend
+    const urlResponse = await fetch(
+      `${import.meta.env.VITE_API_URL}/collection/workspaces/${params.workspace_id}/testimonials/upload-url`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          filename,
+          content_type: params.videoBlob.type,
+          file_size: params.videoBlob.size,
+        }),
+      }
+    );
+
+    if (!urlResponse.ok) {
+      const errorData = await urlResponse.json().catch(() => ({}));
+      throw new Error(
+        errorData.message || errorData.error || "Failed to get upload URL"
+      );
+    }
+
+    const { upload_url, object_path, upload_id } = await urlResponse.json();
+
+    // Step 2: Upload directly to OCI using presigned URL
+    const uploadResponse = await fetch(upload_url, {
+      method: "PUT",
+      headers: {
+        "Content-Type": params.videoBlob.type,
+      },
+      body: params.videoBlob,
+    });
+
+    if (!uploadResponse.ok) {
+      throw new Error(
+        `Direct upload failed with status ${uploadResponse.status}`
+      );
+    }
+
+    // Step 3: Notify backend to process the uploaded file
+    const confirmResponse = await fetch(
+      `${import.meta.env.VITE_API_URL}/collection/workspaces/${params.workspace_id}/testimonials/upload-confirm`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          object_path,
+          upload_id,
+          author_name: params.author_name,
+          author_email: params.author_email,
+          author_company: params.author_company || "",
+          rating: params.rating,
+          content: params.content || "",
+          collection_method: "form",
+          collection_id: params.collection_id,
+        }),
+      }
+    );
+
+    if (!confirmResponse.ok) {
+      const errorData = await confirmResponse.json().catch(() => ({}));
+      throw new Error(
+        errorData.message || errorData.error || "Failed to confirm upload"
+      );
+    }
+
+    const result = await confirmResponse.json();
+
+    // CRITICAL: For presigned uploads, backend returns status="uploaded" without compression_session_id
+    // This means upload is complete and processing happens in background
+    // Don't track a job - just return success
+    return {
+      testimonial_id: result.testimonial_id,
+      compression_session_id:
+        result.status === "uploaded" ? null : result.compression_session_id,
+    };
   }
 }

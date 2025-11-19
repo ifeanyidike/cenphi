@@ -44,7 +44,9 @@ export const useJobProgress = (): UseJobProgressReturn => {
         setError('Authentication required');
         return;
       }
-      const sseUrl = `${import.meta.env.VITE_API_URL}/processing/testimonials/stream?job_id=${jobId}`;
+      // Use studio SSE endpoint (sessionID-based, not job_id query param)
+      const sseUrl = `${import.meta.env.VITE_API_URL}/studio/sessions/${jobId}/stream`;
+      console.log('[useJobProgress] Starting SSE connection:', sseUrl);
       eventSourceRef.current = new EventSource(sseUrl);
 
       eventSourceRef.current.onopen = () => {

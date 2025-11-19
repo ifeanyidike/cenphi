@@ -9,6 +9,7 @@ import (
 	"io"
 	"maps"
 	"mime/multipart"
+	"net/http"
 	"os"
 	"path/filepath"
 	"slices"
@@ -763,11 +764,6 @@ func (tcs TestimonialCollectionService) ValidateVideoFile(
 			zap.String("reason", validationResult.ErrorMessage))
 		return nil, fmt.Errorf("%s", validationResult.ErrorMessage)
 	}
-
-	tcs.logger.Info("Video validation passed",
-		zap.String("filename", header.Filename),
-		zap.Float64("quality_score", validationResult.Quality.Score),
-		zap.Bool("has_speech", validationResult.Quality.HasSpeech))
 
 	return validationResult, nil
 }
@@ -1848,4 +1844,306 @@ func (tcs TestimonialCollectionService) HandleVapiWebhook(ctx context.Context, w
 
 	// Delegate to the VapiService to handle the webhook
 	return vapiService.HandleCallWebhook(ctx, webhookData)
+}
+
+// GenerateUploadPresignedURL generates a presigned URL for direct upload to storage
+func (tcs TestimonialCollectionService) GenerateUploadPresignedURL(ctx context.Context, objectPath string, expiry time.Duration) (string, error) {
+	if tcs.storageService == nil || tcs.storageService.Provider == nil {
+		return "", fmt.Errorf("storage service not initialized")
+	}
+
+	return tcs.storageService.Provider.GenerateUploadPresignedURL(ctx, objectPath, expiry)
+}
+
+// GenerateDownloadPresignedURL generates a presigned URL for downloading from storage
+func (tcs TestimonialCollectionService) GenerateDownloadPresignedURL(ctx context.Context, objectPath string, expiry time.Duration) (string, error) {
+	if tcs.storageService == nil || tcs.storageService.Provider == nil {
+		return "", fmt.Errorf("storage service not initialized")
+	}
+
+	return tcs.storageService.Provider.PresignedURL(ctx, objectPath, expiry)
+}
+
+// DirectUploadResult holds the result of processing a direct upload
+type DirectUploadResult struct {
+	TestimonialID string
+	SessionID     string
+}
+
+// ProcessDirectUpload processes a video that was uploaded directly to storage
+func (tcs TestimonialCollectionService) ProcessDirectUpload(
+	ctx context.Context,
+	workspaceID uuid.UUID,
+	objectPath string,
+	authorName string,
+	authorEmail string,
+	collectionMethod string,
+) (*DirectUploadResult, error) {
+	// Create a session ID for SSE tracking
+	sessionID := uuid.New()
+
+	// Generate a downloadable URL from the object path
+	// This is critical for AI processing jobs that need to download the file
+	downloadableURL, err := tcs.storageService.Provider.PresignedURL(ctx, objectPath, 24*time.Hour)
+	if err != nil {
+		tcs.logger.Error("Failed to generate downloadable URL for direct upload",
+			zap.String("object_path", objectPath),
+			zap.Error(err))
+		return nil, fmt.Errorf("failed to generate downloadable URL: %w", err)
+	}
+
+	// Create testimonial record matching the pattern from processVideo
+	testimonial := &models.Testimonial{
+		ID:               uuid.New(),
+		WorkspaceID:      workspaceID,
+		AuthorName:       &authorName,
+		AuthorEmail:      &authorEmail,
+		Type:             "video",
+		Format:           "mp4", // Default format, will be updated after processing
+		Status:           "draft",
+		MediaURL:         &downloadableURL, // Use full downloadable URL, not just path
+		CollectionMethod: collectionMethod,
+		ProcessingStatus: "pending",
+		CreatedAt:        time.Now(),
+		UpdatedAt:        time.Now(),
+	}
+
+	// Add metadata
+	metadata := make(map[string]interface{})
+	metadata["video_source"] = "direct_upload"
+	metadata["submitted_at"] = time.Now().Unix()
+	metadata["upload_method"] = "presigned_url"
+	testimonial.Metadata = metadata
+
+	// Save testimonial to database
+	if err := tcs.repo.Create(ctx, testimonial, tcs.db); err != nil {
+		tcs.logger.Error("Failed to create testimonial",
+			zap.String("object_path", objectPath),
+			zap.Error(err))
+		return nil, fmt.Errorf("failed to save video testimonial: %w", err)
+	}
+
+	// Compress and optimize video in background (critical for large files and AI processing)
+	go func() {
+		if err := tcs.compressDirectUpload(context.Background(), testimonial.ID, objectPath, workspaceID); err != nil {
+			tcs.logger.Error("Failed to compress direct upload",
+				zap.String("testimonial_id", testimonial.ID.String()),
+				zap.String("object_path", objectPath),
+				zap.Error(err))
+		}
+	}()
+
+	// Queue video processing jobs asynchronously (same as ProcessUploadedVideo)
+	go func() {
+		if err := tcs.queueVideoProcessingJobs(context.Background(), testimonial); err != nil {
+			tcs.logger.Error("Failed to queue video processing jobs",
+				zap.String("testimonial_id", testimonial.ID.String()),
+				zap.Error(err))
+		}
+	}()
+
+	tcs.logger.Info("Direct upload processed successfully",
+		zap.String("testimonial_id", testimonial.ID.String()),
+		zap.String("workspace_id", workspaceID.String()),
+		zap.String("collection_method", collectionMethod),
+		zap.String("object_path", objectPath))
+
+	// Upload to vector store asynchronously (same as ProcessUploadedVideo)
+	go func() {
+		if err := tcs.uploadToVectorStore(context.Background(), testimonial); err != nil {
+			tcs.logger.Error("Failed to upload video testimonial to vector store",
+				zap.String("testimonial_id", testimonial.ID.String()),
+				zap.Error(err))
+		}
+	}()
+
+	return &DirectUploadResult{
+		TestimonialID: testimonial.ID.String(),
+		SessionID:     sessionID.String(),
+	}, nil
+}
+
+// compressDirectUpload handles background compression for presigned URL uploads
+// It downloads the original video, compresses it, generates thumbnail, and replaces the original file
+func (tcs TestimonialCollectionService) compressDirectUpload(ctx context.Context, testimonialID uuid.UUID, objectPath string, workspaceID uuid.UUID) error {
+	tcs.logger.Info("Starting background compression for direct upload",
+		zap.String("testimonial_id", testimonialID.String()),
+		zap.String("object_path", objectPath))
+
+	// Step 1: Download the original video from OCI
+	downloadURL, err := tcs.storageService.Provider.PresignedURL(ctx, objectPath, 30*time.Minute)
+	if err != nil {
+		return fmt.Errorf("failed to generate download URL: %w", err)
+	}
+
+	// Create temp directory
+	tempDir := "/tmp/video_compression"
+	if err := os.MkdirAll(tempDir, 0755); err != nil {
+		return fmt.Errorf("failed to create temp directory: %w", err)
+	}
+
+	// Download to temp file
+	ext := filepath.Ext(objectPath)
+	if ext == "" {
+		ext = ".mp4" // default
+	}
+	downloadPath := filepath.Join(tempDir, fmt.Sprintf("original_%s%s", testimonialID.String(), ext))
+
+	resp, err := http.Get(downloadURL)
+	if err != nil {
+		return fmt.Errorf("failed to download video: %w", err)
+	}
+	defer resp.Body.Close()
+
+	downloadFile, err := os.Create(downloadPath)
+	if err != nil {
+		return fmt.Errorf("failed to create download file: %w", err)
+	}
+
+	originalSize, err := io.Copy(downloadFile, resp.Body)
+	downloadFile.Close()
+	if err != nil {
+		os.Remove(downloadPath)
+		return fmt.Errorf("failed to save downloaded video: %w", err)
+	}
+
+	// Ensure cleanup
+	defer func() {
+		if _, err := os.Stat(downloadPath); err == nil {
+			os.Remove(downloadPath)
+		}
+	}()
+
+	tcs.logger.Info("Downloaded video for compression",
+		zap.String("testimonial_id", testimonialID.String()),
+		zap.Int64("original_size_bytes", originalSize))
+
+	// Step 2: Compress video
+	sessionID := uuid.New()
+	compressionResult, err := tcs.videoCompressor.CompressVideoForStorage(ctx, downloadPath, sessionID)
+	if err != nil {
+		tcs.logger.Error("Compression failed for direct upload",
+			zap.String("testimonial_id", testimonialID.String()),
+			zap.Error(err))
+		return fmt.Errorf("video compression failed: %w", err)
+	}
+
+	var finalPath string
+	var finalFileSize int64
+
+	if !compressionResult.Success {
+		tcs.logger.Warn("Compression failed, using original file",
+			zap.String("testimonial_id", testimonialID.String()),
+			zap.Float64("original_size_mb", compressionResult.OriginalSizeMB))
+		finalPath = downloadPath
+		finalFileSize = originalSize
+	} else {
+		// Use compressed file
+		if compressionResult.CompressedPath != downloadPath {
+			// Replace original with compressed
+			if err := tcs.videoCompressor.ReplaceWithCompressed(downloadPath, compressionResult.CompressedPath); err != nil {
+				tcs.logger.Warn("Failed to replace with compressed, using compressed path",
+					zap.Error(err))
+				finalPath = compressionResult.CompressedPath
+			} else {
+				finalPath = downloadPath
+			}
+		} else {
+			finalPath = downloadPath
+		}
+		finalFileSize = int64(compressionResult.CompressedSizeMB * 1024 * 1024)
+
+		tcs.logger.Info("Video compression completed for direct upload",
+			zap.String("testimonial_id", testimonialID.String()),
+			zap.Float64("original_mb", compressionResult.OriginalSizeMB),
+			zap.Float64("compressed_mb", compressionResult.CompressedSizeMB),
+			zap.Float64("reduction_percent", compressionResult.ReductionPercent))
+	}
+
+	// Ensure cleanup of compressed file if different from downloadPath
+	if compressionResult.CompressedPath != downloadPath {
+		defer func() {
+			if _, err := os.Stat(compressionResult.CompressedPath); err == nil {
+				os.Remove(compressionResult.CompressedPath)
+			}
+		}()
+	}
+
+	// Step 3: Upload compressed video to SAME path (replacing original)
+	finalFile, err := os.Open(finalPath)
+	if err != nil {
+		return fmt.Errorf("failed to open compressed file: %w", err)
+	}
+	defer finalFile.Close()
+
+	// Determine content type
+	contentType := "video/mp4"
+	switch ext {
+	case ".avi":
+		contentType = "video/x-msvideo"
+	case ".mov":
+		contentType = "video/quicktime"
+	case ".wmv":
+		contentType = "video/x-ms-wmv"
+	case ".flv":
+		contentType = "video/x-flv"
+	case ".webm":
+		contentType = "video/webm"
+	}
+
+	// Upload directly to the same objectPath using the low-level upload method
+	// This will overwrite the existing file in OCI
+	fileURL, err := tcs.storageService.Provider.(*storage.OCIProvider).UploadToPath(ctx, finalFile, objectPath, contentType, finalFileSize)
+	if err != nil {
+		return fmt.Errorf("failed to upload compressed video: %w", err)
+	}
+
+	tcs.logger.Info("Uploaded compressed video to storage",
+		zap.String("testimonial_id", testimonialID.String()),
+		zap.String("object_path", objectPath),
+		zap.String("file_url", fileURL))
+
+	// Step 4: Generate thumbnail
+	var thumbnailURL *string
+	var duration *float64
+
+	thumbnailCtx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	metadata, err := utils.ExtractVideoMetadataWithOCI(thumbnailCtx, fileURL, workspaceID.String(), tcs.storageService)
+	if err != nil {
+		tcs.logger.Warn("Failed to extract video metadata for direct upload",
+			zap.Error(err),
+			zap.String("testimonial_id", testimonialID.String()))
+	} else {
+		duration = &metadata.Duration
+		thumbnailURL = &metadata.ThumbnailURL
+		tcs.logger.Info("Extracted video metadata for direct upload",
+			zap.String("testimonial_id", testimonialID.String()),
+			zap.Float64("duration", metadata.Duration),
+			zap.String("thumbnail_url", metadata.ThumbnailURL))
+	}
+
+	// Step 5: Update testimonial record with new compressed video URL and metadata
+	// First, fetch the current testimonial
+
+	// Save the updated testimonial
+	if err := tcs.repo.UpdateAny(ctx, testimonialID, map[string]any{
+		"duration":      duration,
+		"media_url":     fileURL,        // fileURL is string, not pointer
+		"thumbnail_url": thumbnailURL,    // thumbnailURL is *string
+		"updated_at":    time.Now(),
+	}, tcs.db); err != nil {
+		tcs.logger.Error("Failed to update testimonial with compressed video info",
+			zap.String("testimonial_id", testimonialID.String()),
+			zap.Error(err))
+		return fmt.Errorf("failed to update testimonial metadata: %w", err)
+	}
+
+	tcs.logger.Info("Successfully completed background compression for direct upload",
+		zap.String("testimonial_id", testimonialID.String()),
+		zap.String("final_url", fileURL),
+		zap.Int64("final_size_bytes", finalFileSize))
+
+	return nil
 }

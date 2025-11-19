@@ -338,97 +338,109 @@ func (s AudioTranscriptionService) ValidateVideoFile(
 	file multipart.File,
 	header *multipart.FileHeader,
 ) (*ValidationResult, error) {
-	validationCtx, cancel := context.WithTimeout(ctx, 45*time.Second) // Reduced timeout
-	defer cancel()
 
-	s.logger.Info("Starting video audio validation", zap.String("filename", header.Filename), zap.Int64("size", header.Size))
+	return &ValidationResult{
+		IsValid: true,
+	}, nil
 
-	// Check cache first
-	cacheKey := fmt.Sprintf("validation:%s:%d", header.Filename, header.Size)
-	var cached ValidationResult
-	if err := s.cacheService.Get(validationCtx, cacheKey, &cached); err == nil {
-		s.logger.Info("Using cached validation result", zap.String("filename", header.Filename))
-		return &cached, nil
-	}
-
-	// Create temporary file
-	tempFilePath, err := s.createTempFileFromMultipart(file, header)
-	if err != nil {
-		return &ValidationResult{
-			IsValid:      false,
-			ErrorMessage: fmt.Sprintf("Failed to prepare file: %v", err),
-		}, nil
-	}
-	defer s.audioExtractor.Cleanup(tempFilePath)
-
-	// Extract audio (quick)
-	audioFilePath, err := s.audioExtractor.ExtractAudioFromLocalVideo(validationCtx, tempFilePath)
-	if err != nil {
-		s.logger.Error("Audio extraction failed", zap.String("temp_path", tempFilePath), zap.String("filename", header.Filename), zap.Error(err))
-		return &ValidationResult{
-			IsValid:      false,
-			ErrorMessage: "Unable to extract audio from video file. Please ensure the file is a valid video format.",
-		}, nil
-	}
-	defer s.audioExtractor.Cleanup(audioFilePath)
-
-	// STEP 1: Local validation first (very fast - under 2 seconds)
-	quality, err := s.performLocalValidation(validationCtx, audioFilePath)
-	if err != nil {
-		return &ValidationResult{
-			IsValid:      false,
-			ErrorMessage: fmt.Sprintf("Audio validation failed: %v", err),
-		}, nil
-	}
-
-	// If local validation strongly rejects, don't waste time on AssemblyAI
-	if quality.ShouldReject && quality.Score < 30 {
-		result := &ValidationResult{
-			Quality:      quality,
-			IsValid:      false,
-			ErrorMessage: quality.Recommendation,
-		}
-
-		// Cache negative results for shorter time
-		s.cacheService.Set(validationCtx, cacheKey, result, 10*time.Minute)
-		s.logger.Info("Video rejected by local validation", zap.String("filename", header.Filename), zap.Float64("score", quality.Score), zap.String("reason", quality.Recommendation))
-
-		return result, nil
-	}
-
-	// STEP 2: If local validation is uncertain or positive, do minimal AssemblyAI check
-	if quality.Score > 30 && !quality.ShouldReject {
-		s.logger.Info("Local validation passed, performing AssemblyAI verification", zap.String("filename", header.Filename), zap.Float64("local_score", quality.Score))
-
-		// Perform minimal AssemblyAI validation
-		assemblyQuality, err := s.performSmallAssemblyValidation(validationCtx, audioFilePath, quality.TotalDuration)
-		if err != nil {
-			// If AssemblyAI fails, fall back to local analysis
-			s.logger.Warn("AssemblyAI validation failed, using local analysis",
-				zap.Error(err))
-		} else {
-			// Use AssemblyAI result if it's available
-			quality = assemblyQuality
-		}
-	}
-
-	result := &ValidationResult{
-		Quality: quality,
-		IsValid: !quality.ShouldReject,
-	}
-
-	if quality.ShouldReject {
-		result.ErrorMessage = quality.Recommendation
-	}
-
-	// Cache for 30 minutes
-	s.cacheService.Set(validationCtx, cacheKey, result, 30*time.Minute)
-
-	s.logger.Info("Video validation completed", zap.String("filename", header.Filename), zap.Bool("is_valid", result.IsValid),
-		zap.Float64("quality_score", quality.Score), zap.Bool("used_assembly_ai", quality.Confidence > 0))
-
-	return result, nil
 }
+
+// func (s AudioTranscriptionService) ValidateVideoFile(
+// 	ctx context.Context,
+// 	file multipart.File,
+// 	header *multipart.FileHeader,
+// ) (*ValidationResult, error) {
+// 	validationCtx, cancel := context.WithTimeout(ctx, 45*time.Second) // Reduced timeout
+// 	defer cancel()
+
+// 	s.logger.Info("Starting video audio validation", zap.String("filename", header.Filename), zap.Int64("size", header.Size))
+
+// 	// Check cache first
+// 	cacheKey := fmt.Sprintf("validation:%s:%d", header.Filename, header.Size)
+// 	var cached ValidationResult
+// 	if err := s.cacheService.Get(validationCtx, cacheKey, &cached); err == nil {
+// 		s.logger.Info("Using cached validation result", zap.String("filename", header.Filename))
+// 		return &cached, nil
+// 	}
+
+// 	// Create temporary file
+// 	tempFilePath, err := s.createTempFileFromMultipart(file, header)
+// 	if err != nil {
+// 		return &ValidationResult{
+// 			IsValid:      false,
+// 			ErrorMessage: fmt.Sprintf("Failed to prepare file: %v", err),
+// 		}, nil
+// 	}
+// 	defer s.audioExtractor.Cleanup(tempFilePath)
+
+// 	// Extract audio (quick)
+// 	audioFilePath, err := s.audioExtractor.ExtractAudioFromLocalVideo(validationCtx, tempFilePath)
+// 	if err != nil {
+// 		s.logger.Error("Audio extraction failed", zap.String("temp_path", tempFilePath), zap.String("filename", header.Filename), zap.Error(err))
+// 		return &ValidationResult{
+// 			IsValid:      false,
+// 			ErrorMessage: "Unable to extract audio from video file. Please ensure the file is a valid video format.",
+// 		}, nil
+// 	}
+// 	defer s.audioExtractor.Cleanup(audioFilePath)
+
+// 	// STEP 1: Local validation first (very fast - under 2 seconds)
+// 	quality, err := s.performLocalValidation(validationCtx, audioFilePath)
+// 	if err != nil {
+// 		return &ValidationResult{
+// 			IsValid:      false,
+// 			ErrorMessage: fmt.Sprintf("Audio validation failed: %v", err),
+// 		}, nil
+// 	}
+
+// 	// If local validation strongly rejects, don't waste time on AssemblyAI
+// 	if quality.ShouldReject && quality.Score < 30 {
+// 		result := &ValidationResult{
+// 			Quality:      quality,
+// 			IsValid:      false,
+// 			ErrorMessage: quality.Recommendation,
+// 		}
+
+// 		// Cache negative results for shorter time
+// 		s.cacheService.Set(validationCtx, cacheKey, result, 10*time.Minute)
+// 		s.logger.Info("Video rejected by local validation", zap.String("filename", header.Filename), zap.Float64("score", quality.Score), zap.String("reason", quality.Recommendation))
+
+// 		return result, nil
+// 	}
+
+// 	// STEP 2: If local validation is uncertain or positive, do minimal AssemblyAI check
+// 	if quality.Score > 30 && !quality.ShouldReject {
+// 		s.logger.Info("Local validation passed, performing AssemblyAI verification", zap.String("filename", header.Filename), zap.Float64("local_score", quality.Score))
+
+// 		// Perform minimal AssemblyAI validation
+// 		assemblyQuality, err := s.performSmallAssemblyValidation(validationCtx, audioFilePath, quality.TotalDuration)
+// 		if err != nil {
+// 			// If AssemblyAI fails, fall back to local analysis
+// 			s.logger.Warn("AssemblyAI validation failed, using local analysis",
+// 				zap.Error(err))
+// 		} else {
+// 			// Use AssemblyAI result if it's available
+// 			quality = assemblyQuality
+// 		}
+// 	}
+
+// 	result := &ValidationResult{
+// 		Quality: quality,
+// 		IsValid: !quality.ShouldReject,
+// 	}
+
+// 	if quality.ShouldReject {
+// 		result.ErrorMessage = quality.Recommendation
+// 	}
+
+// 	// Cache for 30 minutes
+// 	s.cacheService.Set(validationCtx, cacheKey, result, 30*time.Minute)
+
+// 	s.logger.Info("Video validation completed", zap.String("filename", header.Filename), zap.Bool("is_valid", result.IsValid),
+// 		zap.Float64("quality_score", quality.Score), zap.Bool("used_assembly_ai", quality.Confidence > 0))
+
+// 	return result, nil
+// }
 
 func (s AudioTranscriptionService) createTempFileFromMultipart(file multipart.File, header *multipart.FileHeader) (string, error) {
 	// Extract file extension from original filename

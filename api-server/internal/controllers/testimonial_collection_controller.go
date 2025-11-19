@@ -655,7 +655,13 @@ func (tcc *TestimonialCollectionController) QueueVideoUpload(w http.ResponseWrit
 		tcc.logger.Error("Video validation system error",
 			zap.String("filename", header.Filename),
 			zap.Error(validationErr))
-		utils.RespondWithError(w, http.StatusInternalServerError, "Unable to validate video")
+
+		// Return user-friendly error message
+		utils.RespondWithJSON(w, http.StatusBadRequest, map[string]interface{}{
+			"success": false,
+			"error":   validationErr.Error(),
+			"message": "We couldn't validate your video. " + validationErr.Error(),
+		})
 		return
 	}
 
@@ -668,6 +674,7 @@ func (tcc *TestimonialCollectionController) QueueVideoUpload(w http.ResponseWrit
 		utils.RespondWithJSON(w, http.StatusBadRequest, map[string]interface{}{
 			"success":          false,
 			"error":            "Video validation failed",
+			"message":          validationResult.ErrorMessage, // User-friendly message
 			"voice_detected":   validationResult.Quality.HasSpeech,
 			"can_transcribe":   false,
 			"quality_score":    validationResult.Quality.Score,
@@ -748,5 +755,132 @@ func (tcc *TestimonialCollectionController) QueueVideoUpload(w http.ResponseWrit
 		"collection":            authorData.CollectionMethod,
 		"voice_detected":        true,
 		"can_transcribe":        true,
+	})
+}
+
+// GetUploadURL generates a presigned URL for direct upload to OCI (bypasses Cloud Run 32MB limit)
+func (tcc *TestimonialCollectionController) GetUploadURL(w http.ResponseWriter, r *http.Request) {
+	workspaceIDStr := chi.URLParam(r, "workspaceID")
+	workspaceID, err := uuid.Parse(workspaceIDStr)
+	if err != nil {
+		tcc.logger.Error("Invalid workspace ID", zap.Error(err))
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid workspace ID")
+		return
+	}
+
+	var req struct {
+		Filename    string `json:"filename"`
+		ContentType string `json:"content_type"`
+		FileSize    int64  `json:"file_size"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		tcc.logger.Error("Invalid request format", zap.Error(err))
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid request format")
+		return
+	}
+
+	// Validate file size (max 250MB as per frontend maxFileSize)
+	const maxFileSize = 250 * 1024 * 1024 // 250MB
+	if req.FileSize > maxFileSize {
+		tcc.logger.Error("File too large", zap.Int64("size", req.FileSize), zap.Int64("max", maxFileSize))
+		utils.RespondWithError(w, http.StatusBadRequest, fmt.Sprintf("File too large. Maximum size: %dMB", maxFileSize/(1024*1024)))
+		return
+	}
+
+	// Generate unique object path (use videos/ to match folder pattern from regular uploads)
+	uploadID := uuid.New().String()
+	objectPath := fmt.Sprintf("videos/%s/%s/%s", workspaceID.String(), uploadID, req.Filename)
+
+	// Generate presigned URL (15 minutes expiry) via service
+	uploadURL, err := tcc.service.GenerateUploadPresignedURL(r.Context(), objectPath, 15*time.Minute)
+	if err != nil {
+		tcc.logger.Error("Failed to generate upload URL",
+			zap.String("workspace_id", workspaceID.String()),
+			zap.Error(err))
+		utils.RespondWithError(w, http.StatusInternalServerError, "Failed to generate upload URL. Please try again.")
+		return
+	}
+
+	tcc.logger.Info("Upload URL generated",
+		zap.String("workspace_id", workspaceID.String()),
+		zap.String("upload_id", uploadID),
+		zap.Int64("file_size", req.FileSize))
+
+	utils.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
+		"upload_url":  uploadURL,
+		"object_path": objectPath,
+		"upload_id":   uploadID,
+	})
+}
+
+// ConfirmUpload processes a video that was uploaded directly to OCI
+func (tcc *TestimonialCollectionController) ConfirmUpload(w http.ResponseWriter, r *http.Request) {
+	workspaceIDStr := chi.URLParam(r, "workspaceID")
+	workspaceID, err := uuid.Parse(workspaceIDStr)
+	if err != nil {
+		tcc.logger.Error("Invalid workspace ID", zap.Error(err))
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid workspace ID")
+		return
+	}
+
+	var req struct {
+		ObjectPath       string `json:"object_path"`
+		UploadID         string `json:"upload_id"`
+		AuthorName       string `json:"author_name"`
+		AuthorEmail      string `json:"author_email"`
+		CollectionMethod string `json:"collection_method"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		tcc.logger.Error("Invalid request format", zap.Error(err))
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid request format")
+		return
+	}
+
+	// Validate required fields
+	if req.ObjectPath == "" || req.UploadID == "" {
+		tcc.logger.Error("Missing required fields", zap.String("object_path", req.ObjectPath), zap.String("upload_id", req.UploadID))
+		utils.RespondWithError(w, http.StatusBadRequest, "Missing required fields: object_path and upload_id")
+		return
+	}
+
+	// Set defaults for author info if not provided
+	if req.AuthorName == "" {
+		req.AuthorName = "Anonymous"
+	}
+	if req.CollectionMethod == "" {
+		req.CollectionMethod = "form"
+	}
+
+	tcc.logger.Info("Processing direct upload - immediate response mode",
+		zap.String("workspace_id", workspaceID.String()),
+		zap.String("upload_id", req.UploadID),
+		zap.String("object_path", req.ObjectPath))
+
+	// CRITICAL FIX: Process upload immediately and return success
+	// All validation, compression, and AI processing happens in background
+	// This ensures user gets immediate feedback that upload is complete
+	result, err := tcc.service.ProcessDirectUpload(r.Context(), workspaceID, req.ObjectPath, req.AuthorName, req.AuthorEmail, req.CollectionMethod)
+	if err != nil {
+		tcc.logger.Error("Failed to process direct upload",
+			zap.String("upload_id", req.UploadID),
+			zap.Error(err))
+		utils.RespondWithError(w, http.StatusInternalServerError, "Failed to process upload. Please try again.")
+		return
+	}
+
+	tcc.logger.Info("Upload confirmed - processing in background",
+		zap.String("upload_id", req.UploadID),
+		zap.String("testimonial_id", result.TestimonialID))
+
+	// CRITICAL: Don't return compression_session_id for presigned uploads
+	// Background processing (compression, AI) happens asynchronously
+	// Frontend should treat this as immediate success
+	utils.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
+		"success":        true,
+		"testimonial_id": result.TestimonialID,
+		"status":         "uploaded",
+		"message":        "Upload successful! Video is being processed in the background.",
 	})
 }

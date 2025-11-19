@@ -358,6 +358,8 @@ func RegisterTestimonialCollectionRoutes(r chi.Router, tcc controllers.Testimoni
 			// r.Use(authMiddleware.VerifyToken)
 			r.Post("/upload/video", tcc.UploadVideo)            // Direct video upload (legacy)
 			r.Post("/upload/video/queue", tcc.QueueVideoUpload) // Queued video upload (new)
+			r.Post("/upload-url", tcc.GetUploadURL)             // Get presigned URL for large file upload
+			r.Post("/upload-confirm", tcc.ConfirmUpload)        // Confirm large file upload completion
 			r.Post("/upload/csv", tcc.UploadCSV)
 			r.Post("/upload/excel", tcc.UploadXLS)
 			r.Post("/import/google-drive", tcc.ImportFromGoogleDrive)

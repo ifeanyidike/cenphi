@@ -3,6 +3,7 @@ package controllers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -49,8 +50,16 @@ func (mc TestimonialRequestController) SendSingleEmail(w http.ResponseWriter, r 
 
 	response, err := mc.service.SendTestimonialRequest(r.Context(), req)
 	if err != nil {
-		mc.logger.Error("Failed to send testimonial request", zap.Error(err))
-		mc.respondError(w, http.StatusInternalServerError, "Failed to send email", err)
+		mc.logger.Error("Failed to send testimonial request",
+			zap.String("email", req.ContactEmail),
+			zap.Error(err))
+
+		// Return user-friendly error message
+		errorMsg := "We couldn't send the testimonial request. Please check the email address and try again."
+		if err.Error() != "" {
+			errorMsg = err.Error() // Use the specific error from the service
+		}
+		mc.respondError(w, http.StatusBadRequest, errorMsg, err)
 		return
 	}
 
@@ -83,15 +92,39 @@ func (mc TestimonialRequestController) SendBulkEmails(w http.ResponseWriter, r *
 	}
 
 	responses, err := mc.service.SendBulkTestimonialRequests(r.Context(), req)
-	if err != nil {
-		mc.logger.Error("Failed to send bulk emails", zap.Error(err))
-		// Still return partial success if some emails were sent
-	}
 
 	successCount := len(responses)
 	totalCount := len(req.Recipients)
 
-	mc.respondSuccess(w, http.StatusOK, "Bulk email processing completed", map[string]interface{}{
+	// If error and no successful sends, return error
+	if err != nil && successCount == 0 {
+		mc.logger.Error("Failed to send bulk emails",
+			zap.Int("total", totalCount),
+			zap.Error(err))
+
+		errorMsg := "We couldn't send the testimonial requests. Please try again later."
+		if err.Error() != "" {
+			errorMsg = err.Error()
+		}
+		mc.respondError(w, http.StatusBadRequest, errorMsg, err)
+		return
+	}
+
+	// Partial success or complete success
+	if err != nil {
+		mc.logger.Warn("Partial success sending bulk emails",
+			zap.Int("successful", successCount),
+			zap.Int("failed", totalCount-successCount),
+			zap.Error(err))
+	}
+
+	statusCode := http.StatusOK
+	message := "Bulk email processing completed"
+	if successCount < totalCount {
+		message = fmt.Sprintf("Sent %d out of %d requests successfully", successCount, totalCount)
+	}
+
+	mc.respondSuccess(w, statusCode, message, map[string]interface{}{
 		"total_recipients": totalCount,
 		"successful_sends": successCount,
 		"failed_sends":     totalCount - successCount,

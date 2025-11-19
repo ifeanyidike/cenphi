@@ -191,9 +191,9 @@ const VideoUpload: React.FC<VideoUploadProps> = ({
 
       if (result.testimonial_id) {
         const compressionSessionId = result.compression_session_id;
-        if (result.job_id) {
+        if (compressionSessionId) {
           setStatus("processing");
-          startTracking(result.job_id);
+          startTracking(compressionSessionId);
         } else {
           setStatus("completed");
           setTimeout(() => onSubmitSuccess(result.testimonial_id, compressionSessionId), 1000);

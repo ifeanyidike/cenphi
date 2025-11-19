@@ -60,11 +60,12 @@ func (qw *AIQueueWorker) handleTestimonialSentimentAnalysis(ctx context.Context,
 		return qw.respondWithFailure(ctx, serviceID, req.JobID, "invalid testimonial ID", err)
 	}
 
-	// Update testimonial processing_status to "analyzing_sentiment"
+	// Update testimonial processing_status to "processing"
+	// Note: "analyzing_sentiment" is not a valid value in job_status enum (only: pending, processing, completed, failed)
 	if updateErr := qw.testimonialRepo.UpdateAny(ctx, testimonialID, map[string]any{
-		"processing_status": "analyzing_sentiment",
+		"processing_status": "processing",
 	}, qw.db); updateErr != nil {
-		qw.logger.Warn("Failed to update testimonial processing_status to analyzing_sentiment", zap.Error(updateErr))
+		qw.logger.Warn("Failed to update testimonial processing_status to processing", zap.Error(updateErr))
 	}
 
 	qw.logger.Info("💭 Starting testimonial sentiment analysis",

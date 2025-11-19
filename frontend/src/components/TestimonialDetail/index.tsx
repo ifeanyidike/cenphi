@@ -67,10 +67,10 @@ const getCompletedFeaturesCount = (
   return relevantFeatures.filter((feature) =>
     artifacts.some(
       (artifact) =>
-        artifact.processing_type.includes(feature) ||
-        feature.includes(artifact.processing_type.split("_")[0])
+        artifact.processing_type?.includes(feature) ||
+        feature?.includes(artifact.processing_type?.split("_")[0])
     )
-  ).length;
+  )?.length;
 };
 
 const getTotalFeaturesCount = (testimonialType: "video" | "text") => {
@@ -134,7 +134,12 @@ const TestimonialDetail = observer(() => {
 
   // Fetch highlights on-demand when testimonial is loaded (only for highlights tab)
   useEffect(() => {
-    if (!testimonialId || activeTab !== "artifacts" || activeArtifactTab !== "highlights") return;
+    if (
+      !testimonialId ||
+      activeTab !== "artifacts" ||
+      activeArtifactTab !== "highlights"
+    )
+      return;
 
     const fetchHighlights = async () => {
       try {
@@ -431,7 +436,7 @@ const TestimonialDetail = observer(() => {
   ) => {
     // Navigate to Studio with appropriate context
     if (testimonial?.id) {
-      const clipIds = clips.map((c) => c.id).join(",");
+      const clipIds = clips?.map((c) => c.id).join(",");
 
       // For story_mode, navigate to story studio
       if (serviceType === "story_mode") {
@@ -444,7 +449,7 @@ const TestimonialDetail = observer(() => {
       // For platform_optimizer, navigate to optimization studio
       if (serviceType === "platform_optimizer") {
         // Single clip optimization
-        if (clips.length === 1) {
+        if (clips?.length === 1) {
           navigate(
             `/studio/optimize?testimonialId=${testimonial.id}&clipId=${clips[0].id}&sourceType=clip`
           );
@@ -460,7 +465,7 @@ const TestimonialDetail = observer(() => {
       // For custom_pipeline, navigate to custom studio
       if (serviceType === "custom_pipeline") {
         navigate(
-          `/studio/custom?testimonialId=${testimonial.id}&clipIds=${clipIds}&sourceType=${clips.length === 1 ? "clip" : "clips"}`
+          `/studio/custom?testimonialId=${testimonial.id}&clipIds=${clipIds}&sourceType=${clips?.length === 1 ? "clip" : "clips"}`
         );
         return;
       }
@@ -558,14 +563,16 @@ const TestimonialDetail = observer(() => {
   );
 
   // Get sentiment from testimonial.sentiment_data (new schema) or fall back to artifacts (legacy)
-  const sentiment = (testimonial?.sentiment_data || sentimentArtifact?.data) as SentimentData | undefined;
+  const sentiment = (testimonial?.sentiment_data || sentimentArtifact?.data) as
+    | SentimentData
+    | undefined;
 
   const getSentimentColor = (label: string) => {
-    if (label.includes("positive"))
+    if (label?.includes("positive"))
       return "bg-emerald-50 text-emerald-700 border-emerald-200";
-    if (label.includes("negative"))
+    if (label?.includes("negative"))
       return "bg-red-50 text-red-700 border-red-200";
-    if (label.includes("neutral"))
+    if (label?.includes("neutral"))
       return "bg-slate-50 text-slate-700 border-slate-200";
     return "bg-gray-50 text-gray-700 border-gray-200";
   };
@@ -709,7 +716,7 @@ const TestimonialDetail = observer(() => {
             <CardContent className="space-y-4">
               <div className="text-center">
                 <div
-                  className={`inline-flex items-center px-4 py-2 rounded-lg text-xs font-semibold border ${getSentimentColor(sentiment.label)}`}
+                  className={`inline-flex items-center px-4 py-2 rounded-lg text-xs font-semibold border ${getSentimentColor(sentiment?.label)}`}
                 >
                   {sentiment.label?.replace("_", " ")?.toUpperCase()}
                 </div>
@@ -723,7 +730,7 @@ const TestimonialDetail = observer(() => {
                   Detected Emotions
                 </h4>
                 <div className="flex flex-wrap gap-1.5">
-                  {sentiment.emotions.map((emotion, index) => (
+                  {sentiment?.emotions?.map((emotion, index) => (
                     <Badge
                       key={index}
                       variant="secondary"
@@ -778,12 +785,12 @@ const TestimonialDetail = observer(() => {
                 <Lightbulb className="h-3.5 w-3.5 text-slate-600" />
               </div>
               Business Recommendations (
-              {sentiment.business_recommendations.length})
+              {sentiment?.business_recommendations?.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {sentiment.business_recommendations.map((rec, index) => (
+              {sentiment?.business_recommendations?.map((rec, index) => (
                 <Card
                   key={index}
                   className="border-l-2 border-l-slate-400 border border-slate-200 bg-white"
@@ -894,7 +901,7 @@ const TestimonialDetail = observer(() => {
     if (!testimonial) return;
 
     // Create EnhancedArtifact for each clip
-    const clipArtifacts = clips.map((clip) => {
+    const clipArtifacts = clips?.map((clip) => {
       const parentArtifact =
         parentArtifacts.find((a) => a.id === clip.artifactId) ||
         parentArtifacts[0];
@@ -951,10 +958,10 @@ const TestimonialDetail = observer(() => {
                   variant="outline"
                   className={cn(
                     "text-[10px] font-medium px-2 py-0.5",
-                    getSentimentColor(sentiment.label)
+                    getSentimentColor(sentiment?.label)
                   )}
                 >
-                  {sentiment.label.replace("_", " ")}
+                  {sentiment.label?.replace("_", " ")}
                 </Badge>
               )}
             </div>
@@ -976,7 +983,7 @@ const TestimonialDetail = observer(() => {
                       <span className="hidden sm:inline text-slate-300">•</span>
                     )}
                     <div className="flex items-center gap-1">
-                      {Array.from({ length: 5 }).map((_, i) => (
+                      {Array.from({ length: 5 })?.map((_, i) => (
                         <Star
                           key={i}
                           className={cn(
@@ -1044,7 +1051,7 @@ const TestimonialDetail = observer(() => {
                       <span className="text-slate-300">•</span>
                     )}
                     <div className="flex items-center gap-1">
-                      {Array.from({ length: 5 }).map((_, i) => (
+                      {Array.from({ length: 5 })?.map((_, i) => (
                         <Star
                           key={i}
                           className={cn(
@@ -1071,7 +1078,7 @@ const TestimonialDetail = observer(() => {
                     getSentimentColor(sentiment.label)
                   )}
                 >
-                  {sentiment.label.replace("_", " ")}
+                  {sentiment.label?.replace("_", " ")}
                 </Badge>
               )}
               <Button
@@ -1104,7 +1111,7 @@ const TestimonialDetail = observer(() => {
           className="space-y-6"
         >
           <MainTabs
-            artifactsCount={contextualArtifacts.length}
+            artifactsCount={contextualArtifacts?.length || 0}
             completedFeaturesCount={getCompletedFeaturesCount(
               contextualArtifacts,
               testimonial.type as "video" | "text"
@@ -1112,7 +1119,7 @@ const TestimonialDetail = observer(() => {
             totalFeaturesCount={getTotalFeaturesCount(
               testimonial.type as "video" | "text"
             )}
-            hasNewFeatures={contextualArtifacts.length === 0} // Show "New" badge if no artifacts yet
+            hasNewFeatures={contextualArtifacts?.length === 0} // Show "New" badge if no artifacts yet
           />
 
           <TabsContent value="overview" className="space-y-5">
@@ -1328,7 +1335,7 @@ const TestimonialDetail = observer(() => {
                           >
                             {testimonial.content}
                           </p>
-                          {testimonial.content.length > 200 && (
+                          {testimonial.content?.length > 200 && (
                             <button
                               onClick={() => setShowTranscript(!showTranscript)}
                               className="text-xs text-blue-600 hover:text-blue-700 font-medium mt-2 inline-flex items-center gap-1"
@@ -1374,7 +1381,7 @@ const TestimonialDetail = observer(() => {
               <div className="space-y-5">
                 <AuthorStats
                   testimonial={testimonial}
-                  artifactCount={artifacts.length}
+                  artifactCount={artifacts?.length}
                   onSaveAuthorData={saveAuthorData}
                 />
 

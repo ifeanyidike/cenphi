@@ -146,43 +146,15 @@ export const QueuedFileUpload: React.FC<QueuedFileUploadProps> = ({
         throw new Error("Authentication required");
       }
 
-      const formData = new FormData();
-      formData.append("video", file);
-      formData.append("author_name", authStore.user?.displayName || "User");
-      formData.append("author_email", authStore.user?.email || "");
-      formData.append("collection_method", "form");
+      // For files >30MB, use signed URL to bypass Cloud Run's 32MB limit
+      // const CLOUD_RUN_LIMIT = 30 * 1024 * 1024; // 30MB (conservative)
+      const CLOUD_RUN_LIMIT = 5 * 1024 * 1024; // 5MB (conservative)
 
-      // Use queued upload endpoint
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/collection/workspaces/${workspaceId}/testimonials/upload/video/queue`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: formData,
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.message || `Upload failed with status ${response.status}`
-        );
+      if (file.size > CLOUD_RUN_LIMIT) {
+        await uploadLargeFile(file, token);
+      } else {
+        await uploadSmallFile(file, token);
       }
-
-      const result = await response.json();
-
-      setUploadState((prev) => ({
-        ...prev,
-        status: "queued",
-        progress: 10,
-        jobId: result.job_id,
-        message: "Upload queued successfully! Processing will begin shortly...",
-      }));
-
-      // Start tracking job progress via SSE
-      startTracking(result.job_id);
     } catch (error: any) {
       console.error("Upload failed:", error);
       setUploadState((prev) => ({
@@ -191,6 +163,172 @@ export const QueuedFileUpload: React.FC<QueuedFileUploadProps> = ({
         error: error.message,
       }));
       onError(error.message);
+    }
+  };
+
+  // Standard upload for files ≤30MB
+  const uploadSmallFile = async (file: File, token: string) => {
+    const formData = new FormData();
+    formData.append("video", file);
+    formData.append("author_name", authStore.user?.displayName || "User");
+    formData.append("author_email", authStore.user?.email || "");
+    formData.append("collection_method", "form");
+
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL}/collection/workspaces/${workspaceId}/testimonials/upload/video/queue`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message || `Upload failed with status ${response.status}`
+      );
+    }
+
+    const result = await response.json();
+    console.log("[QueuedFileUpload] Upload response:", result);
+
+    setUploadState((prev) => ({
+      ...prev,
+      status: "queued",
+      progress: 10,
+      jobId: result.compression_session_id,
+      message: "Upload queued successfully! Processing will begin shortly...",
+    }));
+
+    console.log(
+      "[QueuedFileUpload] Starting SSE tracking with session ID:",
+      result.compression_session_id
+    );
+    startTracking(result.compression_session_id);
+  };
+
+  // Direct OCI upload for files >30MB (bypasses Cloud Run)
+  const uploadLargeFile = async (file: File, token: string) => {
+    setUploadState((prev) => ({
+      ...prev,
+      message: "Preparing large file upload...",
+      progress: 5,
+    }));
+
+    // Step 1: Get presigned URL from backend
+    const urlResponse = await fetch(
+      `${import.meta.env.VITE_API_URL}/collection/workspaces/${workspaceId}/testimonials/upload-url`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          filename: file.name,
+          content_type: file.type,
+          file_size: file.size,
+        }),
+      }
+    );
+
+    if (!urlResponse.ok) {
+      const errorData = await urlResponse.json().catch(() => ({}));
+      throw new Error(errorData.message || "Failed to get upload URL");
+    }
+
+    const { upload_url, object_path, upload_id } = await urlResponse.json();
+
+    setUploadState((prev) => ({
+      ...prev,
+      message: "Uploading to storage...",
+      progress: 10,
+    }));
+
+    // Step 2: Upload directly to OCI using presigned URL
+    const uploadResponse = await fetch(upload_url, {
+      method: "PUT",
+      headers: {
+        "Content-Type": file.type,
+      },
+      body: file,
+    });
+
+    if (!uploadResponse.ok) {
+      throw new Error(
+        `Direct upload failed with status ${uploadResponse.status}`
+      );
+    }
+
+    setUploadState((prev) => ({
+      ...prev,
+      message: "Finalizing upload...",
+      progress: 90,
+    }));
+
+    // Step 3: Notify backend to process the uploaded file
+    const confirmResponse = await fetch(
+      `${import.meta.env.VITE_API_URL}/collection/workspaces/${workspaceId}/testimonials/upload-confirm`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          object_path,
+          upload_id,
+          author_name: authStore.user?.displayName || "User",
+          author_email: authStore.user?.email || "",
+          collection_method: "form",
+        }),
+      }
+    );
+
+    if (!confirmResponse.ok) {
+      const errorData = await confirmResponse.json().catch(() => ({}));
+      throw new Error(errorData.message || "Failed to confirm upload");
+    }
+
+    const result = await confirmResponse.json();
+    console.log("[QueuedFileUpload] Upload confirmation response:", result);
+
+    // CRITICAL: For presigned uploads, backend returns status="uploaded" without compression_session_id
+    // This means upload is complete and processing happens in background
+    if (result.compression_session_id) {
+      setUploadState((prev) => ({
+        ...prev,
+        status: "queued",
+        progress: 100,
+        jobId: result.compression_session_id,
+        message: "Upload complete! Processing will begin shortly...",
+      }));
+
+      console.log(
+        "[QueuedFileUpload] Starting SSE tracking with session ID:",
+        result.compression_session_id
+      );
+      startTracking(result.compression_session_id);
+    } else {
+      // No compression_session_id means immediate success (background processing)
+      setUploadState((prev) => ({
+        ...prev,
+        status: "completed",
+        progress: 100,
+        testimonialId: result.testimonial_id,
+        message:
+          "Upload successful! Video is being processed in the background.",
+      }));
+
+      console.log(
+        "[QueuedFileUpload] Immediate success - no job tracking needed"
+      );
+      setTimeout(() => {
+        onUploadComplete(result.testimonial_id);
+      }, 1000);
     }
   };
 

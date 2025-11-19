@@ -279,6 +279,63 @@ func (p *OCIProvider) UploadFile(ctx context.Context, file multipart.File, heade
 	return url, nil
 }
 
+// UploadToPath uploads a file to a specific object path in OCI storage
+// This method allows uploading to an exact path, useful for replacing existing files
+func (p *OCIProvider) UploadToPath(ctx context.Context, file io.Reader, objectPath string, contentType string, fileSize int64) (string, error) {
+	startTime := time.Now()
+
+	if file == nil {
+		return "", fmt.Errorf("file reader is nil")
+	}
+
+	if fileSize > 500*1024*1024 { // 500MB limit
+		return "", fmt.Errorf("file size (%d bytes) exceeds maximum allowed (500MB)", fileSize)
+	}
+
+	// Create upload context with timeout
+	uploadCtx, cancel := context.WithTimeout(ctx, p.uploadTimeout)
+	defer cancel()
+
+	sizeMB := float64(fileSize) / (1024 * 1024)
+
+	p.logger.Info("Uploading to specific path",
+		zap.String("object_path", objectPath),
+		zap.String("content_type", contentType),
+		zap.Float64("size_mb", sizeMB))
+
+	// Choose upload strategy based on file size
+	var url string
+	var uploadErr error
+
+	if fileSize <= MaxSimpleUploadSize {
+		url, uploadErr = p.simpleUploadWithRetry(uploadCtx, file, objectPath, contentType, fileSize)
+	} else {
+		// For large files, we need to use multipart but that requires a multipart.File
+		// For now, just use simple upload with extended timeout
+		url, uploadErr = p.simpleUploadWithRetry(uploadCtx, file, objectPath, contentType, fileSize)
+	}
+
+	if uploadErr != nil {
+		p.logger.Error("Failed to upload to path",
+			zap.String("object_path", objectPath),
+			zap.Float64("size_mb", sizeMB),
+			zap.Error(uploadErr))
+		return "", uploadErr
+	}
+
+	duration := time.Since(startTime)
+	speed := sizeMB / duration.Seconds()
+
+	p.logger.Info("Upload to path completed",
+		zap.String("object_path", objectPath),
+		zap.String("url", url),
+		zap.Float64("size_mb", sizeMB),
+		zap.Duration("duration", duration),
+		zap.Float64("speed_mbps", speed))
+
+	return url, nil
+}
+
 // IMPROVED: Enhanced simple upload with better timeout handling
 func (p *OCIProvider) simpleUploadWithRetry(ctx context.Context, reader io.Reader, objectPath, contentType string, contentLength int64) (string, error) {
 	var lastErr error
@@ -2032,6 +2089,45 @@ func (p *OCIProvider) PresignedURL(ctx context.Context, objectPath string, expir
 		zap.String("object", objectPath),
 		zap.Duration("expiry", expiry),
 		zap.String("url", presignedURL))
+
+	return presignedURL, nil
+}
+
+// GenerateUploadPresignedURL creates a presigned URL for uploading a file directly to OCI Object Storage
+// This allows clients to upload files >32MB directly to OCI, bypassing Cloud Run's 32MB limit
+func (p *OCIProvider) GenerateUploadPresignedURL(ctx context.Context, objectPath string, expiry time.Duration) (string, error) {
+	p.logger.Info("Generating upload presigned URL",
+		zap.String("object", objectPath),
+		zap.Duration("expiry", expiry))
+
+	requestName := fmt.Sprintf("upload-presigned-%s-%d",
+		strings.ReplaceAll(objectPath, "/", "-"),
+		time.Now().Unix())
+
+	// Create PAR with ObjectWrite access type for uploads
+	request := objectstorage.CreatePreauthenticatedRequestRequest{
+		NamespaceName: common.String(p.config.Namespace),
+		BucketName:    common.String(p.config.Bucket),
+		CreatePreauthenticatedRequestDetails: objectstorage.CreatePreauthenticatedRequestDetails{
+			Name:        common.String(requestName),
+			AccessType:  objectstorage.CreatePreauthenticatedRequestDetailsAccessTypeObjectwrite, // Write access for uploads
+			TimeExpires: &common.SDKTime{Time: time.Now().Add(expiry)},
+			ObjectName:  common.String(objectPath),
+		},
+	}
+
+	response, err := p.client.CreatePreauthenticatedRequest(ctx, request)
+	if err != nil {
+		return "", fmt.Errorf("failed to create upload presigned URL: %w", err)
+	}
+
+	baseURL := p.getBaseURL()
+	presignedURL := fmt.Sprintf("%s%s", baseURL, *response.AccessUri)
+
+	p.logger.Info("Upload presigned URL generated successfully",
+		zap.String("object", objectPath),
+		zap.Duration("expiry", expiry),
+		zap.String("url_prefix", baseURL))
 
 	return presignedURL, nil
 }

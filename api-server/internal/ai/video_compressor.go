@@ -19,7 +19,7 @@ import (
 
 const (
 	MaxRecommendedSizeMB = 200
-	CRFVisuallyLossless  = 20
+	CRFHighQuality       = 23 // Excellent quality with good compression (industry standard)
 	CompressionPreset    = "medium"
 )
 
@@ -78,14 +78,15 @@ func (vc *VideoCompressor) CompressVideoForStorage(ctx context.Context, inputPat
 	// Create output path (same directory, temp file)
 	outputPath := strings.TrimSuffix(inputPath, filepath.Ext(inputPath)) + "_compressed.mp4"
 
-	// Build ffmpeg command with CRF 20 (visually lossless)
+	// Build ffmpeg command with CRF 23 (excellent quality, industry standard)
+	// Scale filter: NEVER upscale - only downscale if larger than 1920x1080
 	cmd := exec.CommandContext(ctx,
 		"ffmpeg",
 		"-i", inputPath,
 		"-c:v", "libx264",
-		"-crf", strconv.Itoa(CRFVisuallyLossless), // Visually lossless quality
-		"-preset", CompressionPreset,              // Good speed/quality balance
-		"-vf", "scale='min(1920,iw)':'min(1080,ih)':force_original_aspect_ratio=decrease",
+		"-crf", strconv.Itoa(CRFHighQuality),                                                                  // Excellent quality with good compression
+		"-preset", CompressionPreset,                                                                          // Good speed/quality balance
+		"-vf", "scale='if(gt(iw,1920),1920,iw)':'if(gt(ih,1080),1080,ih)':force_original_aspect_ratio=decrease", // NEVER upscale, only downscale
 		"-c:a", "aac",
 		"-b:a", "128k",
 		"-movflags", "+faststart", // Web optimization
@@ -193,6 +194,41 @@ func (vc *VideoCompressor) CompressVideoForStorage(ctx context.Context, inputPat
 	compressedSizeMB := float64(compressedInfo.Size()) / (1024 * 1024)
 	reductionPercent := ((originalSizeMB - compressedSizeMB) / originalSizeMB) * 100
 
+	// CRITICAL: If compression made file LARGER, skip it and use original
+	// This happens when video is already well-compressed or at lower resolution
+	if compressedSizeMB >= originalSizeMB {
+		vc.logger.Warn("Compression made file larger, using original",
+			zap.String("session_id", sessionID.String()),
+			zap.Float64("original_mb", originalSizeMB),
+			zap.Float64("compressed_mb", compressedSizeMB),
+			zap.Float64("size_increase_percent", -reductionPercent))
+
+		// Clean up larger compressed file
+		os.Remove(outputPath)
+
+		// Emit event about skipping compression
+		vc.emitSSE(sessionID, sse.StudioEvent{
+			ID:        uuid.New().String(),
+			Type:      "compression_skipped",
+			SessionID: sessionID.String(),
+			Timestamp: time.Now(),
+			Data: map[string]interface{}{
+				"message":          "Video already optimized, using original file",
+				"original_size_mb": originalSizeMB,
+				"reason":           "compression_would_increase_size",
+			},
+		})
+
+		return &CompressionResult{
+			Success:            true,
+			CompressedPath:     inputPath, // Use original
+			OriginalSizeMB:     originalSizeMB,
+			CompressedSizeMB:   originalSizeMB,
+			ReductionPercent:   0,
+			ShouldRetrySmaller: false,
+		}, nil
+	}
+
 	vc.logger.Info("Video compression completed successfully",
 		zap.String("session_id", sessionID.String()),
 		zap.Float64("original_mb", originalSizeMB),
@@ -206,12 +242,12 @@ func (vc *VideoCompressor) CompressVideoForStorage(ctx context.Context, inputPat
 		SessionID: sessionID.String(),
 		Timestamp: time.Now(),
 		Data: map[string]interface{}{
-			"message":             fmt.Sprintf("Optimized: %.1fMB → %.1fMB (%.0f%% reduction, visually lossless quality)", originalSizeMB, compressedSizeMB, reductionPercent),
+			"message":             fmt.Sprintf("Optimized: %.1fMB → %.1fMB (%.0f%% reduction)", originalSizeMB, compressedSizeMB, reductionPercent),
 			"original_size_mb":    originalSizeMB,
 			"compressed_size_mb":  compressedSizeMB,
 			"reduction_percent":   reductionPercent,
-			"quality":             "visually_lossless",
-			"crf":                 CRFVisuallyLossless,
+			"quality":             "high_quality",
+			"crf":                 CRFHighQuality,
 		},
 	})
 

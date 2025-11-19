@@ -39,11 +39,12 @@ func (qw *AIQueueWorker) handleTestimonialTranscription(ctx context.Context, msg
 		return qw.respondWithFailure(ctx, serviceID, req.JobID, "transcription failed when parsing testimonial UUID", err)
 	}
 
-	// Update testimonial processing_status to "transcribing" (first job starting)
+	// Update testimonial processing_status to "processing" (first job starting)
+	// Note: "transcribing" is not a valid value in job_status enum (only: pending, processing, completed, failed)
 	if updateErr := qw.testimonialRepo.UpdateAny(ctx, testimonialID, map[string]any{
-		"processing_status": "transcribing",
+		"processing_status": "processing",
 	}, qw.db); updateErr != nil {
-		qw.logger.Warn("Failed to update testimonial processing_status to transcribing", zap.Error(updateErr))
+		qw.logger.Warn("Failed to update testimonial processing_status to processing", zap.Error(updateErr))
 	}
 
 	qw.logger.Info("🎙️ Starting testimonial transcription",

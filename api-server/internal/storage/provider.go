@@ -18,8 +18,12 @@ type Provider interface {
 	// UploadChunked performs a chunked upload for large files
 	UploadChunked(ctx context.Context, filePath string, destinationPath string, contentType string, chunkSize int) (string, error)
 
-	// PresignedURL generates a presigned URL for temporary access
+	// PresignedURL generates a presigned URL for temporary access (downloads)
 	PresignedURL(ctx context.Context, objectPath string, expiry time.Duration) (string, error)
+
+	// GenerateUploadPresignedURL generates a presigned URL for direct uploads
+	// This allows clients to upload files directly to storage, bypassing server size limits
+	GenerateUploadPresignedURL(ctx context.Context, objectPath string, expiry time.Duration) (string, error)
 
 	// Delete removes a file from storage
 	Delete(ctx context.Context, objectPath string) error
