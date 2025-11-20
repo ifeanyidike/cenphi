@@ -33,7 +33,7 @@ func NewJobScheduler(queue *RedisQueueService, logger *zap.Logger) *JobScheduler
 // Start starts the scheduler
 func (s *JobScheduler) Start() {
 	s.logger.Info("🕐 Job scheduler started")
-	ticker := time.NewTicker(10 * time.Second) // check every 10 seconds
+	ticker := time.NewTicker(30 * time.Second) // Optimized: check every 30 seconds (67% reduction in Redis ops, scheduled jobs have precision tolerance)
 	defer ticker.Stop()
 
 	for {

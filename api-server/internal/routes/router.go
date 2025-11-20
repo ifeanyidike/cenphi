@@ -113,6 +113,7 @@ func RegisterWidget(r *chi.Router) {
 
 func RegisterHealthRoutes(r chi.Router, healthController controllers.HealthController) {
 	r.Get("/health", healthController.HealthCheck)
+	r.Get("/health/grpc", healthController.GRPCHealthCheck)
 }
 
 func RegisterSwaggerRoute(r chi.Router, controller controllers.SwaggerController) {

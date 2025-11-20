@@ -16,13 +16,42 @@ import (
 
 	"github.com/ifeanyidike/cenphi/internal/config"
 	"github.com/ifeanyidike/cenphi/pb"
+	"google.golang.org/api/idtoken"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+// idTokenCredential implements credentials.PerRPCCredentials for Cloud Run ID tokens
+type idTokenCredential struct {
+	audience string
+}
+
+func (c *idTokenCredential) GetRequestMetadata(ctx context.Context, uri ...string) (map[string]string, error) {
+	// Get ID token for the target audience (Cloud Run service URL)
+	tokenSource, err := idtoken.NewTokenSource(ctx, c.audience)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create ID token source: %w", err)
+	}
+
+	token, err := tokenSource.Token()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get ID token: %w", err)
+	}
+
+	return map[string]string{
+		"authorization": "Bearer " + token.AccessToken,
+	}, nil
+}
+
+func (c *idTokenCredential) RequireTransportSecurity() bool {
+	return true // ID tokens require TLS
+}
+
 type MediaIntelligence interface {
 	Close() error
+	GetConnectionState(ctx context.Context) connectivity.State
 	SingleMediaIntelligenceRequests
 }
 
@@ -89,23 +118,64 @@ type GRPCClient struct {
 
 func NewGRPCClients(cfg config.MediaIntelligenceConfig) (MediaIntelligence, error) {
 	var opts []grpc.DialOption
+	var address string
 
-	// Determine if we should use TLS based on environment or address
-	if cfg.UseTLS || strings.Contains(cfg.Address, ".run.app") {
-		// Cloud Run requires TLS
-		opts = append(opts, grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{})))
-		fmt.Printf("GRPC connecting with TLS to: %s\n", cfg.Address)
+	// Determine connection mode based on environment or address
+	if strings.Contains(cfg.Address, ".run.app") {
+		// Cloud Run service - always use TLS on port 443
+		// Cloud Run's load balancer handles TLS termination and routes to h2c backend
+		address = strings.TrimSuffix(cfg.Address, ":443")
+		address = strings.TrimSuffix(address, ":80")
+		address = address + ":443" // Cloud Run uses TLS on port 443
+
+		// Use TLS credentials (Cloud Run provides automatic TLS)
+		tlsConfig := &tls.Config{
+			MinVersion: tls.VersionTLS12,
+		}
+		creds := credentials.NewTLS(tlsConfig)
+		opts = append(opts, grpc.WithTransportCredentials(creds))
+
+		// Add per-RPC credentials for Cloud Run authentication using ID tokens
+		// The audience should be the target service URL (without :443)
+		audience := "https://" + strings.TrimSuffix(cfg.Address, ":443")
+		idTokenCreds := &idTokenCredential{audience: audience}
+		opts = append(opts, grpc.WithPerRPCCredentials(idTokenCreds))
+
+		fmt.Printf("GRPC connecting with TLS and ID token to Cloud Run service: %s (audience: %s)\n", address, audience)
+	} else if cfg.UseTLS {
+		// External service with TLS
+		address = cfg.Address
+		tlsConfig := &tls.Config{
+			MinVersion: tls.VersionTLS12,
+		}
+		creds := credentials.NewTLS(tlsConfig)
+		opts = append(opts, grpc.WithTransportCredentials(creds))
+
+		fmt.Printf("GRPC connecting with TLS to: %s\n", address)
 	} else {
 		// Local development - no TLS
+		address = cfg.Address
 		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
-		fmt.Printf("GRPC connecting without TLS to: %s\n", cfg.Address)
+		fmt.Printf("GRPC connecting without TLS to: %s\n", address)
 	}
 
+	// Add default call options for better reliability
+	opts = append(opts,
+		grpc.WithDefaultCallOptions(
+			grpc.MaxCallRecvMsgSize(100*1024*1024), // 100MB
+			grpc.MaxCallSendMsgSize(100*1024*1024), // 100MB
+		),
+	)
+
 	// Connect to gRPC server
-	conn, err := grpc.NewClient(cfg.Address, opts...)
+	conn, err := grpc.NewClient(address, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to gRPC server: %w", err)
 	}
+
+	// Determine useTLS for HTTP cancel endpoint
+	// Cloud Run services always use TLS
+	useTLS := cfg.UseTLS || strings.Contains(cfg.Address, ".run.app")
 
 	return &GRPCClient{
 		enhancementClient:  pb.NewMediaEnhancementServiceClient(conn),
@@ -117,8 +187,8 @@ func NewGRPCClients(cfg config.MediaIntelligenceConfig) (MediaIntelligence, erro
 		viralClient:        pb.NewViralAnalysisServiceClient(conn),
 		sessionMgmtClient:  pb.NewSessionManagementServiceClient(conn),
 		conn:               conn,
-		address:            cfg.Address,
-		useTLS:             cfg.UseTLS || strings.Contains(cfg.Address, ".run.app"),
+		address:            address,
+		useTLS:             useTLS,
 		closed:             false,
 	}, nil
 }
@@ -527,4 +597,16 @@ func (g *GRPCClient) CancelJob(ctx context.Context, jobID string) error {
 	}
 
 	return nil
+}
+
+// GetConnectionState returns the current state of the gRPC connection
+func (c *GRPCClient) GetConnectionState(ctx context.Context) connectivity.State {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if c.conn == nil {
+		return connectivity.Shutdown
+	}
+
+	return c.conn.GetState()
 }

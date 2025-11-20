@@ -613,7 +613,7 @@ func (qw *AIQueueWorker) clearJobCancelFunction(ctx context.Context, jobID strin
 }
 
 func (qw *AIQueueWorker) monitorJobCancellation(jobCtx context.Context, jobID string, cancel context.CancelFunc) {
-	ticker := time.NewTicker(2 * time.Second) // Check every 2 seconds
+	ticker := time.NewTicker(5 * time.Second) // Optimized: Check every 5 seconds (60% reduction in Redis ops)
 	defer ticker.Stop()
 
 	for {

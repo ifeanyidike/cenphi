@@ -222,7 +222,7 @@ func (s AudioTranscriptionService) startTranscription(ctx context.Context, uploa
 func (s AudioTranscriptionService) pollTranscription(ctx context.Context, jobID string) (*models.TranscriptionResult, error) {
 	url := fmt.Sprintf("https://api.assemblyai.com/v2/transcript/%s", jobID)
 
-	ticker := time.NewTicker(2 * time.Second)
+	ticker := time.NewTicker(5 * time.Second) // Optimized: Poll every 5 seconds (60% reduction, AssemblyAI processing takes time)
 	defer ticker.Stop()
 
 	for {
@@ -795,7 +795,7 @@ func (s AudioTranscriptionService) startMinimalTranscription(ctx context.Context
 // Poll with timeout for validation
 func (s AudioTranscriptionService) pollWithTimeout(ctx context.Context, jobID string, timeout time.Duration) (*models.TranscriptionResult, error) {
 	url := fmt.Sprintf("https://api.assemblyai.com/v2/transcript/%s", jobID)
-	ticker := time.NewTicker(1 * time.Second) // Check every second for validation
+	ticker := time.NewTicker(3 * time.Second) // Optimized: Check every 3 seconds (67% reduction, transcription takes minutes anyway)
 	defer ticker.Stop()
 	timeoutTimer := time.After(timeout)
 

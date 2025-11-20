@@ -201,8 +201,27 @@ func (s *workspaceRepository) GetPbBrandContext(ctx context.Context, workspaceID
 
 	bc := &pb.BrandContext{}
 
-	if err := json.Unmarshal(c, bc); err != nil {
+	// First unmarshal to a generic map to handle complex extracted_data field
+	var rawData map[string]interface{}
+	if err := json.Unmarshal(c, &rawData); err != nil {
 		return nil, fmt.Errorf("failed to decode brand context JSON: %w", err)
+	}
+
+	// Handle extracted_data field specially - it might be nested objects in DB
+	// but protobuf expects map[string]string, so we'll just omit it for now
+	// since it's not used in clipping anyway
+	if _, ok := rawData["extracted_data"]; ok {
+		delete(rawData, "extracted_data")
+	}
+
+	// Re-marshal without extracted_data and unmarshal into protobuf struct
+	cleanedJSON, err := json.Marshal(rawData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to re-marshal cleaned brand context: %w", err)
+	}
+
+	if err := json.Unmarshal(cleanedJSON, bc); err != nil {
+		return nil, fmt.Errorf("failed to decode cleaned brand context JSON: %w", err)
 	}
 
 	return bc, nil
@@ -217,8 +236,26 @@ func (s *workspaceRepository) GetBrandContextFromWorkspace(workspace *models.Wor
 
 	bc := &pb.BrandContext{}
 
-	if err := json.Unmarshal(c, bc); err != nil {
+	// First unmarshal to a generic map to handle complex extracted_data field
+	var rawData map[string]interface{}
+	if err := json.Unmarshal(c, &rawData); err != nil {
 		return nil, fmt.Errorf("failed to decode brand context JSON: %w", err)
+	}
+
+	// Handle extracted_data field specially - it might be nested objects in DB
+	// but protobuf expects map[string]string, so we'll just omit it for now
+	if _, ok := rawData["extracted_data"]; ok {
+		delete(rawData, "extracted_data")
+	}
+
+	// Re-marshal without extracted_data and unmarshal into protobuf struct
+	cleanedJSON, err := json.Marshal(rawData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to re-marshal cleaned brand context: %w", err)
+	}
+
+	if err := json.Unmarshal(cleanedJSON, bc); err != nil {
+		return nil, fmt.Errorf("failed to decode cleaned brand context JSON: %w", err)
 	}
 
 	return bc, nil

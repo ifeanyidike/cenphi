@@ -228,7 +228,7 @@ func NewApplication(logger *zap.Logger, cfg config.Config, db *sql.DB, redisClie
 	// aiJobWorker := workers.NewAIJobWorker(testimonialService, aiClient, logger, 5)
 
 	// Initialize controllers
-	healthController := controllers.NewHealthController(logger)
+	healthController := controllers.NewHealthController(logger, media_intelligence)
 	swaggerController := controllers.NewSwaggerController()
 	userController := controllers.NewUserController(userService, logger)
 	teamMemberController := controllers.NewTeamMemberController(teamMemberService, userService, logger)

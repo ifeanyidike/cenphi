@@ -416,8 +416,8 @@ const Studio: React.FC = () => {
 
   const handleProcessingComplete = () => {
     setJobId(null);
-    // Navigate back to service selector
-    navigate(`/studio?${searchParams.toString()}`);
+    // Navigate to dashboard after processing is complete
+    navigate("/dashboard");
   };
 
   const handleCancel = () => {

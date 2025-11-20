@@ -100,7 +100,7 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
     const [groupByCategory, setGroupByCategory] = useState(true); // Enable category grouping by default
     // Start with loading false if we already have cached data
     const [loading, setLoading] = useState(
-      aiArtifactsManager.artifacts.length === 0
+      aiArtifactsManager.artifacts?.length === 0
     );
     const [showLoading, setShowLoading] = useState(false); // Delayed loading indicator
     const [artifacts, setArtifacts] = useState<TestimonialArtifact[]>([]);
@@ -287,14 +287,14 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
 
         // Category filter
         if (
-          selectedCategories.length > 0 &&
+          selectedCategories?.length > 0 &&
           !selectedCategories.includes(artifact.category.id)
         ) {
           return false;
         }
 
         // Platform filter
-        if (selectedPlatforms.length > 0) {
+        if (selectedPlatforms?.length > 0) {
           if (
             !artifact.platformTarget ||
             !selectedPlatforms.includes(artifact.platformTarget.id)
@@ -304,7 +304,7 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
         }
 
         // Approval status filter
-        if (selectedApprovalStatus.length > 0) {
+        if (selectedApprovalStatus?.length > 0) {
           const status = artifact.approval_status || "draft";
           if (!selectedApprovalStatus.includes(status)) {
             return false;
@@ -571,7 +571,7 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
     };
 
     const handleSelectAll = () => {
-      if (selectedItems.size === filteredArtifacts.length) {
+      if (selectedItems.size === filteredArtifacts?.length) {
         setSelectedItems(new Set());
       } else {
         setSelectedItems(new Set(filteredArtifacts.map((a) => a.id)));
@@ -585,7 +585,7 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
           selectedItems.has(a.id)
         );
 
-        if (artifacts.length > 0) {
+        if (artifacts?.length > 0) {
           // Use the first artifact as the main artifact, pass all as artifacts prop
           setSharingArtifact(artifacts[0]);
           // ShareDrawer will receive artifacts prop via the component below
@@ -910,12 +910,12 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
                         addSuffix: true,
                       })}
                     </span>
-                    {artifact.sourceTestimonials.length > 0 && (
+                    {artifact.sourceTestimonials?.length > 0 && (
                       <>
                         <span>•</span>
                         <span>
-                          {artifact.sourceTestimonials.length} source
-                          {artifact.sourceTestimonials.length > 1 ? "s" : ""}
+                          {artifact.sourceTestimonials?.length} source
+                          {artifact.sourceTestimonials?.length > 1 ? "s" : ""}
                         </span>
                       </>
                     )}
@@ -1037,7 +1037,7 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
     const renderTextCard = (artifact: EnhancedArtifact, index: number) => {
       const TypeIcon = artifact.category.icon;
       const content = artifact.text_content || "";
-      const wordCount = content.split(/\s+/).filter(Boolean).length;
+      const wordCount = content.split(/\s+/)?.filter(Boolean)?.length;
       const isSelected = selectedItems.has(artifact.id);
 
       return (
@@ -1118,7 +1118,7 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
                     </p>
                   </div>
                 </div>
-                {content.length > 300 && (
+                {content?.length > 300 && (
                   <Button
                     variant="link"
                     size="sm"
@@ -1138,15 +1138,15 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
                     variant="outline"
                     className="text-[8px] px-1.5 py-0 bg-white/50 border-slate-200/50"
                   >
-                    {content.length} chars
+                    {content?.length} chars
                   </Badge>
                   {artifact.sourceTestimonials.length > 0 && (
                     <Badge
                       variant="outline"
                       className="text-[8px] px-1.5 py-0 bg-white/50 border-slate-200/50"
                     >
-                      {artifact.sourceTestimonials.length} source
-                      {artifact.sourceTestimonials.length > 1 ? "s" : ""}
+                      {artifact.sourceTestimonials?.length} source
+                      {artifact.sourceTestimonials?.length > 1 ? "s" : ""}
                     </Badge>
                   )}
                 </div>
@@ -1253,7 +1253,7 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
 
       // Show first 3 clips as preview
       const previewClips = clips.slice(0, 3);
-      const totalClips = clips.length;
+      const totalClips = clips?.length;
 
       return (
         <motion.div
@@ -1336,7 +1336,7 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
               </div>
 
               {/* Source Info */}
-              {artifact.sourceTestimonials.length > 0 && (
+              {artifact.sourceTestimonials?.length > 0 && (
                 <p className="text-[10px] text-slate-600 mb-3">
                   From:{" "}
                   <span className="font-medium text-slate-900">
@@ -1559,7 +1559,7 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
                       onDeleteFolder={handleDeleteFolder}
                       onDownloadFolder={handleDownloadFolder}
                       downloadingFolders={downloadingFolders}
-                      totalContentCount={enhancedArtifacts.length}
+                      totalContentCount={enhancedArtifacts?.length}
                     />
                   )}
                 </div>
@@ -1613,7 +1613,7 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
                         onDeleteFolder={handleDeleteFolder}
                         onDownloadFolder={handleDownloadFolder}
                         downloadingFolders={downloadingFolders}
-                        totalContentCount={enhancedArtifacts.length}
+                        totalContentCount={enhancedArtifacts?.length}
                       />
                     </div>
                   </SheetContent>
@@ -1624,8 +1624,8 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
               <ContentHubHeader
                 selectedFolderId={selectedFolderId}
                 folders={folders}
-                filteredCount={filteredArtifacts.length}
-                totalCount={enhancedArtifacts.length}
+                filteredCount={filteredArtifacts?.length}
+                totalCount={enhancedArtifacts?.length}
                 selectionMode={selectionMode}
                 selectedItemsCount={selectedItems.size}
                 onToggleSelectionMode={toggleSelectionMode}
@@ -1635,13 +1635,14 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
               />
 
               {/* Stats */}
-              {!showLoading && enhancedArtifacts.length > 0 && (
+              {!showLoading && enhancedArtifacts?.length > 0 && (
                 <ContentStats
                   stats={{
                     total: contentStats.total,
                     categoriesCount: Object.keys(contentStats.byCategory)
-                      .length,
-                    platformsCount: Object.keys(contentStats.byPlatform).length,
+                      ?.length,
+                    platformsCount: Object.keys(contentStats.byPlatform)
+                      ?.length,
                     sourcesCount: contentStats.sourceTestimonials.size,
                   }}
                 />
@@ -1677,14 +1678,14 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
               >
                 {showLoading ? (
                   renderLoadingState()
-                ) : filteredArtifacts.length === 0 ? (
+                ) : filteredArtifacts?.length === 0 ? (
                   renderEmptyState()
                 ) : groupByCategory && groupedArtifacts ? (
                   // Grouped by category view
                   <div className="space-y-8">
                     {CONTENT_CATEGORIES.map((category) => {
                       const artifacts = groupedArtifacts.get(category.id);
-                      if (!artifacts || artifacts.length === 0) return null;
+                      if (!artifacts || artifacts?.length === 0) return null;
 
                       const CategoryIcon = category.icon;
 
@@ -1705,8 +1706,8 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
                                 {category.label}
                               </h3>
                               <p className="text-[10px] text-slate-500">
-                                {artifacts.length}{" "}
-                                {artifacts.length === 1 ? "item" : "items"}
+                                {artifacts?.length}{" "}
+                                {artifacts?.length === 1 ? "item" : "items"}
                               </p>
                             </div>
                           </div>
@@ -1804,7 +1805,8 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
                             onClick={handleSelectAll}
                             className="h-9 text-xs"
                           >
-                            {selectedItems.size === filteredArtifacts.length ? (
+                            {selectedItems.size ===
+                            filteredArtifacts?.length ? (
                               <>
                                 <X className="h-3.5 w-3.5 mr-1.5" />
                                 Deselect All
@@ -1897,7 +1899,7 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
           <ShareDrawer
             artifact={sharingArtifact}
             artifacts={
-              selectedArtifacts.length > 1 ? selectedArtifacts : undefined
+              selectedArtifacts?.length > 1 ? selectedArtifacts : undefined
             }
             isOpen={!!sharingArtifact}
             onOpenChange={(open) => {

@@ -17,6 +17,7 @@ import (
 	"github.com/ifeanyidike/cenphi/internal/models"
 	"github.com/ifeanyidike/cenphi/internal/utils"
 	"github.com/ifeanyidike/cenphi/pb"
+	"google.golang.org/grpc/connectivity"
 )
 
 type RESTClient struct {
@@ -76,6 +77,19 @@ func (c *RESTClient) Close() error {
 	defer c.mu.Unlock()
 	c.closed = true
 	return nil
+}
+
+// GetConnectionState returns a placeholder state for REST clients (not applicable)
+func (c *RESTClient) GetConnectionState(ctx context.Context) connectivity.State {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if c.closed {
+		return connectivity.Shutdown
+	}
+	// REST client doesn't have connection states like gRPC
+	// Return Ready if not closed
+	return connectivity.Ready
 }
 
 func (c *RESTClient) makeRequest(ctx context.Context, endpoint string, request interface{}, response interface{}) error {
