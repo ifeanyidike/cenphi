@@ -68,7 +68,7 @@ const ContentFilterBar: React.FC<ContentFilterBarProps> = ({
   onToggleFilter,
 }) => {
   const activeFiltersCount =
-    selectedCategories.length + selectedPlatforms.length + selectedApprovalStatus.length;
+    (selectedCategories?.length || 0) + (selectedPlatforms?.length || 0) + (selectedApprovalStatus?.length || 0);
 
   return (
     <motion.div

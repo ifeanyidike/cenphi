@@ -36,7 +36,7 @@ const ContentHubHeader: React.FC<ContentHubHeaderProps> = ({
   onAddToFolder,
   selectedItems,
 }) => {
-  const selectedFolder = folders.find((f) => f.id === selectedFolderId);
+  const selectedFolder = folders?.find((f) => f.id === selectedFolderId);
 
   return (
     <div className="mb-6 pb-4 border-b border-slate-200">
@@ -93,7 +93,7 @@ const ContentHubHeader: React.FC<ContentHubHeaderProps> = ({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                {folders.map((folder) => (
+                {folders?.map((folder) => (
                   <DropdownMenuItem
                     key={folder.id}
                     onClick={() =>
