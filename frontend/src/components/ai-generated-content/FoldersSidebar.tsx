@@ -287,7 +287,7 @@ const FoldersSidebar: React.FC<FoldersSidebarProps> = memo(
         )}
 
         {/* Empty State */}
-        {folders.length === 0 && (
+        {folders?.length === 0 && (
           <div className="text-center py-8 px-4">
             <div className="w-10 h-10 mx-auto mb-3 rounded-lg bg-slate-100 flex items-center justify-center">
               <Folder className="h-5 w-5 text-slate-400" />
