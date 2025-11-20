@@ -36,22 +36,8 @@ func (qw *AIQueueWorker) handleTestimonialHighlightExtraction(ctx context.Contex
 
 	serviceID := "highlight-extraction"
 
-	if req.DependsOn != "" {
-		dependencyReady, err := qw.checkJobDependency(ctx, req.DependsOn)
-		if err != nil {
-			return qw.respondWithFailure(ctx, serviceID, req.JobID, "invalid testimonial ID", err)
-		}
-
-		if !dependencyReady {
-			// Dependency not ready yet - this is RETRYABLE
-			qw.logger.Info("Highlight extraction waiting for transcription",
-				zap.String("job_id", req.JobID),
-				zap.String("depends_on", req.DependsOn),
-				zap.String("testimonial_id", req.TestimonialID))
-
-			return fmt.Errorf("dependency job %s not complete yet, retrying", req.DependsOn)
-		}
-	}
+	// NOTE: Dependency checking removed - jobs are now chained instead of using depends_on
+	// Highlight extraction is queued directly after transcription completes (see transcription_worker.go)
 
 	// Update job status to processing
 	qw.updateJobStatusWithService(ctx, req.JobID, serviceID, "processing", 10, nil, nil)

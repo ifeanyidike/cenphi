@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
+	"time"
 )
 
 // type OpenAIResponse struct {
@@ -18,8 +20,12 @@ func (ai AIClient) Complete(ctx context.Context, prompt, systemPrompt string) (s
 	// Try OpenAI first
 	response, err := ai.callOpenAI(ctx, prompt, systemPrompt)
 	if err == nil {
+		log.Println("✅ OpenAI completed successfully")
 		return response, nil
 	}
+
+	// Log OpenAI failure reason before falling back to Claude
+	log.Printf("⚠️ OpenAI failed (falling back to Claude): %v", err)
 
 	// Fallback to Claude
 	return ai.callClaude(ctx, prompt, systemPrompt)
@@ -166,10 +172,17 @@ func (s AIClient) callOpenAI(ctx context.Context, prompt, systemPrompt string) (
 }
 
 func (s AIClient) callClaude(ctx context.Context, prompt, systemPrompt string) (string, error) {
+	log.Println("📞 Calling Claude API...")
+	startTime := time.Now()
+
 	resp, err := s.makeClaudeCall(ctx, prompt, systemPrompt, false)
 	if err != nil {
+		duration := time.Since(startTime)
+		log.Printf("❌ Claude API call failed after %v: %v", duration, err)
 		return "", err
 	}
+
+	log.Printf("✅ Claude API call completed in %v", time.Since(startTime))
 
 	if resp.StatusCode != http.StatusOK {
 		// Read and discard error response body

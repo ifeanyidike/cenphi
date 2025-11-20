@@ -99,7 +99,8 @@ class BrollPlacementAI:
             candidates,
             broll_clips,
             max_broll_duration,
-            transition_type
+            transition_type,
+            video_duration
         )
         logger.info(f"[BrollAI] Matched {len(placements)} B-roll placements")
 
@@ -474,7 +475,8 @@ Respond ONLY with valid JSON:
         candidates: List[Dict],
         broll_clips: List[Dict],
         max_duration: float,
-        transition_type: str
+        transition_type: str,
+        video_duration: float = None
     ) -> List[Dict]:
         """
         Match B-roll clips to insertion candidates using AI-powered semantic similarity.
@@ -523,11 +525,33 @@ Respond ONLY with valid JSON:
                     segment_duration * 0.8  # Use max 80% of segment
                 )
 
+                # CRITICAL FIX: Ensure placement stays within video bounds
+                start_time = best_match['start_time']
+                if video_duration is not None:
+                    # Don't place B-roll in last 5 seconds (for outro/CTA)
+                    safe_end_time = video_duration - 5.0
+
+                    # If start_time is beyond safe zone, skip this placement
+                    if start_time >= safe_end_time:
+                        logger.warning(f"[BrollAI] Skipping placement at {start_time}s - beyond safe zone (video: {video_duration}s)")
+                        continue
+
+                    # Trim duration if it would extend beyond safe zone
+                    if start_time + clip_duration > safe_end_time:
+                        original_duration = clip_duration
+                        clip_duration = safe_end_time - start_time
+                        logger.info(f"[BrollAI] Trimmed B-roll duration from {original_duration}s to {clip_duration}s to stay within bounds")
+
+                    # Ensure minimum duration of 2 seconds
+                    if clip_duration < 2.0:
+                        logger.warning(f"[BrollAI] Skipping placement at {start_time}s - trimmed duration too short ({clip_duration}s)")
+                        continue
+
                 placements.append({
                     'clip_id': clip.get('id', clip.get('pexels_id', f"clip_{len(placements)}")),
                     'clip_url': clip.get('url', clip.get('source_url', '')),
                     'clip_name': clip_name,
-                    'start_time': best_match['start_time'],
+                    'start_time': start_time,
                     'duration': round(clip_duration, 2),
                     'transition_type': transition_type,
                     'confidence': round(best_score, 2),

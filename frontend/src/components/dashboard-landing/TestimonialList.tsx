@@ -30,6 +30,14 @@ import { Testimonial } from "@/types/testimonial";
 import { Link } from "react-router-dom";
 import { observer } from "mobx-react-lite";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import ConfirmDialog from "../common/ConfirmDialog";
 import ExportModal from "./ExportModal";
@@ -457,27 +465,28 @@ const TestimonialList = ({
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1">
               {/* Search */}
               <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground z-10 pointer-events-none" />
+                <Input
                   type="text"
                   placeholder="Search testimonials..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-12 pr-6 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all duration-200 w-full text-sm bg-white shadow-sm"
+                  className="pl-12 pr-6 h-12 rounded-xl shadow-sm"
                 />
               </div>
 
               {/* Filter */}
-              <select
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
-                className="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-transparent text-sm bg-white shadow-sm w-full sm:w-auto"
-              >
-                <option value="all">All Types</option>
-                <option value="video">Video Testimonials</option>
-                <option value="text">Text Testimonials</option>
-                <option value="high_rating">High Rating (4+)</option>
-              </select>
+              <Select value={filterType} onValueChange={setFilterType}>
+                <SelectTrigger className="h-12 rounded-xl shadow-sm w-full sm:w-auto sm:min-w-[200px]">
+                  <SelectValue placeholder="Filter by type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="video">Video Testimonials</SelectItem>
+                  <SelectItem value="text">Text Testimonials</SelectItem>
+                  <SelectItem value="high_rating">High Rating (4+)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 lg:gap-6">

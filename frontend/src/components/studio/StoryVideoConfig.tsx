@@ -1117,6 +1117,79 @@ const StoryVideoConfig: React.FC<StoryVideoConfigProps> = ({
     }
   };
 
+  const handleRegenerateStoryVideoHighlights = async () => {
+    // Only support regeneration for single testimonial context
+    if (context.type !== "testimonial") {
+      setLoadError(
+        "Regeneration is only available for single testimonial stories."
+      );
+      return;
+    }
+
+    setCurrentStep("loading");
+    setLoadError(null);
+
+    try {
+      // Force regeneration of story_video highlights
+      const response = await studioAPI.getStoryVideoHighlights(
+        [context.testimonialId],
+        { force: true }
+      );
+
+      if (response.testimonials && response.testimonials.length > 0) {
+        const testimonialHighlights = response.testimonials[0];
+        const storyVideoMoments = testimonialHighlights.highlights;
+
+        // Check if still insufficient after regeneration
+        if (storyVideoMoments.length <= 1) {
+          setLoadError(
+            `Regeneration still produced only ${storyVideoMoments.length} highlight${storyVideoMoments.length === 1 ? "" : "s"}. This video may not have enough content for story highlights. Try using standalone highlights instead.`
+          );
+          setCurrentStep("insufficient-highlights-fallback");
+          return;
+        }
+
+        // Success! Get the testimonial and set up with new moments
+        let testimonial = cachedTestimonial;
+
+        if (!testimonial || cachedTestimonialId !== context.testimonialId) {
+          testimonial = await workspaceHub.testimonialManager.fetchTestimonial(
+            context.testimonialId,
+            false
+          );
+          setCachedTestimonial(testimonial);
+          setCachedTestimonialId(context.testimonialId);
+        }
+
+        const testimonialsData: TestimonialWithMoments[] = [
+          {
+            id: testimonial.id,
+            author_name: testimonial.author_name,
+            author_company: testimonial.author_company,
+            media_url: testimonial.media_url || "",
+            rating: testimonial.rating,
+            sentiment_score: testimonial.sentiment_score,
+            moments: storyVideoMoments,
+          },
+        ];
+
+        setTestimonialsWithMoments(testimonialsData);
+
+        // Pre-select all moments
+        setSelectedMoments(storyVideoMoments);
+
+        // Move to moment selection step
+        setCurrentStep("select-moments");
+      }
+    } catch (error: any) {
+      console.error("Failed to regenerate story video highlights:", error);
+      setLoadError(
+        `Failed to regenerate highlights: ${error.message || "Please try again."}`
+      );
+      setCurrentStep("insufficient-highlights-fallback");
+    }
+  };
+
   // Error state - check this BEFORE loading state so errors are always visible
   if (loadError && currentStep !== "insufficient-highlights-fallback") {
     return (
@@ -1252,6 +1325,14 @@ const StoryVideoConfig: React.FC<StoryVideoConfigProps> = ({
                   Cancel
                 </Button>
                 <Button
+                  onClick={handleRegenerateStoryVideoHighlights}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Regenerate Story Video
+                </Button>
+                <Button
                   onClick={handleLoadFallbackHighlights}
                   disabled={!fallbackHighlightType}
                   className="flex-1 bg-blue-600 hover:bg-blue-700"
@@ -1336,6 +1417,11 @@ const StoryVideoConfig: React.FC<StoryVideoConfigProps> = ({
           context.type === "testimonial"
             ? () => setCurrentStep("select-highlight-type")
             : onBack
+        }
+        onRegenerate={
+          context.type === "testimonial"
+            ? handleRegenerateStoryVideoHighlights
+            : undefined
         }
         title="Select Moments for Story Video"
         description={getContextDescription()}

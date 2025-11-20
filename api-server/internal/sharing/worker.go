@@ -613,7 +613,7 @@ func (w *SharingWorker) processScheduledPosts() {
 
 // runMetricsSync periodically syncs metrics for published posts
 func (w *SharingWorker) runMetricsSync() {
-	ticker := time.NewTicker(15 * time.Minute) // Sync every 15 minutes
+	ticker := time.NewTicker(30 * time.Minute) // Sync every 30 minutes - reduces Redis usage by 50%
 	defer ticker.Stop()
 
 	w.logger.Info("Starting periodic metrics sync")

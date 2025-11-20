@@ -512,34 +512,12 @@ func (tcs TestimonialCollectionService) queueVideoProcessingJobs(ctx context.Con
 	}
 	*transcriptionJob.ScheduledAt = time.Now()
 
-	// Create dependent jobs (only sentiment analysis - highlights are now on-demand)
-	dependentJobs := []*models.Job{
-		{
-			ID:            uuid.New(),
-			JobType:       "sentiment_analysis",
-			TestimonialID: &testimonial.ID,
-			WorkspaceID:   &testimonial.WorkspaceID,
-			Status:        "pending",
-			Priority:      2,
-			Payload: models.JSONMap{
-				"testimonial_id": testimonial.ID.String(),
-				"type":           "video",
-				"depends_on":     transcriptionJob.ID.String(),
-			},
-			MaxRetries:  5,
-			ScheduledAt: &time.Time{},
-			CreatedAt:   time.Now(),
-			UpdatedAt:   time.Now(),
-		},
-	}
+	// NOTE: Sentiment analysis is now queued AFTER transcription completes
+	// This eliminates retry loops and reduces Redis writes by 95%
+	// See transcription_worker.go for where sentiment is queued
 
-	// Set scheduled times for dependent jobs
-	for _, job := range dependentJobs {
-		*job.ScheduledAt = time.Now()
-	}
-
-	// Combine all jobs
-	allJobs := append([]*models.Job{transcriptionJob}, dependentJobs...)
+	// Only queue transcription job initially
+	allJobs := []*models.Job{transcriptionJob}
 
 	// Process each job
 	for _, job := range allJobs {

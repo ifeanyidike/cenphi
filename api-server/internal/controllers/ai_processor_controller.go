@@ -2397,6 +2397,7 @@ type StoryVideoHighlightResult struct {
 func (c *AIProcessorController) GetOrGenerateStoryVideoHighlights(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		TestimonialIDs []string `json:"testimonial_ids" validate:"required,min=1"`
+		Force          bool     `json:"force"` // Force regeneration, skip cache/database lookups
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -2443,38 +2444,46 @@ func (c *AIProcessorController) GetOrGenerateStoryVideoHighlights(w http.Respons
 				TestimonialID: tID,
 			}
 
-			// Check Redis cache first
+			// Cache key used for both lookups and caching generated results
 			cacheKey := fmt.Sprintf("story_video_highlights:%s", tID.String())
-			var cachedMoments []*pb.HighlightMoment
-			if err := c.getCachedMoments(r.Context(), cacheKey, &cachedMoments); err == nil && len(cachedMoments) > 0 {
-				c.logger.Info("Cache hit for story_video highlights",
+
+			// Skip cache and database lookups if force regeneration requested
+			if !req.Force {
+				// Check Redis cache first
+				var cachedMoments []*pb.HighlightMoment
+				if err := c.getCachedMoments(r.Context(), cacheKey, &cachedMoments); err == nil && len(cachedMoments) > 0 {
+					c.logger.Info("Cache hit for story_video highlights",
+						zap.String("testimonial_id", tID.String()))
+					result.Highlights = cachedMoments
+					result.Source = "cache"
+					resultChan <- testimonialResult{index: index, result: result}
+					return
+				}
+
+				// Check database for existing story_video highlights
+				highlights, err := c.highlightRepo.GetStoryVideoHighlights(r.Context(), tID, c.DB)
+				if err == nil && len(highlights) > 0 && len(highlights[0].Moments) > 0 {
+					c.logger.Info("Found existing story_video highlights in database",
+						zap.String("testimonial_id", tID.String()),
+						zap.Int("highlight_count", len(highlights)))
+
+					// Extract moments from the highlight record
+					var moments []*pb.HighlightMoment
+					momentsBytes, _ := json.Marshal(highlights[0].Moments)
+					_ = json.Unmarshal(momentsBytes, &moments)
+
+					result.Highlights = moments
+					result.Source = "database"
+
+					// Cache the flattened moments for future use
+					_ = c.cacheMoments(r.Context(), cacheKey, moments, 30*time.Minute)
+
+					resultChan <- testimonialResult{index: index, result: result}
+					return
+				}
+			} else {
+				c.logger.Info("Force regeneration requested, skipping cache and database",
 					zap.String("testimonial_id", tID.String()))
-				result.Highlights = cachedMoments
-				result.Source = "cache"
-				resultChan <- testimonialResult{index: index, result: result}
-				return
-			}
-
-			// Check database for existing story_video highlights
-			highlights, err := c.highlightRepo.GetStoryVideoHighlights(r.Context(), tID, c.DB)
-			if err == nil && len(highlights) > 0 && len(highlights[0].Moments) > 0 {
-				c.logger.Info("Found existing story_video highlights in database",
-					zap.String("testimonial_id", tID.String()),
-					zap.Int("highlight_count", len(highlights)))
-
-				// Extract moments from the highlight record
-				var moments []*pb.HighlightMoment
-				momentsBytes, _ := json.Marshal(highlights[0].Moments)
-				_ = json.Unmarshal(momentsBytes, &moments)
-
-				result.Highlights = moments
-				result.Source = "database"
-
-				// Cache the flattened moments for future use
-				_ = c.cacheMoments(r.Context(), cacheKey, moments, 30*time.Minute)
-
-				resultChan <- testimonialResult{index: index, result: result}
-				return
 			}
 
 			// Generate new story_video highlights
@@ -2533,21 +2542,47 @@ func (c *AIProcessorController) GetOrGenerateStoryVideoHighlights(w http.Respons
 			highlightsBytes, _ := json.Marshal(highlightMoments)
 			_ = json.Unmarshal(highlightsBytes, &highlightsJSON)
 
-			// Save to testimonial_highlights table
-			highlightRecord := &models.TestimonialHighlight{
-				TestimonialID:  tID,
-				WorkspaceID:    testimonialData.WorkspaceID,
-				HighlightType:  "story_video",
-				ExtractionMode: "story_video",
-				Moments:        highlightsJSON,
-				MomentCount:    len(highlightMoments),
-				TotalDuration:  totalDuration,
-				ProcessingMetadata: models.JSONMap{
-					"ai_model":       "openai-gpt-4o (fallback: claude-3-5-sonnet)", // OpenAI tried first, Claude on failure
-					"max_highlights": 0,                                             // Extract ALL moments (no limit)
+			// Check if we already have existing story_video highlights to update
+			existingHighlights, err := c.highlightRepo.GetStoryVideoHighlights(r.Context(), tID, c.DB)
+
+			var highlightRecord *models.TestimonialHighlight
+			if err == nil && len(existingHighlights) > 0 {
+				// Update existing record
+				c.logger.Info("Updating existing story_video highlights",
+					zap.String("testimonial_id", tID.String()),
+					zap.String("existing_id", existingHighlights[0].ID.String()))
+
+				highlightRecord = &existingHighlights[0]
+				highlightRecord.Moments = highlightsJSON
+				highlightRecord.MomentCount = len(highlightMoments)
+				highlightRecord.TotalDuration = totalDuration
+				highlightRecord.ProcessingMetadata = models.JSONMap{
+					"ai_model":       "openai-gpt-4o (fallback: claude-3-5-sonnet)",
+					"max_highlights": 0,
 					"generated_at":   time.Now().Format(time.RFC3339),
-					"context":        "story_video_api_endpoint",
-				},
+					"context":        "story_video_api_endpoint_regenerate",
+					"regenerated":    true,
+				}
+			} else {
+				// Create new record
+				c.logger.Info("Creating new story_video highlights",
+					zap.String("testimonial_id", tID.String()))
+
+				highlightRecord = &models.TestimonialHighlight{
+					TestimonialID:  tID,
+					WorkspaceID:    testimonialData.WorkspaceID,
+					HighlightType:  "general",
+					ExtractionMode: "story_video",
+					Moments:        highlightsJSON,
+					MomentCount:    len(highlightMoments),
+					TotalDuration:  totalDuration,
+					ProcessingMetadata: models.JSONMap{
+						"ai_model":       "openai-gpt-4o (fallback: claude-3-5-sonnet)",
+						"max_highlights": 0,
+						"generated_at":   time.Now().Format(time.RFC3339),
+						"context":        "story_video_api_endpoint",
+					},
+				}
 			}
 
 			if err := c.highlightRepo.Upsert(r.Context(), highlightRecord, c.DB); err != nil {

@@ -712,14 +712,15 @@ export class StudioAPI {
    * Route: POST /ai/story-video-highlights
    *
    * This endpoint will:
-   * - Check Redis cache first for existing highlights
-   * - Check database for saved highlights
-   * - Generate new highlights using AI if not found
+   * - Check Redis cache first for existing highlights (unless force=true)
+   * - Check database for saved highlights (unless force=true)
+   * - Generate new highlights using AI if not found or force=true
    * - Save generated highlights to database
    * - Cache results for future requests
    */
   async getStoryVideoHighlights(
-    testimonialIds: string[]
+    testimonialIds: string[],
+    options?: { force?: boolean }
   ): Promise<{
     testimonials: Array<{
       testimonial_id: string;
@@ -730,7 +731,10 @@ export class StudioAPI {
     const response = await fetch(`${this.baseUrl}/ai/story-video-highlights`, {
       method: "POST",
       headers: await this.getHeaders(),
-      body: JSON.stringify({ testimonial_ids: testimonialIds }),
+      body: JSON.stringify({
+        testimonial_ids: testimonialIds,
+        force: options?.force || false,
+      }),
     });
 
     if (!response.ok) {

@@ -224,7 +224,7 @@ func (r *RedisQueueService) Consume(ctx context.Context, queueName string, handl
 				Consumer: consumerName,
 				Streams:  []string{streamKey, ">"},
 				Count:    1,
-				Block:    time.Second * 5, // 5 second timeout for POLLING only
+				Block:    time.Second * 60, // 60 second timeout - background jobs can wait up to 1 min to start
 			})
 
 			if result.Err() != nil {

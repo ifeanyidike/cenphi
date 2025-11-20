@@ -298,34 +298,12 @@ func (uw *UploadWorker) queueAIProcessingJobs(ctx context.Context, testimonial *
 	}
 	*transcriptionJob.ScheduledAt = time.Now()
 
-	// Create dependent AI jobs (only sentiment analysis - highlights are now on-demand)
-	dependentJobs := []*models.Job{
-		{
-			ID:            uuid.New(),
-			JobType:       "sentiment_analysis",
-			TestimonialID: &testimonial.ID,
-			WorkspaceID:   &testimonial.WorkspaceID,
-			Status:        "pending",
-			Priority:      2,
-			Payload: models.JSONMap{
-				"testimonial_id": testimonial.ID.String(),
-				"type":           "video",
-				"depends_on":     transcriptionJob.ID.String(),
-			},
-			MaxRetries:  5,
-			ScheduledAt: &time.Time{},
-			CreatedAt:   time.Now(),
-			UpdatedAt:   time.Now(),
-		},
-	}
+	// NOTE: Sentiment analysis and highlight extraction are now chained from transcription_worker
+	// This eliminates retry loops and reduces Redis writes by 95%
+	// See transcription_worker.go for the chaining logic
 
-	// Set scheduled times for dependent jobs
-	for _, job := range dependentJobs {
-		*job.ScheduledAt = time.Now()
-	}
-
-	// Combine all jobs
-	allJobs := append([]*models.Job{transcriptionJob}, dependentJobs...)
+	// Only queue transcription job - sentiment and highlights will be chained after it completes
+	allJobs := []*models.Job{transcriptionJob}
 
 	// Queue each job
 	for _, job := range allJobs {

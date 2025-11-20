@@ -367,6 +367,14 @@ func (s *HighlightService) filterAndScoreHighlights(
 
 	filtered := make([]*pb.HighlightMoment, 0, len(highlights))
 
+	// Story video highlights can be longer (up to 60s) as they tell complete narratives
+	maxDurationMs := 30000.0 // Default: 30s for general highlights
+	maxExtendedMs := 30000.0 // Default: 30s for tier 3
+	if highlightType == HighlightTypeStoryVideo {
+		maxDurationMs = 40000.0  // Story video: allow up to 40s for tier 2
+		maxExtendedMs = 60000.0  // Story video: allow up to 60s for tier 3 (exceptional cases)
+	}
+
 	for _, h := range highlights {
 		if h == nil {
 			continue
@@ -382,8 +390,8 @@ func (s *HighlightService) filterAndScoreHighlights(
 			continue
 		}
 
-		// TIER 2: Good highlights (5-25s, decent quality) - Keep with validation
-		if durMs >= 5000.0 && durMs <= 25000.0 {
+		// TIER 2: Good highlights (5-25s for general, 5-40s for story_video, decent quality) - Keep with validation
+		if durMs >= 5000.0 && durMs <= maxDurationMs {
 			comp := s.calculateCompletenessScore(txt, durSec)
 			kw := s.calculateKeywordValueScore(h.Keywords, txt)
 			val := s.calculateBusinessValueScoreFromHighlight(h)
@@ -405,7 +413,8 @@ func (s *HighlightService) filterAndScoreHighlights(
 
 		// TIER 3: Borderline highlights - Reject unless exceptional
 		// These need BOTH good completeness AND good keywords/value
-		if durMs >= 5000.0 && durMs <= 30000.0 {
+		// For story_video, allow up to 60s if quality is exceptional
+		if durMs >= 5000.0 && durMs <= maxExtendedMs {
 			comp := s.calculateCompletenessScore(txt, durSec)
 			kw := s.calculateKeywordValueScore(h.Keywords, txt)
 
@@ -1361,7 +1370,7 @@ CRITICAL SELECTION RULES:
 ✓ EXTRACT highlights that are:
   - Independently powerful (could stand alone as a social media clip)
   - Specific with metrics, vivid details, or strong emotion
-  - Between 8-20 seconds duration
+  - Between 8-40 seconds duration (prefer 10-25s, allow up to 40s for exceptional narrative moments)
   - Non-overlapping in time or content
 
 ✗ REJECT highlights that are:
@@ -1369,7 +1378,7 @@ CRITICAL SELECTION RULES:
   - Pure setup without payoff ("so we started looking around...")
   - Repetitive of already-selected highlights
   - Corporate jargon without emotion
-  - Longer than 20 seconds without exceptional value
+  - Longer than 40 seconds (even if compelling, split into multiple moments)
 
 QUALITY THRESHOLDS (STRICT):
 - importance_score: Minimum 0.75 (be HIGHLY selective)

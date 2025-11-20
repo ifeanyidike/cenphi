@@ -20,6 +20,7 @@ interface MomentSelectionStepProps {
   testimonials: TestimonialWithMoments[];
   onComplete: (selectedMoments: HighlightMoment[]) => void;
   onBack?: () => void;
+  onRegenerate?: () => void; // Optional callback to regenerate highlights
   title?: string;
   description?: string;
   minSelection?: number;
@@ -42,6 +43,7 @@ const MomentSelectionStep: React.FC<MomentSelectionStepProps> = ({
   testimonials,
   onComplete,
   onBack,
+  onRegenerate,
   title = "Select Moments",
   description = "Choose the moments you want to include",
   minSelection = 1,
@@ -148,16 +150,29 @@ const MomentSelectionStep: React.FC<MomentSelectionStepProps> = ({
             </h2>
             <p className="text-sm text-slate-600">{description}</p>
           </div>
-          {onBack && (
-            <Button
-              onClick={onBack}
-              variant="outline"
-              size="sm"
-              className="h-8"
-            >
-              Back
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {onRegenerate && (
+              <Button
+                onClick={onRegenerate}
+                variant="outline"
+                size="sm"
+                className="h-8"
+              >
+                <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                Regenerate
+              </Button>
+            )}
+            {onBack && (
+              <Button
+                onClick={onBack}
+                variant="outline"
+                size="sm"
+                className="h-8"
+              >
+                Back
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Stats Bar */}
