@@ -1587,7 +1587,7 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
                           variant="secondary"
                           className="ml-auto text-[10px]"
                         >
-                          {folders.find((f) => f.id === selectedFolderId)
+                          {folders?.find((f) => f.id === selectedFolderId)
                             ?.name || "Selected"}
                         </Badge>
                       )}
