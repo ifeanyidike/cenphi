@@ -1140,7 +1140,7 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
                   >
                     {content?.length} chars
                   </Badge>
-                  {artifact.sourceTestimonials.length > 0 && (
+                  {artifact.sourceTestimonials?.length > 0 && (
                     <Badge
                       variant="outline"
                       className="text-[8px] px-1.5 py-0 bg-white/50 border-slate-200/50"
