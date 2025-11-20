@@ -574,7 +574,7 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
       if (selectedItems.size === filteredArtifacts?.length) {
         setSelectedItems(new Set());
       } else {
-        setSelectedItems(new Set(filteredArtifacts.map((a) => a.id)));
+        setSelectedItems(new Set(filteredArtifacts?.map((a) => a.id) || []));
       }
     };
 
@@ -1582,12 +1582,12 @@ const AIGeneratedContent: React.FC<AIGeneratedContentProps> = observer(
                     >
                       <Folder className="h-4 w-4" />
                       <span>Folders</span>
-                      {selectedFolderId && (
+                      {selectedFolderId && folders && (
                         <Badge
                           variant="secondary"
                           className="ml-auto text-[10px]"
                         >
-                          {folders?.find((f) => f.id === selectedFolderId)
+                          {folders.find((f) => f.id === selectedFolderId)
                             ?.name || "Selected"}
                         </Badge>
                       )}

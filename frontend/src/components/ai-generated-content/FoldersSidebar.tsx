@@ -131,7 +131,7 @@ const FoldersSidebar: React.FC<FoldersSidebarProps> = memo(
         </button>
 
         {/* Folders List */}
-        {folders.length > 0 && (
+        {folders?.length > 0 && (
           <div className="space-y-0.5 pt-1">
             <AnimatePresence mode="popLayout">
               {folders
@@ -210,7 +210,11 @@ const FoldersSidebar: React.FC<FoldersSidebarProps> = memo(
                             ${isSelected ? "opacity-100 hover:bg-white/15" : ""}
                             ${downloadingFolders.has(folder.id) ? "opacity-100" : ""}
                           `}
-                          title={downloadingFolders.has(folder.id) ? "Downloading..." : "Download folder as ZIP"}
+                          title={
+                            downloadingFolders.has(folder.id)
+                              ? "Downloading..."
+                              : "Download folder as ZIP"
+                          }
                         >
                           {downloadingFolders.has(folder.id) ? (
                             <Loader2
