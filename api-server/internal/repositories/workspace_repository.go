@@ -93,16 +93,25 @@ func (r *workspaceRepository) GetBrandContextByID(ctx context.Context, id uuid.U
 
 func (r *workspaceRepository) Create(ctx context.Context, workspace *models.Workspace, db DB) error {
 	query := `
-		INSERT INTO workspaces 
-			(id, name, website_url, industry, brand_context, plan) 
+		INSERT INTO workspaces
+			(id, name, website_url, industry, brand_context, plan)
 		VALUES ($1, $2, $3, $4, $5, $6)
 	`
+
+	// Handle brand_context properly - convert nil or empty to SQL NULL
+	var brandContext interface{}
+	if len(workspace.BrandContext) > 0 {
+		brandContext = string(workspace.BrandContext)
+	} else {
+		brandContext = nil // Will be inserted as SQL NULL
+	}
+
 	_, err := db.ExecContext(ctx, query,
 		workspace.ID,
 		workspace.Name,
 		workspace.WebsiteURL,
 		workspace.Industry,
-		string(workspace.BrandContext),
+		brandContext,
 		workspace.Plan,
 	)
 
