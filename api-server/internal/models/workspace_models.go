@@ -48,23 +48,23 @@ type BrandContext struct {
 }
 
 type Workspace struct {
-	ID                uuid.UUID       `json:"id" db:"id"`
-	Name              string          `json:"name" db:"name" validate:"omitempty,min=3,max=255"`
-	WebsiteURL        string          `json:"website_url,omitempty" db:"website_url" validate:"omitempty,url"`
-	Industry          string          `json:"industry" db:"industry" validate:"omitempty,min=3,max=100"`
-	Plan              Plan            `json:"plan" db:"plan" validate:"required,oneof=essentials growth accelerate transform enterprise"`
-	Settings          JSONMap         `json:"settings,omitempty" db:"settings"`
-	BrandContext      json.RawMessage `json:"brand_context,omitempty" db:"brand_context"`
-	VectorStoreID     *string         `json:"vector_store_id,omitempty" db:"vector_store_id"`
-	TotalTestimonials int             `json:"total_testimonials" db:"total_testimonials"`
+	ID                uuid.UUID        `json:"id" db:"id"`
+	Name              string           `json:"name" db:"name" validate:"omitempty,min=3,max=255"`
+	WebsiteURL        string           `json:"website_url,omitempty" db:"website_url" validate:"omitempty,url"`
+	Industry          string           `json:"industry" db:"industry" validate:"omitempty,min=3,max=100"`
+	Plan              Plan             `json:"plan" db:"plan" validate:"required,oneof=essentials growth accelerate transform enterprise"`
+	Settings          JSONMap          `json:"settings,omitempty" db:"settings"`
+	BrandContext      *json.RawMessage `json:"brand_context,omitempty" db:"brand_context"`
+	VectorStoreID     *string          `json:"vector_store_id,omitempty" db:"vector_store_id"`
+	TotalTestimonials int              `json:"total_testimonials" db:"total_testimonials"`
 
 	// Showcase fields
 	ShowcaseEnabled  bool    `json:"showcase_enabled" db:"showcase_enabled"`
 	ShowcaseSlug     *string `json:"showcase_slug,omitempty" db:"showcase_slug"`
 	ShowcaseSettings JSONMap `json:"showcase_settings,omitempty" db:"showcase_settings"`
 
-	CreatedAt         time.Time       `json:"created_at" db:"created_at"`
-	UpdatedAt         time.Time       `json:"updated_at" db:"updated_at"`
+	CreatedAt         time.Time        `json:"created_at" db:"created_at"`
+	UpdatedAt         time.Time        `json:"updated_at" db:"updated_at"`
 }
 
 type WorkspaceWithUserID struct {
@@ -143,7 +143,7 @@ func (w *Workspace) MarshalSettings() (string, error) {
 }
 
 func (w *Workspace) MarshalBrandContext() (string, error) {
-	if w.BrandContext == nil {
+	if w.BrandContext == nil || len(*w.BrandContext) == 0 {
 		return "{}", nil
 	}
 	data, err := json.Marshal(w.BrandContext)

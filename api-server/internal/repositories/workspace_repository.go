@@ -77,8 +77,8 @@ func (r *workspaceRepository) GetByID(ctx context.Context, id uuid.UUID, db DB) 
 func (r *workspaceRepository) GetBrandContextByID(ctx context.Context, id uuid.UUID, db DB) (json.RawMessage, error) {
 	query :=
 		`
-        SELECT 
-            brand_context
+        SELECT
+            COALESCE(brand_context, '{}'::jsonb)
         FROM workspaces
         WHERE id = $1
         `
@@ -98,12 +98,12 @@ func (r *workspaceRepository) Create(ctx context.Context, workspace *models.Work
 		VALUES ($1, $2, $3, $4, $5, $6)
 	`
 
-	// Handle brand_context properly - convert nil or empty to SQL NULL
-	var brandContext interface{}
-	if len(workspace.BrandContext) > 0 {
-		brandContext = string(workspace.BrandContext)
+	// Handle brand_context properly - convert nil or empty to empty JSON object
+	var brandContext string
+	if workspace.BrandContext != nil && len(*workspace.BrandContext) > 0 {
+		brandContext = string(*workspace.BrandContext)
 	} else {
-		brandContext = nil // Will be inserted as SQL NULL
+		brandContext = "{}" // Default to empty JSON object
 	}
 
 	_, err := db.ExecContext(ctx, query,
@@ -239,7 +239,7 @@ func (s *workspaceRepository) GetPbBrandContext(ctx context.Context, workspaceID
 func (s *workspaceRepository) GetBrandContextFromWorkspace(workspace *models.Workspace) (*pb.BrandContext, error) {
 	c := workspace.BrandContext
 
-	if c == nil {
+	if c == nil || len(*c) == 0 {
 		return &pb.BrandContext{}, nil
 	}
 
@@ -247,7 +247,7 @@ func (s *workspaceRepository) GetBrandContextFromWorkspace(workspace *models.Wor
 
 	// First unmarshal to a generic map to handle complex extracted_data field
 	var rawData map[string]interface{}
-	if err := json.Unmarshal(c, &rawData); err != nil {
+	if err := json.Unmarshal(*c, &rawData); err != nil {
 		return nil, fmt.Errorf("failed to decode brand context JSON: %w", err)
 	}
 

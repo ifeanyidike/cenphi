@@ -352,11 +352,11 @@ func (c AIProcessorController) PolishText(w http.ResponseWriter, r *http.Request
 	if req.BrandContext == nil && req.WorkspaceID != "" {
 		workspaceID, err := uuid.Parse(req.WorkspaceID)
 		if err == nil {
-			if workspace, err := c.WorkspaceRepo.GetByID(r.Context(), workspaceID, c.DB); err != nil {
-
-				if err := json.Unmarshal(workspace.BrandContext, req.BrandContext); err != nil {
-					c.logger.Error("failed to unmarshall brand context...skipping")
-
+			if workspace, err := c.WorkspaceRepo.GetByID(r.Context(), workspaceID, c.DB); err == nil && workspace != nil {
+				if workspace.BrandContext != nil && len(*workspace.BrandContext) > 0 {
+					if err := json.Unmarshal(*workspace.BrandContext, req.BrandContext); err != nil {
+						c.logger.Error("failed to unmarshall brand context...skipping")
+					}
 				}
 			}
 		}
@@ -426,11 +426,11 @@ func (c AIProcessorController) GenerateContent(w http.ResponseWriter, r *http.Re
 	if req.BrandContext == nil && req.WorkspaceID != "" {
 		workspaceID, err := uuid.Parse(req.WorkspaceID)
 		if err == nil {
-			if workspace, err := c.WorkspaceRepo.GetByID(r.Context(), workspaceID, c.DB); err != nil {
-
-				if err := json.Unmarshal(workspace.BrandContext, req.BrandContext); err != nil {
-					c.logger.Error("failed to unmarshall brand context...skipping")
-
+			if workspace, err := c.WorkspaceRepo.GetByID(r.Context(), workspaceID, c.DB); err == nil && workspace != nil {
+				if workspace.BrandContext != nil && len(*workspace.BrandContext) > 0 {
+					if err := json.Unmarshal(*workspace.BrandContext, req.BrandContext); err != nil {
+						c.logger.Error("failed to unmarshall brand context...skipping")
+					}
 				}
 			}
 		}

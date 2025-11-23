@@ -170,6 +170,15 @@ export class WorkspaceOrchestrator {
     if (!token) {
       throw new Error("Authentication required");
     }
+
+    // Get user email and name from Firebase Auth
+    const userEmail = currentUser.email;
+    const userName = currentUser.displayName || "";
+
+    if (!userEmail) {
+      throw new Error("User email is required for onboarding");
+    }
+
     const workspace_id = crypto.randomUUID();
     const response = await fetch(
       `${import.meta.env.VITE_API_URL}/onboarding/setup`,
@@ -181,10 +190,12 @@ export class WorkspaceOrchestrator {
         },
         body: JSON.stringify({
           firebase_uid: currentUser.uid,
+          email: userEmail,
+          name: userName,
           workspace: {
             plan: "essentials",
             workspace_id,
-            name: `${companyName} Workspace`,
+            name: companyName, // Use company name directly, without appending " Workspace"
             website_url: websiteUrl || "",
             // Brand context extraction will happen in background if website provided
           },

@@ -507,10 +507,10 @@ func (w *PlatformOptimizationStepsWorker) HandleApplyBranding(ctx context.Contex
 	// Extract logo URL and brand color from workspace brand context
 	logoURL := ""
 	brandColor := ""
-	if workspace != nil && workspace.BrandContext != nil {
+	if workspace != nil && workspace.BrandContext != nil && len(*workspace.BrandContext) > 0 {
 		// Parse brand context JSON
 		var brandContext pb.BrandContext
-		if err := json.Unmarshal(workspace.BrandContext, &brandContext); err == nil {
+		if err := json.Unmarshal(*workspace.BrandContext, &brandContext); err == nil {
 			if brandContext.LogoUrl != "" {
 				logoURL = brandContext.LogoUrl
 			}

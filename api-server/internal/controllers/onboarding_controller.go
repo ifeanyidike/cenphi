@@ -21,6 +21,8 @@ type OnboardingController struct {
 // Define a struct to encapsulate both workspace and team member data
 type OnboardRequest struct {
 	Uid        string            `json:"firebase_uid"`
+	Email      string            `json:"email"`
+	Name       string            `json:"name"`
 	Workspace  models.Workspace  `json:"workspace"`
 	TeamMember models.TeamMember `json:"team_member"`
 }
@@ -30,16 +32,23 @@ func NewOnboardingController(service services.OnboardingService, logger *zap.Log
 }
 
 func (c OnboardingController) handleOnboarding(w http.ResponseWriter, r *http.Request,
-	onboardFunc func(ctx context.Context, uid string, workspace *models.Workspace, team_member *models.TeamMember) (models.GetWorkspaceDataParam, error),
+	onboardFunc func(ctx context.Context, uid string, email string, name string, workspace *models.Workspace, team_member *models.TeamMember) (models.GetWorkspaceDataParam, error),
 ) {
 	var req OnboardRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		c.logger.Error("Invalid request payload", zap.Error(err))
 		utils.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
 	}
 
 	if req.Uid == "" {
 		utils.RespondWithError(w, http.StatusBadRequest, "Invalid userId or workspace ID")
+		return
+	}
+
+	// Email is required for user creation
+	if req.Email == "" {
+		utils.RespondWithError(w, http.StatusBadRequest, "Email is required")
 		return
 	}
 
@@ -57,7 +66,7 @@ func (c OnboardingController) handleOnboarding(w http.ResponseWriter, r *http.Re
 	ctx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
 	defer cancel()
 
-	workspaceData, err := onboardFunc(ctx, req.Uid, &req.Workspace, &req.TeamMember)
+	workspaceData, err := onboardFunc(ctx, req.Uid, req.Email, req.Name, &req.Workspace, &req.TeamMember)
 	if err != nil {
 		c.logger.Error("Failed to onboard owner", zap.Error(err))
 		utils.RespondWithError(w, http.StatusInternalServerError, "Failed to onboard owner")

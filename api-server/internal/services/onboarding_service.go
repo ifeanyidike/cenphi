@@ -16,7 +16,7 @@ import (
 )
 
 type OnboardingService interface {
-	StartOnboarding(ctx context.Context, uid string, workspace *models.Workspace, teamMember *models.TeamMember) (models.GetWorkspaceDataParam, error)
+	StartOnboarding(ctx context.Context, uid string, email string, name string, workspace *models.Workspace, teamMember *models.TeamMember) (models.GetWorkspaceDataParam, error)
 }
 
 type onboardingService struct {
@@ -40,16 +40,23 @@ func NewOnboardingService(db *sql.DB, logger *zap.Logger, repo repositories.Repo
 	}
 }
 
-func (s *onboardingService) StartOnboarding(ctx context.Context, uid string, workspace *models.Workspace, teamMember *models.TeamMember) (
+func (s *onboardingService) StartOnboarding(ctx context.Context, uid string, email string, name string, workspace *models.Workspace, teamMember *models.TeamMember) (
 	models.GetWorkspaceDataParam, error,
 ) {
 
 	s.logger.Info("Starting onboarding process",
 		zap.String("uid", uid),
+		zap.String("email", email),
 		zap.String("workspace_name", workspace.Name))
 
 	if s.repo == nil {
 		return models.GetWorkspaceDataParam{}, fmt.Errorf("repository not initialized")
+	}
+
+	// Initialize brand_context as empty JSON object if not set
+	if workspace.BrandContext == nil {
+		emptyJSON := json.RawMessage([]byte("{}"))
+		workspace.BrandContext = &emptyJSON
 	}
 
 	// Start brand context extraction if website URL provided
@@ -75,15 +82,40 @@ func (s *onboardingService) StartOnboarding(ctx context.Context, uid string, wor
 		}
 	}()
 
-	// Get the user
+	// Get or create the user
 	user, err := s.repo.User().FindByUID(ctx, uid, tx)
 	if err != nil {
-		s.logger.Error("Failed to get user", zap.Error(err), zap.String("uid", uid))
-		return models.GetWorkspaceDataParam{}, fmt.Errorf("user not found: %w", err)
+		// User doesn't exist, create them
+		s.logger.Info("User not found, creating new user",
+			zap.String("uid", uid),
+			zap.String("email", email))
+
+		newUser := &models.User{
+			ID:          uuid.New(),
+			FirebaseUID: uid,
+			Email:       email,
+			Name:        name,
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
+		}
+
+		if err := s.repo.User().Create(ctx, newUser, tx); err != nil {
+			s.logger.Error("Failed to create user during onboarding",
+				zap.Error(err),
+				zap.String("uid", uid),
+				zap.String("email", email))
+			return models.GetWorkspaceDataParam{}, fmt.Errorf("failed to create user: %w", err)
+		}
+
+		user = newUser
+		s.logger.Info("User created successfully during onboarding",
+			zap.String("user_id", user.ID.String()),
+			zap.String("uid", uid),
+			zap.String("email", email))
 	}
 
 	if user == nil {
-		s.logger.Error("User not found", zap.String("uid", uid))
+		s.logger.Error("User is still nil after creation", zap.String("uid", uid))
 		return models.GetWorkspaceDataParam{}, fmt.Errorf("user not found: %s", uid)
 	}
 
@@ -117,7 +149,8 @@ func (s *onboardingService) StartOnboarding(ctx context.Context, uid string, wor
 						zap.Error(marshalErr),
 						zap.String("workspace_id", workspace.ID.String()))
 				} else {
-					workspace.BrandContext = brandContextJSON
+					brandContextRaw := json.RawMessage(brandContextJSON)
+					workspace.BrandContext = &brandContextRaw
 					if industry, ok := result.brandContext.ExtractedData["industry"].(string); ok {
 						workspace.Industry = industry
 					} else {
