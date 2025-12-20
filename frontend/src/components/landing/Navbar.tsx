@@ -210,12 +210,12 @@ const Navbar = observer(() => {
             >
               Why Cenphi
             </Link>
-            {/* <Link
+            <Link
               to="/pricing"
               className="px-4 py-2 text-xs font-medium rounded-full transition-all duration-200 text-gray-700 hover:text-gray-900 hover:bg-white"
             >
               Pricing
-            </Link> */}
+            </Link>
           </div>
 
           {/* CTAs */}

@@ -41,7 +41,7 @@ const LandingPage = lazy(() => import("@/pages/Landing"));
 const MarketingLanding = lazy(() => import("@/pages/MarketingLanding"));
 const SalesLanding = lazy(() => import("@/pages/SalesLanding"));
 const ProductLanding = lazy(() => import("@/pages/ProductLanding"));
-// const Pricing = lazy(() => import("@/pages/Pricing"));
+const Pricing = lazy(() => import("@/pages/Pricing"));
 const OnboardingPage = lazy(() => import("@/pages/OnboardingPage"));
 const NotFoundPage = lazy(() => import("@/pages/NotFoundPage"));
 
@@ -284,10 +284,10 @@ export const router = createBrowserRouter([
     path: "/why-Cenphi",
     element: <WhyCenphi />,
   },
-  // {
-  //   path: "/pricing",
-  //   element: <Pricing />,
-  // },
+  {
+    path: "/pricing",
+    element: <Pricing />,
+  },
   {
     element: <AuthPagesProtectedRoute />,
     children: [
