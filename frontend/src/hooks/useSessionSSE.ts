@@ -602,10 +602,14 @@ export const useSessionSSE = (sessionId: string): UseSessionSSEReturn => {
               break;
             }
 
+            case "job_complete":
+            case "job_completed":
             case "session_complete":
+              console.log("[useSessionSSE] Session/job completed");
               setSession((prev) =>
                 prev ? { ...prev, status: "completed" } : null
               );
+              setCurrentStage(null); // Clear current stage since nothing is processing
               break;
 
             case "session_paused":

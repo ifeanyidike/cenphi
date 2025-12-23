@@ -289,6 +289,7 @@ export const StageCard: React.FC<StageCardProps> = ({
 
             {/* Continue button for accepted stage with preview */}
             {(() => {
+              // Check if there are subsequent stages that have already started
               const hasSubsequentStageTriggered = stages
                 .slice(index + 1)
                 .some(
@@ -299,11 +300,20 @@ export const StageCard: React.FC<StageCardProps> = ({
                     s.status === "accepted"
                 );
 
+              // Check if there are pending stages left to continue to
+              const hasPendingStagesAfter = stages
+                .slice(index + 1)
+                .some((s) => s.status === "pending");
+
+              // Don't show Continue if:
+              // 1. A subsequent stage has already started, OR
+              // 2. There are no pending stages left to continue to
               return session?.auto_proceed === false &&
                 isAccepted &&
                 stage.metadata?.preview_url &&
                 !stage.skip_reason &&
-                !hasSubsequentStageTriggered ? (
+                !hasSubsequentStageTriggered &&
+                hasPendingStagesAfter ? (
                 <div className="flex items-center gap-2.5 mt-3.5 pt-3.5 border-t border-slate-100">
                   <div className="flex-1">
                     <p className="text-[10px] text-slate-600 font-medium">

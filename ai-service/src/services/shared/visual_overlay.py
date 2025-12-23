@@ -385,23 +385,23 @@ class VisualOverlay:
             )
             
             output_label = "[watermark_overlay]"
-            
+
             # Build background watermark filter with rotation and transparency
+            # Note: text is NOT wrapped in quotes - special chars are escaped in _clean_subtitle_text
             filter_params = [
-                f"text='{clean_watermark_text}'",
+                f"text={clean_watermark_text}",
                 f"fontsize={font_size}",
-                f"fontcolor={watermark_color}@{watermark_opacity}",  # Very transparent
+                f"fontcolor={watermark_color}@{watermark_opacity}",
                 f"x={x_pos}",
                 f"y={y_pos}",
-                # f"angle=45*PI/180",  # 45-degree rotation for watermark effect
-                f"shadowcolor=black@0.05",  # Very subtle shadow
+                f"shadowcolor=black@0.05",
                 f"shadowx=1",
                 f"shadowy=1"
-                # Removed box background for cleaner watermark look
             ]
-            
-            # Build filter with proper syntax
-            watermark_filter = f"{input_label}drawtext={':'.join(filter_params)}{output_label}"
+
+            # Build filter with proper syntax - ensure output label is separated
+            filter_str = ':'.join(filter_params)
+            watermark_filter = f"{input_label}drawtext={filter_str}{output_label}"
             logger.debug(f"Watermark filter created: {watermark_filter}")
             return watermark_filter, output_label
             
@@ -455,38 +455,46 @@ class VisualOverlay:
         input_label: str
     ) -> tuple:
         """Build theme overlay filter"""
-        
+
         try:
             theme_config = self.theme_configs.get(theme, {})
             if not theme_config:
                 return None, None
-            
+
             icon = theme_config.get("icon", "")
             color = theme_config.get("color", "#FFFFFF")
-            
-            # Clean the icon text
-            clean_icon = icon.replace("'", "\\'").replace(":", "\\:")
-            
+
+            # Clean the icon text using the standard escaping function
+            clean_icon = self._clean_subtitle_text(icon)
+            if not clean_icon:
+                return None, None
+
             # Calculate theme position and size
             font_size = max(min(video_width // 30, 36), 20)
-            
+
             # Position at top center with padding
             x_pos = "(w-text_w)/2"
             y_pos = "20"
-            
+
             output_label = "[theme_overlay]"
-            
-            # Create theme overlay with icon and background
-            theme_filter = (
-                f"{input_label}drawtext=text='{clean_icon}':"
-                f"fontsize={font_size}:"
-                f"fontcolor={color}:"
-                f"x={x_pos}:y={y_pos}:"
-                f"shadowcolor=black@0.8:shadowx=2:shadowy=2{output_label}"
-            )
-            
+
+            # Build filter parameters - text is NOT quoted
+            filter_params = [
+                f"text={clean_icon}",
+                f"fontsize={font_size}",
+                f"fontcolor={color}",
+                f"x={x_pos}",
+                f"y={y_pos}",
+                f"shadowcolor=black@0.8",
+                f"shadowx=2",
+                f"shadowy=2"
+            ]
+
+            filter_str = ':'.join(filter_params)
+            theme_filter = f"{input_label}drawtext={filter_str}{output_label}"
+
             return theme_filter, output_label
-            
+
         except Exception as e:
             logger.error(f"Theme filter build failed: {e}")
             return None, None
@@ -499,42 +507,43 @@ class VisualOverlay:
         input_label: str
     ) -> tuple:
         """Build professional subtitle filter with FIXED syntax"""
-        
+
         try:
-            # Clean and prepare text
+            # Clean and prepare text (escaping handled by _clean_subtitle_text)
             clean_text = self._clean_subtitle_text(text)
             if not clean_text:
                 return None, None
-            
+
             # Calculate font size based on video dimensions
             base_font_size = max(min(video_width // 40, 32), 16)
-            
+
             # Position subtitles at bottom with padding
             y_position = f"h-text_h-{video_height // 15}"
-            
+
             output_label = "[subtitle_overlay]"
-            
-            # FIXED: Build filter parameters separately to avoid concatenation issues
+
+            # Build filter parameters - text is NOT quoted (escaping handles special chars)
             filter_params = [
-                f"text='{clean_text}'",
+                f"text={clean_text}",
                 f"fontsize={base_font_size}",
                 f"fontcolor=white",
                 f"x=(w-text_w)/2",
                 f"y={y_position}",
                 f"shadowcolor=black@0.8",
                 f"shadowx=2",
-                f"shadowy=2", 
+                f"shadowy=2",
                 f"box=1",
                 f"boxcolor=black@0.6",
                 f"boxborderw=8"
             ]
-            
-            # FIXED: Build filter with proper FFmpeg syntax
+
+            # Build filter with proper FFmpeg syntax
             # Format: [input]drawtext=param1:param2:param3[output]
-            subtitle_filter = f"{input_label}drawtext={':'.join(filter_params)}{output_label}"
-            
+            filter_str = ':'.join(filter_params)
+            subtitle_filter = f"{input_label}drawtext={filter_str}{output_label}"
+
             return subtitle_filter, output_label
-            
+
         except Exception as e:
             logger.error(f"Subtitle filter build failed: {e}")
             return None, None
@@ -624,14 +633,23 @@ class VisualOverlay:
     #         return None
     
     def _clean_subtitle_text(self, text: str) -> str:
-        """Clean and prepare subtitle text with IMPROVED escaping"""
-        
+        """Clean and prepare subtitle text with FFmpeg drawtext escaping.
+
+        For UNQUOTED text values in FFmpeg drawtext filter, we need to escape:
+        - Backslash: \\
+        - Colon: \: (parameter separator)
+        - Single quote: \' (even unquoted, can cause issues)
+        - Square brackets: \[ \] (filter label syntax)
+        - Semicolon: \; (filter separator)
+        - Percent: %% (FFmpeg uses % for special sequences)
+        """
+
         if not text:
             return ""
-        
+
         # Remove extra whitespace
         clean_text = re.sub(r'\s+', ' ', text.strip())
-        
+
         # Limit length (approximately 2 lines at 40 chars per line)
         if len(clean_text) > 80:
             # Try to break at a sentence boundary
@@ -643,22 +661,38 @@ class VisualOverlay:
                 words = clean_text.split()
                 truncated = []
                 char_count = 0
-                
+
                 for word in words:
                     if char_count + len(word) + 1 <= 77:  # +1 for space, -3 for "..."
                         truncated.append(word)
                         char_count += len(word) + 1
                     else:
                         break
-                
+
                 clean_text = " ".join(truncated) + "..."
-        
-        # IMPROVED: Less aggressive FFmpeg escaping to avoid parsing issues
-        # Only escape what's absolutely necessary for FFmpeg drawtext
-        clean_text = clean_text.replace("\\", "\\\\")  # Escape backslashes first
-        clean_text = clean_text.replace("'", "\\'")    # Escape single quotes for shell safety
-        clean_text = clean_text.replace(":", "\\:")    # Escape colons (FFmpeg parameter separator)
-        
+
+        # FFmpeg drawtext escaping for UNQUOTED text values
+        # Order matters - escape backslashes first!
+
+        # 1. Escape backslashes (must be first)
+        clean_text = clean_text.replace("\\", "\\\\")
+
+        # 2. Escape colons (FFmpeg parameter separator)
+        clean_text = clean_text.replace(":", "\\:")
+
+        # 3. Escape single quotes (can still cause parsing issues)
+        clean_text = clean_text.replace("'", "\\'")
+
+        # 4. Escape square brackets (FFmpeg filter label syntax)
+        clean_text = clean_text.replace("[", "\\[")
+        clean_text = clean_text.replace("]", "\\]")
+
+        # 5. Escape semicolons (FFmpeg filter chain separator)
+        clean_text = clean_text.replace(";", "\\;")
+
+        # 6. Escape percent signs (FFmpeg uses % for special sequences like %{pts})
+        clean_text = clean_text.replace("%", "%%")
+
         return clean_text
     
 
