@@ -17,6 +17,7 @@ import {
   Wifi,
 } from "lucide-react";
 import { authStore } from "@/stores/authStore";
+import { connectSSE } from "@/hooks/sse/connection";
 
 interface SSEProcessingProps {
   testimonialId: string;
@@ -115,7 +116,7 @@ export const SSEProcessing: React.FC<SSEProcessingProps> = ({
   const [detailedProgress, setDetailedProgress] = useState<string>("");
 
   const eventSourceRef = useRef<EventSource | null>(null);
-  const studioEventSourceRef = useRef<EventSource | null>(null); // For studio upload/compression events
+  const stopStudioRef = useRef<(() => void) | null>(null); // For studio upload/compression events
   const timerRef = useRef<number | null>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
   const reconnectAttempts = useRef(0);
@@ -232,74 +233,27 @@ export const SSEProcessing: React.FC<SSEProcessingProps> = ({
     }
   };
 
-  const connectToStudioSSE = async () => {
-    if (!compressionSessionId) {
-      console.log("No compression session ID provided, skipping studio SSE");
-      return;
-    }
-
-    try {
-      console.log("Connecting to studio SSE for compression tracking...");
-
-      // Close existing studio connection
-      if (studioEventSourceRef.current) {
-        studioEventSourceRef.current.close();
-      }
-
-      // Connect to studio SSE endpoint for upload/compression events
-      const sseUrl = `${import.meta.env.VITE_API_URL}/studio/sessions/${compressionSessionId}/stream`;
-      const eventSource = new EventSource(sseUrl);
-      studioEventSourceRef.current = eventSource;
-
-      eventSource.onopen = () => {
-        console.log("Studio SSE connection opened for compression tracking");
-      };
-
-      eventSource.onmessage = (event) => {
+  const connectToStudioSSE = () => {
+    stopStudioRef.current?.();
+    if (!compressionSessionId) return;
+    stopStudioRef.current = connectSSE(async () => {
+      const token = await authStore.user?.getIdToken();
+      if (!token) throw new Error("Authentication required");
+      return `${import.meta.env.VITE_API_URL}/studio/sessions/${encodeURIComponent(compressionSessionId)}/stream?token=${encodeURIComponent(token)}`;
+    }, {
+      onOpen: () => {},
+      // Compression updates are optional; the main processing stream owns UI errors.
+      onError: () => {},
+      onMessage: (event) => {
         try {
           const data = JSON.parse(event.data);
+          if (!data || (data.session_id && data.session_id !== compressionSessionId)) return;
           handleStudioEvent(data);
-        } catch (error) {
-          console.error("Failed to parse studio SSE message:", error);
+        } catch {
+          console.error("Failed to parse compression update");
         }
-      };
-
-      eventSource.onerror = (error) => {
-        console.error("Studio SSE connection error:", error);
-        // Don't retry studio SSE connection - it's optional for progress tracking
-        if (studioEventSourceRef.current) {
-          studioEventSourceRef.current.close();
-          studioEventSourceRef.current = null;
-        }
-      };
-
-      // Handle specific studio event types
-      const handleStudioSpecificEvent =
-        (eventType: string) => (event: MessageEvent) => {
-          try {
-            const data = JSON.parse(event.data);
-            handleStudioEvent({ ...data, type: eventType });
-          } catch (error) {
-            console.error(`Failed to parse studio ${eventType} event:`, error);
-          }
-        };
-
-      eventSource.addEventListener(
-        "upload_complete",
-        handleStudioSpecificEvent("upload_complete")
-      );
-      eventSource.addEventListener(
-        "compression_progress",
-        handleStudioSpecificEvent("compression_progress")
-      );
-      eventSource.addEventListener(
-        "compression_complete",
-        handleStudioSpecificEvent("compression_complete")
-      );
-    } catch (error: any) {
-      console.error("Failed to connect to studio SSE:", error);
-      // Don't set error state - studio SSE is optional for progress tracking
-    }
+      },
+    });
   };
 
   const handleStudioEvent = (event: any) => {
@@ -359,10 +313,8 @@ export const SSEProcessing: React.FC<SSEProcessingProps> = ({
         setCurrentStepIndex(1); // Move to transcribing step
 
         // Close studio SSE connection after compression is complete
-        if (studioEventSourceRef.current) {
-          studioEventSourceRef.current.close();
-          studioEventSourceRef.current = null;
-        }
+        stopStudioRef.current?.();
+        stopStudioRef.current = null;
         break;
 
       default:
@@ -525,10 +477,8 @@ export const SSEProcessing: React.FC<SSEProcessingProps> = ({
       eventSourceRef.current = null;
     }
 
-    if (studioEventSourceRef.current) {
-      studioEventSourceRef.current.close();
-      studioEventSourceRef.current = null;
-    }
+    stopStudioRef.current?.();
+        stopStudioRef.current = null;
 
     if (timerRef.current) {
       clearInterval(timerRef.current);

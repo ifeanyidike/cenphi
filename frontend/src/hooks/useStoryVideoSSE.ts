@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { authStore } from '@/stores/authStore';
+import { connectSSE } from './sse/connection';
 
 // Story Video specific types
 export interface Clip {
@@ -102,14 +103,12 @@ export const useStoryVideoSSE = (): UseStoryVideoSSEReturn => {
   const [orderedClips, setOrderedClips] = useState<Clip[]>([]);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-  const eventSourceRef = useRef<EventSource | null>(null);
+  const stopRef = useRef<(() => void) | null>(null);
   const sessionIdRef = useRef<string | null>(null);
 
   const stopSession = useCallback(() => {
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
-    }
+    stopRef.current?.();
+    stopRef.current = null;
     setIsConnected(false);
     setError(null);
     sessionIdRef.current = null;
@@ -118,6 +117,11 @@ export const useStoryVideoSSE = (): UseStoryVideoSSEReturn => {
   const startSession = useCallback((sessionId: string, autoProceed: boolean) => {
     // Close existing connection
     stopSession();
+    setCurrentStage(null);
+    setStages([]);
+    setClips([]);
+    setOrderedClips([]);
+    setPreviewUrl(null);
 
     try {
       sessionIdRef.current = sessionId;
@@ -134,20 +138,17 @@ export const useStoryVideoSSE = (): UseStoryVideoSSEReturn => {
         is_paused: false,
       });
 
-      // Connect to SSE endpoint
-      const sseUrl = `${import.meta.env.VITE_API_URL}/studio/sessions/${sessionId}/stream`;
-      const eventSource = new EventSource(sseUrl);
-      eventSourceRef.current = eventSource;
-
-      eventSource.onopen = () => {
-        console.log('[Story Video SSE] Connected');
-        setIsConnected(true);
-        setError(null);
-      };
-
-      eventSource.onmessage = (event) => {
+      stopRef.current = connectSSE(async () => {
+        const token = await authStore.user?.getIdToken();
+        if (!token) throw new Error("Authentication required");
+        return `${import.meta.env.VITE_API_URL}/studio/sessions/${encodeURIComponent(sessionId)}/stream?token=${encodeURIComponent(token)}`;
+      }, {
+        onOpen: () => { setIsConnected(true); setError(null); },
+        onError: (message) => { setIsConnected(false); setError(message); },
+        onMessage: (event) => {
         try {
           const data = JSON.parse(event.data);
+          if (!data || (data.session_id && data.session_id !== sessionId)) return;
           console.log('[Story Video SSE]', data.type || data.event_type, data);
 
           const eventType = data.type || data.event_type;
@@ -242,16 +243,16 @@ export const useStoryVideoSSE = (): UseStoryVideoSSEReturn => {
 
               // Update progress
               const extractionProgress = data.progress;
-              if (extractionProgress && currentStage?.id === 'extract_clips') {
+              if (extractionProgress) {
                 const percentComplete = extractionProgress.total_clips > 0
                   ? (extractionProgress.clips_extracted / extractionProgress.total_clips) * 100
                   : 0;
 
-                setCurrentStage(prev => prev ? {
+                setCurrentStage(prev => prev?.id === 'extract_clips' ? {
                   ...prev,
                   progress: percentComplete,
                   message: `Extracted ${extractionProgress.clips_extracted} of ${extractionProgress.total_clips} clips`
-                } : null);
+                } : prev);
               }
               break;
             }
@@ -305,8 +306,8 @@ export const useStoryVideoSSE = (): UseStoryVideoSSEReturn => {
               // If requires user action and status is reviewing, set as current stage
               if (requiresUserAction && status === 'reviewing') {
                 setCurrentStage(updatedStage);
-              } else if (currentStage?.id === stageId) {
-                setCurrentStage(null);
+              } else {
+                setCurrentStage(prev => prev?.id === stageId ? null : prev);
               }
 
               // Extract clips/ordered_clips from metadata
@@ -369,29 +370,14 @@ export const useStoryVideoSSE = (): UseStoryVideoSSEReturn => {
           console.error('[Story Video SSE] Error parsing event:', err);
           setError('Failed to parse event data');
         }
-      };
-
-      eventSource.onerror = (event) => {
-        console.error('[Story Video SSE] Connection error:', event);
-        setIsConnected(false);
-
-        if (eventSource.readyState === EventSource.CLOSED) {
-          setError('Connection lost. Retrying...');
-
-          setTimeout(() => {
-            if (eventSourceRef.current?.readyState === EventSource.CLOSED && sessionIdRef.current) {
-              console.log('[Story Video SSE] Reconnecting...');
-              startSession(sessionIdRef.current, session?.auto_proceed || false);
-            }
-          }, 3000);
-        }
-      };
+        },
+      });
 
     } catch (err) {
       console.error('[Story Video SSE] Failed to start connection:', err);
       setError('Failed to start session');
     }
-  }, [stopSession, session?.auto_proceed, currentStage?.id]);
+  }, [stopSession]);
 
   // Control actions
   const acceptStage = useCallback(async (stageId: string) => {

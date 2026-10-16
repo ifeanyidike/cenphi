@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { authStore } from '@/stores/authStore';
+import { connectSSE } from './sse/connection';
 
 interface JobStatus {
   job_id: string;
@@ -23,40 +24,30 @@ export const useJobProgress = (): UseJobProgressReturn => {
   const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const eventSourceRef = useRef<EventSource | null>(null);
+  const stopRef = useRef<(() => void) | null>(null);
 
   const stopTracking = useCallback(() => {
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
-    }
+    stopRef.current?.();
+    stopRef.current = null;
     setIsConnected(false);
     setError(null);
   }, []);
 
-  const startTracking = useCallback(async (jobId: string) => {
-    // Close existing connection
+  const startTracking = useCallback((jobId: string) => {
     stopTracking();
-
-    try {
+    setJobStatus(null);
+    if (!jobId) return;
+    stopRef.current = connectSSE(async () => {
       const token = await authStore.user?.getIdToken();
-      if (!token) {
-        setError('Authentication required');
-        return;
-      }
-      // Use studio SSE endpoint (sessionID-based, not job_id query param)
-      const sseUrl = `${import.meta.env.VITE_API_URL}/studio/sessions/${jobId}/stream`;
-      console.log('[useJobProgress] Starting SSE connection:', sseUrl);
-      eventSourceRef.current = new EventSource(sseUrl);
-
-      eventSourceRef.current.onopen = () => {
-        setIsConnected(true);
-        setError(null);
-      };
-
-      eventSourceRef.current.onmessage = (event) => {
+      if (!token) throw new Error("Authentication required");
+      return `${import.meta.env.VITE_API_URL}/studio/sessions/${encodeURIComponent(jobId)}/stream?token=${encodeURIComponent(token)}`;
+    }, {
+      onOpen: () => { setIsConnected(true); setError(null); },
+      onError: (message) => { setIsConnected(false); setError(message); },
+      onMessage: (event) => {
         try {
           const data = JSON.parse(event.data);
+          if (!data || (data.session_id && data.session_id !== jobId)) return;
 
           // Handle compression events
           if (data.type === 'upload_complete') {
@@ -105,25 +96,8 @@ export const useJobProgress = (): UseJobProgressReturn => {
           console.error('Error parsing SSE data:', err);
           setError('Failed to parse job status update');
         }
-      };
-
-      eventSourceRef.current.onerror = (event) => {
-        console.error('SSE connection error:', event);
-        setIsConnected(false);
-        setError('Connection lost. Retrying...');
-
-        // Auto-retry connection after 3 seconds
-        setTimeout(() => {
-          if (eventSourceRef.current?.readyState === EventSource.CLOSED) {
-            startTracking(jobId);
-          }
-        }, 3000);
-      };
-
-    } catch (err) {
-      console.error('Failed to start SSE connection:', err);
-      setError('Failed to start progress tracking');
-    }
+      },
+    });
   }, [stopTracking]);
 
   // Cleanup on unmount

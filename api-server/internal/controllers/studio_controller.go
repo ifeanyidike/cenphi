@@ -14,6 +14,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/ifeanyidike/cenphi/internal/ai"
+	"github.com/ifeanyidike/cenphi/internal/middleware"
 	"github.com/ifeanyidike/cenphi/internal/models"
 	"github.com/ifeanyidike/cenphi/internal/repositories"
 	"github.com/ifeanyidike/cenphi/internal/services"
@@ -97,6 +98,26 @@ func (c StudioController) StreamStudioEvents(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	userID, authErr := middleware.GetUserFromContext(r.Context())
+	if authErr != nil {
+		utils.RespondWithError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+	if _, parseErr := uuid.Parse(sessionID); parseErr != nil {
+		utils.RespondWithError(w, http.StatusBadRequest, "invalid session_id")
+		return
+	}
+	allowed, accessErr := canStreamSession(r.Context(), c.db, sessionID, userID)
+	if accessErr != nil {
+		c.logger.Error("Failed to authorize studio stream", zap.Error(accessErr))
+		utils.RespondWithError(w, http.StatusInternalServerError, "unable to authorize session")
+		return
+	}
+	if !allowed {
+		utils.RespondWithError(w, http.StatusForbidden, "session access denied")
+		return
+	}
+
 	// Refresh session and stages from database to handle reconnection
 	// This ensures the client gets the latest state even after disconnect/restart
 	sessionUUID, err := uuid.Parse(sessionID)
@@ -125,6 +146,8 @@ func (c StudioController) StreamStudioEvents(w http.ResponseWriter, r *http.Requ
 					c.logger.Error("Failed to load stages from database",
 						zap.Error(stagesErr),
 						zap.String("session_id", sessionID))
+					utils.RespondWithError(w, http.StatusInternalServerError, "unable to load session stages")
+					return
 				}
 
 				if stagesErr == nil {
@@ -178,7 +201,13 @@ func (c StudioController) StreamStudioEvents(w http.ResponseWriter, r *http.Requ
 
 				// Restore the session to SSEManager (now thread-safe)
 				c.sseManager.RestoreSession(sseSession)
+			} else if !errors.Is(err, sql.ErrNoRows) {
+				c.logger.Error("Failed to load studio session", zap.Error(err))
+				utils.RespondWithError(w, http.StatusInternalServerError, "unable to load session")
+				return
 			}
+			// Upload compression IDs live in testimonial metadata, not the
+			// processing_sessions table. Access was checked above for either.
 		}
 	}
 

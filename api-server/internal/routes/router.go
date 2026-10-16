@@ -574,9 +574,8 @@ func RegisterAnalyticsRoutes(r chi.Router, controller controllers.AnalyticsContr
 
 func RegisterStudioRoutes(r chi.Router, controller controllers.StudioController, authMiddleware middleware.AuthMiddleware) {
 	r.Route("/studio", func(r chi.Router) {
-		// SSE streaming endpoint (no auth middleware to avoid connection issues with EventSource API)
-		// Must be OUTSIDE the authenticated group since EventSource can't send custom headers
-		r.Get("/sessions/{sessionID}/stream", controller.StreamStudioEvents)
+        // VerifyToken accepts the query token used by native EventSource.
+        r.With(authMiddleware.VerifyToken).Get("/sessions/{sessionID}/stream", controller.StreamStudioEvents)
 
 		// All other routes require authentication
 		r.Group(func(r chi.Router) {

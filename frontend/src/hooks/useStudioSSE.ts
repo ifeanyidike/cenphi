@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { authStore } from '@/stores/authStore';
+import { connectSSE } from './sse/connection';
 
 // SSE Event Types based on backend implementation
 export interface StepProgress {
@@ -109,50 +110,43 @@ export const useStudioSSE = (): UseStudioSSEReturn => {
   const [allPreviews, setAllPreviews] = useState<Map<string, PreviewArtifact>>(new Map());
   const [existingClipsNotification, setExistingClipsNotification] = useState<ExistingClipsNotification | null>(null);
 
-  const eventSourceRef = useRef<EventSource | null>(null);
+  const stopRef = useRef<(() => void) | null>(null);
   const jobIdRef = useRef<string | null>(null);
 
   const stopSession = useCallback(() => {
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
-    }
+    stopRef.current?.();
+    stopRef.current = null;
     setIsConnected(false);
     setError(null);
     jobIdRef.current = null;
   }, []);
 
-  const startSession = useCallback(async (
+  const startSession = useCallback((
     jobId: string,
     pipelineType: 'platform_optimization' | 'clipping' | 'story_video'
   ) => {
     // Close existing connection
     stopSession();
+    setCurrentStep(null);
+    setLatestPreview(null);
+    setAllPreviews(new Map());
+    setExistingClipsNotification(null);
 
     try {
-      const token = await authStore.user?.getIdToken();
-      if (!token) {
-        setError('Authentication required');
-        return;
-      }
-
       jobIdRef.current = jobId;
 
       // DON'T initialize session yet - wait for session_created event from backend
       // This prevents showing "0 / 0 steps" UI before stages are loaded
       setSession(null);
 
-      // Connect to SSE endpoint (correct route: /studio/sessions/{sessionID}/stream)
-      const sseUrl = `${import.meta.env.VITE_API_URL}/studio/sessions/${jobId}/stream`;
-      const eventSource = new EventSource(sseUrl);
-      eventSourceRef.current = eventSource;
-
-      eventSource.onopen = () => {
-        setIsConnected(true);
-        setError(null);
-      };
-
-      eventSource.onmessage = (event) => {
+      stopRef.current = connectSSE(async () => {
+        const token = await authStore.user?.getIdToken();
+        if (!token) throw new Error("Authentication required");
+        return `${import.meta.env.VITE_API_URL}/studio/sessions/${encodeURIComponent(jobId)}/stream?token=${encodeURIComponent(token)}`;
+      }, {
+        onOpen: () => { setIsConnected(true); setError(null); },
+        onError: (message) => { setIsConnected(false); setError(message); },
+        onMessage: (event) => {
         try {
           const studioEvent: StudioEvent = JSON.parse(event.data);
           console.log('[SSE Event]', studioEvent.type, studioEvent);
@@ -407,25 +401,8 @@ export const useStudioSSE = (): UseStudioSSEReturn => {
           console.error('[SSE] Error parsing event:', err, 'Raw data:', event.data);
           setError('Failed to parse event data');
         }
-      };
-
-      eventSource.onerror = (event) => {
-        console.error('[SSE] Connection error:', event, 'ReadyState:', eventSource.readyState);
-        setIsConnected(false);
-
-        // Only show error message if connection is closed
-        if (eventSource.readyState === EventSource.CLOSED) {
-          setError('Connection lost. Retrying...');
-
-          // Auto-retry connection after 3 seconds
-          setTimeout(() => {
-            if (eventSourceRef.current?.readyState === EventSource.CLOSED && jobIdRef.current) {
-              console.log('[SSE] Attempting to reconnect...');
-              startSession(jobIdRef.current, pipelineType);
-            }
-          }, 3000);
-        }
-      };
+        },
+      });
 
     } catch (err) {
       console.error('Failed to start SSE connection:', err);

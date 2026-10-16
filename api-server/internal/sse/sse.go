@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -18,24 +19,29 @@ import (
 	"go.uber.org/zap"
 )
 
+type studioClient struct {
+	sessionID string
+	events    chan []byte
+}
+
 type SSEManager struct {
-	clients         map[string]chan queue.JobResult
-	studioClients   map[string]chan StudioEvent   // New: Studio-specific clients
-	mu              sync.RWMutex
-	logger          *zap.Logger
-	cacheService    cache.RedisCache
-	ctx             context.Context
-	cancel          context.CancelFunc
-	sessions        map[string]*ProcessingSession // Track active studio sessions
-	stageRepo       repositories.ProcessingStageRepository // Injected stage repository for database updates
-	db              *sql.DB // Database connection
+	clients       map[string]chan queue.JobResult
+	studioClients map[string]studioClient // New: Studio-specific clients
+	mu            sync.RWMutex
+	logger        *zap.Logger
+	cacheService  cache.RedisCache
+	ctx           context.Context
+	cancel        context.CancelFunc
+	sessions      map[string]*ProcessingSession          // Track active studio sessions
+	stageRepo     repositories.ProcessingStageRepository // Injected stage repository for database updates
+	db            *sql.DB                                // Database connection
 }
 
 func NewSSEManager(cacheService cache.RedisCache, logger *zap.Logger) *SSEManager {
 	ctx, cancel := context.WithCancel(context.Background())
 	manager := &SSEManager{
 		clients:       make(map[string]chan queue.JobResult),
-		studioClients: make(map[string]chan StudioEvent),
+		studioClients: make(map[string]studioClient),
 		logger:        logger,
 		cacheService:  cacheService,
 		ctx:           ctx,
@@ -707,9 +713,9 @@ func (m *SSEManager) SkipStage(sessionID, stageID, skipReason string) error {
 		WorkspaceID:   session.WorkspaceID,
 		Stage:         stage,
 		Metadata: map[string]interface{}{
-			"skip_reason":       skipReason,
-			"dependent_stages":  dependentStages,
-			"skipped_at":        now,
+			"skip_reason":      skipReason,
+			"dependent_stages": dependentStages,
+			"skipped_at":       now,
 		},
 		Timestamp: now,
 	}
@@ -811,38 +817,32 @@ func (m *SSEManager) findDependentStages(session *ProcessingSession, stageID str
 	return dependents
 }
 
-// BroadcastStudioEvent sends an event to all studio clients
+// BroadcastStudioEvent sends an immutable event to clients of its session.
 func (m *SSEManager) BroadcastStudioEvent(event StudioEvent) {
-	m.mu.RLock()
-	clientCount := len(m.studioClients)
-	m.mu.RUnlock()
-
-	// PERFORMANCE FIX: Removed verbose Info logging from hot path
-	// This function fires on EVERY SSE event (could be 100s per second)
-	// Only log warnings/errors for actual problems
-
-	if clientCount == 0 {
-		// Only log when events are actually being dropped (indicates a problem)
-		m.logger.Warn("No studio clients connected - event will be dropped",
-			zap.String("event_type", event.Type),
-			zap.String("session_id", event.SessionID))
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if event.SessionID == "" {
+		event.SessionID = event.JobID
+	}
+	// Copy the payload while holding the same lock used by stage writers.
+	// Queued events must not change when the next update mutates a stage.
+	payload, err := json.Marshal(event)
+	if err != nil {
+		m.logger.Error("Failed to marshal studio SSE data", zap.Error(err))
 		return
 	}
-
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	for clientID, clientChan := range m.studioClients {
+	for clientID, client := range m.studioClients {
+		if client.sessionID != event.SessionID {
+			continue
+		}
 		select {
-		case clientChan <- event:
-			// PERFORMANCE FIX: Removed Debug log that fires per-client per-event
-			// With N users × M events/sec, this creates massive log volume
-			// Debug logging should be enabled manually when troubleshooting
+		case client.events <- payload:
 		default:
-			// Channel is full - this IS a problem, keep the warning
-			m.logger.Warn("Studio SSE client channel full, skipping",
-				zap.String("clientID", clientID),
-				zap.String("event_type", event.Type))
+			// A slow client must reconnect for a fresh snapshot rather than silently
+			// missing a completion. Only this lock owner closes a queued stream.
+			delete(m.studioClients, clientID)
+			close(client.events)
+			m.logger.Warn("Studio SSE client too slow, disconnecting", zap.String("clientID", clientID))
 		}
 	}
 }
@@ -853,9 +853,10 @@ func (m *SSEManager) SendStudioEvent(sessionID string, event *StudioEvent) {
 		return
 	}
 
-	// Use the BroadcastStudioEvent for now since we're sending to all connected clients
-	// In a full implementation, you'd filter by sessionID
-	m.BroadcastStudioEvent(*event)
+	// The caller's destination is authoritative, even for legacy events without it.
+	routed := *event
+	routed.SessionID = sessionID
+	m.BroadcastStudioEvent(routed)
 
 	// Also store in session if it exists
 	m.mu.Lock()
@@ -883,9 +884,12 @@ func (m *SSEManager) SendStudioEvent(sessionID string, event *StudioEvent) {
 func (m *SSEManager) HasStudioClient(sessionID string) bool {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	// Currently checks if ANY studio client is connected
-	// Session-specific filtering happens in BroadcastStudioEvent
-	return len(m.studioClients) > 0
+	for _, client := range m.studioClients {
+		if client.sessionID == sessionID {
+			return true
+		}
+	}
+	return false
 }
 
 // GetSession retrieves a processing session by ID
@@ -907,157 +911,88 @@ func (m *SSEManager) RestoreSession(session *ProcessingSession) {
 		zap.String("status", session.Status))
 }
 
-// StreamStudioEvents handles studio-specific SSE connections
+// StreamStudioEvents handles one session. The HTTP controller authorizes access.
 func (m *SSEManager) StreamStudioEvents(ctx context.Context, w io.Writer, sessionID string) error {
-	// Set SSE headers
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		return fmt.Errorf("response writer does not support flushing")
 	}
+	clientID := uuid.NewString()
+	client := studioClient{sessionID: sessionID, events: make(chan []byte, 100)}
 
-	// Generate unique client ID
-	clientID := fmt.Sprintf("studio_client_%d", time.Now().UnixNano())
-
-	// Create channel for this client
-	clientChan := make(chan StudioEvent, 100)
-
-	// Register client FIRST before sending any events
+	// Register and serialize the snapshot under one lock. Writers cannot mutate
+	// its maps while the initial payload is being serialized.
 	m.mu.Lock()
-	m.studioClients[clientID] = clientChan
-	totalClients := len(m.studioClients)
-	m.mu.Unlock()
-
-	// Only log at Info level on first client connection or when debugging
-	m.logger.Debug("Studio SSE client connected",
-		zap.String("clientID", clientID),
-		zap.String("sessionID", sessionID),
-		zap.Int("total_clients", totalClients))
-
-	// Get session data and send initial event with all stages
-	m.mu.RLock()
-	session, sessionExists := m.sessions[sessionID]
-	m.mu.RUnlock()
-
-	if sessionExists && session != nil {
-		// Build stages array from session.Stages (sorted by order)
+	m.studioClients[clientID] = client
+	initial := StudioEvent{
+		ID: uuid.NewString(), Type: "connection_established", SessionID: sessionID, Timestamp: time.Now(),
+	}
+	if session := m.sessions[sessionID]; session != nil {
 		stages := make([]*ProcessingStageEvent, 0, len(session.Stages))
 		for _, stage := range session.Stages {
 			stages = append(stages, stage)
 		}
-
-		// Sort stages by order for consistent display
-		sortStages := func(stages []*ProcessingStageEvent) {
-			for i := 0; i < len(stages); i++ {
-				for j := i + 1; j < len(stages); j++ {
-					if stages[i].Order > stages[j].Order {
-						stages[i], stages[j] = stages[j], stages[i]
-					}
-				}
-			}
+		sort.Slice(stages, func(i, j int) bool { return stages[i].Order < stages[j].Order })
+		initial.Type = "session_created"
+		initial.JobID = sessionID
+		initial.WorkspaceID = session.WorkspaceID
+		initial.TestimonialID = session.TestimonialID
+		initial.Data = map[string]interface{}{
+			"session_id": sessionID, "type": session.Type, "status": session.Status,
+			"auto_proceed": session.AutoProceed, "stages": stages, "total_steps": len(stages),
+			"started_at": session.StartedAt,
 		}
-		sortStages(stages)
-
-		// Send session_created event with all stages
-		initialEvent := StudioEvent{
-			ID:        fmt.Sprintf("event_%d", time.Now().UnixNano()),
-			Type:      "session_created",
-			SessionID: sessionID,
-			JobID:     sessionID,
-			TestimonialID: session.TestimonialID,
-			WorkspaceID:   session.WorkspaceID,
-			Data: map[string]interface{}{
-				"session_id":  sessionID,
-				"type":        session.Type,
-				"status":      session.Status,
-				"auto_proceed": session.AutoProceed, // BUGFIX: Use actual auto_proceed from session
-				"stages":      stages,
-			},
-			Timestamp: time.Now(),
-		}
-
-		m.logger.Debug("Sending session_created event with stages",
-			zap.String("sessionID", sessionID),
-			zap.Int("stages_count", len(stages)),
-			zap.String("status", session.Status))
-
-		m.writeStudioSSEEvent(w, initialEvent)
-		flusher.Flush()
-	} else {
-		// Session not found - this shouldn't happen in normal flow
-		// Log warning but send connection_established to avoid breaking frontend
-		m.logger.Warn("Session not found in SSE manager - may need restoration from DB",
-			zap.String("sessionID", sessionID))
-
-		initialEvent := StudioEvent{
-			ID:        fmt.Sprintf("event_%d", time.Now().UnixNano()),
-			Type:      "connection_established",
-			SessionID: sessionID,
-			Data: map[string]interface{}{
-				"message":   "Studio SSE connection established",
-				"client_id": clientID,
-				"warning":   "Session not found in memory - may be loading from database",
-			},
-			Timestamp: time.Now(),
-		}
-
-		m.writeStudioSSEEvent(w, initialEvent)
-		flusher.Flush()
 	}
-
-	// Handle client disconnection
+	payload, err := json.Marshal(initial)
+	m.mu.Unlock()
 	defer func() {
 		m.mu.Lock()
 		delete(m.studioClients, clientID)
-		close(clientChan)
 		m.mu.Unlock()
-		m.logger.Debug("Studio SSE client disconnected", zap.String("clientID", clientID))
 	}()
+	if err != nil {
+		return fmt.Errorf("marshal studio snapshot: %w", err)
+	}
 
-	// Set maximum connection duration (2 hours) to prevent resource leaks
-	connectionTimeout := time.After(2 * time.Hour)
-
-	// Listen for messages or client disconnect
+	write := func(data []byte) error {
+		if _, err := fmt.Fprintf(w, "data: %s\n\n", data); err != nil {
+			return err
+		}
+		flusher.Flush()
+		return nil
+	}
+	if err := write(payload); err != nil {
+		return err
+	}
+	heartbeat := time.NewTicker(15 * time.Second)
+	defer heartbeat.Stop()
+	timeout := time.NewTimer(2 * time.Hour)
+	defer timeout.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
-		case <-connectionTimeout:
-			// Close connection after timeout and expect client to reconnect
-			m.logger.Info("SSE connection timeout reached, closing connection",
-				zap.String("clientID", clientID),
-				zap.String("sessionID", sessionID))
+		case <-m.ctx.Done():
 			return nil
-		case event := <-clientChan:
-			m.writeStudioSSEEvent(w, event)
-			flusher.Flush()
-		case <-time.After(15 * time.Second):
-			// Send heartbeat every 15 seconds to prevent proxy timeouts
-			heartbeat := StudioEvent{
-				ID:   fmt.Sprintf("heartbeat_%d", time.Now().UnixNano()),
-				Type: "heartbeat",
-				Metadata: map[string]interface{}{
-					"timestamp": time.Now().Unix(),
-				},
-				Timestamp: time.Now(),
+		case <-timeout.C:
+			return nil
+		case data, ok := <-client.events:
+			if !ok {
+				return nil
 			}
-			m.writeStudioSSEEvent(w, heartbeat)
-			flusher.Flush()
+			if err := write(data); err != nil {
+				return err
+			}
+		case <-heartbeat.C:
+			data, err := json.Marshal(StudioEvent{Type: "heartbeat", SessionID: sessionID, Timestamp: time.Now()})
+			if err != nil {
+				return err
+			}
+			if err := write(data); err != nil {
+				return err
+			}
 		}
 	}
-}
-
-// writeStudioSSEEvent formats and writes a studio SSE event
-func (m *SSEManager) writeStudioSSEEvent(w io.Writer, event StudioEvent) {
-	jsonData, err := json.Marshal(event)
-	if err != nil {
-		m.logger.Error("Failed to marshal studio SSE data", zap.Error(err))
-		fmt.Fprintf(w, "data: {\"error\": \"Failed to marshal data\"}\n\n")
-		return
-	}
-
-	// Don't use custom event types - frontend uses onmessage which only receives default events
-	// Event type is already in the JSON data as event.type
-	fmt.Fprintf(w, "data: %s\n\n", jsonData)
 }
 
 // getNextPendingStage finds the next stage that can be processed
